@@ -1,0 +1,70 @@
+:root {
+  --bg: #0b0f17;
+  --card: #131a26;
+  --line: #222c3d;
+  --text: #e6e9ef;
+  --muted: #8a94a7;
+  --gold: #c8aa6e;
+  --blue: #4fa3ff;
+  --red: #ff5d5d;
+  --ok: #3ccf8e;
+  color-scheme: dark;
+  font: 13px/1.4 "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; }
+.app { display: flex; flex-direction: column; height: 100vh; }
+.app.loading { align-items: center; justify-content: center; color: var(--muted); }
+.titlebar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border-bottom: 1px solid var(--line); -webkit-app-region: drag; user-select: none;
+}
+.titlebar .title { font-weight: 600; color: var(--gold); letter-spacing: 0.02em; }
+.titlebar .spacer { flex: 1; }
+.btn {
+  -webkit-app-region: no-drag; background: transparent; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; font: inherit; cursor: pointer;
+}
+.btn:hover { color: var(--text); border-color: var(--muted); }
+.btn.close { border: none; font-size: 18px; line-height: 1; padding: 0 4px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.connected { background: var(--ok); }
+.dot.disconnected { background: var(--red); }
+main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.status-line { color: var(--text); font-size: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 11px; }
+.warn { color: #ffb86b; margin: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+.card h2 { margin: 0 0 8px; font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.05em; }
+.card h3 { margin: 0 0 6px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.card p { margin: 0 0 4px; }
+.phase { display: flex; align-items: center; gap: 8px; }
+.phase .timer { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--gold); font-weight: 600; }
+.your-turn { color: var(--ok); font-weight: 600; }
+.teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.slots { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.slot { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 4px; min-width: 0; }
+.slot.me { background: rgba(200, 170, 110, 0.12); }
+.slot.acting { outline: 1px solid var(--blue); }
+.slot-text { display: flex; flex-direction: column; min-width: 0; }
+.champ-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pos { font-size: 10px; color: var(--muted); text-transform: capitalize; }
+.icon { border-radius: 4px; flex-shrink: 0; display: block; }
+.icon.empty { background: #1c2433; border: 1px dashed var(--line); }
+.icon.dim { opacity: 0.5; }
+.bans { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 6px; min-height: 22px; }
+.bans .icon { filter: grayscale(1); opacity: 0.7; }
+.picks ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pick { display: flex; gap: 8px; align-items: flex-start; }
+.pick .rank { color: var(--gold); font-weight: 700; width: 12px; padding-top: 10px; }
+.pick-body { flex: 1; min-width: 0; }
+.pick-head { display: flex; justify-content: space-between; }
+.score { color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 600; }
+.factors { display: flex; flex-direction: column; gap: 2px; margin: 4px 0; }
+.factor { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
+.bar { height: 4px; background: #1c2433; border-radius: 2px; overflow: hidden; }
+.bar > div { height: 100%; background: var(--blue); }
+.reasons { margin: 0; padding-left: 14px; font-size: 11px; color: var(--muted); }
+.disclaimer { margin-top: 8px !important; font-size: 10px; color: var(--muted); }
+.idle { display: flex; flex-direction: column; gap: 6px; }

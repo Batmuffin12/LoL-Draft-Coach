@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "record": "tsx src/record-cli.ts"
+    "record": "tsx src/record-cli.ts",
+    "mock": "tsx src/mock-cli.ts"
   },
   "dependencies": {
     "@ldc/shared": "workspace:*",

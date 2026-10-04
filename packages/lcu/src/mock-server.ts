@@ -23,9 +23,16 @@ export class MockLcuServer {
   constructor(
     private readonly fixture: Fixture,
     /** Extra GET responses (e.g. a fake local summoner, since fixtures are anonymised). */
-    overrides: Record<string, unknown> = {},
+    private readonly overrides: Record<string, unknown> = {},
   ) {
-    for (const [path, body] of Object.entries({ ...fixture.snapshots, ...overrides })) this.state.set(path, body);
+    this.reset();
+  }
+
+  /** Rewinds to the start of the fixture (snapshots restored, no frames played). */
+  reset(): void {
+    this.cursor = 0;
+    this.state.clear();
+    for (const [path, body] of Object.entries({ ...this.fixture.snapshots, ...this.overrides })) this.state.set(path, body);
   }
 
   get remainingFrames(): number {
