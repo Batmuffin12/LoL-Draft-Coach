@@ -17,6 +17,8 @@ import {
   percentile,
   recommendPicks,
   roleFit,
+  adviseRoles,
+  gradeScore,
   scoreTeamNeeds,
   teamProfile,
   weightsForBand,
@@ -313,17 +315,19 @@ describe("purity", () => {
 });
 
 describe("role-aware comfort and off-meta picks", () => {
-  // Mirrors a real profile: a jungle main (15 games) and a fun pick played 4x jungle + 4x bottom.
+  // Mirrors a real profile: a jungle main whose jungle games are 3-4 months old (now played mid),
+  // and a fun pick played 4x jungle this week + 4x bottom.
   const MAIN = 950;
   const FUN = 202;
   const games = [
-    ...Array.from({ length: 15 }, (_, i) => game(MAIN, i < 8, 3, "jungle")),
+    ...Array.from({ length: 15 }, (_, i) => game(MAIN, i < 9, 85 + i * 2, "jungle")),
+    ...Array.from({ length: 9 }, (_, i) => game(MAIN, i < 3, 2, "middle")),
     ...Array.from({ length: 4 }, (_, i) => game(FUN, i < 2, 3, "jungle")),
-    ...Array.from({ length: 4 }, (_, i) => game(FUN, i < 2, 3, "bottom")),
+    ...Array.from({ length: 4 }, (_, i) => game(FUN, i < 2, 5, "bottom")),
   ];
   const masteries = [
-    { championId: FUN, level: 10, points: 400_000 },
-    { championId: MAIN, level: 5, points: 60_000 },
+    { championId: MAIN, level: 19, points: 177_000, lastPlayTime: NOW, grades: ["S", "A+"] },
+    { championId: FUN, level: 17, points: 158_000, lastPlayTime: NOW - 3 * DAY, grades: ["C"] },
   ];
   const intended = new Map<number, string[]>([[MAIN, ["jungle", "middle"]], [FUN, ["bottom"]]]);
 
@@ -356,6 +360,7 @@ describe("role-aware comfort and off-meta picks", () => {
     expect(picks[0]!.offMeta).toBe(false);
     expect(fun.reasons.join(" ")).toMatch(/Off-meta in jungle \(usually bottom\)/);
     expect(fun.reasons[0]).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
+    expect(picks[0]!.reasons.join(" ")).toMatch(/grades S A\+/);
     const unpenalised = combineFactors(fun.factors, weightsForBand(2, engineCfg));
     expect(fun.score).toBeCloseTo(unpenalised * (1 - engineCfg.roles.offMetaPenalty));
   });
@@ -366,5 +371,71 @@ describe("role-aware comfort and off-meta picks", () => {
     const a = deriveChampionAttributes([...own, ...others], 3).get(FUN)!;
     expect(a.roleShares).toEqual({ bottom: 1 });
     expect(a.samples).toBe(10);
+  });
+});
+
+describe("champion skill vs current form", () => {
+  const cfg = engineCfg.comfort;
+  const filler = Array.from({ length: 20 }, (_, i) => game(99, i % 2 === 0, 2, "jungle"));
+
+  it("keeps an old main strong through mastery and long-window results", () => {
+    const oldMain = Array.from({ length: 20 }, (_, i) => game(1, i < 13, 100, "jungle"));
+    const c = computeComfort([...oldMain, ...filler], [
+      { championId: 1, level: 20, points: 200_000, lastPlayTime: NOW - 100 * DAY },
+      { championId: 99, level: 2, points: 10_000, lastPlayTime: NOW },
+    ], NOW, cfg, "jungle").get(1)!;
+    expect(c.skill).toBeGreaterThan(0.6);
+    expect(c.form).toBeLessThan(c.skill);
+  });
+
+  it("fades mastery that hasn't been played for a long time", () => {
+    const m = (last: number) => [
+      { championId: 1, level: 10, points: 200_000, lastPlayTime: NOW - last * DAY },
+      { championId: 2, level: 10, points: 100_000, lastPlayTime: NOW },
+    ];
+    const fresh = computeComfort([], m(1), NOW, cfg).get(1)!.skill;
+    const stale = computeComfort([], m(720), NOW, cfg).get(1)!.skill;
+    expect(stale).toBeLessThan(fresh / 2);
+  });
+
+  it("lets good grades lift and bad grades hold back the same mastery", () => {
+    const m = (grades: string[]) => [
+      { championId: 1, level: 10, points: 100_000, lastPlayTime: NOW, grades },
+      { championId: 2, level: 10, points: 100_000, lastPlayTime: NOW },
+    ];
+    expect(computeComfort([], m(["S", "A+"]), NOW, cfg).get(1)!.skill).toBeGreaterThan(computeComfort([], m(["C", "D"]), NOW, cfg).get(1)!.skill);
+    expect(gradeScore(["S+"], cfg.skill.gradeScale)).toBe(1);
+    expect(gradeScore(["unknown"], cfg.skill.gradeScale)).toBeNull();
+  });
+
+  it("transfers skill to a new role when the meta moves a champion", () => {
+    const midHistory = Array.from({ length: 20 }, (_, i) => game(1, i < 13, 20, "middle"));
+    const m = [{ championId: 1, level: 15, points: 150_000, lastPlayTime: NOW }];
+    const jungle = computeComfort([...midHistory, ...filler], m, NOW, cfg, "jungle").get(1)!;
+    const middle = computeComfort([...midHistory, ...filler], m, NOW, cfg, "middle").get(1)!;
+    expect(jungle.gamesInRole).toBe(0);
+    expect(jungle.skill).toBeCloseTo(middle.skill); // skill carries over unchanged...
+    expect(jungle.form).toBeLessThan(middle.form); // ...form in the new role starts lower
+  });
+});
+
+describe("adviseRoles", () => {
+  it("ranks roles by recent results and experience, with best champions per role", () => {
+    const games = [
+      ...Array.from({ length: 30 }, (_, i) => game(1, i < 19, 5, "jungle")),
+      ...Array.from({ length: 10 }, (_, i) => game(2, i < 7, 5, "jungle")),
+      ...Array.from({ length: 30 }, (_, i) => game(3, i < 11, 5, "middle")),
+      game(4, true, 5, "top"),
+    ];
+    const advice = adviseRoles(games, [], NOW, engineCfg);
+    expect(advice.map((a) => a.role)).toEqual(["jungle", "middle", "top"]);
+    expect(advice[0]).toMatchObject({ games: 40, topChampions: [1, 2], enoughData: true });
+    expect(advice[0]!.winRate).toBeCloseTo(26 / 40);
+    // One lucky top game is "not enough data", listed last rather than recommended.
+    expect(advice.find((a) => a.role === "top")!.enoughData).toBe(false);
+  });
+
+  it("returns nothing without games", () => {
+    expect(adviseRoles([], [], NOW, engineCfg)).toEqual([]);
   });
 });

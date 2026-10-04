@@ -18,13 +18,34 @@ export const EngineConfigSchema = z.object({
   description: z.string().optional(),
   bands: z.record(z.string().regex(/^\d+$/), FactorWeightsSchema),
   comfort: z.object({
-    recencyHalfLifeDays: z.number().positive(),
     smoothingK: z.number().min(0),
     experienceScaleGames: z.number().positive(),
     winRateSpread: z.number().positive(),
-    /** Weight of games played on the champion in other roles when scoring a role (0..1). */
-    offRoleGameWeight: unit,
-    mix: z.object({ winRate: weight, experience: weight, mastery: weight }),
+    /** Champion skill: transfers across roles and fades slowly. */
+    skill: z.object({
+      halfLifeDays: z.number().positive(),
+      /** Mastery counts half as much after this many days without playing the champion. */
+      masteryStaleHalfLifeDays: z.number().positive(),
+      /** Mastery milestone grades, worst to best. */
+      gradeScale: z.array(z.string()).min(2),
+      mix: z.object({ mastery: weight, grades: weight, winRate: weight }),
+    }),
+    /** Current form: recent games in the role. */
+    form: z.object({
+      halfLifeDays: z.number().positive(),
+      /** Weight of games played on the champion in other roles (0..1). */
+      offRoleGameWeight: unit,
+      mix: z.object({ winRate: weight, experience: weight }),
+    }),
+    mix: z.object({ skill: weight, form: weight }),
+  }),
+  roleAdvice: z.object({
+    halfLifeDays: z.number().positive(),
+    experienceScaleGames: z.number().positive(),
+    /** Below this many games in a role, it's shown as "not enough games". */
+    minGames: z.number().int().min(1),
+    topChampions: z.number().int().positive(),
+    mix: z.object({ winRate: weight, experience: weight }),
   }),
   teamNeeds: z.object({
     minAttributeSamples: z.number().int().min(1),

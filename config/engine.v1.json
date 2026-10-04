@@ -32,15 +32,46 @@
     }
   },
   "comfort": {
-    "recencyHalfLifeDays": 30,
     "smoothingK": 5,
     "experienceScaleGames": 8,
     "winRateSpread": 0.15,
-    "offRoleGameWeight": 0.3,
+    "skill": {
+      "halfLifeDays": 120,
+      "masteryStaleHalfLifeDays": 180,
+      "gradeScale": [
+        "D-",
+        "D",
+        "D+",
+        "C-",
+        "C",
+        "C+",
+        "B-",
+        "B",
+        "B+",
+        "A-",
+        "A",
+        "A+",
+        "S-",
+        "S",
+        "S+"
+      ],
+      "mix": {
+        "mastery": 0.35,
+        "grades": 0.3,
+        "winRate": 0.35
+      }
+    },
+    "form": {
+      "halfLifeDays": 30,
+      "offRoleGameWeight": 0.3,
+      "mix": {
+        "winRate": 0.5,
+        "experience": 0.5
+      }
+    },
     "mix": {
-      "winRate": 0.45,
-      "experience": 0.35,
-      "mastery": 0.2
+      "skill": 0.5,
+      "form": 0.5
     }
   },
   "teamNeeds": {
@@ -59,6 +90,16 @@
   "roles": {
     "minRoleShare": 0.15,
     "offMetaPenalty": 0.15
+  },
+  "roleAdvice": {
+    "halfLifeDays": 60,
+    "experienceScaleGames": 15,
+    "minGames": 5,
+    "topChampions": 3,
+    "mix": {
+      "winRate": 0.6,
+      "experience": 0.4
+    }
   },
   "topN": 3
 }

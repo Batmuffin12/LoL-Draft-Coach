@@ -114,7 +114,10 @@ export function recommendPicks(input: RecommendInput): PickRecommendation[] {
     } else if (c.games > 0 && c.winRate !== null) {
       reasons.push(`${c.games} recent game${plural(c.games)}${role ? " in other roles" : ""}, ${Math.round(c.winRate * 100)}% win rate`);
     }
-    if (c.masteryLevel !== null) reasons.push(`Mastery ${c.masteryLevel}, ${Math.round(c.masteryPoints / 1000)}k points`);
+    if (c.masteryLevel !== null) {
+      const grades = c.grades.length ? `, grades ${c.grades.join(" ")}` : "";
+      reasons.push(`Mastery ${c.masteryLevel}, ${Math.round(c.masteryPoints / 1000)}k points${grades}`);
+    }
     reasons.push(...team.reasons);
     if (offMeta) {
       const listed = input.intendedPositions.get(id);

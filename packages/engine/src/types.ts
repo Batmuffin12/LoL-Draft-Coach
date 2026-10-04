@@ -14,6 +14,10 @@ export interface MasteryEntry {
   championId: ChampionId;
   level: number;
   points: number;
+  /** Epoch ms the champion was last played (Champion-Mastery-V4 lastPlayTime). */
+  lastPlayTime?: number;
+  /** End-of-game grades of the current mastery milestone (e.g. "S", "A+"). */
+  grades?: string[];
 }
 
 /** One participant's stats from a match: the raw material for champion attributes. */
@@ -58,6 +62,11 @@ export interface ComfortStats {
   smoothedWinRate: number;
   masteryLevel: number | null;
   masteryPoints: number;
+  grades: string[];
+  /** Champion skill in [0, 1]: mastery, grades and long-window win rate, any role. */
+  skill: number;
+  /** Current form in [0, 1]: recent games and win rate in the role. */
+  form: number;
   /** Comfort factor in [0, 1]. */
   score: number;
   gamesByPosition: Record<Position, number>;
