@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Jev decision thresholds (used once the real adapter exists; JEV_ENABLED stays false until then).",
+  "thresholds": { "act": 0.7, "clear": 0.85 }
+}
