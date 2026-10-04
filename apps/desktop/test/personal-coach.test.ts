@@ -11,7 +11,7 @@ import { MatchStore, minimizeMatch } from "../src/main/match-store";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { loadProfile, sortMatchIdsNewestFirst } from "../src/main/profile";
 import type { ViewState } from "../src/shared/view";
-import { fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, waitFor } from "./helpers";
+import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -73,7 +73,8 @@ afterEach(async () => {
 
 async function startCoach(riot: RiotApi | null, overrides: Record<string, unknown> = {}) {
   server = new MockLcuServer(loadFixture("synthetic-draft-pick"), {
-    "/lol-summoner/v1/current-summoner": { puuid: LOCAL_PUUID, gameName: "Me", tagLine: "EUW" },
+    // Like the real client: its PUUID is not usable with the Riot API.
+    "/lol-summoner/v1/current-summoner": { puuid: CLIENT_PUUID, gameName: "Me", tagLine: "EUW" },
     "/lol-ranked/v1/current-ranked-stats": { queues: [{ queueType: "RANKED_SOLO_5x5", tier: "EMERALD", division: "IV" }] },
     ...overrides,
   });
@@ -115,6 +116,14 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
 
     // Compliance: nothing identity-like ever reaches the panel.
     expect(JSON.stringify(states)).not.toMatch(/puuid|mock-local|other-|name-|gameName|tagLine/i);
+  });
+
+  it("resolves the account through Account-V1 and never sends the client's PUUID to Riot", async () => {
+    const fake = fakeRiotFetch();
+    await startCoach(riotWith(fake.fetchFn));
+    await waitFor(() => coach!.state.status.profile.state === "ready");
+    expect(fake.calls.some((c) => c.includes("/accounts/by-riot-id/Me/EUW"))).toBe(true);
+    expect(fake.calls.some((c) => c.includes(CLIENT_PUUID))).toBe(false);
   });
 
   it("shows a clear renew-your-key message when the development key has expired", async () => {

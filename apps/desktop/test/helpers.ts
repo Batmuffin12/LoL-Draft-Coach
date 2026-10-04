@@ -30,7 +30,10 @@ export const waitFor = async (cond: () => boolean, timeoutMs = 5_000) => {
   }
 };
 
+/** The PUUID the Riot API knows (encrypted for our key). */
 export const LOCAL_PUUID = "mock-local-player";
+/** The PUUID the League client reports; the Riot API rejects it with 400, like the real one. */
+export const CLIENT_PUUID = "raw-client-puuid";
 
 /**
  * Fake Riot API: the local player has played a few mid champions; the other nine
@@ -68,6 +71,10 @@ export function fakeRiotFetch(opts: { expiredKey?: boolean; myChamps?: [number, 
     const url = new URL(String(input));
     calls.push(url.pathname);
     if (opts.expiredKey) return Response.json({ status: { message: "Unknown apikey", status_code: 401 } }, { status: 401 });
+    const byPuuid = /\/by-puuid\/([^/]+)/.exec(url.pathname)?.[1];
+    if (byPuuid && byPuuid !== LOCAL_PUUID) {
+      return Response.json({ status: { message: "Bad Request - Exception decrypting", status_code: 400 } }, { status: 400 });
+    }
     if (url.pathname.includes("champion-mastery")) {
       return Response.json([{ championId: 103, championLevel: 7, championPoints: 250000 }, { championId: 84, championLevel: 5, championPoints: 40000 }], { headers });
     }

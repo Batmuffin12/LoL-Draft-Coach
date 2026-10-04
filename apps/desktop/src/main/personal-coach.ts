@@ -65,27 +65,39 @@ export class PersonalCoach extends Coach {
     this.update({ status: { ...this.view.status, profile: { state: "error", message } } });
   }
 
+  /**
+   * The client's PUUID cannot be used with the Riot API (Riot encrypts PUUIDs per API key),
+   * so we take the Riot ID from the client and resolve it through Account-V1.
+   */
   private async onClientConnected(): Promise<void> {
     try {
       const me = await this.p.connector.getCurrentSummoner();
       const ranked = await this.p.connector.getRankedStats().catch(() => null);
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.p.config.bands));
-      if (me) await this.loadFor(me.puuid, false);
+      if (me?.gameName && me.tagLine) await this.loadByRiotId(me.gameName, me.tagLine, false);
     } catch (err) {
       this.notice(`Could not read your account from the client: ${(err as Error).message}`);
     }
   }
 
+  /** Fallback when the client isn't running: RIOT_ID from .env. */
   private async loadFromRiotId(): Promise<void> {
-    const { riot, riotId } = this.p;
-    if (!riot || !riotId || this.puuid) return;
+    const { riotId } = this.p;
+    if (!this.p.riot || !riotId || this.puuid) return;
     const [gameName, tagLine] = riotId.split("#");
-    if (!gameName || !tagLine) return this.setProfileError(`RIOT_ID must look like Name#TAG (got "${riotId}")`);
+    if (!gameName || !tagLine) {
+      return this.setProfileError(`RIOT_ID must look like "Name#TAG", in quotes (got "${riotId}")`);
+    }
+    await this.loadByRiotId(gameName, tagLine, true);
+  }
+
+  private async loadByRiotId(gameName: string, tagLine: string, bandFromApi: boolean): Promise<void> {
+    const { riot } = this.p;
+    if (!riot) return;
     try {
       const account = await riot.accountByRiotId(gameName, tagLine);
-      if (!account) return this.setProfileError(`Riot ID ${riotId} was not found.`);
-      if (this.puuid) return; // the client connected meanwhile
-      await this.loadFor(account.puuid, true);
+      if (!account) return this.setProfileError(`Riot ID ${gameName}#${tagLine} was not found.`);
+      await this.loadFor(account.puuid, bandFromApi);
     } catch (err) {
       this.onRiotError(err);
     }

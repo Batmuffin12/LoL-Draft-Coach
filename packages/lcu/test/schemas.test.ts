@@ -77,3 +77,20 @@ describe("sanitizeChampSelect", () => {
     expect(u.has(103)).toBe(false);
   });
 });
+
+describe("real recorded fixture", () => {
+  const real = loadFixture("recorded/real-ranked-flex-jungle");
+  const realSessions = real.frames.filter((f) => f.uri === "/lol-champ-select/v1/session" && f.data);
+
+  it("parses every frame of a real client recording", () => {
+    for (const f of realSessions) expect(() => parseLcu(ChampSelectSessionSchema, f.uri, f.data)).not.toThrow();
+  });
+
+  it("sanitises to a full 5v5 draft with the local player's position", () => {
+    const d = sanitizeChampSelect(parseLcu(ChampSelectSessionSchema, "s", realSessions.at(-1)!.data));
+    expect(d.myTeam).toHaveLength(5);
+    expect(d.theirTeam).toHaveLength(5);
+    expect(d.myTeam.find((s) => s.isLocalPlayer)?.position).toBe("jungle");
+    expect([...d.myTeam, ...d.theirTeam].every((s) => s.championId > 0)).toBe(true);
+  });
+});
