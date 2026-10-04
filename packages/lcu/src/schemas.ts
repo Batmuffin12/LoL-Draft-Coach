@@ -69,9 +69,12 @@ export const RankedStatsSchema = z.looseObject({
 });
 export type RankedStats = z.infer<typeof RankedStatsSchema>;
 
-/** The local player's own summoner. */
+/**
+ * The local player's own summoner. Note: this PUUID is not valid for the Riot API
+ * (which uses per-key encrypted PUUIDs); resolve gameName#tagLine via Account-V1 instead.
+ */
 export const CurrentSummonerSchema = z.looseObject({
-  puuid: z.string().min(1),
+  puuid: z.string().optional(),
   gameName: z.string().optional(),
   tagLine: z.string().optional(),
 });
