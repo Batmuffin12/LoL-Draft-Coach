@@ -20,6 +20,10 @@ pnpm typecheck
 pnpm desktop             # build and start the champ select panel
 ```
 
+Try the panel without League: run `pnpm --filter @ldc/lcu mock` in one terminal, then in another set the printed `LDC_LCU_OVERRIDE` value and run `pnpm desktop`.
+
+Record a real champ select as a test fixture (anonymised automatically): `pnpm --filter @ldc/lcu record`, then enter champ select.
+
 ## Repo layout
 
 | Folder | What it does |
