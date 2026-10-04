@@ -11,7 +11,8 @@
 | Jev (TypeSafe AI) | **No key or docs yet.** `packages/jev` holds only the adapter interface + a mock, behind `JEV_ENABLED=false`. Do not guess Jev's real API. |
 | Sentry | Skipped for now. |
 | Railway | Not used until milestone 3. |
-| Milestones | 1 (foundation) and 2 (personal coach) built. Next: 3 (server + collector). |
+| Milestones | 1 (foundation, v0.1.0) and 2 (personal coach, v0.2.0) done. Next: 3 (server + collector, Railway). |
+| Fixtures | Only a synthetic fixture so far. Record a real champ select with `pnpm --filter @ldc/lcu record` and commit it (it is anonymised on write). |
 
 Interim deviation (agreed with the owner): until `apps/server` exists (milestone 3), the desktop **main process** calls the Riot API with the key from the local `.env`. The key never reaches the renderer. Move these calls behind the server in milestone 3.
 
@@ -51,11 +52,13 @@ pnpm typecheck        # tsc --noEmit across all packages
 pnpm test             # vitest across all packages
 pnpm desktop          # build + launch the Electron panel
 pnpm --filter @ldc/lcu record   # record a live champ select into an anonymised fixture
+pnpm --filter @ldc/lcu mock     # fake League client replaying a fixture; then set LDC_LCU_OVERRIDE as printed
 ```
 
 ## Layout
 
 - `apps/desktop`: Electron (ow-electron-compatible) + React + Vite panel. Main process = adapters + engine; renderer = UI only.
 - `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev`: adapters. `packages/engine`: scoring.
-- `config/`: `engine.v1.json` (factor weights per band, smoothing), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size).
+- `config/`: `engine.v1.json` (factor weights per band, smoothing), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime.
+- TODOs carried forward: lane matchup / counter / meta factors (M3), timelines + power curve attribute (M3), templates + Jev + loadout (M4), Overwolf, installer, Sentry, GitHub Actions (M5).
 - Node 22 LTS target (`.nvmrc`), TypeScript strict, ESM.

@@ -23,9 +23,15 @@ importers:
       '@ldc/ddragon':
         specifier: workspace:*
         version: link:../../packages/ddragon
+      '@ldc/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@ldc/lcu':
         specifier: workspace:*
         version: link:../../packages/lcu
+      '@ldc/riot-api':
+        specifier: workspace:*
+        version: link:../../packages/riot-api
       '@ldc/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -35,6 +41,9 @@ importers:
       koffi:
         specifier: ^3.3.2
         version: 3.3.2
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/react':
         specifier: ^19.3.0
@@ -73,6 +82,21 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  packages/engine:
+    dependencies:
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
+  packages/jev:
+    dependencies:
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   packages/lcu:
     dependencies:
       '@ldc/shared':
@@ -94,6 +118,15 @@ importers:
       tsx:
         specifier: ^4
         version: 4.23.15
+
+  packages/riot-api:
+    dependencies:
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   packages/shared:
     dependencies:

@@ -82,7 +82,9 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
         </p>
       )}
       {profile.state === "error" && <p className="warn">{profile.message}</p>}
-      {picks.length === 0 && profile.state !== "loading" && <p className="muted">Suggestions appear during champ select.</p>}
+      {picks.length === 0 && (profile.state === "ready" || profile.state === "idle") && (
+        <p className="muted">Suggestions appear during champ select.</p>
+      )}
       <ol>
         {picks.map((p, i) => (
           <li key={p.champion.id} className="pick">

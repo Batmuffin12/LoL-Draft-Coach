@@ -7,8 +7,12 @@ import { join } from "node:path";
 import { app, BrowserWindow, ipcMain, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
+import { RiotApi } from "@ldc/riot-api";
 import { IPC, type ViewState } from "../shared/view";
-import { Coach } from "./coach";
+import type { Coach } from "./coach";
+import { findConfigDir, loadConfig } from "./config";
+import { MatchStore } from "./match-store";
+import { PersonalCoach } from "./personal-coach";
 import { computeDockBounds, createWin32Finder, sameRect, type Rect } from "./dock";
 import { loadEnv } from "./env";
 
@@ -91,7 +95,21 @@ async function main(): Promise<void> {
     discover: async () => override ?? discoverCredentials({ installDir: env.lolInstallDir }),
   });
   const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
-  const coach = new Coach({ connector, ddragon });
+  const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
+  // Interim (until apps/server exists in milestone 3): the key is read here in the main
+  // process from the local .env and never sent to the renderer.
+  const riot = env.riotApiKey
+    ? new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion })
+    : null;
+  const matchesDir = join(app.getPath("userData"), "matches");
+  const coach = new PersonalCoach({
+    connector,
+    ddragon,
+    config,
+    riot,
+    riotId: env.riotId,
+    storeFor: (puuid) => new MatchStore(matchesDir, puuid),
+  });
 
   win = createWindow();
   coach.on("state", (s) => {

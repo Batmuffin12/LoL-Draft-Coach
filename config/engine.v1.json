@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "Scoring weights and settings. Factor weights are per rank band; factors without data are skipped and the rest re-normalised.",
+  "bands": {
+    "1": {
+      "comfort": 0.45,
+      "teamNeeds": 0.2,
+      "laneMatchup": 0.1,
+      "counterValue": 0.1,
+      "metaStrength": 0.15
+    },
+    "2": {
+      "comfort": 0.4,
+      "teamNeeds": 0.2,
+      "laneMatchup": 0.15,
+      "counterValue": 0.1,
+      "metaStrength": 0.15
+    },
+    "3": {
+      "comfort": 0.35,
+      "teamNeeds": 0.25,
+      "laneMatchup": 0.15,
+      "counterValue": 0.15,
+      "metaStrength": 0.1
+    },
+    "4": {
+      "comfort": 0.3,
+      "teamNeeds": 0.3,
+      "laneMatchup": 0.15,
+      "counterValue": 0.15,
+      "metaStrength": 0.1
+    }
+  },
+  "comfort": {
+    "recencyHalfLifeDays": 30,
+    "smoothingK": 5,
+    "experienceScaleGames": 8,
+    "winRateSpread": 0.15,
+    "mix": {
+      "winRate": 0.45,
+      "experience": 0.35,
+      "mastery": 0.2
+    }
+  },
+  "teamNeeds": {
+    "minAttributeSamples": 3,
+    "targetMagicShare": 0.4,
+    "frontlineThreshold": 0.6,
+    "engageThreshold": 0.6,
+    "reasonMinNeed": 0.3,
+    "reasonMinFit": 0.6,
+    "dimensions": {
+      "damageBalance": 1,
+      "frontline": 1,
+      "engage": 0.7
+    }
+  },
+  "roles": {
+    "minRoleShare": 0.15
+  },
+  "topN": 3
+}
