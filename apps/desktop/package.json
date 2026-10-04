@@ -1,6 +1,6 @@
 {
   "name": "@ldc/desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "LoL Draft Coach champ select panel (Electron, ow-electron-compatible)",
   "type": "module",
@@ -13,10 +13,13 @@
   },
   "dependencies": {
     "@ldc/ddragon": "workspace:*",
+    "@ldc/engine": "workspace:*",
     "@ldc/lcu": "workspace:*",
+    "@ldc/riot-api": "workspace:*",
     "@ldc/shared": "workspace:*",
     "dotenv": "^18.0.5",
-    "koffi": "^3.3.2"
+    "koffi": "^3.3.2",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

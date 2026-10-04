@@ -23,9 +23,15 @@ importers:
       '@ldc/ddragon':
         specifier: workspace:*
         version: link:../../packages/ddragon
+      '@ldc/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@ldc/lcu':
         specifier: workspace:*
         version: link:../../packages/lcu
+      '@ldc/riot-api':
+        specifier: workspace:*
+        version: link:../../packages/riot-api
       '@ldc/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -35,6 +41,9 @@ importers:
       koffi:
         specifier: ^3.3.2
         version: 3.3.2
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/react':
         specifier: ^19.3.0
