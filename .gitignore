@@ -1,0 +1,56 @@
+# --- Secrets & local config (never commit) ---
+.env
+.env.*
+!.env.example
+*.local.json
+.claude/settings.local.json
+*.pem
+*.key
+secrets/
+
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+
+# --- Build output ---
+dist/
+out/
+build/
+release/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# --- Installers ---
+*.exe
+*.msi
+*.msix
+*.appx
+*.dmg
+*.blockmap
+latest*.yml
+
+# --- Databases ---
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# --- Local caches & raw (non-anonymised) recordings ---
+.cache/
+packages/lcu/fixtures/raw/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
