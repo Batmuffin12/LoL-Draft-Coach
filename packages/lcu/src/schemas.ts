@@ -1,0 +1,95 @@
+import { z } from "zod";
+
+/**
+ * Zod schemas for the LCU payloads we read. They are deliberately loose: they check
+ * the fields we use and let unknown fields through, because the LCU is unofficial and
+ * gains fields between patches. A renamed or retyped field we rely on fails loudly.
+ */
+
+export const ChampSelectPlayerSchema = z.looseObject({
+  cellId: z.number().int(),
+  championId: z.number().int().default(0),
+  championPickIntent: z.number().int().default(0),
+  assignedPosition: z.string().default(""),
+  team: z.number().int().optional(),
+});
+
+export const ChampSelectActionSchema = z.looseObject({
+  id: z.number().int(),
+  actorCellId: z.number().int(),
+  championId: z.number().int().default(0),
+  completed: z.boolean(),
+  isAllyAction: z.boolean().default(false),
+  isInProgress: z.boolean().default(false),
+  type: z.string(),
+});
+
+export const ChampSelectSessionSchema = z.looseObject({
+  actions: z.array(z.array(ChampSelectActionSchema)).default([]),
+  bans: z
+    .looseObject({
+      myTeamBans: z.array(z.number().int()).default([]),
+      theirTeamBans: z.array(z.number().int()).default([]),
+    })
+    .default({ myTeamBans: [], theirTeamBans: [] }),
+  isCustomGame: z.boolean().default(false),
+  localPlayerCellId: z.number().int(),
+  myTeam: z.array(ChampSelectPlayerSchema),
+  theirTeam: z.array(ChampSelectPlayerSchema).default([]),
+  timer: z.looseObject({
+    phase: z.string(),
+    adjustedTimeLeftInPhase: z.number().default(0),
+  }),
+});
+export type ChampSelectSession = z.infer<typeof ChampSelectSessionSchema>;
+
+export const GameflowPhaseSchema = z.string();
+
+export const GameflowSessionSchema = z.looseObject({
+  phase: z.string(),
+  gameData: z
+    .looseObject({
+      queue: z.looseObject({ id: z.number().int() }).optional(),
+    })
+    .optional(),
+});
+export type GameflowSession = z.infer<typeof GameflowSessionSchema>;
+
+/** Ranked stats of the local player only. Tier strings stay strings; bands come from config. */
+export const RankedStatsSchema = z.looseObject({
+  queues: z
+    .array(
+      z.looseObject({
+        queueType: z.string(),
+        tier: z.string().default(""),
+        division: z.string().default(""),
+      }),
+    )
+    .default([]),
+});
+export type RankedStats = z.infer<typeof RankedStatsSchema>;
+
+/** The local player's own summoner. */
+export const CurrentSummonerSchema = z.looseObject({
+  puuid: z.string().min(1),
+  gameName: z.string().optional(),
+  tagLine: z.string().optional(),
+});
+export type CurrentSummoner = z.infer<typeof CurrentSummonerSchema>;
+
+export const PickableChampionIdsSchema = z.array(z.number().int());
+
+export class LcuSchemaError extends Error {
+  constructor(
+    readonly endpoint: string,
+    readonly issues: string,
+  ) {
+    super(`LCU response for ${endpoint} did not match the expected shape (the client may have changed):\n${issues}`);
+  }
+}
+
+export function parseLcu<T extends z.ZodType>(schema: T, endpoint: string, data: unknown): z.infer<T> {
+  const result = schema.safeParse(data);
+  if (!result.success) throw new LcuSchemaError(endpoint, z.prettifyError(result.error));
+  return result.data;
+}

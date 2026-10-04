@@ -1,0 +1,202 @@
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { EventEmitter } from "node:events";
+import { z } from "zod";
+import type { ChampionId, ChampionInfo } from "@ldc/shared";
+
+export const DEFAULT_BASE_URL = "https://ddragon.leagueoflegends.com";
+
+const VersionsSchema = z.array(z.string().min(1)).min(1);
+
+const ChampionFileSchema = z.looseObject({
+  version: z.string(),
+  data: z.record(
+    z.string(),
+    z.looseObject({
+      id: z.string(),
+      key: z.string().regex(/^\d+$/),
+      name: z.string(),
+      image: z.looseObject({ full: z.string() }),
+    }),
+  ),
+});
+
+const ItemFileSchema = z.looseObject({
+  data: z.record(
+    z.string(),
+    z.looseObject({ name: z.string(), stats: z.record(z.string(), z.number()).default({}) }),
+  ),
+});
+
+const RunesFileSchema = z.array(
+  z.looseObject({ id: z.number(), key: z.string(), name: z.string(), slots: z.array(z.unknown()) }),
+);
+
+const SummonerFileSchema = z.looseObject({
+  data: z.record(z.string(), z.looseObject({ id: z.string(), key: z.string(), name: z.string() })),
+});
+
+/** The static data files we load for each patch, with their validators. */
+const FILES = {
+  champion: ChampionFileSchema,
+  item: ItemFileSchema,
+  runesReforged: RunesFileSchema,
+  summoner: SummonerFileSchema,
+} as const;
+type FileName = keyof typeof FILES;
+type RawFiles = { [K in FileName]: z.infer<(typeof FILES)[K]> };
+
+export interface StaticData {
+  version: string;
+  locale: string;
+  champions: Map<ChampionId, ChampionInfo>;
+  items: RawFiles["item"];
+  runes: RawFiles["runesReforged"];
+  summonerSpells: RawFiles["summoner"];
+}
+
+export interface DataDragonOptions {
+  cacheDir: string;
+  locale?: string;
+  baseUrl?: string;
+  fetch?: typeof fetch;
+}
+
+export class DataDragonError extends Error {}
+
+/**
+ * Data Dragon adapter. On load it reads versions.json, and when the newest version
+ * differs from the cached one it downloads every static file for the new patch.
+ * Works offline from the cache.
+ */
+export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
+  private current: StaticData | null = null;
+  private readonly base: string;
+  private readonly locale: string;
+  private readonly fetchFn: typeof fetch;
+
+  constructor(private readonly opts: DataDragonOptions) {
+    super();
+    this.base = opts.baseUrl ?? DEFAULT_BASE_URL;
+    this.locale = opts.locale ?? "en_US";
+    this.fetchFn = opts.fetch ?? fetch;
+  }
+
+  get data(): StaticData {
+    if (!this.current) throw new DataDragonError("Data Dragon not loaded yet");
+    return this.current;
+  }
+
+  /** Newest version according to versions.json (first entry). */
+  async latestVersion(): Promise<string> {
+    const versions = VersionsSchema.parse(await this.getJson(`${this.base}/api/versions.json`));
+    return versions[0]!;
+  }
+
+  /**
+   * Loads static data for the newest patch. Returns true when a new patch was
+   * downloaded (and emits "patch"), false when the cache was already current.
+   */
+  async load(): Promise<boolean> {
+    let latest: string;
+    try {
+      latest = await this.latestVersion();
+    } catch (err) {
+      const cached = await this.readCachedVersion();
+      if (!cached) throw new DataDragonError(`Data Dragon unreachable and no cached data: ${String(err)}`);
+      this.setCurrent(await this.readCache(cached));
+      return false;
+    }
+
+    const cachedVersion = await this.readCachedVersion();
+    if (cachedVersion === latest) {
+      try {
+        this.setCurrent(await this.readCache(latest));
+        return false;
+      } catch {
+        // Corrupt cache: fall through and re-download.
+      }
+    }
+
+    const raw = {} as RawFiles;
+    for (const name of Object.keys(FILES) as FileName[]) {
+      const json = await this.getJson(`${this.base}/cdn/${latest}/data/${this.locale}/${name}.json`);
+      (raw as Record<FileName, unknown>)[name] = this.validate(name, json);
+    }
+    await this.writeCache(latest, raw);
+    this.setCurrent(this.build(latest, raw));
+    return true;
+  }
+
+  /** Swaps in new data and emits "patch" whenever the in-memory version changes. */
+  private setCurrent(data: StaticData): void {
+    const changed = this.current?.version !== data.version;
+    this.current = data;
+    if (changed) this.emit("patch", data);
+  }
+
+  champion(id: ChampionId): ChampionInfo | undefined {
+    return this.current?.champions.get(id);
+  }
+
+  private validate(name: FileName, json: unknown): unknown {
+    const r = FILES[name].safeParse(json);
+    if (!r.success) throw new DataDragonError(`Data Dragon ${name}.json changed shape:\n${z.prettifyError(r.error)}`);
+    return r.data;
+  }
+
+  private build(version: string, raw: RawFiles): StaticData {
+    const champions = new Map<ChampionId, ChampionInfo>();
+    for (const c of Object.values(raw.champion.data)) {
+      const id = Number(c.key);
+      champions.set(id, {
+        id,
+        key: c.id,
+        name: c.name,
+        iconUrl: `${this.base}/cdn/${version}/img/champion/${c.image.full}`,
+      });
+    }
+    return { version, locale: this.locale, champions, items: raw.item, runes: raw.runesReforged, summonerSpells: raw.summoner };
+  }
+
+  private async getJson(url: string): Promise<unknown> {
+    const res = await this.fetchFn(url);
+    if (!res.ok) throw new DataDragonError(`GET ${url} failed with HTTP ${res.status}`);
+    return res.json();
+  }
+
+  private versionDir(version: string): string {
+    return join(this.opts.cacheDir, `${version}_${this.locale}`);
+  }
+
+  private async readCachedVersion(): Promise<string | null> {
+    try {
+      const meta = JSON.parse(await readFile(join(this.opts.cacheDir, "current.json"), "utf8")) as { version?: string; locale?: string };
+      return meta.locale === this.locale && meta.version ? meta.version : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async readCache(version: string): Promise<StaticData> {
+    const raw = {} as RawFiles;
+    for (const name of Object.keys(FILES) as FileName[]) {
+      const json = JSON.parse(await readFile(join(this.versionDir(version), `${name}.json`), "utf8"));
+      (raw as Record<FileName, unknown>)[name] = this.validate(name, json);
+    }
+    return this.build(version, raw);
+  }
+
+  private async writeCache(version: string, raw: RawFiles): Promise<void> {
+    const dir = this.versionDir(version);
+    await mkdir(dir, { recursive: true });
+    for (const [name, json] of Object.entries(raw)) await writeFile(join(dir, `${name}.json`), JSON.stringify(json), "utf8");
+    await writeFile(join(this.opts.cacheDir, "current.json"), JSON.stringify({ version, locale: this.locale }), "utf8");
+    // Only the current patch is kept; older ones are re-downloadable.
+    for (const d of await readdir(this.opts.cacheDir, { withFileTypes: true })) {
+      if (d.isDirectory() && d.name !== `${version}_${this.locale}`) {
+        await rm(join(this.opts.cacheDir, d.name), { recursive: true, force: true });
+      }
+    }
+  }
+}
