@@ -10,6 +10,7 @@ export const SNAPSHOT_PATHS = [
   LCU_PATHS.gameflowSession,
   LCU_PATHS.champSelectSession,
   LCU_PATHS.pickableChampionIds,
+  LCU_PATHS.recommendedPositions,
 ] as const;
 
 /**

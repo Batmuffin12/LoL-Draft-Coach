@@ -1,4 +1,4 @@
-import type { ChampionId } from "@ldc/shared";
+import type { ChampionId, Position } from "@ldc/shared";
 import type { EngineConfig } from "./config";
 import type { ComfortStats, MasteryEntry, PlayerGame } from "./types";
 
@@ -23,18 +23,24 @@ export function percentile(v: number, all: number[]): number {
  *   own overall win rate with k from config: (wins + k·base) / (games + k).
  * - Experience: 1 − e^(−weightedGames / scale).
  * - Mastery: percentile of mastery points among the player's champions.
+ * When a role is given, games on the champion in other roles count with
+ * offRoleGameWeight, so comfort reflects how well the player plays it *there*.
  */
 export function computeComfort(
   games: PlayerGame[],
   masteries: MasteryEntry[],
   now: number,
   cfg: EngineConfig["comfort"],
+  role: Position | null = null,
 ): Map<ChampionId, ComfortStats> {
   const halfLifeMs = cfg.recencyHalfLifeDays * DAY_MS;
-  const weight = (g: PlayerGame) => Math.pow(0.5, Math.max(0, now - g.endedAt) / halfLifeMs);
+  const recency = (g: PlayerGame) => Math.pow(0.5, Math.max(0, now - g.endedAt) / halfLifeMs);
+  const inRole = (g: PlayerGame) => !role || !g.position || g.position === role;
+  const weight = (g: PlayerGame) => recency(g) * (inRole(g) ? 1 : cfg.offRoleGameWeight);
 
-  const totalW = games.reduce((s, g) => s + weight(g), 0);
-  const base = totalW > 0 ? games.reduce((s, g) => s + (g.win ? weight(g) : 0), 0) / totalW : 0.5;
+  // The player's own average is the smoothing target, over all their games.
+  const totalW = games.reduce((s, g) => s + recency(g), 0);
+  const base = totalW > 0 ? games.reduce((s, g) => s + (g.win ? recency(g) : 0), 0) / totalW : 0.5;
 
   const byChamp = new Map<ChampionId, PlayerGame[]>();
   for (const g of games) byChamp.set(g.championId, [...(byChamp.get(g.championId) ?? []), g]);
@@ -61,6 +67,7 @@ export function computeComfort(
 
     const gamesByPosition: Record<string, number> = {};
     for (const g of list) if (g.position) gamesByPosition[g.position] = (gamesByPosition[g.position] ?? 0) + 1;
+    const roleList = role ? list.filter((g) => g.position === role) : [];
 
     out.set(id, {
       championId: id,
@@ -72,6 +79,9 @@ export function computeComfort(
       masteryPoints: mastery?.points ?? 0,
       score: clamp01(score),
       gamesByPosition,
+      role,
+      gamesInRole: role ? roleList.length : null,
+      winRateInRole: role && roleList.length ? roleList.filter((g) => g.win).length / roleList.length : null,
     });
   }
   return out;

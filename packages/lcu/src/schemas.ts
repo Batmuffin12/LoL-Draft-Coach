@@ -82,6 +82,15 @@ export type CurrentSummoner = z.infer<typeof CurrentSummonerSchema>;
 
 export const PickableChampionIdsSchema = z.array(z.number().int());
 
+/**
+ * Riot's own recommended positions per champion (keyed by champion id as a string),
+ * maintained by Riot each patch. Unofficial like all LCU data.
+ */
+export const RecommendedPositionsSchema = z.record(
+  z.string().regex(/^\d+$/),
+  z.looseObject({ recommendedPositions: z.array(z.string()).default([]) }),
+);
+
 export class LcuSchemaError extends Error {
   constructor(
     readonly endpoint: string,

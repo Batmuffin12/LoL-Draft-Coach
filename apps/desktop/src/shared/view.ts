@@ -42,6 +42,7 @@ export interface PickView {
   score: number;
   factors: FactorScores;
   reasons: string[];
+  offMeta: boolean;
 }
 
 export interface ViewState {

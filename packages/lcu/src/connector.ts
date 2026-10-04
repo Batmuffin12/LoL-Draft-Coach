@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { ConnectionState } from "@ldc/shared";
+import { normalizePosition, type ChampionId, type ConnectionState, type Position } from "@ldc/shared";
 import type { LcuCredentials } from "./credentials";
 import { LcuHttp } from "./http";
 import { LcuSocket, type LcuEvent } from "./socket";
@@ -10,6 +10,7 @@ import {
   GameflowSessionSchema,
   PickableChampionIdsSchema,
   RankedStatsSchema,
+  RecommendedPositionsSchema,
   parseLcu,
   type ChampSelectSession,
   type CurrentSummoner,
@@ -24,6 +25,7 @@ export const LCU_PATHS = {
   gameflowSession: "/lol-gameflow/v1/session",
   rankedStats: "/lol-ranked/v1/current-ranked-stats",
   currentSummoner: "/lol-summoner/v1/current-summoner",
+  recommendedPositions: "/lol-perks/v1/recommended-champion-positions",
 } as const;
 
 export interface ConnectorEvents {
@@ -171,6 +173,16 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   async getRankedStats(): Promise<RankedStats | null> {
     const data = await this.requireHttp().get(LCU_PATHS.rankedStats);
     return data == null ? null : parseLcu(RankedStatsSchema, LCU_PATHS.rankedStats, data);
+  }
+
+  /** Riot's recommended positions per champion (empty map when unavailable). */
+  async getRecommendedPositions(): Promise<Map<ChampionId, Position[]>> {
+    const data = await this.requireHttp().get(LCU_PATHS.recommendedPositions);
+    if (data == null) return new Map();
+    const parsed = parseLcu(RecommendedPositionsSchema, LCU_PATHS.recommendedPositions, data);
+    return new Map(
+      Object.entries(parsed).map(([id, v]) => [Number(id), v.recommendedPositions.map(normalizePosition).filter(Boolean)]),
+    );
   }
 
   /** The local player's own summoner (used only to load their own history). */

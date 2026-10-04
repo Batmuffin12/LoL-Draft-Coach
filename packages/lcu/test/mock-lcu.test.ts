@@ -138,3 +138,23 @@ describe("FixtureRecorder", () => {
     expect(JSON.parse(text).frames.length).toBeGreaterThan(10);
   });
 });
+
+describe("recommended positions", () => {
+  it("reads Riot's recommended positions as normalised positions", async () => {
+    const creds = await startMock();
+    connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });
+    connector.start();
+    await waitFor(() => connector!.status === "connected");
+    const positions = await connector.getRecommendedPositions();
+    expect(positions.get(245)).toEqual(["jungle", "middle"]);
+    expect(positions.get(202)).toEqual(["bottom"]);
+  });
+
+  it("returns an empty map when the client doesn't serve them", async () => {
+    const creds = await startMock("synthetic-draft-pick", { "/lol-perks/v1/recommended-champion-positions": null });
+    connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });
+    connector.start();
+    await waitFor(() => connector!.status === "connected");
+    expect((await connector.getRecommendedPositions()).size).toBe(0);
+  });
+});
