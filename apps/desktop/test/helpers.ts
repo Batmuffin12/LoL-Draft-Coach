@@ -76,11 +76,21 @@ export function fakeRiotFetch(opts: { expiredKey?: boolean; myChamps?: [number, 
       return Response.json({ status: { message: "Bad Request - Exception decrypting", status_code: 400 } }, { status: 400 });
     }
     if (url.pathname.includes("champion-mastery")) {
-      return Response.json([{ championId: 103, championLevel: 7, championPoints: 250000 }, { championId: 84, championLevel: 5, championPoints: 40000 }], { headers });
+      return Response.json(
+        [
+          { championId: 103, championLevel: 7, championPoints: 250000, lastPlayTime: Date.now(), milestoneGrades: ["S", "A+"] },
+          { championId: 84, championLevel: 5, championPoints: 40000, lastPlayTime: Date.now() },
+        ],
+        { headers },
+      );
     }
     if (url.pathname.includes("/league/")) return Response.json([{ queueType: "RANKED_SOLO_5x5", tier: "PLATINUM", rank: "II" }], { headers });
     if (url.pathname.includes("/accounts/by-riot-id/")) return Response.json({ puuid: LOCAL_PUUID, gameName: "Me", tagLine: "EUW" }, { headers });
-    if (url.pathname.endsWith("/ids")) return Response.json(url.searchParams.get("queue") === "420" ? ids : [], { headers });
+    if (url.pathname.endsWith("/ids")) {
+      const start = Number(url.searchParams.get("start") ?? 0);
+      const count = Number(url.searchParams.get("count") ?? 20);
+      return Response.json(url.searchParams.get("queue") === "420" ? ids.slice(start, start + count) : [], { headers });
+    }
     const m = /\/matches\/EUW1_(\d+)$/.exec(url.pathname);
     if (m) {
       const i = Number(m[1]) - 1000;

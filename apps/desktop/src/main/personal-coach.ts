@@ -1,5 +1,6 @@
 import { unavailableChampions } from "@ldc/lcu";
 import {
+  adviseRoles,
   bandFromRankedEntries,
   computeComfort,
   deriveChampionAttributes,
@@ -56,6 +57,7 @@ export class PersonalCoach extends Coach {
     if (!this.p.riot) {
       this.setProfileError("No Riot API key configured. Set RIOT_API_KEY in your .env to get personal picks.");
     }
+    this.p.ddragon.on("patch", () => this.updateRoleAdvice()); // champion names/icons for the lobby
     this.p.connector.on("status", (s) => {
       if (s === "connected") void this.onClientConnected();
     });
@@ -154,8 +156,29 @@ export class PersonalCoach extends Coach {
     const { engine } = this.p.config;
     this.profile = { games: [...profile.games], samples: [...profile.samples], masteries: profile.masteries };
     this.comfortByRole.clear();
+    this.updateRoleAdvice();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.onDraft();
+  }
+
+  private updateRoleAdvice(): void {
+    if (!this.profile) return;
+    const lookup = (id: number) => {
+      try {
+        return this.deps.ddragon.champion(id);
+      } catch {
+        return undefined;
+      }
+    };
+    const roles = adviseRoles(this.profile.games, this.profile.masteries, Date.now(), this.p.config.engine).map((r) => ({
+      role: r.role,
+      games: r.games,
+      winRate: r.winRate,
+      score: r.score,
+      enoughData: r.enoughData,
+      champions: r.topChampions.map((id) => champView(id, lookup)!),
+    }));
+    this.update({ roles });
   }
 
   /** On a new champ select: read which champions are pickable and whether the queue is supported. */

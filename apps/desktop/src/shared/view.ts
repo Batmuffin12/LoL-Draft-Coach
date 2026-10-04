@@ -45,12 +45,24 @@ export interface PickView {
   offMeta: boolean;
 }
 
+/** One role in the lobby's role advice (information only; never sets positions). */
+export interface RoleView {
+  role: string;
+  games: number;
+  winRate: number;
+  score: number;
+  enoughData: boolean;
+  champions: ChampView[];
+}
+
 export interface ViewState {
   status: CoachStatus;
   draft: DraftView | null;
   picks: PickView[];
   /** Role the picks are for, if known. */
   pickRole: string | null;
+  /** Your roles ranked by recent results, for the lobby. */
+  roles: RoleView[];
   notices: string[];
   docked: boolean;
 }
@@ -61,6 +73,7 @@ export function emptyViewState(): ViewState {
     draft: null,
     picks: [],
     pickRole: null,
+    roles: [],
     notices: [],
     docked: true,
   };

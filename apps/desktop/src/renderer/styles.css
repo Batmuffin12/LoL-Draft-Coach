@@ -69,3 +69,11 @@ main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: 
 .disclaimer { margin-top: 8px !important; font-size: 10px; color: var(--muted); }
 .idle { display: flex; flex-direction: column; gap: 6px; }
 .tag { margin-left: 6px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #ffb86b; border: 1px solid #6b4a24; border-radius: 3px; padding: 0 4px; vertical-align: middle; }
+.roles ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.role { display: flex; gap: 8px; align-items: flex-start; }
+.role.thin { opacity: 0.6; }
+.role .rank { color: var(--gold); font-weight: 700; width: 12px; }
+.role-body { flex: 1; min-width: 0; }
+.role-name { text-transform: capitalize; }
+.role-champs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+.role-champ { display: inline-flex; align-items: center; gap: 4px; }
