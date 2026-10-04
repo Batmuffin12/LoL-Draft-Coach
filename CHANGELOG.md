@@ -2,6 +2,11 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.2.2] — 2026-10-05
+
+### Added
+- Demo mode: the mock client replays a recorded draft while the panel loads your real history from `RIOT_ID`, so suggestions can be tested without playing a game.
+
 ## [0.2.1] — 2026-10-05
 
 ### Fixed
