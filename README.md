@@ -20,7 +20,7 @@ pnpm typecheck
 pnpm desktop             # build and start the champ select panel
 ```
 
-Try the panel without League: run `pnpm --filter @ldc/lcu mock` in one terminal, then in another set the printed `LDC_LCU_OVERRIDE` value and run `pnpm desktop`.
+Try the panel without playing a game: run `pnpm --filter @ldc/lcu mock` in one terminal (or `pnpm --filter @ldc/lcu mock recorded/real-ranked-flex-jungle` for the real recording), then in another terminal set the printed `LDC_LCU_OVERRIDE` value and run `pnpm desktop`. The mock replays the draft in a loop and the panel loads your own history from `RIOT_ID`, so the suggestions are real. In the real client, a Practice Tool or custom game champ select also works and can be left without penalty.
 
 Record a real champ select as a test fixture (anonymised automatically): `pnpm --filter @ldc/lcu record`, then enter champ select.
 

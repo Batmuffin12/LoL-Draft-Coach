@@ -75,6 +75,7 @@ export class PersonalCoach extends Coach {
       const ranked = await this.p.connector.getRankedStats().catch(() => null);
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.p.config.bands));
       if (me?.gameName && me.tagLine) await this.loadByRiotId(me.gameName, me.tagLine, false);
+      else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
       this.notice(`Could not read your account from the client: ${(err as Error).message}`);
     }

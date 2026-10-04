@@ -7,9 +7,8 @@ import { loadFixture, MockLcuServer } from "./testing";
 
 const name = process.argv[2] ?? "synthetic-draft-pick";
 const timeScale = Number(process.argv[3] ?? "0.15");
-const server = new MockLcuServer(loadFixture(name), {
-  "/lol-summoner/v1/current-summoner": { puuid: "mock-local-player", gameName: "Mock", tagLine: "MOCK" },
-});
+// No account is served, so the panel loads your own history from RIOT_ID in .env.
+const server = new MockLcuServer(loadFixture(name));
 const creds = await server.start();
 console.log(`Mock League client replaying "${name}".`);
 console.log(`Start the panel with:  $env:LDC_LCU_OVERRIDE="${creds.port}:${creds.password}"; pnpm desktop`);

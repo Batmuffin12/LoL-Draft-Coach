@@ -71,7 +71,7 @@ afterEach(async () => {
   coach = null;
 });
 
-async function startCoach(riot: RiotApi | null, overrides: Record<string, unknown> = {}) {
+async function startCoach(riot: RiotApi | null, overrides: Record<string, unknown> = {}, riotId: string | null = null) {
   server = new MockLcuServer(loadFixture("synthetic-draft-pick"), {
     // Like the real client: its PUUID is not usable with the Riot API.
     "/lol-summoner/v1/current-summoner": { puuid: CLIENT_PUUID, gameName: "Me", tagLine: "EUW" },
@@ -85,7 +85,7 @@ async function startCoach(riot: RiotApi | null, overrides: Record<string, unknow
     ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
     config,
     riot,
-    riotId: null,
+    riotId,
     storeFor: (puuid) => new MatchStore(matchesDir, puuid),
   });
   const states: ViewState[] = [];
@@ -124,6 +124,14 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     await waitFor(() => coach!.state.status.profile.state === "ready");
     expect(fake.calls.some((c) => c.includes("/accounts/by-riot-id/Me/EUW"))).toBe(true);
     expect(fake.calls.some((c) => c.includes(CLIENT_PUUID))).toBe(false);
+  });
+
+  it("falls back to RIOT_ID when the client reports no account (mock client / demo)", async () => {
+    const fake = fakeRiotFetch();
+    await startCoach(riotWith(fake.fetchFn), { "/lol-summoner/v1/current-summoner": null, "/lol-ranked/v1/current-ranked-stats": null }, "Me#EUW");
+    await waitFor(() => coach!.state.status.profile.state === "ready");
+    expect(fake.calls.some((c) => c.includes("/accounts/by-riot-id/Me/EUW"))).toBe(true);
+    expect(coach!.state.status.band).toBe(2); // from League-V4 (PLATINUM) since the client has no ranked data
   });
 
   it("shows a clear renew-your-key message when the development key has expired", async () => {
