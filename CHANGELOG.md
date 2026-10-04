@@ -2,6 +2,12 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.2.3] — 2026-10-05
+
+### Changed
+- Role eligibility uses Riot's recommended positions from the client plus other players' games; your own off-meta picks (e.g. a fun jungle pick) are still suggested but tagged "off-meta" and penalised (`roles.offMetaPenalty`).
+- Comfort is role-aware: games on a champion in other roles count only partly (`comfort.offRoleGameWeight`).
+
 ## [0.2.2] — 2026-10-05
 
 ### Added
