@@ -1,0 +1,25 @@
+{
+  "name": "@ldc/lcu",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "record": "tsx src/record-cli.ts"
+  },
+  "dependencies": {
+    "@ldc/shared": "workspace:*",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2",
+    "selfsigned": "^5.5.0",
+    "tsx": "^4"
+  }
+}
