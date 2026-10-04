@@ -22,6 +22,8 @@ export const EngineConfigSchema = z.object({
     smoothingK: z.number().min(0),
     experienceScaleGames: z.number().positive(),
     winRateSpread: z.number().positive(),
+    /** Weight of games played on the champion in other roles when scoring a role (0..1). */
+    offRoleGameWeight: unit,
     mix: z.object({ winRate: weight, experience: weight, mastery: weight }),
   }),
   teamNeeds: z.object({
@@ -33,7 +35,12 @@ export const EngineConfigSchema = z.object({
     reasonMinFit: unit,
     dimensions: z.object({ damageBalance: weight, frontline: weight, engage: weight }),
   }),
-  roles: z.object({ minRoleShare: unit }),
+  roles: z.object({
+    /** A role counts as meta for a champion when at least this share of other players' games are in it. */
+    minRoleShare: unit,
+    /** Score reduction for picks you play in a role that isn't meta for the champion (0..1). */
+    offMetaPenalty: unit,
+  }),
   topN: z.number().int().positive(),
 });
 export type EngineConfig = z.infer<typeof EngineConfigSchema>;

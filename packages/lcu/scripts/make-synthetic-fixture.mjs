@@ -101,6 +101,14 @@ const fixture = {
     "/lol-gameflow/v1/gameflow-phase": "ChampSelect",
     "/lol-gameflow/v1/session": { phase: "ChampSelect", gameData: { queue: { id: 400, type: "NORMAL" } } },
     "/lol-champ-select/v1/session": snapshot,
+    // Same shape as /lol-perks/v1/recommended-champion-positions (test data, subset).
+    "/lol-perks/v1/recommended-champion-positions": Object.fromEntries(
+      Object.entries({
+        12: ["UTILITY"], 21: ["BOTTOM"], 22: ["BOTTOM"], 25: ["UTILITY", "MIDDLE"], 32: ["JUNGLE"], 51: ["BOTTOM"],
+        54: ["TOP"], 59: ["JUNGLE"], 84: ["MIDDLE", "TOP"], 86: ["TOP"], 103: ["MIDDLE"], 111: ["UTILITY"],
+        122: ["TOP"], 157: ["MIDDLE", "TOP"], 202: ["BOTTOM"], 238: ["MIDDLE"], 245: ["JUNGLE", "MIDDLE"], 950: ["JUNGLE", "MIDDLE"],
+      }).map(([id, p]) => [id, { recommendedPositions: p }]),
+    ),
     "/lol-champ-select/v1/pickable-champion-ids": [12, 21, 22, 25, 32, 51, 53, 54, 59, 64, 81, 84, 86, 99, 103, 111, 114, 119, 122, 157, 236, 238, 245, 266, 412, 516],
   },
   frames,

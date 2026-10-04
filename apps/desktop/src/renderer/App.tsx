@@ -92,7 +92,14 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
             <Icon champ={p.champion} size={40} />
             <div className="pick-body">
               <div className="pick-head">
-                <strong>{p.champion.name}</strong>
+                <strong>
+                  {p.champion.name}
+                  {p.offMeta && (
+                    <span className="tag" title="You play it in this role, but it isn't a usual role for this champion">
+                      off-meta
+                    </span>
+                  )}
+                </strong>
                 <span className="score">{Math.round(p.score * 100)}</span>
               </div>
               <div className="factors">

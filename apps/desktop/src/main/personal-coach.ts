@@ -11,7 +11,7 @@ import {
   type ComfortStats,
 } from "@ldc/engine";
 import { RiotKeyError, type RiotApi } from "@ldc/riot-api";
-import type { ChampionId, RankBandId } from "@ldc/shared";
+import type { ChampionId, Position, RankBandId } from "@ldc/shared";
 import type { PickView } from "../shared/view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
@@ -38,7 +38,10 @@ export class PersonalCoach extends Coach {
   private loadingFor: string | null = null;
   private band: RankBandId;
   private profile: PersonalProfile | null = null;
-  private comfort = new Map<ChampionId, ComfortStats>();
+  /** Comfort per role ("" = no role), computed lazily and reset when the profile changes. */
+  private comfortByRole = new Map<string, Map<ChampionId, ComfortStats>>();
+  /** Riot's recommended positions per champion, read from the client. */
+  private intendedPositions = new Map<ChampionId, Position[]>();
   private attributes = new Map<ChampionId, ChampionAttributes>();
   private pickable: ChampionId[] = [];
   private queueSupported = true;
@@ -73,6 +76,7 @@ export class PersonalCoach extends Coach {
     try {
       const me = await this.p.connector.getCurrentSummoner();
       const ranked = await this.p.connector.getRankedStats().catch(() => null);
+      this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.p.config.bands));
       if (me?.gameName && me.tagLine) await this.loadByRiotId(me.gameName, me.tagLine, false);
       else await this.loadFromRiotId(); // e.g. the mock client, which has no account
@@ -149,7 +153,7 @@ export class PersonalCoach extends Coach {
   private setProfile(profile: PersonalProfile): void {
     const { engine } = this.p.config;
     this.profile = { games: [...profile.games], samples: [...profile.samples], masteries: profile.masteries };
-    this.comfort = computeComfort(this.profile.games, this.profile.masteries, Date.now(), engine.comfort);
+    this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.onDraft();
   }
@@ -177,12 +181,19 @@ export class PersonalCoach extends Coach {
     }
     const { engine } = this.p.config;
     const role = draftRole(this.draft, this.profile.games);
+    const key = role ?? "";
+    let comfort = this.comfortByRole.get(key);
+    if (!comfort) {
+      comfort = computeComfort(this.profile.games, this.profile.masteries, Date.now(), engine.comfort, role);
+      this.comfortByRole.set(key, comfort);
+    }
     const picks = recommendPicks({
       draft: this.draft,
       pickable: this.pickable,
       unavailable: unavailableChampions(this.draft),
-      comfort: this.comfort,
+      comfort,
       attributes: this.attributes,
+      intendedPositions: this.intendedPositions,
       role,
       weights: weightsForBand(this.band, engine),
       config: engine,
@@ -199,6 +210,7 @@ export class PersonalCoach extends Coach {
       score: p.score,
       factors: p.factors,
       reasons: p.reasons,
+      offMeta: p.offMeta,
     }));
     this.update({ picks: views, pickRole: role });
   }

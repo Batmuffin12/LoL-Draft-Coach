@@ -28,6 +28,8 @@ export interface AttributeSample {
   /** Seconds spent crowd-controlling others (Match-V5 timeCCingOthers). */
   ccSeconds: number;
   durationSec: number;
+  /** True for the player's own participant: excluded from role shares (what others play). */
+  self?: boolean;
 }
 
 /** Attributes measured from match data (never labelled by hand). */
@@ -41,7 +43,7 @@ export interface ChampionAttributes {
   frontline: number;
   /** CC seconds per minute, as a percentile among measured champions (0..1). */
   engage: number;
-  /** Share of samples per position. */
+  /** Share of other players' samples per position (the player's own games excluded). */
   roleShares: Record<Position, number>;
 }
 
@@ -59,4 +61,9 @@ export interface ComfortStats {
   /** Comfort factor in [0, 1]. */
   score: number;
   gamesByPosition: Record<Position, number>;
+  /** Role the stats were weighted for (null = all roles equally). */
+  role: Position | null;
+  /** Games and win rate in that role (null when no role). */
+  gamesInRole: number | null;
+  winRateInRole: number | null;
 }

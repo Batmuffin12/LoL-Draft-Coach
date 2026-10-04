@@ -16,6 +16,7 @@ import {
   parseRankBandConfig,
   percentile,
   recommendPicks,
+  roleFit,
   scoreTeamNeeds,
   teamProfile,
   weightsForBand,
@@ -251,8 +252,9 @@ describe("recommendPicks", () => {
     ...Array.from({ length: 3 }, (_, i) => game(11, i < 2, 2, "middle")),
     ...Array.from({ length: 3 }, (_, i) => game(12, i < 1, 2, "middle")),
   ];
-  const comfort = computeComfort(games, [], NOW, engineCfg.comfort);
+  const comfort = computeComfort(games, [], NOW, engineCfg.comfort, "middle");
   const base = {
+    intendedPositions: new Map<number, string[]>([[2, ["middle"]], [11, ["middle"]], [12, ["middle"]], [4, ["bottom"]]]),
     draft: draft(),
     pickable: [] as number[],
     unavailable: new Set<number>(),
@@ -269,7 +271,7 @@ describe("recommendPicks", () => {
     for (let i = 1; i < picks.length; i++) expect(picks[i - 1]!.score).toBeGreaterThanOrEqual(picks[i]!.score);
     expect(picks[0]!.factors.comfort).not.toBeNull();
     expect(picks[0]!.factors.laneMatchup).toBeNull();
-    expect(picks[0]!.reasons[0]).toMatch(/recent games, \d+% win rate/);
+    expect(picks[0]!.reasons[0]).toMatch(/recent middle games, \d+% win rate/);
   });
 
   it("only suggests champions from the player's pool that fit the role", () => {
@@ -307,5 +309,62 @@ describe("purity", () => {
       const text = readFileSync(join(dir, f), "utf8");
       expect(text, f).not.toMatch(/from "node:|require\(|\bfetch\(|from "(fs|http|https|net)"/);
     }
+  });
+});
+
+describe("role-aware comfort and off-meta picks", () => {
+  // Mirrors a real profile: a jungle main (15 games) and a fun pick played 4x jungle + 4x bottom.
+  const MAIN = 950;
+  const FUN = 202;
+  const games = [
+    ...Array.from({ length: 15 }, (_, i) => game(MAIN, i < 8, 3, "jungle")),
+    ...Array.from({ length: 4 }, (_, i) => game(FUN, i < 2, 3, "jungle")),
+    ...Array.from({ length: 4 }, (_, i) => game(FUN, i < 2, 3, "bottom")),
+  ];
+  const masteries = [
+    { championId: FUN, level: 10, points: 400_000 },
+    { championId: MAIN, level: 5, points: 60_000 },
+  ];
+  const intended = new Map<number, string[]>([[MAIN, ["jungle", "middle"]], [FUN, ["bottom"]]]);
+
+  it("counts games in other roles only partly", () => {
+    const all = computeComfort(games, masteries, NOW, engineCfg.comfort).get(FUN)!;
+    const jungle = computeComfort(games, masteries, NOW, engineCfg.comfort, "jungle").get(FUN)!;
+    expect(jungle.weightedGames).toBeLessThan(all.weightedGames);
+    expect(jungle.gamesInRole).toBe(4);
+    expect(jungle.games).toBe(8);
+  });
+
+  it("classifies role fit from Riot's positions, others' games, then the player's own games", () => {
+    const comfort = computeComfort(games, masteries, NOW, engineCfg.comfort, "jungle");
+    const min = engineCfg.roles.minRoleShare;
+    expect(roleFit(MAIN, comfort.get(MAIN)!, "jungle", intended, new Map(), min)).toBe("meta");
+    expect(roleFit(FUN, comfort.get(FUN)!, "jungle", intended, new Map(), min)).toBe("offMeta");
+    expect(roleFit(FUN, comfort.get(FUN)!, "top", intended, new Map(), min)).toBeNull();
+  });
+
+  it("ranks the real main above a fun pick, and tags the fun pick off-meta with a penalty", () => {
+    const comfort = computeComfort(games, masteries, NOW, engineCfg.comfort, "jungle");
+    const blind = draft({ myTeam: draft().myTeam.map((s) => ({ ...s, championId: 0, position: s.isLocalPlayer ? "jungle" : "" })) });
+    const picks = recommendPicks({
+      draft: blind, pickable: [], unavailable: new Set(), comfort, attributes: new Map(), intendedPositions: intended,
+      role: "jungle", weights: weightsForBand(2, engineCfg), config: { ...engineCfg, topN: 5 },
+    });
+    expect(picks.map((p) => p.championId)).toEqual([MAIN, FUN]);
+    const fun = picks[1]!;
+    expect(fun.offMeta).toBe(true);
+    expect(picks[0]!.offMeta).toBe(false);
+    expect(fun.reasons.join(" ")).toMatch(/Off-meta in jungle \(usually bottom\)/);
+    expect(fun.reasons[0]).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
+    const unpenalised = combineFactors(fun.factors, weightsForBand(2, engineCfg));
+    expect(fun.score).toBeCloseTo(unpenalised * (1 - engineCfg.roles.offMetaPenalty));
+  });
+
+  it("leaves the player's own games out of champion role shares", () => {
+    const own = Array.from({ length: 4 }, () => sample(FUN, { position: "jungle", self: true }));
+    const others = Array.from({ length: 6 }, () => sample(FUN, { position: "bottom" }));
+    const a = deriveChampionAttributes([...own, ...others], 3).get(FUN)!;
+    expect(a.roleShares).toEqual({ bottom: 1 });
+    expect(a.samples).toBe(10);
   });
 });

@@ -55,8 +55,10 @@ export async function loadProfile(opts: LoadProfileOptions): Promise<PersonalPro
       }
     }
     if (stored) {
-      if (stored.me) profile.games.push(stored.me);
-      profile.samples.push(...stored.samples);
+      const me = stored.me;
+      if (me) profile.games.push(me);
+      // A champion appears once per match, so the player's own sample is the one on their champion.
+      profile.samples.push(...stored.samples.map((s) => ({ ...s, self: me !== null && s.championId === me.championId })));
     }
     const done = i + 1;
     if (done % every === 0 || done === ids.length) opts.onProgress?.(done, ids.length, profile);

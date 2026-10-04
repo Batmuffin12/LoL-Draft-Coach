@@ -42,8 +42,9 @@ export function deriveChampionAttributes(samples: AttributeSample[], minSamples:
       tank += s.damageTaken + s.selfMitigated;
       cc += s.ccSeconds;
       minutes += Math.max(1, s.durationSec / 60);
-      if (s.position) roles[s.position] = (roles[s.position] ?? 0) + 1;
+      if (s.position && !s.self) roles[s.position] = (roles[s.position] ?? 0) + 1;
     }
+    const others = list.filter((s) => !s.self).length;
     const dmg = phys + magic + tru || 1;
     raws.push({
       id,
@@ -53,7 +54,7 @@ export function deriveChampionAttributes(samples: AttributeSample[], minSamples:
       tru: tru / dmg,
       tank: tank / minutes,
       cc: cc / minutes,
-      roles: Object.fromEntries(Object.entries(roles).map(([k, v]) => [k, v / list.length])),
+      roles: others ? Object.fromEntries(Object.entries(roles).map(([k, v]) => [k, v / others])) : {},
     });
   }
 

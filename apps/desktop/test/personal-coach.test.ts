@@ -113,6 +113,8 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     expect(coach!.state.pickRole).toBe("middle");
     expect(picks[0]!.champion.name).toBe("Ahri");
     expect(picks[0]!.reasons.join(" ")).toMatch(/win rate/);
+    // Riot's positions come from the client (fixture): Ahri/Ekko/Akali are all listed for middle.
+    expect(picks.every((p) => !p.offMeta)).toBe(true);
 
     // Compliance: nothing identity-like ever reaches the panel.
     expect(JSON.stringify(states)).not.toMatch(/puuid|mock-local|other-|name-|gameName|tagLine/i);

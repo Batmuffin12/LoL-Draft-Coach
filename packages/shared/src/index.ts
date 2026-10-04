@@ -85,6 +85,8 @@ export interface PickRecommendation {
   factors: FactorScores;
   /** Short, data-derived facts behind the score (no invented stats). */
   reasons: string[];
+  /** The player plays it in this role, but it isn't a recommended/meta role for the champion. */
+  offMeta: boolean;
 }
 
 /** Status shown in the panel. */

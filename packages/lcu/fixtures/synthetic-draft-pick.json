@@ -377,6 +377,103 @@
       },
       "trades": []
     },
+    "/lol-perks/v1/recommended-champion-positions": {
+      "12": {
+        "recommendedPositions": [
+          "UTILITY"
+        ]
+      },
+      "21": {
+        "recommendedPositions": [
+          "BOTTOM"
+        ]
+      },
+      "22": {
+        "recommendedPositions": [
+          "BOTTOM"
+        ]
+      },
+      "25": {
+        "recommendedPositions": [
+          "UTILITY",
+          "MIDDLE"
+        ]
+      },
+      "32": {
+        "recommendedPositions": [
+          "JUNGLE"
+        ]
+      },
+      "51": {
+        "recommendedPositions": [
+          "BOTTOM"
+        ]
+      },
+      "54": {
+        "recommendedPositions": [
+          "TOP"
+        ]
+      },
+      "59": {
+        "recommendedPositions": [
+          "JUNGLE"
+        ]
+      },
+      "84": {
+        "recommendedPositions": [
+          "MIDDLE",
+          "TOP"
+        ]
+      },
+      "86": {
+        "recommendedPositions": [
+          "TOP"
+        ]
+      },
+      "103": {
+        "recommendedPositions": [
+          "MIDDLE"
+        ]
+      },
+      "111": {
+        "recommendedPositions": [
+          "UTILITY"
+        ]
+      },
+      "122": {
+        "recommendedPositions": [
+          "TOP"
+        ]
+      },
+      "157": {
+        "recommendedPositions": [
+          "MIDDLE",
+          "TOP"
+        ]
+      },
+      "202": {
+        "recommendedPositions": [
+          "BOTTOM"
+        ]
+      },
+      "238": {
+        "recommendedPositions": [
+          "MIDDLE"
+        ]
+      },
+      "245": {
+        "recommendedPositions": [
+          "JUNGLE",
+          "MIDDLE"
+        ]
+      },
+      "950": {
+        "recommendedPositions": [
+          "JUNGLE",
+          "MIDDLE"
+        ]
+      }
+    },
     "/lol-champ-select/v1/pickable-champion-ids": [
       12,
       21,
