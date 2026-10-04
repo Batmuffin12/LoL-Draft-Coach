@@ -73,6 +73,21 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  packages/engine:
+    dependencies:
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
+  packages/jev:
+    dependencies:
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   packages/lcu:
     dependencies:
       '@ldc/shared':
@@ -94,6 +109,15 @@ importers:
       tsx:
         specifier: ^4
         version: 4.23.15
+
+  packages/riot-api:
+    dependencies:
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   packages/shared:
     dependencies:
