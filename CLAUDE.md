@@ -12,7 +12,8 @@
 | Sentry | Skipped for now. |
 | Railway | Not used until milestone 3. |
 | Milestones | 1 (foundation, v0.1.0) and 2 (personal coach, v0.2.0) done. Next: 3 (server + collector, Railway). |
-| Fixtures | Only a synthetic fixture so far. Record a real champ select with `pnpm --filter @ldc/lcu record` and commit it (it is anonymised on write). |
+| Fixtures | Synthetic draft + one real Ranked Flex recording (`packages/lcu/fixtures/recorded/`). Record more with `pnpm --filter @ldc/lcu record`. |
+| Gotchas | The LCU PUUID is NOT valid for the Riot API (per-key encrypted PUUIDs): resolve gameName#tagLine via Account-V1. `RIOT_ID` must be quoted in .env. A fresh dev key can take ~30s to activate. |
 
 Interim deviation (agreed with the owner): until `apps/server` exists (milestone 3), the desktop **main process** calls the Riot API with the key from the local `.env`. The key never reaches the renderer. Move these calls behind the server in milestone 3.
 

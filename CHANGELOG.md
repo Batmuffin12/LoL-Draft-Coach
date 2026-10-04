@@ -2,6 +2,15 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.2.1] — 2026-10-05
+
+### Fixed
+- Match history never loaded with the League client open: the client's PUUID is not valid for the Riot API (PUUIDs are encrypted per API key). The account is now resolved from the client's Riot ID through Account-V1.
+- `RIOT_ID` must be quoted in `.env` (`#` starts a comment); documented in `.env.example`, with a clearer error.
+
+### Added
+- First real (anonymised) champ select fixture: Ranked Flex, replayed in tests.
+
 ## [0.2.0] — 2026-10-05 — Milestone 2: Personal coach
 
 ### Added
