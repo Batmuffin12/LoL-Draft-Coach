@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "Maps League-V4 / LCU tier strings to rank bands (docs/SPEC.md, Rank bands). Tiers not listed fall back to defaultBand.",
+  "bands": [
+    { "id": 1, "name": "Iron to Silver", "tiers": ["IRON", "BRONZE", "SILVER"] },
+    { "id": 2, "name": "Gold to Platinum", "tiers": ["GOLD", "PLATINUM"] },
+    { "id": 3, "name": "Emerald to Diamond", "tiers": ["EMERALD", "DIAMOND"] },
+    { "id": 4, "name": "Master and above", "tiers": ["MASTER", "GRANDMASTER", "CHALLENGER"] }
+  ],
+  "defaultBand": 2,
+  "rankedQueueTypesByPriority": ["RANKED_SOLO_5x5", "RANKED_FLEX_SR"]
+}

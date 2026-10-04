@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "description": "App settings. Queue ids are Riot queue ids (see https://static.developer.riotgames.com/docs/lol/queues.json).",
+  "history": {
+    "matchCount": 100,
+    "queues": [420, 440, 400]
+  },
+  "supportedQueues": [420, 440, 400]
+}

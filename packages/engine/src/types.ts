@@ -1,0 +1,62 @@
+import type { ChampionId, Position } from "@ldc/shared";
+
+/** One of the player's own games (from Match-V5), reduced to what the engine needs. */
+export interface PlayerGame {
+  championId: ChampionId;
+  position: Position;
+  win: boolean;
+  /** Epoch ms when the game ended. */
+  endedAt: number;
+}
+
+/** The player's mastery on a champion (Champion-Mastery-V4). */
+export interface MasteryEntry {
+  championId: ChampionId;
+  level: number;
+  points: number;
+}
+
+/** One participant's stats from a match: the raw material for champion attributes. */
+export interface AttributeSample {
+  championId: ChampionId;
+  position: Position;
+  physicalDamage: number;
+  magicDamage: number;
+  trueDamage: number;
+  damageTaken: number;
+  selfMitigated: number;
+  /** Seconds spent crowd-controlling others (Match-V5 timeCCingOthers). */
+  ccSeconds: number;
+  durationSec: number;
+}
+
+/** Attributes measured from match data (never labelled by hand). */
+export interface ChampionAttributes {
+  championId: ChampionId;
+  samples: number;
+  physicalShare: number;
+  magicShare: number;
+  trueShare: number;
+  /** Damage taken + mitigated per minute, as a percentile among measured champions (0..1). */
+  frontline: number;
+  /** CC seconds per minute, as a percentile among measured champions (0..1). */
+  engage: number;
+  /** Share of samples per position. */
+  roleShares: Record<Position, number>;
+}
+
+export interface ComfortStats {
+  championId: ChampionId;
+  games: number;
+  /** Recency-weighted game count. */
+  weightedGames: number;
+  /** Raw win rate over all games (unweighted), for display. */
+  winRate: number | null;
+  /** Recency-weighted win rate smoothed toward the player's own average. */
+  smoothedWinRate: number;
+  masteryLevel: number | null;
+  masteryPoints: number;
+  /** Comfort factor in [0, 1]. */
+  score: number;
+  gamesByPosition: Record<Position, number>;
+}
