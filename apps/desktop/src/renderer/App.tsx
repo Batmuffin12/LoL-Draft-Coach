@@ -73,8 +73,13 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
   const profile = state.status.profile;
   return (
     <section className="card picks">
-      <h2>
-        Suggested picks{role ? <span className="muted"> · {role}</span> : null}
+      <h2 className="picks-head">
+        <span>
+          Suggested picks{role ? <span className="muted"> · {role}</span> : null}
+        </span>
+        {state.pickAdvice.confidence && picks.length > 0 && (
+          <span className={`confidence ${state.pickAdvice.confidence.level}`}>{state.pickAdvice.confidence.label}</span>
+        )}
       </h2>
       {profile.state === "loading" && (
         <p className="muted">
@@ -123,6 +128,7 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
           </li>
         ))}
       </ol>
+      {state.pickAdvice.whyNot && picks.length > 0 && <p className="why-not">{state.pickAdvice.whyNot}</p>}
       <p className="disclaimer">Suggestions only — you choose and lock your champion.</p>
     </section>
   );

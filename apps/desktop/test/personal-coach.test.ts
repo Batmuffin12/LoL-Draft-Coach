@@ -135,6 +135,8 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     // Riot's positions come from the client (fixture): Ahri/Ekko/Akali are all listed for middle.
     expect(picks.every((p) => !p.offMeta)).toBe(true);
     expect(picks.find((p) => p.champion.id === 103)!.reasons.join(" ")).toMatch(/grades S A+/);
+    // The list as a whole is explained: a confidence label from our own data.
+    expect(coach!.state.pickAdvice.confidence?.label).toMatch(/Clear pick|Close call|Not much data yet/);
 
     // Lobby role advice from the same history: middle (19 games) first, bottom (4) after.
     const roles = coach!.state.roles;

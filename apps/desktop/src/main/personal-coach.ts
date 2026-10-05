@@ -5,8 +5,9 @@ import {
   computeComfort,
   deriveChampionAttributes,
   draftRole,
+  advisePicks,
   mainRole,
-  recommendPicks,
+  renderReason,
   weightsForBand,
   type ChampionAttributes,
   type ComfortStats,
@@ -180,7 +181,7 @@ export class PersonalCoach extends Coach {
     if (this.draft && !this.hadDraft) void this.onChampSelectStart();
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
-      this.update({ picks: [], pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.p.config;
@@ -191,7 +192,7 @@ export class PersonalCoach extends Coach {
       comfort = computeComfort(this.profile.games, this.profile.masteries, Date.now(), engine.comfort, role);
       this.comfortByRole.set(key, comfort);
     }
-    const picks = recommendPicks({
+    const advice = advisePicks({
       draft: this.draft,
       pickable: this.pickable,
       unavailable: unavailableChampions(this.draft),
@@ -201,7 +202,7 @@ export class PersonalCoach extends Coach {
       role,
       weights: weightsForBand(this.band, engine),
       config: engine,
-    });
+    }, this.p.config.explain.settings);
     const lookup = (id: number) => {
       try {
         return this.deps.ddragon.champion(id);
@@ -209,13 +210,20 @@ export class PersonalCoach extends Coach {
         return undefined;
       }
     };
-    const views: PickView[] = picks.map((p) => ({
+    const { templates } = this.p.config.explain;
+    const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
+    const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);
+    const views: PickView[] = advice.picks.map((p) => ({
       champion: champView(p.championId, lookup)!,
       score: p.score,
       factors: p.factors,
-      reasons: p.reasons,
+      reasons: p.reasons.map(say),
       offMeta: p.offMeta,
     }));
-    this.update({ picks: views, pickRole: role });
+    const pickAdvice = {
+      whyNot: advice.whyNot ? say(advice.whyNot) : null,
+      confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
+    };
+    this.update({ picks: views, pickAdvice, pickRole: role });
   }
 }

@@ -1,8 +1,13 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { DraftState } from "@ldc/shared";
+import type { DraftState, Reason } from "@ldc/shared";
 import {
+  advisePicks,
+  confidenceOf,
+  usualPick,
+  parseExplainConfig,
+  renderReason,
   allyChampions,
   bandForTier,
   bandFromRankedEntries,
@@ -29,6 +34,9 @@ import {
 const CONFIG_DIR = join(__dirname, "..", "..", "..", "config");
 const readJson = (f: string) => JSON.parse(readFileSync(join(CONFIG_DIR, f), "utf8"));
 const engineCfg = parseEngineConfig(readJson("engine.v1.json"));
+const explainCfg = parseExplainConfig(readJson("explain.v1.json"));
+/** Reasons as the player reads them (champion names shown as #id). */
+const text = (reasons: Reason[]) => reasons.map((r) => renderReason(r, explainCfg.templates, (id) => `#${id}`)).join(" ");
 const bandCfg = parseRankBandConfig(readJson("rank-bands.v1.json"));
 
 const DAY = 86_400_000;
@@ -177,7 +185,7 @@ describe("team needs", () => {
     const mage = scoreTeamNeeds(attrs.get(2), profile, cfg);
     const adc = scoreTeamNeeds(attrs.get(4), profile, cfg);
     expect(mage.score!).toBeGreaterThan(adc.score!);
-    expect(mage.reasons.join(" ")).toMatch(/magic damage/);
+    expect(text(mage.reasons)).toMatch(/magic damage/);
   });
 
   it("prefers a tank when the team has no frontline", () => {
@@ -185,12 +193,12 @@ describe("team needs", () => {
     const tank = scoreTeamNeeds(attrs.get(3), profile, cfg);
     const adc = scoreTeamNeeds(attrs.get(4), profile, cfg);
     expect(tank.score!).toBeGreaterThan(adc.score!);
-    expect(tank.reasons.join(" ")).toMatch(/frontline/);
+    expect(text(tank.reasons)).toMatch(/frontline/);
   });
 
   it("does not ask for frontline when a measured bruiser is already there", () => {
     const tank = scoreTeamNeeds(attrs.get(3), teamProfile([1, 4], attrs), cfg);
-    expect(tank.reasons.join(" ")).not.toMatch(/frontline/);
+    expect(text(tank.reasons)).not.toMatch(/frontline/);
   });
 
   it("is neutral for an unmeasured candidate", () => {
@@ -273,7 +281,7 @@ describe("recommendPicks", () => {
     for (let i = 1; i < picks.length; i++) expect(picks[i - 1]!.score).toBeGreaterThanOrEqual(picks[i]!.score);
     expect(picks[0]!.factors.comfort).not.toBeNull();
     expect(picks[0]!.factors.laneMatchup).toBeNull();
-    expect(picks[0]!.reasons[0]).toMatch(/recent middle games, \d+% win rate/);
+    expect(text(picks[0]!.reasons.slice(0, 1))).toMatch(/recent middle games, \d+% win rate/);
   });
 
   it("only suggests champions from the player's pool that fit the role", () => {
@@ -301,6 +309,63 @@ describe("recommendPicks", () => {
 
   it("is deterministic", () => {
     expect(recommendPicks(base)).toEqual(recommendPicks(base));
+  });
+
+  it("explains why #1 beats the usual pick: off-meta, team needs, or unavailable", () => {
+    expect(usualPick(base)?.championId).toBe(10);
+    const offMeta = advisePicks(base, explainCfg.settings);
+    expect(offMeta.picks[0]?.championId).toBe(2);
+    expect(offMeta.whyNot).toEqual({ id: "whyNot.offMeta", slots: { champion: 10, role: "middle" } });
+
+    // 10 listed for middle, and measured as a pure physical damage dealer: an all-physical team wants the mage.
+    const physical10 = { championId: 10, samples: 20, physicalShare: 0.95, magicShare: 0.03, trueShare: 0.02, frontline: 0.2, engage: 0.2, roleShares: {}, roleSamples: 0 };
+    const listed = {
+      ...base,
+      intendedPositions: new Map([...base.intendedPositions, [10, ["middle"]]]),
+      attributes: new Map([...base.attributes, [10, physical10]]),
+    };
+    const team = advisePicks(listed, explainCfg.settings);
+    expect(team.picks[0]?.championId).toBe(2);
+    expect(text(team.whyNot ? [team.whyNot] : [])).toBe("Picked over your #10: your team needs magic damage");
+
+    const banned = advisePicks({ ...listed, unavailable: new Set([10]) }, explainCfg.settings);
+    expect(text(banned.whyNot ? [banned.whyNot] : [])).toBe("Your #10 is banned or taken");
+  });
+
+  it("has no why-not line when #1 is the usual pick", () => {
+    const alone = { ...base, draft: draft({ myTeam: draft().myTeam.map((s) => ({ ...s, championId: 0 })) }), intendedPositions: new Map([...base.intendedPositions, [10, ["middle"]]]) };
+    const a = advisePicks(alone, explainCfg.settings);
+    expect(a.picks[0]?.championId).toBe(usualPick(alone)?.championId);
+    expect(a.whyNot).toBeNull();
+  });
+
+  it("returns empty advice when nothing fits", () => {
+    expect(advisePicks({ ...base, comfort: new Map() }, explainCfg.settings)).toEqual({ picks: [], whyNot: null, confidence: null });
+  });
+});
+
+describe("explanation helpers", () => {
+  const t = { a: "{n} {n|game|games}, {wr:pct}% with {c:champion}", b: "plain" };
+  it("renders values, percents, plurals and champion names; shows unknown ids", () => {
+    const name = (id: number) => (id === 7 ? "Ahri" : "?");
+    expect(renderReason({ id: "a", slots: { n: 1, wr: 0.555, c: 7 } }, t, name)).toBe("1 game, 56% with Ahri");
+    expect(renderReason({ id: "a", slots: { n: 3, wr: 0.5, c: 7 } }, t, name)).toBe("3 games, 50% with Ahri");
+    expect(renderReason({ id: "missing", slots: {} }, t, name)).toBe("missing");
+  });
+
+  it("every reason the engine emits has a template", () => {
+    const ids = ["comfort.role", "comfort.roleWithAll", "comfort.otherRoles", "comfort.any", "mastery", "mastery.grades", "team.magic", "team.physical", "team.frontline", "team.engage", "offMeta", "offMeta.usual", "whyNot.unavailable", "whyNot.notPickable", "whyNot.offMeta", "whyNot.team.magic", "whyNot.team.physical", "whyNot.team.frontline", "whyNot.team.engage", "confidence.clear", "confidence.close", "confidence.thin"];
+    for (const id of ids) expect(explainCfg.templates, id).toHaveProperty([id]);
+    const src = readdirSync(join(__dirname, "..", "src")).map((f) => readFileSync(join(__dirname, "..", "src", f), "utf8")).join("\n");
+    for (const m of src.matchAll(/reason\("([\w.]+)"/g)) expect(ids, m[1]).toContain(m[1]);
+  });
+
+  it("labels confidence from sample size and score gap", () => {
+    const s = explainCfg.settings;
+    expect(confidenceOf({ score: 0.9, games: 1, masteryPoints: 0 }, { score: 0.1 }, s)).toBe("thin");
+    expect(confidenceOf({ score: 0.9, games: 1, masteryPoints: 100_000 }, { score: 0.1 }, s)).toBe("clear");
+    expect(confidenceOf({ score: 0.6, games: 10, masteryPoints: 0 }, { score: 0.58 }, s)).toBe("close");
+    expect(confidenceOf({ score: 0.6, games: 10, masteryPoints: 0 }, undefined, s)).toBe("clear");
   });
 });
 
@@ -358,9 +423,9 @@ describe("role-aware comfort and off-meta picks", () => {
     const fun = picks[1]!;
     expect(fun.offMeta).toBe(true);
     expect(picks[0]!.offMeta).toBe(false);
-    expect(fun.reasons.join(" ")).toMatch(/Off-meta in jungle \(usually bottom\)/);
-    expect(fun.reasons[0]).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
-    expect(picks[0]!.reasons.join(" ")).toMatch(/grades S A\+/);
+    expect(text(fun.reasons)).toMatch(/Off-meta in jungle \(usually bottom\)/);
+    expect(text(fun.reasons.slice(0, 1))).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
+    expect(text(picks[0]!.reasons)).toMatch(/grades S A\+/);
     const unpenalised = combineFactors(fun.factors, weightsForBand(2, engineCfg));
     expect(fun.score).toBeCloseTo(unpenalised * (1 - engineCfg.roles.offMetaPenalty));
   });

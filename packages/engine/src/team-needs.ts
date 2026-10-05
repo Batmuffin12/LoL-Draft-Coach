@@ -1,4 +1,5 @@
-import type { ChampionId } from "@ldc/shared";
+import type { ChampionId, Reason } from "@ldc/shared";
+import { reason } from "./explain";
 import type { EngineConfig } from "./config";
 import type { ChampionAttributes } from "./types";
 
@@ -45,7 +46,7 @@ export function teamNeeds(profile: TeamProfile, cfg: EngineConfig["teamNeeds"]):
 export interface TeamNeedsScore {
   /** In [0, 1]; null when there is nothing to judge yet (no known allies). */
   score: number | null;
-  reasons: string[];
+  reasons: Reason[];
 }
 
 /**
@@ -73,16 +74,16 @@ export function scoreTeamNeeds(
   if (totalNeed === 0) return { score: 0.5, reasons: [] };
   const score = parts.reduce((s, p) => s + p.need * p.fit, 0) / totalNeed;
 
-  const reasons: string[] = [];
+  const reasons: Reason[] = [];
   const { reasonMinNeed: minNeed, reasonMinFit: strong } = cfg;
   if (damageNeed > minNeed && damageFit >= strong) {
     reasons.push(
       needs.magic >= needs.physical
-        ? `Adds magic damage (your team is ${Math.round((1 - profile.magicShare) * 100)}% physical so far)`
-        : `Adds physical damage (your team is ${Math.round(profile.magicShare * 100)}% magic so far)`,
+        ? reason("team.magic", { physical: 1 - profile.magicShare })
+        : reason("team.physical", { magic: profile.magicShare }),
     );
   }
-  if (needs.frontline > minNeed && candidate.frontline >= strong) reasons.push("Adds the frontline your team is missing");
-  if (needs.engage > minNeed && candidate.engage >= strong) reasons.push("Adds crowd control your team is missing");
+  if (needs.frontline > minNeed && candidate.frontline >= strong) reasons.push(reason("team.frontline"));
+  if (needs.engage > minNeed && candidate.engage >= strong) reasons.push(reason("team.engage"));
   return { score: clamp01(score), reasons };
 }

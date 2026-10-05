@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "description": "English wording for the coach's reasons. Slots: {name} inserts a value, {name:pct} a 0..1 share as a whole percent, {name:champion} a champion name, {name|one|many} picks the singular or plural word by the number in that slot. Numbers always come from the engine.",
+  "templates": {
+    "comfort.role": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate",
+    "comfort.roleWithAll": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate ({allGames} games in all roles)",
+    "comfort.otherRoles": "{games} recent {games|game|games} in other roles, {winRate:pct}% win rate",
+    "comfort.any": "{games} recent {games|game|games}, {winRate:pct}% win rate",
+    "mastery": "Mastery {level}, {kPoints}k points",
+    "mastery.grades": "Mastery {level}, {kPoints}k points, grades {grades}",
+    "team.magic": "Adds magic damage (your team is {physical:pct}% physical so far)",
+    "team.physical": "Adds physical damage (your team is {magic:pct}% magic so far)",
+    "team.frontline": "Adds the frontline your team is missing",
+    "team.engage": "Adds crowd control your team is missing",
+    "offMeta.usual": "Off-meta in {role} (usually {usual})",
+    "offMeta": "Off-meta in {role}",
+    "whyNot.unavailable": "Your {champion:champion} is banned or taken",
+    "whyNot.team.magic": "Picked over your {champion:champion}: your team needs magic damage",
+    "whyNot.team.physical": "Picked over your {champion:champion}: your team needs physical damage",
+    "whyNot.team.frontline": "Picked over your {champion:champion}: your team needs a frontline",
+    "whyNot.team.engage": "Picked over your {champion:champion}: your team needs crowd control",
+    "whyNot.offMeta": "Picked over your {champion:champion}: it's off-meta in {role}",
+    "whyNot.notPickable": "Your {champion:champion} isn't available to you in this queue",
+    "confidence.clear": "Clear pick",
+    "confidence.close": "Close call",
+    "confidence.thin": "Not much data yet"
+  },
+  "settings": {
+    "clearGap": 0.05,
+    "minGames": 3,
+    "minMasteryPoints": 20000
+  }
+}

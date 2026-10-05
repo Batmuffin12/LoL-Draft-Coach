@@ -78,15 +78,36 @@ export interface FactorScores {
 
 export type FactorName = keyof FactorScores;
 
+/**
+ * One explanation: a template id (wording lives in config/explain.v*.json) and the
+ * values it shows. Values come from the engine only, so text can never invent a stat.
+ */
+export interface Reason {
+  id: string;
+  slots: Record<string, string | number>;
+}
+
 export interface PickRecommendation {
   championId: ChampionId;
   /** Weighted total in [0, 1]. */
   score: number;
   factors: FactorScores;
-  /** Short, data-derived facts behind the score (no invented stats). */
-  reasons: string[];
+  /** The data behind the score, most important first. */
+  reasons: Reason[];
   /** The player plays it in this role, but it isn't a recommended/meta role for the champion. */
   offMeta: boolean;
+}
+
+/** How sure the top pick is: a clear gap, a close call, or thin data. */
+export type PickConfidence = "clear" | "close" | "thin";
+
+/** The ranked picks plus the explanation for the list as a whole. */
+export interface PickAdvice {
+  picks: PickRecommendation[];
+  /** Why #1 beats the player's usual pick for this role (null when #1 is the usual pick). */
+  whyNot: Reason | null;
+  /** Confidence in #1 (null when there are no picks). */
+  confidence: PickConfidence | null;
 }
 
 /**

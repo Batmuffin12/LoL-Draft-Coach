@@ -72,11 +72,19 @@ export interface AccountView {
   message: string | null;
 }
 
+/** The explanation for the pick list as a whole. */
+export interface PickAdviceView {
+  /** "Picked over your usual X because …", or null. */
+  whyNot: string | null;
+  confidence: { level: "clear" | "close" | "thin"; label: string } | null;
+}
+
 export interface ViewState {
   account: AccountView | null;
   status: CoachStatus;
   draft: DraftView | null;
   picks: PickView[];
+  pickAdvice: PickAdviceView;
   /** Role the picks are for, if known. */
   pickRole: string | null;
   /** Your roles ranked by recent results, for the lobby. */
@@ -91,6 +99,7 @@ export function emptyViewState(): ViewState {
     status: { lcu: "searching", gameflowPhase: null, patch: null, band: null, profile: { state: "idle" } },
     draft: null,
     picks: [],
+    pickAdvice: { whyNot: null, confidence: null },
     pickRole: null,
     roles: [],
     notices: [],
