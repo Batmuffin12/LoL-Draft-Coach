@@ -62,4 +62,9 @@ describe("readEnv", () => {
     expect(readEnv({}).riotKeyType).toBe("development");
     expect(readEnv({}).riotApiKey).toBeNull();
   });
+
+  it("rejects broken routing values with a clear message", () => {
+    expect(() => readEnv({ RIOT_REGION: "europe some stray text" })).toThrow(/RIOT_REGION in .env must be a Riot routing value/);
+    expect(() => readEnv({ RIOT_PLATFORM: "euw1" })).not.toThrow();
+  });
 });
