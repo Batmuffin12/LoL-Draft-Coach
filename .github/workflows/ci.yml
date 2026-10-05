@@ -19,9 +19,9 @@ jobs:
       # Tests never launch Electron; skip downloading its binary.
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -35,7 +35,7 @@ jobs:
     name: No keys or tokens in the repo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Look for Riot API keys and coach tokens
         run: |
           if git grep -nE 'RGAPI-[0-9a-fA-F-]{20,}|ldc_[A-Za-z0-9_-]{40,}' -- . ':!pnpm-lock.yaml'; then

@@ -71,6 +71,11 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
     this.update({ draft: this.draft ? toDraftView(this.draft, lookup, this.now()) : null });
   }
 
+  /** Shows a short message in the panel (e.g. an update is ready). */
+  announce(message: string): void {
+    this.notice(message);
+  }
+
   protected notice(message: string): void {
     if (this.view.notices.includes(message)) return;
     this.update({ notices: [...this.view.notices, message].slice(-3) });

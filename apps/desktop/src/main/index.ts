@@ -2,6 +2,7 @@
  * Electron main process. Uses only standard Electron APIs so the app can move to
  * ow-electron (Overwolf's Electron build) later without code changes here.
  */
+import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electron";
@@ -15,6 +16,7 @@ import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
+import { startAutoUpdate } from "./updater";
 import { computeDockBounds, createWin32Finder, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 
@@ -82,6 +84,16 @@ async function startDocking(coach: Coach): Promise<void> {
   }, DOCK_POLL_MS);
 }
 
+/** The server address baked into the installer (LDC_SERVER_URL at build time), if any. */
+function builtInServerUrl(): string | null {
+  try {
+    const pkg = JSON.parse(readFileSync(join(app.getAppPath(), "package.json"), "utf8")) as { ldcDefaultServerUrl?: unknown };
+    return typeof pkg.ldcDefaultServerUrl === "string" ? pkg.ldcDefaultServerUrl : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Dev aid: LDC_LCU_OVERRIDE="port:password" points the app at the mock client (pnpm --filter @ldc/lcu mock). */
 function overrideCredentials(): LcuCredentials | null {
   const m = /^(\d+):(.+)$/.exec(process.env.LDC_LCU_OVERRIDE ?? "");
@@ -137,7 +149,7 @@ async function main(): Promise<void> {
     };
     profiles = new ServerProfileSource({
       accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
-      defaultServerUrl: env.serverUrl,
+      defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
     });
     await profiles.init();
   }
@@ -169,6 +181,7 @@ async function main(): Promise<void> {
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
 
   await coach.start();
+  startAutoUpdate((m) => coach.announce(m));
   void startDocking(coach);
   scheduleScreenshot();
 
