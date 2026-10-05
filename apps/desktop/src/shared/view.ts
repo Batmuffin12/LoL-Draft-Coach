@@ -72,6 +72,26 @@ export interface AccountView {
   message: string | null;
 }
 
+/** One playstyle axis as the lobby shows it. */
+export interface AxisView {
+  axis: string;
+  label: string;
+  /** 0..100: average percentile against others in the role. */
+  score: number;
+  level: "high" | "mid" | "low";
+  levelLabel: string;
+  /** The metric that moves this axis most, e.g. "deaths per minute: you 0.3, typical 0.2". */
+  detail: string | null;
+  games: number;
+}
+
+/** The player's playstyle in one role. */
+export interface PlaystyleView {
+  role: string;
+  games: number;
+  axes: AxisView[];
+}
+
 /** The explanation for the pick list as a whole. */
 export interface PickAdviceView {
   /** "Picked over your usual X because …", or null. */
@@ -89,6 +109,8 @@ export interface ViewState {
   pickRole: string | null;
   /** Your roles ranked by recent results, for the lobby. */
   roles: RoleView[];
+  /** Your playstyle per role with enough games (most played first). */
+  playstyle: PlaystyleView[];
   notices: string[];
   docked: boolean;
 }
@@ -102,6 +124,7 @@ export function emptyViewState(): ViewState {
     pickAdvice: { whyNot: null, confidence: null },
     pickRole: null,
     roles: [],
+    playstyle: [],
     notices: [],
     docked: true,
   };

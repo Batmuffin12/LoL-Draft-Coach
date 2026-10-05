@@ -7,3 +7,4 @@ export * from "./recommend";
 export * from "./role-advice";
 export * from "./matches";
 export * from "./explain";
+export * from "./playstyle";

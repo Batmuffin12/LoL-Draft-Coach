@@ -143,6 +143,9 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     expect(roles[0]).toMatchObject({ role: "middle", games: 19, enoughData: true });
     expect(roles[0]!.champions.map((c) => c.name)).toContain("Ahri");
     expect(roles.find((r) => r.role === "bottom")?.enoughData).toBe(false);
+    // No other mid players in these fake games, so there's nothing to compare against: no playstyle
+    // rather than a guess (positive cases: engine playstyle tests).
+    expect(coach!.state.playstyle).toEqual([]);
 
     // Compliance: nothing identity-like ever reaches the panel.
     expect(JSON.stringify(states)).not.toMatch(/puuid|mock-local|other-|name-|gameName|tagLine/i);

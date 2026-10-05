@@ -6,12 +6,19 @@ export const ExplainConfigSchema = z.object({
   version: z.number().int().positive(),
   description: z.string().optional(),
   templates: z.record(z.string(), z.string()),
+  /** Display names of playstyle axes. */
+  axes: z.record(z.string(), z.string()).default({}),
+  /** Display names and number formats of playstyle metrics. */
+  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "integer"]) })).default({}),
   settings: z.object({
     /** Score gap (0..1) between #1 and #2 at or above which #1 is a "clear pick". */
     clearGap: z.number().min(0).max(1),
     /** Below this many games on the champion (and below minMasteryPoints) the pick is "thin". */
     minGames: z.number().int().min(0),
     minMasteryPoints: z.number().min(0),
+    /** Playstyle scores (0..1) at/above playstyleHigh read as a strength, at/below playstyleLow as room to grow. */
+    playstyleHigh: z.number().min(0).max(1),
+    playstyleLow: z.number().min(0).max(1),
   }),
 });
 export type ExplainConfig = z.infer<typeof ExplainConfigSchema>;
@@ -60,4 +67,20 @@ export function confidenceOf(
   if (top.games < settings.minGames && top.masteryPoints < settings.minMasteryPoints) return "thin";
   if (!runnerUp || top.score - runnerUp.score >= settings.clearGap) return "clear";
   return "close";
+}
+
+/** Formats a metric value for display, per the explain config (fallback: one decimal). */
+export function formatMetric(value: number, metric: string, cfg: ExplainConfig): string {
+  const f = cfg.metrics[metric]?.format ?? "decimal";
+  if (f === "percent") return `${Math.round(value * 100)}%`;
+  if (f === "integer") return String(Math.round(value));
+  return value.toFixed(1);
+}
+
+/** A metric's display name: configured label, else the Riot field name split into words. */
+export function metricLabel(metric: string, cfg: ExplainConfig): string {
+  const label = cfg.metrics[metric]?.label;
+  if (label) return label;
+  const field = metric.replace(/^challenges\./, "");
+  return field.replace(/([a-z])([A-Z0-9])/g, "$1 $2").toLowerCase();
 }

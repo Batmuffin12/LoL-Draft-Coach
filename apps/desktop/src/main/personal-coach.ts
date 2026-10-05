@@ -6,6 +6,10 @@ import {
   deriveChampionAttributes,
   draftRole,
   advisePicks,
+  computePlaystyle,
+  formatMetric,
+  metricLabel,
+  playstyleRoles,
   mainRole,
   renderReason,
   weightsForBand,
@@ -13,7 +17,7 @@ import {
   type ComfortStats,
 } from "@ldc/engine";
 import type { ChampionId, Position, RankBandId } from "@ldc/shared";
-import type { PickView } from "../shared/view";
+import type { PickView, PlaystyleView } from "../shared/view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -133,7 +137,48 @@ export class PersonalCoach extends Coach {
     this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateRoleAdvice();
+    this.updatePlaystyle();
     this.onDraft();
+  }
+
+  /** Playstyle per role (lobby card): percentiles against others in the role in the player's own games. */
+  private updatePlaystyle(): void {
+    if (!this.profile) return;
+    const { engine, explain } = this.p.config;
+    const now = Date.now();
+    const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
+    const views: PlaystyleView[] = [];
+    for (const role of playstyleRoles(this.profile.matches, engine.playstyle).slice(0, 3)) {
+      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle);
+      if (!ps) continue;
+      views.push({
+        role,
+        games: ps.games,
+        axes: ps.axes.map((a) => {
+          const m = a.metrics[0];
+          const lv = level(a.score);
+          return {
+            axis: a.axis,
+            label: explain.axes[a.axis] ?? a.axis,
+            score: Math.round(a.score * 100),
+            level: lv,
+            levelLabel: renderReason({ id: `playstyle.level.${lv}`, slots: {} }, explain.templates, String),
+            detail: m
+              ? renderReason(
+                  {
+                    id: "playstyle.metric",
+                    slots: { metric: metricLabel(m.metric, explain), you: formatMetric(m.you, m.metric, explain), reference: formatMetric(m.reference, m.metric, explain) },
+                  },
+                  explain.templates,
+                  String,
+                )
+              : null,
+            games: a.games,
+          };
+        }),
+      });
+    }
+    this.update({ playstyle: views });
   }
 
   private updateRoleAdvice(): void {

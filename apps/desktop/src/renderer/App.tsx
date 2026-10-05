@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { AccountView, ChampView, DraftView, PickView, RoleView, SlotView, ViewState } from "../shared/view";
+import type { AccountView, ChampView, DraftView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -130,6 +130,49 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
       </ol>
       {state.pickAdvice.whyNot && picks.length > 0 && <p className="why-not">{state.pickAdvice.whyNot}</p>}
       <p className="disclaimer">Suggestions only — you choose and lock your champion.</p>
+    </section>
+  );
+}
+
+/** Your playstyle per role: each axis is a diverging bar around "typical" (50) for players in that role in your games. */
+function Playstyle({ styles }: { styles: PlaystyleView[] }) {
+  const [role, setRole] = useState<string | null>(null);
+  if (!styles.length) return null;
+  const current = styles.find((p) => p.role === role) ?? styles[0]!;
+  return (
+    <section className="card playstyle">
+      <h2>Your style</h2>
+      {styles.length > 1 && (
+        <div className="role-tabs" role="tablist">
+          {styles.map((p) => (
+            <button key={p.role} role="tab" aria-selected={p.role === current.role} className={`tab${p.role === current.role ? " on" : ""}`} onClick={() => setRole(p.role)}>
+              {p.role}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="muted small">
+        Your last {current.games} {current.role} games, compared with the other {current.role} players in your matches. 50 is typical.
+      </p>
+      <ul className="axes">
+        {current.axes.map((a) => {
+          const left = Math.min(a.score, 50);
+          const width = Math.abs(a.score - 50);
+          return (
+            <li key={a.axis} className={`axis ${a.level}`} title={`${a.label}: ${a.score} (${a.levelLabel}), ${a.games} games`}>
+              <div className="axis-head">
+                <span>{a.label}</span>
+                <span className="axis-score">{a.score}</span>
+              </div>
+              <div className="diverging" aria-hidden="true">
+                <span className="mid" />
+                <span className="fill" style={{ left: `${left}%`, width: `${width}%` }} />
+              </div>
+              {a.detail && <span className="axis-detail">{a.detail}</span>}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -321,6 +364,7 @@ export function App() {
               <Picks picks={[]} role={state.pickRole} state={state} />
             )}
           </section>
+          <Playstyle styles={state.playstyle} />
           <Roles roles={state.roles} />
           </>
         )}

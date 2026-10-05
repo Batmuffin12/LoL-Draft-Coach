@@ -66,6 +66,17 @@ export const EngineConfigSchema = z.object({
     /** Games you need in a role before an off-meta champion is suggested there. */
     offMetaMinGames: z.number().int().min(1),
   }),
+  /** Playstyle axes: percentiles of Riot metrics against others in the same role. */
+  playstyle: z.object({
+    halfLifeDays: z.number().positive(),
+    /** Games in a role (and per axis) before a playstyle is shown. */
+    minGamesPerRole: z.number().int().min(1),
+    /** Metrics a single game needs for an axis to count it. */
+    minMetrics: z.number().int().min(1),
+    /** Reference values a metric needs before it is used. */
+    minReferenceSamples: z.number().int().min(1),
+    axes: z.record(z.string(), z.object({ metrics: z.array(z.string().regex(/^-?[\w.]+$/)).min(1) })),
+  }),
   topN: z.number().int().positive(),
 });
 export type EngineConfig = z.infer<typeof EngineConfigSchema>;
