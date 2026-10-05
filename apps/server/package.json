@@ -9,6 +9,7 @@
     "build": "node scripts/build.mjs",
     "start": "node dist/main.js",
     "dev": "tsx src/main.ts",
+    "invite": "tsx src/invite-cli.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },

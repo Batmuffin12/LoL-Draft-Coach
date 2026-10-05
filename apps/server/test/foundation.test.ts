@@ -54,15 +54,15 @@ describe("migrations", () => {
 
 describe("GET /health", () => {
   it("reports ok with the version and database state", async () => {
-    const app = createApp({ db: openDb(":memory:"), version: "test" });
+    const app = createApp({ db: openDb(":memory:"), version: "test", riot: null });
     const res = await app.request("/health");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", patch: null, newestMatchAt: null });
+    expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", riotKey: false, patch: null, newestMatchAt: null });
   });
 
   it("reports degraded when the database is closed", async () => {
     const db = openDb(":memory:");
-    const app = createApp({ db, version: "test" });
+    const app = createApp({ db, version: "test", riot: null });
     db.$client.close();
     const res = await app.request("/health");
     expect(res.status).toBe(503);
@@ -70,7 +70,7 @@ describe("GET /health", () => {
   });
 
   it("answers unknown routes with JSON 404", async () => {
-    const res = await createApp({ db: openDb(":memory:"), version: "test" }).request("/nope");
+    const res = await createApp({ db: openDb(":memory:"), version: "test", riot: null }).request("/nope");
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
   });

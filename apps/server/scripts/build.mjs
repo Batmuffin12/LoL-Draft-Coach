@@ -1,9 +1,7 @@
-// Bundles the server (and the workspace packages it uses) into one ESM file for Node 22.
+// Bundles the server and the invite command (with the workspace packages they use) into ESM files for Node 22.
 import { build } from "esbuild";
 
-await build({
-  entryPoints: ["src/main.ts"],
-  outfile: "dist/main.js",
+const common = {
   bundle: true,
   platform: "node",
   format: "esm",
@@ -14,4 +12,9 @@ await build({
   external: ["better-sqlite3"],
   // Lets bundled CommonJS dependencies call require() inside the ESM bundle.
   banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-});
+};
+
+await Promise.all([
+  build({ ...common, entryPoints: ["src/main.ts"], outfile: "dist/main.js" }),
+  build({ ...common, entryPoints: ["src/invite-cli.ts"], outfile: "dist/invite.js" }),
+]);
