@@ -76,4 +76,15 @@ describe("RiotApi", () => {
     const { fetchFn } = fakeRiot(() => Response.json({ metadata: { matchId: "x" }, info: { queueId: "ranked" } }, { headers: okHeaders }));
     await expect(api(fetchFn).match("x")).rejects.toBeInstanceOf(RiotSchemaError);
   });
+
+  it("lists ranked players by tier and division on the platform host", async () => {
+    const { calls, fetchFn } = fakeRiot(() =>
+      Response.json([{ puuid: "P1", queueType: "RANKED_SOLO_5x5", tier: "GOLD", rank: "II", leaguePoints: 40 }], { headers: okHeaders }),
+    );
+    const players = await api(fetchFn).leaguePlayers({ queue: "RANKED_SOLO_5x5", tier: "GOLD", division: "II", page: 3 });
+    expect(players).toEqual([expect.objectContaining({ puuid: "P1", tier: "GOLD" })]);
+    expect(`${calls[0]!.url.host}${calls[0]!.url.pathname}${calls[0]!.url.search}`).toBe(
+      "euw1.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/GOLD/II?page=3",
+    );
+  });
 });

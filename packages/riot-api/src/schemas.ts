@@ -97,3 +97,17 @@ export const LeagueEntriesSchema = z.array(
   }),
 );
 export type LeagueEntry = z.infer<typeof LeagueEntriesSchema>[number];
+
+/**
+ * League-V4 LeagueEntryDTO from the by-tier list ("entries/{queue}/{tier}/{division}").
+ * Only the PUUID is used (summonerId is deprecated); it is never stored with collected matches.
+ */
+export const LeaguePlayersSchema = z.array(
+  z.looseObject({
+    puuid: z.string().min(1),
+    queueType: z.string(),
+    tier: z.string(),
+    rank: z.string().optional(),
+  }),
+);
+export type LeaguePlayer = z.infer<typeof LeaguePlayersSchema>[number];
