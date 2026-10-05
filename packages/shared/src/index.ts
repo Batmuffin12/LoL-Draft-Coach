@@ -89,6 +89,57 @@ export interface PickRecommendation {
   offMeta: boolean;
 }
 
+/**
+ * One participant of a stored match, reduced to what coaching needs. Never carries a
+ * PUUID, name or any other identifier: who the user was is stored separately as an index.
+ */
+export interface ParticipantSummary {
+  championId: ChampionId;
+  teamId: number;
+  position: Position;
+  win: boolean;
+  kills: number;
+  deaths: number;
+  assists: number;
+  /** Lane minions + jungle monsters. */
+  cs: number;
+  gold: number;
+  visionScore: number;
+  physicalDamage: number;
+  magicDamage: number;
+  trueDamage: number;
+  damageTaken: number;
+  selfMitigated: number;
+  /** Seconds spent crowd-controlling others (Match-V5 timeCCingOthers). */
+  ccSeconds: number;
+  objectiveDamage: number;
+  /** Item ids in slots 0–6 (0 = empty). */
+  items: number[];
+  /** Summoner spell ids. */
+  spells: number[];
+  /** Rune page, when Riot sent one. */
+  perks: { primaryStyle: number; subStyle: number; runes: number[]; statPerks: number[] } | null;
+  /** Numeric Match-V5 `challenges` metrics, as Riot names them; any may be missing. */
+  challenges: Record<string, number>;
+}
+
+/** A stored match: game facts and the ten anonymised participants. */
+export interface MatchSummary {
+  matchId: string;
+  queueId: number;
+  gameVersion: string;
+  endedAt: number;
+  durationSec: number;
+  participants: ParticipantSummary[];
+}
+
+/** A match from a user's own history, with which participant they were. */
+export interface UserMatch {
+  match: MatchSummary;
+  /** Index into `match.participants`. */
+  me: number;
+}
+
 /** Status shown in the panel. */
 export type ConnectionState = "searching" | "connected" | "disconnected";
 

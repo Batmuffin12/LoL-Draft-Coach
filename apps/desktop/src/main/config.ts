@@ -1,23 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { z } from "zod";
 import {
+  parseAppConfig,
   parseEngineConfig,
   parseRankBandConfig,
+  type AppConfig,
   type EngineConfig,
   type RankBandConfig,
 } from "@ldc/engine";
 
-export const AppConfigSchema = z.object({
-  version: z.number().int().positive(),
-  description: z.string().optional(),
-  history: z.object({
-    matchCount: z.number().int().positive().max(1000),
-    queues: z.array(z.number().int()).min(1),
-  }),
-  supportedQueues: z.array(z.number().int()),
-});
-export type AppConfig = z.infer<typeof AppConfigSchema>;
+export { AppConfigSchema, type AppConfig } from "@ldc/engine";
 
 export interface LoadedConfig {
   app: AppConfig;
@@ -41,7 +33,5 @@ export function findConfigDir(start: string, resourcesPath?: string): string {
 /** Reads and validates the versioned config files (read at runtime, so they can be tuned without a rebuild). */
 export function loadConfig(dir: string): LoadedConfig {
   const read = (f: string) => JSON.parse(readFileSync(join(dir, f), "utf8")) as unknown;
-  const app = AppConfigSchema.safeParse(read("app.v1.json"));
-  if (!app.success) throw new Error(`Invalid app config:\n${z.prettifyError(app.error)}`);
-  return { app: app.data, engine: parseEngineConfig(read("engine.v1.json")), bands: parseRankBandConfig(read("rank-bands.v1.json")) };
+  return { app: parseAppConfig(read("app.v1.json")), engine: parseEngineConfig(read("engine.v1.json")), bands: parseRankBandConfig(read("rank-bands.v1.json")) };
 }

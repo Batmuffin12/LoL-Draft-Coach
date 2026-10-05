@@ -1,0 +1,34 @@
+{
+  "name": "@ldc/server",
+  "version": "0.3.0",
+  "private": true,
+  "description": "LoL Draft Coach server: users, profiles, meta snapshots and background jobs (Hono + SQLite)",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "invite": "tsx src/invite-cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@ldc/engine": "workspace:*",
+    "@ldc/riot-api": "workspace:*",
+    "@ldc/shared": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.13.13",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

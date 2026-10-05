@@ -77,3 +77,19 @@ main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: 
 .role-name { text-transform: capitalize; }
 .role-champs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 11px; color: var(--muted); }
 .role-champ { display: inline-flex; align-items: center; gap: 4px; }
+.onboarding .form { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 4px; }
+.onboarding label { font-size: 11px; color: var(--muted); }
+.onboarding input {
+  background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px;
+  padding: 6px 8px; font: inherit; font-family: ui-monospace, Consolas, monospace;
+}
+.onboarding input:focus { outline: none; border-color: var(--gold); }
+.btn.primary { margin-top: 6px; color: var(--bg); background: var(--gold); border-color: var(--gold); font-weight: 600; padding: 5px 10px; }
+.btn.primary:hover { color: var(--bg); filter: brightness(1.1); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn.danger { color: var(--red); border-color: var(--red); }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.account-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.account-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.account-row .actions, .account-row .confirm { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.legal { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.35; }

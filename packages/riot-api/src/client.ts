@@ -12,7 +12,7 @@ import {
   type Match,
 } from "./schemas";
 
-export type KeyType = "development" | "personal";
+export type KeyType = "development" | "personal" | "production";
 
 export interface RiotApiOptions {
   apiKey: string;
@@ -47,7 +47,7 @@ export function keyErrorMessage(keyType: KeyType, status: number): string {
       "get a new one at https://developer.riotgames.com, put it in RIOT_API_KEY in your .env, and restart the app."
     );
   }
-  return `Riot rejected the personal API key (HTTP ${status}). Check RIOT_API_KEY in your .env and the key's status at https://developer.riotgames.com.`;
+  return `Riot rejected the ${keyType} API key (HTTP ${status}). Check RIOT_API_KEY in your .env (or the server variables) and the key's status at https://developer.riotgames.com.`;
 }
 
 /**

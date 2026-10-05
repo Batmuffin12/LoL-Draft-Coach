@@ -11,34 +11,33 @@ import {
   type ChampionAttributes,
   type ComfortStats,
 } from "@ldc/engine";
-import { RiotKeyError, type RiotApi } from "@ldc/riot-api";
 import type { ChampionId, Position, RankBandId } from "@ldc/shared";
 import type { PickView } from "../shared/view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
-import type { MatchStore } from "./match-store";
-import { loadProfile, type PersonalProfile } from "./profile";
+import type { PersonalProfile } from "./profile";
+import type { Identity, ProfileSource } from "./profile-source";
 
 export interface PersonalCoachDeps extends CoachDeps {
   config: LoadedConfig;
-  /** Null when no Riot API key is configured. */
-  riot: RiotApi | null;
-  /** Riot ID from .env ("Name#TAG"), used when the League client isn't running. */
+  /** Where the player's history comes from; null when neither a server nor a dev key is set up. */
+  profiles: ProfileSource | null;
+  /** Shown when `profiles` is null. */
+  noProfileMessage?: string;
+  /** Riot ID from .env ("Name#TAG"), used when the client reports no account (mock client / demo). */
   riotId: string | null;
-  storeFor: (puuid: string) => MatchStore;
 }
 
 /**
- * Milestone 2: adds the personal coach on top of the live draft — loads the player's
- * own history, works out their band, and ranks their pool for each draft update.
+ * Adds the personal coach on top of the live draft: gets the player's own history from
+ * a ProfileSource, works out their band, and ranks their pool for each draft update.
  * Only the local player's own identity is used, and only to load their own data.
  */
 export class PersonalCoach extends Coach {
-  private puuid: string | null = null;
-  private loadingFor: string | null = null;
   private band: RankBandId;
   private profile: PersonalProfile | null = null;
+  private identity: Identity | null = null;
   /** Comfort per role ("" = no role), computed lazily and reset when the profile changes. */
   private comfortByRole = new Map<string, Map<ChampionId, ComfortStats>>();
   /** Riot's recommended positions per champion, read from the client. */
@@ -52,14 +51,30 @@ export class PersonalCoach extends Coach {
     this.band = p.config.bands.defaultBand;
   }
 
+  /** The Riot ID of the player logged into the client, once known. */
+  get currentIdentity(): Identity | null {
+    return this.identity;
+  }
+
   override async start(): Promise<void> {
     this.update({ status: { ...this.view.status, band: this.band } });
-    if (!this.p.riot) {
-      this.setProfileError("No Riot API key configured. Set RIOT_API_KEY in your .env to get personal picks.");
+    const { profiles } = this.p;
+    if (!profiles) {
+      this.setProfileError(this.p.noProfileMessage ?? "No coach server or Riot API key configured.");
+    } else {
+      profiles.on("profile", (profile) => this.setProfile(profile));
+      profiles.on("status", (profile) => this.update({ status: { ...this.view.status, profile } }));
+      profiles.on("band", (band) => this.setBand(band));
+      profiles.on("account", (account) => this.update({ account }));
+      if (profiles.account) this.update({ account: profiles.account });
     }
     this.p.ddragon.on("patch", () => this.updateRoleAdvice()); // champion names/icons for the lobby
     this.p.connector.on("status", (s) => {
       if (s === "connected") void this.onClientConnected();
+    });
+    this.p.connector.on("gameflowPhase", (phase) => {
+      // New games are in the player's history once a game has ended.
+      if (phase === "EndOfGame") void this.p.profiles?.refresh();
     });
     await super.start();
     // Without the League client, fall back to the Riot ID from .env.
@@ -72,7 +87,7 @@ export class PersonalCoach extends Coach {
 
   /**
    * The client's PUUID cannot be used with the Riot API (Riot encrypts PUUIDs per API key),
-   * so we take the Riot ID from the client and resolve it through Account-V1.
+   * so we take the Riot ID from the client and let the profile source resolve it.
    */
   private async onClientConnected(): Promise<void> {
     try {
@@ -82,34 +97,27 @@ export class PersonalCoach extends Coach {
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.p.config.bands));
-      if (me?.gameName && me.tagLine) await this.loadByRiotId(me.gameName, me.tagLine, false);
-      else await this.loadFromRiotId(); // e.g. the mock client, which has no account
+      if (me?.gameName && me.tagLine) {
+        this.identity = { gameName: me.gameName, tagLine: me.tagLine };
+        await this.p.profiles?.load(this.identity, { bandFromApi: !ranked });
+      } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
       this.notice(`Could not read your account from the client: ${(err as Error).message}`);
     }
   }
 
-  /** Fallback when the client isn't running: RIOT_ID from .env. */
+  /** Fallback when the client isn't running or has no account: RIOT_ID from .env. */
   private async loadFromRiotId(): Promise<void> {
-    const { riotId } = this.p;
-    if (!this.p.riot || !riotId || this.puuid) return;
-    const [gameName, tagLine] = riotId.split("#");
-    if (!gameName || !tagLine) {
+    const { riotId, profiles } = this.p;
+    if (!profiles || !riotId || this.identity) return;
+    const i = riotId.lastIndexOf("#");
+    const gameName = riotId.slice(0, i).trim();
+    const tagLine = riotId.slice(i + 1).trim();
+    if (i < 0 || !gameName || !tagLine) {
       return this.setProfileError(`RIOT_ID must look like "Name#TAG", in quotes (got "${riotId}")`);
     }
-    await this.loadByRiotId(gameName, tagLine, true);
-  }
-
-  private async loadByRiotId(gameName: string, tagLine: string, bandFromApi: boolean): Promise<void> {
-    const { riot } = this.p;
-    if (!riot) return;
-    try {
-      const account = await riot.accountByRiotId(gameName, tagLine);
-      if (!account) return this.setProfileError(`Riot ID ${gameName}#${tagLine} was not found.`);
-      await this.loadFor(account.puuid, bandFromApi);
-    } catch (err) {
-      this.onRiotError(err);
-    }
+    this.identity = { gameName, tagLine };
+    await profiles.load(this.identity, { bandFromApi: true });
   }
 
   private setBand(band: RankBandId): void {
@@ -118,48 +126,12 @@ export class PersonalCoach extends Coach {
     this.onDraft();
   }
 
-  private onRiotError(err: unknown): void {
-    this.setProfileError(err instanceof RiotKeyError ? err.message : `Riot API error: ${(err as Error).message}`);
-  }
-
-  private async loadFor(puuid: string, bandFromApi: boolean): Promise<void> {
-    const { riot } = this.p;
-    if (!riot || this.puuid === puuid || this.loadingFor === puuid) return;
-    this.loadingFor = puuid;
-    try {
-      if (bandFromApi) {
-        const entries = await riot.leagueEntriesByPuuid(puuid);
-        this.setBand(bandFromRankedEntries(entries, this.p.config.bands));
-      }
-      this.update({ status: { ...this.view.status, profile: { state: "loading", done: 0, total: this.p.config.app.history.matchCount } } });
-      const profile = await loadProfile({
-        riot,
-        puuid,
-        history: this.p.config.app.history,
-        store: this.p.storeFor(puuid),
-        onProgress: (done, total, partial) => {
-          this.setProfile(partial);
-          if (done < total) this.update({ status: { ...this.view.status, profile: { state: "loading", done, total } } });
-        },
-      });
-      this.puuid = puuid;
-      this.setProfile(profile);
-      this.update({
-        status: { ...this.view.status, profile: { state: "ready", games: profile.games.length, role: mainRole(profile.games) } },
-      });
-    } catch (err) {
-      this.onRiotError(err);
-    } finally {
-      this.loadingFor = null;
-    }
-  }
-
   private setProfile(profile: PersonalProfile): void {
     const { engine } = this.p.config;
     this.profile = { games: [...profile.games], samples: [...profile.samples], masteries: profile.masteries };
     this.comfortByRole.clear();
-    this.updateRoleAdvice();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
+    this.updateRoleAdvice();
     this.onDraft();
   }
 

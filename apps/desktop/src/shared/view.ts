@@ -5,6 +5,9 @@ export const IPC = {
   state: "coach:state",
   ready: "coach:ready",
   setDocked: "coach:set-docked",
+  register: "coach:register",
+  signOut: "coach:sign-out",
+  deleteData: "coach:delete-data",
 } as const;
 
 export interface ChampView {
@@ -55,7 +58,22 @@ export interface RoleView {
   champions: ChampView[];
 }
 
+/**
+ * Registration with the coach server (server mode). Null in dev-only direct mode,
+ * where the app calls the Riot API itself.
+ */
+export interface AccountView {
+  state: "unregistered" | "registering" | "registered" | "mismatch" | "error";
+  /** The Riot ID this app is registered for (the player's own). */
+  riotId: string | null;
+  serverUrl: string | null;
+  /** Prefill for the server address field. */
+  defaultServerUrl: string | null;
+  message: string | null;
+}
+
 export interface ViewState {
+  account: AccountView | null;
   status: CoachStatus;
   draft: DraftView | null;
   picks: PickView[];
@@ -69,6 +87,7 @@ export interface ViewState {
 
 export function emptyViewState(): ViewState {
   return {
+    account: null,
     status: { lcu: "searching", gameflowPhase: null, patch: null, band: null, profile: { state: "idle" } },
     draft: null,
     picks: [],
