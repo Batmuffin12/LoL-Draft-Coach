@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { compress } from "hono/compress";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { RiotApiError, RiotKeyError } from "@ldc/riot-api";
@@ -6,6 +7,7 @@ import { AccountError, deleteUser, publicUser, registerUser, touchUser, userByTo
 import { bearerToken } from "./auth";
 import type { Db } from "./db";
 import { WindowLimiter } from "./limits";
+import { loadProfile } from "./profile";
 import type { SyncScheduler } from "./sync-scheduler";
 
 export interface AppDeps {
@@ -42,6 +44,8 @@ export function createApp(deps: AppDeps): Hono<Env> {
   const now = deps.now ?? Date.now;
   const registerLimiter = new WindowLimiter(deps.registerPerMinute ?? 10, 60_000);
   const app = new Hono<Env>();
+  // Profiles are large JSON (a full history is several MB); gzip shrinks them ~5x.
+  app.use(compress());
 
   app.get("/health", (c) => {
     let database: "ok" | "error" = "ok";
@@ -96,6 +100,23 @@ export function createApp(deps: AppDeps): Hono<Env> {
   app.use("/me/*", requireUser);
 
   app.get("/me", (c) => c.json({ user: publicUser(c.get("user")) }));
+
+  app.get("/me/profile", (c) => {
+    const raw = c.req.query("since");
+    const since = raw === undefined ? undefined : Number(raw);
+    if (since !== undefined && !Number.isFinite(since)) return c.json({ error: "invalid_since", message: "since must be epoch milliseconds." }, 400);
+    const user = c.get("user");
+    return c.json({ ...loadProfile(deps.db, user, since), sync: deps.sync?.state(user.id) ?? { state: "idle" } });
+  });
+
+  app.post("/me/sync", (c) => {
+    if (!deps.sync) return c.json({ error: "riot_unavailable", message: "The server has no Riot API key configured." }, 503);
+    const user = c.get("user");
+    deps.sync.request(user.id).catch(() => {});
+    return c.json({ sync: deps.sync.state(user.id) }, 202);
+  });
+
+  app.get("/me/sync", (c) => c.json({ sync: deps.sync?.state(c.get("user").id) ?? { state: "idle" } }));
 
   app.delete("/me", (c) => {
     deleteUser(deps.db, c.get("user").id);
