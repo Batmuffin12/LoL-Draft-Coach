@@ -145,4 +145,17 @@ async function main(): Promise<void> {
   });
 }
 
-void main();
+// A second instance would fight the first over Chromium's cache folders ("Unable to move
+// the cache: Access is denied"), so focus the running panel instead. Screenshot runs are
+// exempt so they can work next to an open panel.
+if (!process.env.LDC_SCREENSHOT && !app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!win || win.isDestroyed()) return;
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  });
+  void main();
+}

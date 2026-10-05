@@ -341,7 +341,7 @@ describe("role-aware comfort and off-meta picks", () => {
 
   it("classifies role fit from Riot's positions, others' games, then the player's own games", () => {
     const comfort = computeComfort(games, masteries, NOW, engineCfg.comfort, "jungle");
-    const min = engineCfg.roles.minRoleShare;
+    const min = engineCfg.roles;
     expect(roleFit(MAIN, comfort.get(MAIN)!, "jungle", intended, new Map(), min)).toBe("meta");
     expect(roleFit(FUN, comfort.get(FUN)!, "jungle", intended, new Map(), min)).toBe("offMeta");
     expect(roleFit(FUN, comfort.get(FUN)!, "top", intended, new Map(), min)).toBeNull();
@@ -437,5 +437,47 @@ describe("adviseRoles", () => {
 
   it("returns nothing without games", () => {
     expect(adviseRoles([], [], NOW, engineCfg)).toEqual([]);
+  });
+});
+
+describe("one-off games in a role (e.g. a single Naafiri bot game)", () => {
+  const MID = 950;
+  const ADC = 145;
+  const games = [
+    ...Array.from({ length: 30 }, (_, i) => game(MID, i < 17, 5, "middle")),
+    game(MID, false, 3, "bottom"), // one-off
+    ...Array.from({ length: 6 }, (_, i) => game(ADC, i < 4, 5, "bottom")),
+  ];
+  const masteries = [{ championId: MID, level: 19, points: 177_000, lastPlayTime: NOW, grades: ["S"] }];
+  const intended = new Map<number, string[]>([[MID, ["jungle", "middle"]], [ADC, ["bottom"]]]);
+
+  it("is not suggested off-meta below roles.offMetaMinGames", () => {
+    const comfort = computeComfort(games, masteries, NOW, engineCfg.comfort, "bottom");
+    expect(engineCfg.roles.offMetaMinGames).toBeGreaterThan(1);
+    expect(roleFit(MID, comfort.get(MID)!, "bottom", intended, new Map(), engineCfg.roles)).toBeNull();
+    const picks = recommendPicks({
+      draft: draft({ myTeam: draft().myTeam.map((s) => ({ ...s, championId: 0, position: s.isLocalPlayer ? "bottom" : "" })) }),
+      pickable: [], unavailable: new Set(), comfort, attributes: new Map(), intendedPositions: intended,
+      role: "bottom", weights: weightsForBand(2, engineCfg), config: engineCfg,
+    });
+    expect(picks.map((p) => p.championId)).toEqual([ADC]);
+  });
+
+  it("is not listed as a best champion for that role in role advice", () => {
+    const bottom = adviseRoles(games, masteries, NOW, engineCfg, intended).find((r) => r.role === "bottom")!;
+    expect(bottom.topChampions).toEqual([ADC]);
+    const middle = adviseRoles(games, masteries, NOW, engineCfg, intended).find((r) => r.role === "middle")!;
+    expect(middle.topChampions).toEqual([MID]);
+  });
+});
+
+describe("role shares from small samples", () => {
+  it("only count as meta once the champion has been seen often enough", () => {
+    const few = [...Array.from({ length: 8 }, () => sample(7, { position: "jungle" })), ...Array.from({ length: 2 }, () => sample(7, { position: "utility" }))];
+    const many = [...Array.from({ length: 40 }, () => sample(7, { position: "jungle" })), ...Array.from({ length: 10 }, () => sample(7, { position: "utility" }))];
+    const comfort = computeComfort([game(7, true, 1, "jungle")], [], NOW, engineCfg.comfort, "utility").get(7)!;
+    const fit = (s: AttributeSample[]) => roleFit(7, comfort, "utility", new Map(), deriveChampionAttributes(s, 3), engineCfg.roles);
+    expect(fit(few)).toBeNull(); // 2 of 10 is noise
+    expect(fit(many)).toBe("meta"); // 10 of 50 is a real pattern
   });
 });

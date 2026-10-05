@@ -1,7 +1,8 @@
 import type { ChampionId, Position } from "@ldc/shared";
 import { computeComfort, halfLifeWeight, mixAvailable, winComponent } from "./comfort";
 import type { EngineConfig } from "./config";
-import type { MasteryEntry, PlayerGame } from "./types";
+import { roleFit } from "./recommend";
+import type { ChampionAttributes, MasteryEntry, PlayerGame } from "./types";
 
 export interface RoleAdvice {
   role: Position;
@@ -18,9 +19,17 @@ export interface RoleAdvice {
 /**
  * Ranks the roles the player has played by how well they do there lately
  * (information for the lobby; it never sets positions). Roles come from the
- * player's own Match-V5 history, not from a fixed list.
+ * player's own Match-V5 history, not from a fixed list. Best champions per role
+ * follow the same meta/off-meta rule as pick suggestions.
  */
-export function adviseRoles(games: PlayerGame[], masteries: MasteryEntry[], now: number, cfg: EngineConfig): RoleAdvice[] {
+export function adviseRoles(
+  games: PlayerGame[],
+  masteries: MasteryEntry[],
+  now: number,
+  cfg: EngineConfig,
+  intendedPositions: Map<ChampionId, Position[]> = new Map(),
+  attributes: Map<ChampionId, ChampionAttributes> = new Map(),
+): RoleAdvice[] {
   const ra = cfg.roleAdvice;
   const weight = (g: PlayerGame) => halfLifeWeight(now - g.endedAt, ra.halfLifeDays);
   const total = games.reduce((s, g) => s + weight(g), 0);
@@ -36,7 +45,7 @@ export function adviseRoles(games: PlayerGame[], masteries: MasteryEntry[], now:
       const experience = 1 - Math.exp(-w / ra.experienceScaleGames);
       const comfort = computeComfort(games, masteries, now, cfg.comfort, role);
       const topChampions = [...comfort.values()]
-        .filter((c) => (c.gamesInRole ?? 0) > 0)
+        .filter((c) => (c.gamesInRole ?? 0) > 0 && roleFit(c.championId, c, role, intendedPositions, attributes, cfg.roles) !== null)
         .sort((a, b) => b.score - a.score || a.championId - b.championId)
         .slice(0, ra.topChampions)
         .map((c) => c.championId);

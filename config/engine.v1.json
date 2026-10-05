@@ -89,7 +89,9 @@
   },
   "roles": {
     "minRoleShare": 0.15,
-    "offMetaPenalty": 0.15
+    "minRoleSamples": 30,
+    "offMetaPenalty": 0.15,
+    "offMetaMinGames": 3
   },
   "roleAdvice": {
     "halfLifeDays": 60,

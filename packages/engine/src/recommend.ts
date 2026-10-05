@@ -61,7 +61,7 @@ export type RoleFit = "meta" | "offMeta" | null;
 /**
  * Whether a champion fits the role:
  * - "meta": Riot recommends it there, or other players play it there often enough;
- * - "offMeta": not meta there, but the player has played it there;
+ * - "offMeta": not meta there, but the player has played it there at least offMetaMinGames times;
  * - null: neither (not suggested).
  */
 export function roleFit(
@@ -70,13 +70,14 @@ export function roleFit(
   role: Position | null,
   intended: Map<ChampionId, Position[]>,
   attributes: Map<ChampionId, ChampionAttributes>,
-  minRoleShare: number,
+  roles: EngineConfig["roles"],
 ): RoleFit {
   if (!role) return "meta";
   if (intended.get(id)?.includes(role)) return "meta";
-  const share = attributes.get(id)?.roleShares[role];
-  if (share !== undefined && share >= minRoleShare) return "meta";
-  return (comfort.gamesByPosition[role] ?? 0) > 0 ? "offMeta" : null;
+  const measured = attributes.get(id);
+  const share = measured?.roleShares[role];
+  if (measured && measured.roleSamples >= roles.minRoleSamples && share !== undefined && share >= roles.minRoleShare) return "meta";
+  return (comfort.gamesByPosition[role] ?? 0) >= roles.offMetaMinGames ? "offMeta" : null;
 }
 
 /**
@@ -94,7 +95,7 @@ export function recommendPicks(input: RecommendInput): PickRecommendation[] {
   for (const [id, c] of comfort) {
     if (input.unavailable.has(id)) continue;
     if (pickable.size && !pickable.has(id)) continue;
-    const fit = roleFit(id, c, role, input.intendedPositions, attributes, config.roles.minRoleShare);
+    const fit = roleFit(id, c, role, input.intendedPositions, attributes, config.roles);
     if (!fit) continue;
     const offMeta = fit === "offMeta";
 

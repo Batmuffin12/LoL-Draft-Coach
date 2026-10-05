@@ -57,10 +57,14 @@ export const EngineConfigSchema = z.object({
     dimensions: z.object({ damageBalance: weight, frontline: weight, engage: weight }),
   }),
   roles: z.object({
-    /** A role counts as meta for a champion when at least this share of other players' games are in it. */
+    /** A role counts as meta for a champion when at least this share of other players' games are in it... */
     minRoleShare: unit,
+    /** ...and the champion has been seen in at least this many of their games (small samples are noise). */
+    minRoleSamples: z.number().int().min(1),
     /** Score reduction for picks you play in a role that isn't meta for the champion (0..1). */
     offMetaPenalty: unit,
+    /** Games you need in a role before an off-meta champion is suggested there. */
+    offMetaMinGames: z.number().int().min(1),
   }),
   topN: z.number().int().positive(),
 });
