@@ -95,7 +95,8 @@ describe("LcuConnector replaying a fixture", () => {
     server!.dropClients();
     await waitFor(() => statuses.includes("disconnected"));
     await waitFor(() => connector!.status === "connected" && server!.clientCount === 1);
-  });
+    // Two full TLS + WebSocket handshakes: a cold Windows CI runner can take longer than the default 5 s.
+  }, 20_000);
 
   it("exposes validated local reads (pickable champions, gameflow queue)", async () => {
     const creds = await startMock();
