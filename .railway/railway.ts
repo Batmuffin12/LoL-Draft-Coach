@@ -61,12 +61,8 @@ export default defineRailway(() => {
     },
   });
 
-  // Daily Railway backups of the volume (SQLite: users, invites, histories, collected games).
-  // A snapshot taken mid-write is like a power cut, which SQLite's WAL mode recovers from.
-  // The SDK's volumeMounts helper drops backup schedules, so set it on the compiled attachment.
-  const attachment = (server as { volumeAttachments?: Record<string, { backupSchedules?: string[] }> }).volumeAttachments?.["ldc-server-volume"];
-  if (!attachment) throw new Error("ldc-server-volume attachment not found: check the volume name");
-  attachment.backupSchedules = ["DAILY"];
+  // No Railway volume backups: they're a Pro-plan feature (this workspace is on Hobby), and the
+  // schedule is silently ignored there. See docs/CLOUD.md "Backups".
 
   // The hourly meta wake-up (research/DECISIONS.md D22). A cron container runs curl for a few
   // seconds and exits; billed only while it runs. The request wakes the server, which collects
