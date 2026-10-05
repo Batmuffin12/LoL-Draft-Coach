@@ -121,3 +121,18 @@ export function weightsForBand(band: RankBandId, cfg: EngineConfig): FactorWeigh
   if (!w) throw new ConfigError(`No factor weights configured for band ${band}`);
   return w;
 }
+
+export const AppConfigSchema = z.object({
+  version: z.number().int().positive(),
+  description: z.string().optional(),
+  history: z.object({
+    matchCount: z.number().int().positive().max(1000),
+    queues: z.array(z.number().int()).min(1),
+  }),
+  supportedQueues: z.array(z.number().int()),
+});
+export type AppConfig = z.infer<typeof AppConfigSchema>;
+
+export function parseAppConfig(json: unknown): AppConfig {
+  return parse(AppConfigSchema, "app config", json);
+}

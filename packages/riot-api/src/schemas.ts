@@ -23,6 +23,39 @@ export const ParticipantSchema = z.looseObject({
   totalDamageTaken: z.number().default(0),
   damageSelfMitigated: z.number().default(0),
   timeCCingOthers: z.number().default(0),
+  kills: z.number().default(0),
+  deaths: z.number().default(0),
+  assists: z.number().default(0),
+  totalMinionsKilled: z.number().default(0),
+  neutralMinionsKilled: z.number().default(0),
+  goldEarned: z.number().default(0),
+  visionScore: z.number().default(0),
+  damageDealtToObjectives: z.number().default(0),
+  item0: z.number().int().default(0),
+  item1: z.number().int().default(0),
+  item2: z.number().int().default(0),
+  item3: z.number().int().default(0),
+  item4: z.number().int().default(0),
+  item5: z.number().int().default(0),
+  item6: z.number().int().default(0),
+  summoner1Id: z.number().int().default(0),
+  summoner2Id: z.number().int().default(0),
+  /** Rune page: styles[0] is primary, styles[1] secondary; statPerks are the shards. */
+  perks: z
+    .looseObject({
+      statPerks: z.record(z.string(), z.number()).default({}),
+      styles: z
+        .array(
+          z.looseObject({
+            style: z.number().int(),
+            selections: z.array(z.looseObject({ perk: z.number().int() })).default([]),
+          }),
+        )
+        .default([]),
+    })
+    .optional(),
+  /** Riot's derived per-player metrics. Values are mostly numbers; some are arrays. Field names vary by patch. */
+  challenges: z.record(z.string(), z.unknown()).optional(),
 });
 export type Participant = z.infer<typeof ParticipantSchema>;
 

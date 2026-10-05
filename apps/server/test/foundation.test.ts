@@ -36,7 +36,7 @@ describe("migrations", () => {
 
   it("match the Drizzle schema (every Drizzle column exists in the migrated tables)", () => {
     const db = openDb(":memory:");
-    for (const table of [schema.users, schema.invites]) {
+    for (const table of [schema.users, schema.invites, schema.matches, schema.userMatches, schema.userMasteries]) {
       const name = (table as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]!;
       const cols = (db.$client.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map((c) => c.name);
       for (const col of Object.values(table) as { name?: string }[]) {

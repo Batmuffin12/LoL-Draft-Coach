@@ -3,6 +3,7 @@ import type { RiotApi } from "@ldc/riot-api";
 import { newInviteCode, newToken, normalizeInviteCode, sha256 } from "./auth";
 import type { Db } from "./db";
 import { invites, users } from "./db/schema";
+import { deleteOrphanUserMatches } from "./sync";
 
 const DAY_MS = 86_400_000;
 
@@ -103,7 +104,9 @@ export function userByToken(db: Db, token: string): User | null {
 
 /** Deletes the user and everything stored for them. */
 export function deleteUser(db: Db, userId: number): void {
+  // user_matches and user_masteries cascade; matches only this user had are then removed.
   db.delete(users).where(eq(users.id, userId)).run();
+  deleteOrphanUserMatches(db);
 }
 
 /** What the API shows about a user: never the PUUID or token hash. */
@@ -115,4 +118,10 @@ export function publicUser(u: User) {
     createdAt: u.createdAt,
     lastSyncAt: u.lastSyncAt,
   };
+}
+
+/** Records activity at most once per `everyMs` (background sync only follows active users). */
+export function touchUser(db: Db, user: User, now: number, everyMs = 60_000): void {
+  if (user.lastSeenAt !== null && now - user.lastSeenAt < everyMs) return;
+  db.update(users).set({ lastSeenAt: now }).where(eq(users.id, user.id)).run();
 }

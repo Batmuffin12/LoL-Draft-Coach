@@ -35,6 +35,38 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: "stored matches and user history",
+    sql: `
+      ALTER TABLE users ADD COLUMN last_seen_at INTEGER;
+      ALTER TABLE users ADD COLUMN ranked TEXT;
+      CREATE TABLE matches (
+        match_id TEXT PRIMARY KEY,
+        queue_id INTEGER NOT NULL,
+        game_version TEXT NOT NULL,
+        ended_at INTEGER NOT NULL,
+        duration_sec INTEGER NOT NULL,
+        summary TEXT NOT NULL,
+        source TEXT NOT NULL,
+        stored_at INTEGER NOT NULL
+      );
+      CREATE INDEX matches_ended_at ON matches(ended_at);
+      CREATE TABLE user_matches (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        match_id TEXT NOT NULL REFERENCES matches(match_id) ON DELETE CASCADE,
+        participant_index INTEGER NOT NULL,
+        ended_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, match_id)
+      );
+      CREATE INDEX user_matches_by_time ON user_matches(user_id, ended_at);
+      CREATE TABLE user_masteries (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        data TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

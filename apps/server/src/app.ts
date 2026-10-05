@@ -2,16 +2,19 @@ import { Hono, type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { RiotApiError, RiotKeyError } from "@ldc/riot-api";
-import { AccountError, deleteUser, publicUser, registerUser, userByToken, type AccountLookup, type User } from "./accounts";
+import { AccountError, deleteUser, publicUser, registerUser, touchUser, userByToken, type AccountLookup, type User } from "./accounts";
 import { bearerToken } from "./auth";
 import type { Db } from "./db";
 import { WindowLimiter } from "./limits";
+import type { SyncScheduler } from "./sync-scheduler";
 
 export interface AppDeps {
   db: Db;
   version: string;
   /** Null when the server has no Riot API key: registration answers 503. */
   riot: AccountLookup | null;
+  /** Runs user syncs; null when the server has no Riot key. */
+  sync?: Pick<SyncScheduler, "request" | "state" | "forget"> | null;
   now?: () => number;
   /** Registration attempts allowed per client per minute. */
   registerPerMinute?: number;
@@ -68,6 +71,9 @@ export function createApp(deps: AppDeps): Hono<Env> {
     if (!deps.riot) return c.json({ error: "riot_unavailable", message: "The server has no Riot API key configured." }, 503);
     try {
       const { token, user } = await registerUser(deps.db, deps.riot, body.data, now());
+      touchUser(deps.db, user, now());
+      // First sync runs in the background; the app polls GET /me/sync for progress.
+      deps.sync?.request(user.id).catch(() => {});
       return c.json({ token, user: publicUser(user) }, 201);
     } catch (err) {
       if (err instanceof AccountError) return c.json({ error: err.code, message: err.message }, ACCOUNT_ERROR_STATUS[err.code]);
@@ -82,6 +88,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
     const token = bearerToken(c.req.header("authorization"));
     const user = token ? userByToken(deps.db, token) : null;
     if (!user) return c.json({ error: "unauthorized", message: "Missing or unknown token. Register again with an invite code." }, 401);
+    touchUser(deps.db, user, now());
     c.set("user", user);
     await next();
   });
@@ -92,6 +99,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
 
   app.delete("/me", (c) => {
     deleteUser(deps.db, c.get("user").id);
+    deps.sync?.forget(c.get("user").id);
     return c.body(null, 204);
   });
 
