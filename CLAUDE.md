@@ -1,40 +1,42 @@
 # CLAUDE.md — LoL Draft Coach
 
-**The source of truth is [docs/SPEC.md](docs/SPEC.md). Read it before doing any work.** If a prompt conflicts with the spec, follow the spec and say so.
+**The source of truth is [docs/SPEC.md](docs/SPEC.md). Read it before doing any work.** If a prompt conflicts with the spec, follow the spec and say so. The research behind the current plan (sources, design, architecture) is in [research/](research/ROADMAP.md).
 
 ## Current status (update this as it changes)
 
 | Item | Status |
 | --- | --- |
-| Riot API key | Development key (expires every 24h) in `.env` as `RIOT_API_KEY`. Personal key applied for. |
-| Overwolf | Developer access **pending**. Build nothing that needs Overwolf. Keep `apps/desktop` ow-electron-compatible: only standard Electron APIs, no native Electron forks. |
-| Jev (TypeSafe AI) | **No key or docs yet.** `packages/jev` holds only the adapter interface + a mock, behind `JEV_ENABLED=false`. Do not guess Jev's real API. |
-| Sentry | Skipped for now. |
-| Railway | Not used until milestone 3. |
-| Milestones | 1 (foundation, v0.1.0) and 2 (personal coach, v0.2.0) done. Next: 3 (server + collector, Railway). |
+| Riot API key | Development key (expires every 24h) in `.env` as `RIOT_API_KEY`. Personal key applied for. From milestone 3 the key lives **only on the server**. |
+| Overwolf | Developer access **pending** and no longer needed for data: in-game data comes from Riot's Live Client Data API. Overwolf is optional, only for an overlay window later. Keep `apps/desktop` ow-electron-compatible: only standard Electron APIs. |
+| Jev (TypeSafe AI) | **Optional, off the critical path** (decided Oct 5, 2026). `packages/jev` stays frozen behind `JEV_ENABLED=false`. Confidence labels come from our own sample sizes. Do not guess Jev's API. |
+| Sentry | Milestone 8. |
+| Railway | Server host from milestone 3 (Hobby plan, usage limit set). Oracle Cloud Always Free is the $0 fallback. |
+| Milestones | 1 (v0.1.0) and 2 (v0.2.0) done. Plan revised Oct 5, 2026: 3 server + friends, 4 the coach explains (MVP = 3 + 4), 5 live meta, 6 loadout, 7 grow, 8 in game + polish. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
 | Fixtures | Synthetic draft + one real Ranked Flex recording (`packages/lcu/fixtures/recorded/`). Record more with `pnpm --filter @ldc/lcu record`. |
 | Gotchas | The LCU PUUID is NOT valid for the Riot API (per-key encrypted PUUIDs): resolve gameName#tagLine via Account-V1. `RIOT_ID` must be quoted in .env. A fresh dev key can take ~30s to activate. |
 
-Interim deviation (agreed with the owner): until `apps/server` exists (milestone 3), the desktop **main process** calls the Riot API with the key from the local `.env`. The key never reaches the renderer. Move these calls behind the server in milestone 3.
+Interim deviation (agreed with the owner): until the desktop's server mode ships (milestone 3), the desktop **main process** calls the Riot API with the key from the local `.env`. The key never reaches the renderer. After milestone 3 this direct mode stays as a **dev-only** option and is never enabled in packaged builds.
 
 ## Hard rules (from the spec)
 
-- **Never hardcode game data**: champions, items, runes, summoner spells, patches, rank tiers, queue IDs, rate limits, meta stats. They come from Data Dragon, the LCU, the Riot API, or versioned config in `config/`.
-- **Every outside service sits behind its own adapter** (`packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev`, later `packages/overwolf`).
+- **Never hardcode game data**: champions, items, runes, summoner spells, patches, rank tiers, queue IDs, rate limits, meta stats. They come from Data Dragon, the LCU / CommunityDragon game data, the Riot API, our collector, or versioned config in `config/`.
+- **Every outside service sits behind its own adapter** (`packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/live-client`, `packages/jev`, later `packages/overwolf`).
 - **Riot compliance**:
-  - No game memory access. Use only the LCU, the Riot API and (later) Overwolf events.
-  - Suggest, never decide: never auto-pick, auto-ban, auto-lock, or call any LCU endpoint that acts on champ select. The LCU client in this repo only does reads (GET) and WebSocket subscribes.
-  - Never show teammates' or enemies' names, ranks or histories. Draft data passes through `sanitizeChampSelect()` (packages/lcu) before it reaches the engine or the UI. Only the local player's own identity is used, and only for their own data.
+  - No game memory access. Use only the LCU, the Riot API, the Live Client Data API and (optionally, later) Overwolf events.
+  - Suggest, never decide: never auto-pick, auto-ban, auto-lock, or call any LCU endpoint that acts on champ select. The LCU HTTP client only does reads (GET) and WebSocket subscribes. **Single exception (approved Oct 5, 2026):** a separate, flag-gated LCU writer may create a rune page and write an item set, and only in direct response to the player clicking an import button. No other LCU writes, ever.
+  - Never show teammates' or enemies' names, ranks or histories. Draft data passes through `sanitizeChampSelect()` (packages/lcu) before it reaches the engine or the UI. Only the local player's own identity is used, and only for their own data. Other players appear only as anonymous aggregates.
+  - In-game advice uses only what the client shows (Live Client Data API). No enemy cooldown or ultimate tracking.
   - No Arena augment or item win rates anywhere.
-  - No data brokering.
-- Validate all incoming data with Zod. LCU schemas are loose: they check the fields we use and tolerate new ones.
-- Engine (`packages/engine`) is pure functions: no network, no filesystem. Weights per rank band live in `config/engine.v*.json`.
-- Secrets live only in `.env` (gitignored). Keep `.env.example` up to date.
+  - No data brokering. Collector rows are stored without PUUIDs or names.
+  - Show the Riot "isn't endorsed by Riot Games" notice in the app.
+- **Riot API keys and other secrets never ship in the desktop app.** They live in the server's environment (Railway variables) or the local `.env` (gitignored) for development. Keep `.env.example` up to date.
+- Validate all incoming data with Zod. LCU and Riot schemas are loose: they check the fields we use and tolerate new ones.
+- Engine (`packages/engine`) and aggregation (`packages/meta`) are pure functions: no network, no filesystem. Weights per rank band live in `config/engine.v*.json`. The desktop scores drafts locally from server snapshots; the server never needs the live draft.
 - Every package has Vitest tests. `pnpm test` and `pnpm typecheck` must pass before you finish.
 
 ## Git rules (follow these for the whole project)
 
-- Work on one branch per milestone (`milestone-1-foundation`, `milestone-2-personal-coach`, and so on), created from `main`.
+- Work on one branch per milestone (`milestone-1-foundation`, `milestone-2-personal-coach`, `milestone-3-server`, and so on), created from `main`.
 - Commit after every completed, working step: small commits, one logical change each, using Conventional Commits (`feat:`, `fix:`, `test:`, `chore:`, `docs:`, `refactor:`).
 - Run tests and type checks before every commit (`pnpm typecheck && pnpm test`). Never commit failing code.
 - Push to the remote after every commit.
@@ -59,7 +61,8 @@ pnpm --filter @ldc/lcu mock     # fake League client replaying a fixture; then s
 ## Layout
 
 - `apps/desktop`: Electron (ow-electron-compatible) + React + Vite panel. Main process = adapters + engine; renderer = UI only.
-- `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev`: adapters. `packages/engine`: scoring.
-- `config/`: `engine.v1.json` (factor weights per band, smoothing), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime.
-- TODOs carried forward: lane matchup / counter / meta factors (M3), timelines + power curve attribute (M3), templates + Jev + loadout (M4), Overwolf, installer, Sentry, GitHub Actions (M5).
+- `apps/server` (milestone 3): Hono + SQLite (better-sqlite3 + Drizzle). Users, invites, profiles, meta snapshots, config, advice log; jobs for user sync, collector and hourly aggregation, all in one process.
+- `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev` (frozen), later `packages/live-client`: adapters. `packages/engine`: scoring. Later `packages/meta`: aggregation.
+- `config/`: `engine.v1.json` (factor weights per band, smoothing), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime; the server will serve them from `/config`.
+- `research/`: the Oct 5, 2026 research and roadmap (data sources, competitors, design, architecture, decisions, assumptions).
 - Node 22 LTS target (`.nvmrc`), TypeScript strict, ESM.
