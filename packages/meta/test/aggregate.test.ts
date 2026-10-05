@@ -143,6 +143,25 @@ describe("aggregateBand", () => {
     expect(s.references.top!["challenges.killParticipation"]).toEqual({ n: 2, quantiles: [1, 1, 1, 1, 1] });
   });
 
+  it("counts bans once per game, recency-weighted, over only the games that carried ban data", () => {
+    const withBans = (id: string, bans: { teamId: number; championId: number }[], ageDays = 0) => match(id, BLUE, RED, true, ageDays, { bans });
+    const s = aggregateBand({
+      ...base,
+      matches: [
+        withBans("A", [{ teamId: 100, championId: 77 }, { teamId: 200, championId: 77 }, { teamId: 200, championId: 88 }]),
+        withBans("B", [{ teamId: 100, championId: 77 }], cfg.halfLifeDays),
+        withBans("C", []),
+        match("OLD", BLUE, RED, true), // stored before bans were kept: not in the denominator
+      ],
+    });
+    expect(s.matches).toBe(4);
+    expect(s.banMatches).toBeCloseTo(2.5);
+    expect(s.bans).toEqual([
+      { championId: 77, bans: 1.5, n: 2 },
+      { championId: 88, bans: 1, n: 1 },
+    ]);
+  });
+
   it("never carries player identifiers into the snapshot", () => {
     const m = match("A", BLUE, RED, true);
     (m.participants[0] as unknown as Record<string, unknown>).puuid = "SECRET-PUUID";

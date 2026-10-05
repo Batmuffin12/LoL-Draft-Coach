@@ -177,6 +177,11 @@ export interface MatchSummary {
   endedAt: number;
   durationSec: number;
   participants: ParticipantSummary[];
+  /**
+   * Champions banned in the game, per team. Absent on games stored before bans were kept
+   * (they don't count toward ban rates); an empty list means the game had no bans.
+   */
+  bans?: { teamId: number; championId: ChampionId }[];
 }
 
 /** A match from a user's own history, with which participant they were. */
@@ -239,6 +244,12 @@ export interface MetaSnapshot {
   /** Recency-weighted games per role (all champions), for pick rates. */
   roleGames: Record<Position, number>;
   champions: ChampionRoleStat[];
+  /**
+   * Bans: recency-weighted ban count per champion, over `banMatches` (the weighted number
+   * of games that carried ban data). Absent in snapshots made before bans were collected.
+   */
+  bans?: { championId: ChampionId; bans: number; n: number }[];
+  banMatches?: number;
   matchups: PairStat[];
   duos: PairStat[];
   attributes: ChampionAttributes[];

@@ -69,6 +69,15 @@ export const MatchSchema = z.looseObject({
     gameVersion: z.string().default(""),
     queueId: z.number().int(),
     participants: z.array(ParticipantSchema),
+    /** Per team: the champions it banned (championId -1 = no ban). */
+    teams: z
+      .array(
+        z.looseObject({
+          teamId: z.number().int(),
+          bans: z.array(z.looseObject({ championId: z.number().int(), pickTurn: z.number().int().optional() })).default([]),
+        }),
+      )
+      .optional(),
   }),
 });
 export type Match = z.infer<typeof MatchSchema>;

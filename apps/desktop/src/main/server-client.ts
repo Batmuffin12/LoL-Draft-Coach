@@ -59,6 +59,9 @@ export const MetaSnapshotSchema = z.looseObject({
   halfLifeDays: z.number(),
   roleGames: z.record(z.string(), z.number()),
   champions: z.array(z.looseObject({ championId: z.number(), role: z.string(), games: z.number(), wins: z.number(), n: z.number() })),
+  // Ban rates: absent in snapshots made before bans were collected.
+  bans: z.array(z.looseObject({ championId: z.number(), bans: z.number(), n: z.number() })).optional(),
+  banMatches: z.number().optional(),
   matchups: z.array(PairSchema),
   duos: z.array(PairSchema),
   attributes: z.array(

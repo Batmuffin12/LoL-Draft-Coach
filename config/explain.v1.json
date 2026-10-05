@@ -57,7 +57,8 @@
     "ban.counters": "Beats your top {picks} picks by {delta:signedPct1}% on average; picked in {pickRate:pct}% of games",
     "ban.meta": "Strong in {role}: {winRate:pct1}% win rate, picked in {pickRate:pct}% of games",
     "expectedWin": "≈ {win:pct}% in this draft",
-    "ban.popular": "Picked in {pickRate:pct}% of {role} games in your rank (not enough games yet for its win rate)"
+    "ban.popular": "Picked in {pickRate:pct}% of {role} games in your rank (not enough games yet for its win rate)",
+    "ban.banRate": "Banned in {banRate:pct}% of games in your rank"
   },
   "settings": {
     "clearGap": 0.05,

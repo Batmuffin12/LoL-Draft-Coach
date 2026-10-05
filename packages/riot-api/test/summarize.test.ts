@@ -74,6 +74,24 @@ describe("summarizeMatch", () => {
     });
   });
 
+  it("keeps each team's bans (champion ids only, skipped bans dropped), and marks games without team data", () => {
+    const withTeams = MatchSchema.parse({
+      ...raw,
+      info: {
+        ...raw.info,
+        teams: [
+          { teamId: 100, win: true, bans: [{ championId: 238, pickTurn: 1 }, { championId: -1, pickTurn: 2 }] },
+          { teamId: 200, win: false, bans: [{ championId: 555, pickTurn: 6 }], objectives: {} },
+        ],
+      },
+    });
+    expect(summarizeMatch(withTeams).bans).toEqual([
+      { teamId: 100, championId: 238 },
+      { teamId: 200, championId: 555 },
+    ]);
+    expect(summarizeMatch(MatchSchema.parse(raw)).bans).toBeUndefined();
+  });
+
   it("defaults missing stats instead of failing, and drops non-numeric challenges", () => {
     expect(summary.participants[0]).toMatchObject({ kills: 0, cs: 0, perks: null, challenges: {} });
     expect(summary.participants[3]?.challenges).not.toHaveProperty("legendaryItemUsed");

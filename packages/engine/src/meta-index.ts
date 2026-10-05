@@ -32,6 +32,7 @@ export class MetaIndex {
   private readonly matchups = new Map<string, Stat>();
   private readonly duos = new Map<string, Stat>();
   readonly attributes: Map<ChampionId, ChampionAttributes>;
+  private readonly bansById: Map<ChampionId, { bans: number; n: number }>;
   /** Roles seen in the data, most games first (positions come from Riot's data, never from code). */
   readonly roles: Position[];
 
@@ -48,6 +49,7 @@ export class MetaIndex {
     for (const [a, ra, b, rb, games, wins, n] of snapshot.matchups) this.matchups.set(pairKey(a, ra, b, rb), { games, wins, n });
     for (const [a, ra, b, rb, games, wins, n] of snapshot.duos) this.duos.set(pairKey(a, ra, b, rb), { games, wins, n });
     this.attributes = new Map(snapshot.attributes.map((a) => [a.championId, a]));
+    this.bansById = new Map((snapshot.bans ?? []).map((b) => [b.championId, b]));
     this.roles = Object.entries(snapshot.roleGames)
       .sort((x, y) => y[1] - x[1])
       .map(([r]) => r);
@@ -66,6 +68,17 @@ export class MetaIndex {
   pickRate(id: ChampionId, role: Position): number {
     const matches = (this.snapshot.roleGames[role] ?? 0) / 2; // two players per role per match
     return matches > 0 ? this.champion(id, role).games / matches : 0;
+  }
+
+  /**
+   * Share of games (with ban data) in which the champion was banned, and how many such
+   * games there were; null when the snapshot has no ban data.
+   */
+  banRate(id: ChampionId): { rate: number; games: number } | null {
+    const total = this.snapshot.banMatches ?? 0;
+    if (!this.snapshot.bans || total <= 0) return null;
+    const b = this.bansById.get(id);
+    return { rate: b ? b.bans / total : 0, games: total };
   }
 
   /** Share of the champion's games in each role. */

@@ -288,6 +288,16 @@ describe("suggestBans", () => {
     expect(bans.every((b) => b.reasons.length > 0)).toBe(true);
   });
 
+  it("says how often a suggested ban is banned in the band, once there is ban data", () => {
+    const withBans = { ...snapshot(), banMatches: 800, bans: [{ championId: 302, bans: 240, n: 240 }] };
+    const idx = index(withBans);
+    expect(idx.banRate(302)).toEqual({ rate: 0.3, games: 800 });
+    expect(idx.banRate(301)).toEqual({ rate: 0, games: 800 });
+    expect(index().banRate(302)).toBeNull(); // older snapshot: no ban data
+    const bans = suggestBans(input(draft([], 301), { index: idx }));
+    expect(text(bans.find((b) => b.championId === 302)!.reasons)).toMatch(/Banned in 30% of games in your rank/);
+  });
+
   it("still says why when the band has too few games for a win rate", () => {
     const bans = suggestBans(input(draft(), { index: index(snapshot({ gamesScale: 0.02 })) }));
     expect(bans.length).toBeGreaterThan(0);

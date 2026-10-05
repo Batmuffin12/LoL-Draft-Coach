@@ -86,6 +86,9 @@ export class BandAggregator {
   private readonly metrics: string[];
   private readonly patches = new Set<string | null>();
   private count = 0;
+  private readonly bans = new Map<ChampionId, { bans: number; n: number }>();
+  /** Weighted games that carried ban data (older stored games didn't). */
+  private banMatches = 0;
   private newest: number | null = null;
 
   constructor(private readonly opts: AggregatorOptions) {
@@ -111,6 +114,16 @@ export class BandAggregator {
     this.count++;
     this.newest = Math.max(this.newest ?? 0, m.endedAt);
     this.patches.add(patchOf(m.gameVersion));
+    if (m.bans) {
+      this.banMatches += w;
+      // A champion counts once per game, even if both teams list it.
+      for (const id of new Set(m.bans.map((b) => b.championId))) {
+        const b = this.bans.get(id) ?? { bans: 0, n: 0 };
+        b.bans += w;
+        b.n++;
+        this.bans.set(id, b);
+      }
+    }
     const ps = m.participants;
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i]!;
@@ -187,6 +200,10 @@ export class BandAggregator {
       newestMatchAt: this.newest,
       halfLifeDays: cfg.halfLifeDays,
       roleGames: Object.fromEntries(Object.entries(this.roleGames).map(([k, v]) => [k, round(v)])),
+      banMatches: round(this.banMatches),
+      bans: [...this.bans]
+        .map(([championId, b]) => ({ championId, bans: round(b.bans), n: b.n }))
+        .sort((a, b) => a.championId - b.championId),
       champions: [...this.champions.values()]
         .map((c) => ({ ...c, games: round(c.games), wins: round(c.wins) }))
         .sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role)),

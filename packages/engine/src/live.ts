@@ -370,6 +370,9 @@ export function suggestBans(input: LiveInput): BanSuggestion[] {
       // Too few games to quote a win rate: say what is known.
       reasons.push(reason("ban.popular", { pickRate, role: eRole }));
     }
+    // How often players in the band ban it, once enough games carried ban data.
+    const banned = index.banRate(s.championId);
+    if (banned && banned.games >= cfg.minGames.meta) reasons.push(reason("ban.banRate", { banRate: banned.rate }));
     out.push({ championId: s.championId, threat, reasons });
   }
   return out.sort((a, b) => b.threat - a.threat || a.championId - b.championId).slice(0, cfg.bans.topN);
