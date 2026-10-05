@@ -347,16 +347,39 @@ export function assessPick(input: LiveInput, championId: ChampionId): PickRecomm
 }
 
 /**
+ * Extra bans for the champion the player hovers before (or during) bans: what counters it in
+ * their lane, without repeating `alreadySuggested`. Only `bans.hoverTopNWhenSuggested` (1) when
+ * the hovered champion is already the #1 suggested pick (the main list protects it), else
+ * `bans.hoverTopN` (3).
+ */
+export function suggestHoverBans(input: LiveInput, hovered: ChampionId, alreadySuggested: ChampionId[]): BanSuggestion[] {
+  const { bans } = input.config.rating;
+  const isTopPick = adviseLivePicks(input).picks[0]?.championId === hovered;
+  return suggestBans(input, { protect: [hovered], exclude: alreadySuggested, topN: isTopPick ? bans.hoverTopNWhenSuggested : bans.hoverTopN });
+}
+
+export interface BanOptions {
+  /** Protect these champions instead of the player's top recommended picks (e.g. the champion they hover). */
+  protect?: ChampionId[];
+  /** Champions not to suggest (e.g. already in another ban list). */
+  exclude?: Iterable<ChampionId>;
+  /** How many to return (default: config bans.topN). */
+  topN?: number;
+}
+
+/**
  * Ban suggestions for the ban phase: champions that are picked often in the band and
  * either beat the player's best picks for their role or are simply strong. Champions the
  * player would pick, allies have shown, or that are already gone are never suggested.
  */
-export function suggestBans(input: LiveInput): BanSuggestion[] {
+export function suggestBans(input: LiveInput, opts: BanOptions = {}): BanSuggestion[] {
   const { index, config } = input;
   const cfg = config.rating;
   const { ctx, all } = scoreAll(input);
-  const protect = all.slice(0, cfg.bans.protectPicks);
-  const excluded = new Set<ChampionId>([...ctx.unavailable, ...ctx.allies.map((a) => a.championId), ...protect.map((p) => p.pick.championId)]);
+  const recommended = all.slice(0, cfg.bans.protectPicks).map((s) => s.pick.championId);
+  const protect = opts.protect ?? recommended;
+  // Never suggest banning a champion the player might pick (their recommendations or the protected ones).
+  const excluded = new Set<ChampionId>([...ctx.unavailable, ...ctx.allies.map((a) => a.championId), ...recommended, ...protect, ...(opts.exclude ?? [])]);
   const role = ctx.role;
 
   const seen = new Set<ChampionId>();
@@ -375,10 +398,10 @@ export function suggestBans(input: LiveInput): BanSuggestion[] {
     let worst: { pick: ChampionId; delta: number; games: number } | null = null;
     let beats = 0;
     if (laneShare >= cfg.bans.minPickRate && protect.length) {
-      for (const p of protect) {
-        const d = index.matchupDelta(p.pick.championId, laneRole, id, laneRole);
+      for (const pid of protect) {
+        const d = index.matchupDelta(pid, laneRole, id, laneRole);
         beats += d.delta;
-        if (d.n >= cfg.minGames.pair && (!worst || d.delta < worst.delta)) worst = { pick: p.pick.championId, delta: d.delta, games: d.n };
+        if (d.n >= cfg.minGames.pair && (!worst || d.delta < worst.delta)) worst = { pick: pid, delta: d.delta, games: d.n };
       }
       beats /= protect.length;
     }
@@ -422,5 +445,5 @@ export function suggestBans(input: LiveInput): BanSuggestion[] {
     if (banned && banned.games >= cfg.minGames.meta) reasons.push(reason("ban.banRate", { banRate: banned.rate }));
     out.push({ championId: s.championId, threat, reasons });
   }
-  return out.sort((a, b) => b.threat - a.threat || a.championId - b.championId).slice(0, cfg.bans.topN);
+  return out.sort((a, b) => b.threat - a.threat || a.championId - b.championId).slice(0, opts.topN ?? cfg.bans.topN);
 }

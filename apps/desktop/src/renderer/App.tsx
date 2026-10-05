@@ -175,29 +175,44 @@ function YourPick({ pick }: { pick: MyPickView }) {
 }
 
 /** Ban suggestions (ban phase, live meta). */
-function BanSuggestions({ bans }: { bans: BanView[] }) {
-  if (!bans.length) return null;
+function BanList({ bans, start = 1 }: { bans: BanView[]; start?: number }) {
+  return (
+    <ol>
+      {bans.map((b, i) => (
+        <li key={b.champion.id} className="pick">
+          <span className="rank">{start + i}</span>
+          <Icon champ={b.champion} size={32} />
+          <div className="pick-body">
+            <strong>{b.champion.name}</strong>
+            <ul className="reasons">
+              {b.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Ban suggestions, plus extra ones for the champion you're hovering. */
+function BanSuggestions({ bans, hover }: { bans: BanView[]; hover: ViewState["hoverBans"] }) {
+  if (!bans.length && !hover?.bans.length) return null;
   return (
     <section className="card picks bans-card">
       <h2 className="picks-head">
         <span>Suggested bans</span>
       </h2>
-      <ol>
-        {bans.map((b, i) => (
-          <li key={b.champion.id} className="pick">
-            <span className="rank">{i + 1}</span>
-            <Icon champ={b.champion} size={32} />
-            <div className="pick-body">
-              <strong>{b.champion.name}</strong>
-              <ul className="reasons">
-                {b.reasons.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <BanList bans={bans} />
+      {hover && hover.bans.length > 0 && (
+        <>
+          <h3 className="hover-bans-head">
+            <Icon champ={hover.champion} size={18} /> For your {hover.champion.name}
+          </h3>
+          <BanList bans={hover.bans} start={bans.length + 1} />
+        </>
+      )}
       <p className="disclaimer">Suggestions only — you choose your ban.</p>
     </section>
   );
@@ -441,7 +456,7 @@ export function App() {
               <Timer draft={draft} />
             </section>
 
-            <BanSuggestions bans={state.bans} />
+            <BanSuggestions bans={state.bans} hover={state.hoverBans} />
             {state.myPick ? <YourPick pick={state.myPick} /> : <Picks picks={state.picks} role={state.pickRole} state={state} />}
 
             <section className="card teams">

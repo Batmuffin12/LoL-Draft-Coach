@@ -148,6 +148,8 @@ export interface ViewState {
   pickAdvice: PickAdviceView;
   /** Ban suggestions while the local player is banning (empty otherwise). */
   bans: BanView[];
+  /** Extra bans for the champion the player hovers before or during bans (null when not hovering). */
+  hoverBans: { champion: ChampView; bans: BanView[] } | null;
   /** Set once the local player has locked in a champion (suggestions stop then). */
   myPick: MyPickView | null;
   /** Null until a snapshot is loaded (or in dev-only direct mode, which has no meta). */
@@ -170,6 +172,7 @@ export function emptyViewState(): ViewState {
     picks: [],
     pickAdvice: { whyNot: null, confidence: null },
     bans: [],
+    hoverBans: null,
     myPick: null,
     meta: null,
     pickRole: null,

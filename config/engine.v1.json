@@ -224,6 +224,8 @@
       "minPickRate": 0.02,
       "metaWeight": 0.5,
       "offRoleWeight": 0.25,
+      "hoverTopN": 3,
+      "hoverTopNWhenSuggested": 1,
       "protectPicks": 3,
       "topN": 3
     },

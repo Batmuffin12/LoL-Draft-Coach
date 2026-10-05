@@ -151,6 +151,9 @@ export const EngineConfigSchema = z.object({
       metaWeight: z.number().min(0),
       /** Share (0..1) of a champion's strength that counts when it plays a lane other than yours. */
       offRoleWeight: unit,
+      /** Extra bans shown for a champion the player hovers; fewer when it's already the #1 suggested pick. */
+      hoverTopN: z.number().int().min(0),
+      hoverTopNWhenSuggested: z.number().int().min(0),
       /** How many of your best picks a ban should protect. */
       protectPicks: z.number().int().min(1),
       topN: z.number().int().min(1),

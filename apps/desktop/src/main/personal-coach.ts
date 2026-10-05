@@ -17,6 +17,7 @@ import {
   adviseLivePicks,
   assessPick,
   suggestBans,
+  suggestHoverBans,
   MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
@@ -345,7 +346,7 @@ export class PersonalCoach extends Coach {
     if (this.draft && !this.hadDraft) void this.onChampSelectStart();
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
-      this.update({ picks: [], bans: [], myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], bans: [], hoverBans: null, myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.config;
@@ -382,6 +383,7 @@ export class PersonalCoach extends Coach {
       this.update({
         picks: [],
         bans: [],
+        hoverBans: null,
         pickAdvice: { whyNot: null, confidence: null },
         pickRole: role,
         myPick: {
@@ -406,10 +408,18 @@ export class PersonalCoach extends Coach {
       whyNot: advice.whyNot ? say(advice.whyNot) : null,
       confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
     };
-    const bans: BanView[] =
-      live && banningNow(this.draft)
-        ? suggestBans(live).map((b) => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say) }))
-        : [];
-    this.update({ picks: views, pickAdvice, bans, myPick: null, pickRole: role });
+    const banning = live !== null && banningNow(this.draft);
+    const banSuggestions = banning ? suggestBans(live) : [];
+    const toView = (b: { championId: number; reasons: Parameters<typeof say>[0][] }): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say) });
+    // Hovering a champion before or during bans: extra bans that protect it (1 if it's already the top suggestion).
+    const hovered = this.draft.myTeam.find((s) => s.isLocalPlayer)?.pickIntentId ?? 0;
+    const hoverBans =
+      banning && hovered > 0
+        ? {
+            champion: champView(hovered, lookup)!,
+            bans: suggestHoverBans(live, hovered, banSuggestions.map((b) => b.championId)).map(toView),
+          }
+        : null;
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, pickRole: role });
   }
 }

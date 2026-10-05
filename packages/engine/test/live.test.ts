@@ -15,6 +15,7 @@ import {
   renderReason,
   smoothRate,
   suggestBans,
+  suggestHoverBans,
   weightedQuantile,
   winOf,
   type LiveInput,
@@ -313,6 +314,31 @@ describe("suggestBans", () => {
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
     expect(ids).toContain(302); // strong top laner
     expect(bans.every((b) => b.reasons.length > 0)).toBe(true);
+  });
+
+  it("adds bans for a hovered champion: its own counters, no repeats, and just 1 when it's the top pick", () => {
+    // 203 hard-counters 103 only (30% for 103 over 200 games); picked in 10% of mid games.
+    const s = snapshot();
+    const snap = {
+      ...s,
+      champions: [...s.champions, { championId: 203, role: "middle", games: 200, wins: 100, n: 200 }],
+      matchups: [...s.matchups, [103, "middle", 203, "middle", 200, 60, 200] as [number, string, number, string, number, number, number]],
+    };
+    const inp = input(draft(), { index: index(snap) });
+    const general = suggestBans(inp).map((b) => b.championId);
+    const top = adviseLivePicks(inp).picks[0]!.championId;
+    expect(top).not.toBe(103); // 103 is unplayed: not the top suggestion here
+    const hover = suggestHoverBans(inp, 103, general);
+    expect(hover.length).toBeGreaterThan(0);
+    expect(hover.length).toBeLessThanOrEqual(config.rating.bans.hoverTopN);
+    // Protecting only 103, its counter 203 must rank first among the hover bans.
+    expect(suggestBans(inp, { protect: [103] })[0]!.championId).toBe(203);
+    expect(hover.some((b) => general.includes(b.championId))).toBe(false);
+    if (!general.includes(203)) {
+      expect(hover[0]!.championId).toBe(203);
+      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: -\d+\.\d% \(200 games\)/);
+    }
+    expect(suggestHoverBans(inp, top, general)).toHaveLength(config.rating.bans.hoverTopNWhenSuggested);
   });
 
   it("bans for your lane: a mid counter to your picks beats a hugely popular, strong bot laner", () => {
