@@ -149,6 +149,8 @@ export const EngineConfigSchema = z.object({
       minPickRate: unit,
       /** Weight of a champion's own strength next to how badly it beats your picks. */
       metaWeight: z.number().min(0),
+      /** Share (0..1) of a champion's strength that counts when it plays a lane other than yours. */
+      offRoleWeight: unit,
       /** How many of your best picks a ban should protect. */
       protectPicks: z.number().int().min(1),
       topN: z.number().int().min(1),

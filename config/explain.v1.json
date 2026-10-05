@@ -54,7 +54,7 @@
     "whyNot.synergy": "Picked over your {champion:champion}: works better with your team ({delta:signedPct1}%)",
     "whyNot.team": "Picked over your {champion:champion}: fills what your team is missing ({delta:signedPct1}%)",
     "whyNot.personal": "Picked over your {champion:champion}: you play it better in this role ({delta:signedPct1}%)",
-    "ban.counters": "Beats your top {picks} picks by {delta:signedPct1}% on average; picked in {pickRate:pct}% of games",
+    "ban.counters": "Counters your {pick:champion}: {delta:signedPct1}% ({games} games); picked in {pickRate:pct}% of {role} games",
     "ban.meta": "Strong in {role}: {winRate:pct1}% win rate, picked in {pickRate:pct}% of games",
     "expectedWin": "≈ {win:pct}% in this draft",
     "ban.popular": "Picked in {pickRate:pct}% of {role} games in your rank (not enough games yet for its win rate)",

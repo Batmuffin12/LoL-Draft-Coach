@@ -307,12 +307,24 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft([], 301)));
     const ids = bans.map((b) => b.championId);
     expect(ids[0]).toBe(202);
-    expect(text(bans[0]!.reasons)).toMatch(/Beats your top 3 picks by -\d+\.\d% on average; picked in 40% of games/);
+    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: -\d+\.\d% \(200 games\); picked in 40% of middle games/);
     expect(ids).not.toContain(301); // an ally is hovering it
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
     expect(ids).toContain(302); // strong top laner
     expect(bans.every((b) => b.reasons.length > 0)).toBe(true);
+  });
+
+  it("bans for your lane: a mid counter to your picks beats a hugely popular, strong bot laner", () => {
+    // 701 = "Jinx": bottom only, in 60% of games, 54% win rate. 202 counters the mid picks we'd recommend.
+    const s = snapshot();
+    const withJinx = { ...s, champions: [...s.champions, { championId: 701, role: "bottom", games: 1200, wins: 648, n: 1200 }] };
+    const bans = suggestBans(input(draft(), { index: index(withJinx) })).map((b) => b.championId);
+    expect(bans[0]).toBe(202);
+    expect(bans.indexOf(701) === -1 || bans.indexOf(701) > bans.indexOf(202)).toBe(true);
+    // Without a known role (custom games), every champion is judged in its own main role, as before.
+    const noRole = suggestBans(input(draft(), { index: index(withJinx), role: null })).map((b) => b.championId);
+    expect(noRole).toContain(701);
   });
 
   it("says how often a suggested ban is banned in the band, once there is ban data", () => {

@@ -364,36 +364,57 @@ export function suggestBans(input: LiveInput): BanSuggestion[] {
   for (const s of index.snapshot.champions) {
     if (seen.has(s.championId) || excluded.has(s.championId)) continue;
     seen.add(s.championId);
-    const eRole = index.mainRole(s.championId);
-    if (!eRole) continue;
-    const pickRate = index.pickRate(s.championId, eRole);
-    if (pickRate < cfg.bans.minPickRate) continue;
+    const id = s.championId;
+    const strength = (r: Position) => cfg.bans.metaWeight * Math.max(0, index.metaRating(id, r));
 
-    const meta = index.metaRating(s.championId, eRole);
-    // How much it beats the picks we'd make (lane matchups when it plays our role, else cross-lane at counter weight).
+    // Your lane: how often it's picked in your role × (how badly it beats the picks we'd
+    // recommend you + its own strength there). Without a known role, judge it in its main role.
+    const laneRole = role ?? index.mainRole(id);
+    if (!laneRole) continue;
+    const laneShare = index.pickRate(id, laneRole);
+    let worst: { pick: ChampionId; delta: number; games: number } | null = null;
     let beats = 0;
-    let games = 0;
-    if (protect.length) {
+    if (laneShare >= cfg.bans.minPickRate && protect.length) {
       for (const p of protect) {
-        const d = index.matchupDelta(p.pick.championId, role ?? eRole, s.championId, eRole);
-        beats += (eRole === role ? 1 : cfg.counterWeight) * d.delta;
-        games += d.n;
+        const d = index.matchupDelta(p.pick.championId, laneRole, id, laneRole);
+        beats += d.delta;
+        if (d.n >= cfg.minGames.pair && (!worst || d.delta < worst.delta)) worst = { pick: p.pick.championId, delta: d.delta, games: d.n };
       }
       beats /= protect.length;
     }
-    const threat = pickRate * (Math.max(0, -beats) + cfg.bans.metaWeight * Math.max(0, meta));
+    const counterThreat = laneShare >= cfg.bans.minPickRate ? laneShare * Math.max(0, -beats) : 0;
+    const laneMetaThreat = laneShare >= cfg.bans.minPickRate ? laneShare * strength(laneRole) : 0;
+
+    // Other lanes: only a fraction of their strength (a strong bot laner is your team's problem
+    // more than yours). Skipped when your role is unknown (the main role already counted).
+    let offRoleThreat = 0;
+    let offRole: Position | null = null;
+    if (role) {
+      for (const r of index.roles) {
+        if (r === role) continue;
+        const share = index.pickRate(id, r);
+        if (share < cfg.bans.minPickRate) continue;
+        const t = share * cfg.bans.offRoleWeight * strength(r);
+        if (!offRole || t > offRoleThreat) offRole = r;
+        offRoleThreat += t;
+      }
+    }
+    const threat = counterThreat + laneMetaThreat + offRoleThreat;
     if (threat <= 0) continue;
 
     const reasons: Reason[] = [];
-    if (-beats >= Math.abs(meta) * cfg.bans.metaWeight && games >= cfg.minGames.pair) {
-      reasons.push(reason("ban.counters", { picks: protect.length, delta: deltaWin(beats), pickRate }));
-    } else if (index.champion(s.championId, eRole).n >= cfg.minGames.meta) {
-      const st = index.champion(s.championId, eRole);
-      reasons.push(reason("ban.meta", { winRate: st.wins / st.games, pickRate, role: eRole }));
+    const describeRole = offRoleThreat > counterThreat + laneMetaThreat && offRole ? offRole : laneRole;
+    const share = index.pickRate(id, describeRole);
+    if (describeRole === laneRole && worst && worst.delta < 0 && counterThreat >= laneMetaThreat) {
+      reasons.push(reason("ban.counters", { pick: worst.pick, delta: deltaWin(worst.delta), games: worst.games, pickRate: share, role: laneRole }));
+    } else if (index.champion(id, describeRole).n >= cfg.minGames.meta) {
+      const st = index.champion(id, describeRole);
+      reasons.push(reason("ban.meta", { winRate: st.wins / st.games, pickRate: share, role: describeRole }));
     } else {
       // Too few games to quote a win rate: say what is known.
-      reasons.push(reason("ban.popular", { pickRate, role: eRole }));
+      reasons.push(reason("ban.popular", { pickRate: share, role: describeRole }));
     }
+    const eRole = describeRole;
     const rising = trendReason(index, s.championId, eRole);
     if (rising) reasons.push(rising);
     // How often players in the band ban it, once enough games carried ban data.
