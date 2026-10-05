@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ParticipantSummary, UserMatch } from "@ldc/shared";
-import { computePlaystyle, empiricalPercentile, parseEngineConfig, playstyleRoles, readMetric } from "../src/index";
+import { computePlaystyle, empiricalPercentile, parseEngineConfig, percentileFromQuantiles, playstyleRoles, readMetric } from "../src/index";
 
 const cfg = parseEngineConfig(JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "config", "engine.v1.json"), "utf8"))).playstyle;
 const NOW = 1_800_000_000_000;
@@ -76,5 +76,29 @@ describe("playstyle", () => {
 
   it("lists the roles with enough games, most played first", () => {
     expect(playstyleRoles([...games(10, "middle"), ...games(20, "jungle"), ...games(2, "top")], cfg)).toEqual(["jungle", "middle"]);
+  });
+});
+
+describe("playstyle against band references (live meta)", () => {
+  it("interpolates percentiles from quantiles, with runs of equal values at their middle", () => {
+    expect(percentileFromQuantiles(5, [0, 10, 20])).toBe(0.25);
+    expect(percentileFromQuantiles(-1, [0, 10, 20])).toBe(0);
+    expect(percentileFromQuantiles(99, [0, 10, 20])).toBe(1);
+    expect(percentileFromQuantiles(0, [0, 0, 0, 10, 20])).toBe(0.25);
+    expect(percentileFromQuantiles(3, [3])).toBe(0.5);
+  });
+
+  it("uses the band's references when the snapshot has them, else the player's own games", () => {
+    // In the band, kill participation 0.7 is only the median: the player is average there.
+    const band = { "challenges.killParticipation": { n: 5000, quantiles: [0.2, 0.5, 0.7, 0.8, 0.95] } };
+    const ps = computePlaystyle(games(30), "jungle", NOW, cfg, band)!;
+    expect(ps.reference).toBe("band");
+    expect(ps.referenceSamples).toBe(5000);
+    const kp = ps.axes.find((a) => a.axis === "fighting")!.metrics.find((m) => m.metric === "challenges.killParticipation")!;
+    expect(kp.percentile).toBeGreaterThan(0.5);
+    expect(kp.percentile).toBeLessThan(0.6);
+    expect(kp.reference).toBe(0.7);
+    // Too few band samples: back to the lane opponents in the player's games.
+    expect(computePlaystyle(games(30), "jungle", NOW, cfg, { "challenges.killParticipation": { n: 3, quantiles: [0, 1] } })!.reference).toBe("games");
   });
 });
