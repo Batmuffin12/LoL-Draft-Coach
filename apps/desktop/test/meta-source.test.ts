@@ -82,6 +82,27 @@ describe("MetaSource", () => {
     expect(seen.at(-1)).toMatchObject({ state: "ready", offline: true });
   });
 
+  it("doesn't drop a band change that arrives while another band is loading", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const asked: number[] = [];
+    const client = {
+      async meta(band: number) {
+        asked.push(band);
+        if (band === 2) await gate;
+        return { notModified: false, snapshot: { ...snapshot(), band }, etag: `"b${band}"` };
+      },
+    } as unknown as ServerClient;
+    const src = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-") });
+    const a = src.refresh(2);
+    expect(src.refresh(2)).toBe(a); // same band: joins
+    const b = src.refresh(3); // the player's band changed mid-download
+    release();
+    await Promise.all([a, b]);
+    expect(asked).toEqual([2, 3]);
+    expect(src.snapshot?.band).toBe(3);
+  });
+
   it("reports why there is no meta when nothing is cached and the server can't help", async () => {
     const src = new MetaSource({ client: () => fakeClient([]).client, cacheDir: tmp("ldc-meta-") });
     const seen: MetaStatus[] = [];

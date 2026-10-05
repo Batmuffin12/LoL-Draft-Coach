@@ -31,7 +31,8 @@ export interface MetaSourceDeps {
 export class MetaSource extends EventEmitter<{ snapshot: [MetaSnapshot]; status: [MetaStatus] }> {
   private current: { band: RankBandId; etag: string | null; snapshot: MetaSnapshot } | null = null;
   private checkedAt = new Map<RankBandId, number>();
-  private inFlight: Promise<void> | null = null;
+  private chain: Promise<void> = Promise.resolve();
+  private pending: { band: RankBandId; promise: Promise<void> } | null = null;
   private readonly now: () => number;
 
   constructor(private readonly deps: MetaSourceDeps) {
@@ -65,8 +66,17 @@ export class MetaSource extends EventEmitter<{ snapshot: [MetaSnapshot]; status:
 
   /** Makes sure the band's snapshot is loaded and recent; `force` skips the minimum interval. */
   refresh(band: RankBandId, opts: { force?: boolean } = {}): Promise<void> {
-    if (!this.inFlight) this.inFlight = this.load(band, opts.force ?? false).finally(() => (this.inFlight = null));
-    return this.inFlight;
+    // Loads run one after another. A request for the band already pending joins it; another
+    // band (e.g. the player just changed rank band) is queued, never dropped.
+    if (this.pending && this.pending.band === band && !opts.force) return this.pending.promise;
+    const promise: Promise<void> = this.chain
+      .then(() => this.load(band, opts.force ?? false))
+      .finally(() => {
+        if (this.pending?.promise === promise) this.pending = null;
+      });
+    this.chain = promise.catch(() => {});
+    this.pending = { band, promise };
+    return promise;
   }
 
   private async load(band: RankBandId, force: boolean): Promise<void> {
