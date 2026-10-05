@@ -12,7 +12,8 @@
     "invite": "tsx src/invite-cli.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "collect": "tsx --env-file-if-exists=../../.env src/collect-cli.ts"
+    "collect": "tsx --env-file-if-exists=../../.env src/collect-cli.ts",
+    "backtest": "tsx --env-file-if-exists=../../.env src/backtest-cli.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",
