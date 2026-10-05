@@ -225,6 +225,17 @@ export interface ChampionRoleStat {
  */
 export type PairStat = [ChampionId, Position, ChampionId, Position, number, number, number];
 
+/** A champion rising in a role: recent days compared with the rest of the window (unweighted). */
+export interface TrendingChampion {
+  championId: ChampionId;
+  role: Position;
+  /** What is rising: how often it's picked, how often it wins, or both. */
+  rising: "pick" | "win" | "both";
+  pickRate: { before: number; recent: number };
+  winRate: { before: number; recent: number };
+  games: { before: number; recent: number };
+}
+
 /**
  * The live meta for one rank band, published by the server about hourly. Built from
  * anonymous collected matches only (no player identities). The desktop scores drafts
@@ -250,6 +261,8 @@ export interface MetaSnapshot {
    */
   bans?: { championId: ChampionId; bans: number; n: number }[];
   banMatches?: number;
+  /** Champions whose pick or win rate in a role is rising fast (recent days vs the rest of the window). */
+  trending?: TrendingChampion[];
   matchups: PairStat[];
   duos: PairStat[];
   attributes: ChampionAttributes[];

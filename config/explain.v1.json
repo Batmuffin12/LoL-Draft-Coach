@@ -58,7 +58,10 @@
     "ban.meta": "Strong in {role}: {winRate:pct1}% win rate, picked in {pickRate:pct}% of games",
     "expectedWin": "≈ {win:pct}% in this draft",
     "ban.popular": "Picked in {pickRate:pct}% of {role} games in your rank (not enough games yet for its win rate)",
-    "ban.banRate": "Banned in {banRate:pct}% of games in your rank"
+    "ban.banRate": "Banned in {banRate:pct}% of games in your rank",
+    "trend.pick": "Trending in {role}: picked in {recent:pct}% of games lately, up from {before:pct}%",
+    "trend.win": "Trending in {role}: winning {recent:pct1}% lately, up from {before:pct1}% ({games} recent games)",
+    "trend.both": "Rising in {role}: picked in {pickRecent:pct}% of games (was {pickBefore:pct}%) and winning {winRecent:pct1}% (was {winBefore:pct1}%)"
   },
   "settings": {
     "clearGap": 0.05,

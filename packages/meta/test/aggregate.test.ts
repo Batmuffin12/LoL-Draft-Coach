@@ -162,6 +162,20 @@ describe("aggregateBand", () => {
     ]);
   });
 
+  it("flags a champion whose pick and win rate rise in the recent days, not a stable one", () => {
+    // Before (10 days ago): top 1 in 40 of 400 games, winning half. Recent (1 day): 40 of 100, winning 80%.
+    const games: MatchSummary[] = [];
+    for (let i = 0; i < 400; i++) games.push(match(`B${i}`, [i < 40 ? 1 : 9, 2, 3, 4, 5], RED, i % 2 === 0, 10));
+    for (let i = 0; i < 100; i++) games.push(match(`R${i}`, [i < 40 ? 1 : 9, 2, 3, 4, 5], RED, i < 40 ? i % 5 !== 0 : i % 2 === 0, 1));
+    const trendCfg = { ...cfg, trend: config.aggregation.trend };
+    const s = aggregateBand({ ...base, matches: games, config: trendCfg });
+    const one = s.trending?.find((t) => t.championId === 1);
+    expect(one).toMatchObject({ role: "top", rising: "both", pickRate: { before: 0.1, recent: 0.4 }, winRate: { before: 0.5, recent: 0.8 }, games: { before: 40, recent: 40 } });
+    expect(s.trending?.some((t) => t.championId === 11)).toBe(false); // their top 11: picked in every game, winning less
+    // No earlier period yet (e.g. production's first days): nothing is trending.
+    expect(aggregateBand({ ...base, matches: games.filter((m) => m.matchId.startsWith("R")), config: trendCfg }).trending).toEqual([]);
+  });
+
   it("never carries player identifiers into the snapshot", () => {
     const m = match("A", BLUE, RED, true);
     (m.participants[0] as unknown as Record<string, unknown>).puuid = "SECRET-PUUID";

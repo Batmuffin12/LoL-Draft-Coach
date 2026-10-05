@@ -1,4 +1,4 @@
-import type { ChampionAttributes, ChampionId, ChampionRoleStat, MetaSnapshot, Position } from "@ldc/shared";
+import type { ChampionAttributes, ChampionId, ChampionRoleStat, MetaSnapshot, Position, TrendingChampion } from "@ldc/shared";
 import type { RatingConfig } from "./config";
 import { rating, smoothRate, winOf } from "./rating";
 
@@ -33,6 +33,7 @@ export class MetaIndex {
   private readonly duos = new Map<string, Stat>();
   readonly attributes: Map<ChampionId, ChampionAttributes>;
   private readonly bansById: Map<ChampionId, { bans: number; n: number }>;
+  private readonly trends: Map<string, TrendingChampion>;
   /** Roles seen in the data, most games first (positions come from Riot's data, never from code). */
   readonly roles: Position[];
 
@@ -50,6 +51,7 @@ export class MetaIndex {
     for (const [a, ra, b, rb, games, wins, n] of snapshot.duos) this.duos.set(pairKey(a, ra, b, rb), { games, wins, n });
     this.attributes = new Map(snapshot.attributes.map((a) => [a.championId, a]));
     this.bansById = new Map((snapshot.bans ?? []).map((b) => [b.championId, b]));
+    this.trends = new Map((snapshot.trending ?? []).map((t) => [key(t.championId, t.role), t]));
     this.roles = Object.entries(snapshot.roleGames)
       .sort((x, y) => y[1] - x[1])
       .map(([r]) => r);
@@ -79,6 +81,11 @@ export class MetaIndex {
     if (!this.snapshot.bans || total <= 0) return null;
     const b = this.bansById.get(id);
     return { rate: b ? b.bans / total : 0, games: total };
+  }
+
+  /** The champion's trend in a role, when the band flags it as rising. */
+  trend(id: ChampionId, role: Position): TrendingChampion | undefined {
+    return this.trends.get(key(id, role));
   }
 
   /** Share of the champion's games in each role. */

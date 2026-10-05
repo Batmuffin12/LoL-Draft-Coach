@@ -9,12 +9,25 @@
     "minAttributeSamples": 10,
     "referenceQuantiles": 21,
     "referenceMaxSamples": 4000,
-    "minReferenceSamples": 40
+    "minReferenceSamples": 40,
+    "trend": {
+      "recentDays": 3,
+      "minGames": 30,
+      "pickRateFactor": 1.5,
+      "minPickRate": 0.02,
+      "minWinRateRise": 0.03,
+      "minZ": 2
+    }
   },
   "collector": {
     "leagueQueue": "RANKED_SOLO_5x5",
     "queueId": 420,
-    "divisions": ["I", "II", "III", "IV"],
+    "divisions": [
+      "I",
+      "II",
+      "III",
+      "IV"
+    ],
     "matchesPerPlayer": 5,
     "budgetSeconds": 900,
     "maxMatchesPerRun": 450,

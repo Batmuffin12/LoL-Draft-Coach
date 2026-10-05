@@ -20,6 +20,18 @@ export const MetaConfigSchema = z.object({
     referenceMaxSamples: z.number().int().min(1),
     /** Values a role/metric needs before a reference is published. */
     minReferenceSamples: z.number().int().min(1),
+    /** Trending champions: the last recentDays compared with the rest of the window. */
+    trend: z.object({
+      recentDays: z.number().positive(),
+      /** Games a champion-role needs in each period before it can be called trending. */
+      minGames: z.number().int().min(1),
+      /** Pick rate trend: recent ≥ pickRateFactor × before, and recent ≥ minPickRate (0..1). */
+      pickRateFactor: z.number().min(1),
+      minPickRate: z.number().min(0).max(1),
+      /** Win rate trend: a rise of at least minWinRateRise (0..1) and minZ standard errors. */
+      minWinRateRise: z.number().min(0).max(1),
+      minZ: z.number().min(0),
+    }),
   }),
   collector: z.object({
     /** League-V4 queue to sample players from, and the Match-V5 queue id of its games. */

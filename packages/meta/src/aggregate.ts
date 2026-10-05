@@ -1,5 +1,5 @@
 import { addAttributeSample, attributesFromTotals, halfLifeWeight, readMetric, type AttributeTotals } from "@ldc/engine";
-import type { ChampionId, ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId } from "@ldc/shared";
+import type { ChampionId, ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId, TrendingChampion } from "@ldc/shared";
 import type { AggregationConfig } from "./config";
 
 const DAY_MS = 86_400_000;
@@ -89,6 +89,10 @@ export class BandAggregator {
   private readonly bans = new Map<ChampionId, { bans: number; n: number }>();
   /** Weighted games that carried ban data (older stored games didn't). */
   private banMatches = 0;
+  /** Unweighted counts for trends: recent days vs the rest of the window. */
+  private readonly trendCounts = new Map<string, { championId: ChampionId; role: Position; rN: number; rW: number; bN: number; bW: number }>();
+  private recentMatches = 0;
+  private beforeMatches = 0;
   private newest: number | null = null;
 
   constructor(private readonly opts: AggregatorOptions) {
@@ -114,6 +118,21 @@ export class BandAggregator {
     this.count++;
     this.newest = Math.max(this.newest ?? 0, m.endedAt);
     this.patches.add(patchOf(m.gameVersion));
+    const recent = this.opts.now - m.endedAt < cfg.trend.recentDays * DAY_MS;
+    if (recent) this.recentMatches++;
+    else this.beforeMatches++;
+    for (const p of m.participants) {
+      const key = `${p.championId}|${p.position}`;
+      let t = this.trendCounts.get(key);
+      if (!t) this.trendCounts.set(key, (t = { championId: p.championId, role: p.position, rN: 0, rW: 0, bN: 0, bW: 0 }));
+      if (recent) {
+        t.rN++;
+        if (p.win) t.rW++;
+      } else {
+        t.bN++;
+        if (p.win) t.bW++;
+      }
+    }
     if (m.bans) {
       this.banMatches += w;
       // A champion counts once per game, even if both teams list it.
@@ -167,6 +186,36 @@ export class BandAggregator {
     return true;
   }
 
+  /**
+   * Champion-roles rising fast: a pick rate well above before, and/or a win-rate rise that
+   * is both large and clear of noise (a two-proportion z-test). Both periods need enough games.
+   */
+  private trending(): TrendingChampion[] {
+    const t = this.opts.config.trend;
+    if (!this.recentMatches || !this.beforeMatches) return [];
+    const out: TrendingChampion[] = [];
+    for (const c of this.trendCounts.values()) {
+      if (c.rN < t.minGames || c.bN < t.minGames) continue;
+      const pick = { before: c.bN / this.beforeMatches, recent: c.rN / this.recentMatches };
+      const win = { before: c.bW / c.bN, recent: c.rW / c.rN };
+      const pickRising = pick.recent >= t.minPickRate && pick.recent >= t.pickRateFactor * pick.before;
+      const pooled = (c.rW + c.bW) / (c.rN + c.bN);
+      const se = Math.sqrt(pooled * (1 - pooled) * (1 / c.rN + 1 / c.bN));
+      const rise = win.recent - win.before;
+      const winRising = rise >= t.minWinRateRise && se > 0 && rise / se >= t.minZ;
+      if (!pickRising && !winRising) continue;
+      out.push({
+        championId: c.championId,
+        role: c.role,
+        rising: pickRising && winRising ? "both" : pickRising ? "pick" : "win",
+        pickRate: { before: round(pick.before), recent: round(pick.recent) },
+        winRate: { before: round(win.before), recent: round(win.recent) },
+        games: { before: c.bN, recent: c.rN },
+      });
+    }
+    return out.sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role));
+  }
+
   finish(): MetaSnapshot {
     const cfg = this.opts.config;
     const references: MetaSnapshot["references"] = {};
@@ -200,6 +249,7 @@ export class BandAggregator {
       newestMatchAt: this.newest,
       halfLifeDays: cfg.halfLifeDays,
       roleGames: Object.fromEntries(Object.entries(this.roleGames).map(([k, v]) => [k, round(v)])),
+      trending: this.trending(),
       banMatches: round(this.banMatches),
       bans: [...this.bans]
         .map(([championId, b]) => ({ championId, bans: round(b.bans), n: b.n }))

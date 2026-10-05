@@ -251,6 +251,20 @@ describe("adviseLivePicks", () => {
     expect(advice.picks[0]!.championId).toBe(102);
   });
 
+  it("says when a pick or a ban is trending in the band, without changing its score", () => {
+    const trending = [
+      { championId: 103, role: "middle", rising: "pick" as const, pickRate: { before: 0.04, recent: 0.09 }, winRate: { before: 0.5, recent: 0.51 }, games: { before: 40, recent: 45 } },
+      { championId: 302, role: "top", rising: "both" as const, pickRate: { before: 0.3, recent: 0.5 }, winRate: { before: 0.5, recent: 0.56 }, games: { before: 300, recent: 200 } },
+    ];
+    const idx = index({ ...snapshot(), trending });
+    const plain = adviseLivePicks(input(draft())).picks.find((p) => p.championId === 103)!;
+    const withTrend = adviseLivePicks(input(draft(), { index: idx })).picks.find((p) => p.championId === 103)!;
+    expect(text(withTrend.reasons)).toMatch(/Trending in middle: picked in 9% of games lately, up from 4%/);
+    expect(withTrend.expectedWin).toBe(plain.expectedWin);
+    const ban = suggestBans(input(draft([], 301), { index: idx })).find((b) => b.championId === 302)!;
+    expect(text(ban.reasons)).toMatch(/Rising in top: picked in 50% of games \(was 30%\) and winning 56\.0% \(was 50\.0%\)/);
+  });
+
   it("adds synergy with allies already picked", () => {
     const withJungle = draft();
     withJungle.myTeam[1]!.championId = 401;

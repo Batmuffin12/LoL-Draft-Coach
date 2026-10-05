@@ -93,6 +93,18 @@ function comfortReasons(c: ComfortStats | undefined, role: Position | null): Rea
   return out;
 }
 
+/** "Trending in jungle: picked in 9% of games, up from 4%" when the band flags the champion-role. */
+function trendReason(index: MetaIndex, id: ChampionId, role: Position): Reason | null {
+  const t = index.trend(id, role);
+  if (!t) return null;
+  if (t.rising === "both") {
+    return reason("trend.both", { role, pickRecent: t.pickRate.recent, pickBefore: t.pickRate.before, winRecent: t.winRate.recent, winBefore: t.winRate.before });
+  }
+  return t.rising === "pick"
+    ? reason("trend.pick", { role, recent: t.pickRate.recent, before: t.pickRate.before })
+    : reason("trend.win", { role, recent: t.winRate.recent, before: t.winRate.before, games: t.games.recent });
+}
+
 /** A reason with its importance (absolute change in win chance) and sign. */
 interface Weighted {
   r: Reason;
@@ -118,6 +130,9 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   if (metaStat.n >= cfg.minGames.meta) {
     note(reason(meta >= 0 ? "meta.strong" : "meta.weak", { winRate: metaStat.wins / metaStat.games, games: metaStat.n, role }), meta);
   }
+  // Rising in the band lately: information only (no evidence yet that trends add to the win chance).
+  const rising = trendReason(index, id, role);
+  if (rising) notes.push({ r: rising, weight: cfg.explain.minDeltaWin, positive: true });
 
   // Lane: the revealed opponent, or (blind) the likely ones.
   let lane = 0;
@@ -370,6 +385,8 @@ export function suggestBans(input: LiveInput): BanSuggestion[] {
       // Too few games to quote a win rate: say what is known.
       reasons.push(reason("ban.popular", { pickRate, role: eRole }));
     }
+    const rising = trendReason(index, s.championId, eRole);
+    if (rising) reasons.push(rising);
     // How often players in the band ban it, once enough games carried ban data.
     const banned = index.banRate(s.championId);
     if (banned && banned.games >= cfg.minGames.meta) reasons.push(reason("ban.banRate", { banRate: banned.rate }));

@@ -62,6 +62,18 @@ export const MetaSnapshotSchema = z.looseObject({
   // Ban rates: absent in snapshots made before bans were collected.
   bans: z.array(z.looseObject({ championId: z.number(), bans: z.number(), n: z.number() })).optional(),
   banMatches: z.number().optional(),
+  trending: z
+    .array(
+      z.looseObject({
+        championId: z.number(),
+        role: z.string(),
+        rising: z.enum(["pick", "win", "both"]),
+        pickRate: z.looseObject({ before: z.number(), recent: z.number() }),
+        winRate: z.looseObject({ before: z.number(), recent: z.number() }),
+        games: z.looseObject({ before: z.number(), recent: z.number() }),
+      }),
+    )
+    .optional(),
   matchups: z.array(PairSchema),
   duos: z.array(PairSchema),
   attributes: z.array(
