@@ -3,6 +3,9 @@ import type { RiotApi } from "@ldc/riot-api";
 import type { AppConfig } from "./config";
 import { minimizeMatch, type MatchStore } from "./match-store";
 
+/** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
+export const MATCH_IDS_PAGE = 100;
+
 export interface PersonalProfile {
   games: PlayerGame[];
   samples: AttributeSample[];
@@ -37,10 +40,19 @@ export async function loadProfile(opts: LoadProfileOptions): Promise<PersonalPro
     championId: m.championId,
     level: m.championLevel,
     points: m.championPoints,
+    ...(m.lastPlayTime !== undefined ? { lastPlayTime: m.lastPlayTime } : {}),
+    ...(m.milestoneGrades ? { grades: m.milestoneGrades } : {}),
   }));
 
-  const idLists = [];
-  for (const queue of history.queues) idLists.push(await riot.matchIdsByPuuid(puuid, { queue, count: Math.min(history.matchCount, 100) }));
+  const idLists: string[][] = [];
+  for (const queue of history.queues) {
+    // Match-V5 returns at most MATCH_IDS_PAGE ids per call; page with `start`.
+    for (let start = 0; start < history.matchCount; start += MATCH_IDS_PAGE) {
+      const page = await riot.matchIdsByPuuid(puuid, { queue, start, count: Math.min(MATCH_IDS_PAGE, history.matchCount - start) });
+      idLists.push(page);
+      if (page.length < MATCH_IDS_PAGE) break;
+    }
+  }
   const ids = sortMatchIdsNewestFirst(idLists.flat()).slice(0, history.matchCount);
 
   const profile: PersonalProfile = { games: [], samples: [], masteries };

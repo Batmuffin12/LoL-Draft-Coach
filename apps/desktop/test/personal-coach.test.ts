@@ -9,7 +9,7 @@ import { RiotApi, type Match } from "@ldc/riot-api";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { MatchStore, minimizeMatch } from "../src/main/match-store";
 import { PersonalCoach } from "../src/main/personal-coach";
-import { loadProfile, sortMatchIdsNewestFirst } from "../src/main/profile";
+import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
 import type { ViewState } from "../src/shared/view";
 import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, waitFor } from "./helpers";
 
@@ -37,6 +37,21 @@ describe("match store", () => {
 
   it("sorts match ids newest first and de-duplicates", () => {
     expect(sortMatchIdsNewestFirst(["EUW1_5", "EUW1_100", "EUW1_5", "EUW1_20"])).toEqual(["EUW1_100", "EUW1_20", "EUW1_5"]);
+  });
+
+  it("pages through match ids beyond Riot's per-call limit", async () => {
+    const many: [number, string, boolean][] = Array.from({ length: 130 }, (_, i) => [103, "MIDDLE", i % 2 === 0]);
+    const fake = fakeRiotFetch({ myChamps: many });
+    const p = await loadProfile({
+      riot: riotWith(fake.fetchFn),
+      puuid: LOCAL_PUUID,
+      history: { matchCount: 120, queues: [420] },
+      store: new MatchStore(tmp("ldc-pg-"), LOCAL_PUUID),
+    });
+    expect(p.games).toHaveLength(120);
+    expect(fake.calls.filter((c) => c.endsWith("/ids"))).toHaveLength(2);
+    expect(MATCH_IDS_PAGE).toBe(100);
+    expect(p.masteries[0]).toMatchObject({ championId: 103, grades: ["S", "A+"] });
   });
 
   it("loads the profile once and serves it from the cache afterwards", async () => {
@@ -115,6 +130,13 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     expect(picks[0]!.reasons.join(" ")).toMatch(/win rate/);
     // Riot's positions come from the client (fixture): Ahri/Ekko/Akali are all listed for middle.
     expect(picks.every((p) => !p.offMeta)).toBe(true);
+    expect(picks.find((p) => p.champion.id === 103)!.reasons.join(" ")).toMatch(/grades S A+/);
+
+    // Lobby role advice from the same history: middle (19 games) first, bottom (4) after.
+    const roles = coach!.state.roles;
+    expect(roles[0]).toMatchObject({ role: "middle", games: 19, enoughData: true });
+    expect(roles[0]!.champions.map((c) => c.name)).toContain("Ahri");
+    expect(roles.find((r) => r.role === "bottom")?.enoughData).toBe(false);
 
     // Compliance: nothing identity-like ever reaches the panel.
     expect(JSON.stringify(states)).not.toMatch(/puuid|mock-local|other-|name-|gameName|tagLine/i);

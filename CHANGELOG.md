@@ -2,6 +2,19 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.2.4] — 2026-10-05
+
+### Changed
+- Comfort is now two signals (weights in `config/engine.v1.json`):
+  - **Champion skill** (any role, fades slowly): mastery, mastery milestone grades (S…D), and a long-window win rate. Mastery fades only after months without playing the champion.
+  - **Current form** (this role, fades quickly): recent games and win rate in the role.
+- History raised to 200 games; match ids are paged past Match-V5's 100-per-call limit.
+
+### Added
+- "Your roles" in the lobby: each role with games, win rate and best champions, ranked by recent results. Roles under the minimum game count show "not enough games". Information only.
+- Pick reasons include mastery grades.
+- Clear dialog when `RIOT_PLATFORM`/`RIOT_REGION` in `.env` isn't a valid routing value.
+
 ## [0.2.3] — 2026-10-05
 
 ### Changed

@@ -17,14 +17,49 @@ export function percentile(v: number, all: number[]): number {
   return (below + (equal - 1) / 2) / (all.length - 1);
 }
 
+/** Weighted mean over components that have a value; weights re-normalised. */
+export function mixAvailable(parts: { value: number | null; weight: number }[]): number {
+  let sum = 0;
+  let total = 0;
+  for (const p of parts) {
+    if (p.value === null || p.weight <= 0) continue;
+    sum += p.value * p.weight;
+    total += p.weight;
+  }
+  return total > 0 ? sum / total : 0;
+}
+
+/** Mean of mastery milestone grades mapped onto the configured scale (0..1); null when none are known. */
+export function gradeScore(grades: string[] | undefined, scale: string[]): number | null {
+  const values = (grades ?? []).map((g) => scale.indexOf(g)).filter((i) => i >= 0);
+  if (!values.length || scale.length < 2) return null;
+  return values.reduce((s, i) => s + i, 0) / values.length / (scale.length - 1);
+}
+
+export const halfLifeWeight = (ageMs: number, halfLifeDays: number) =>
+  Math.pow(0.5, Math.max(0, ageMs) / (halfLifeDays * DAY_MS));
+
+/** Smoothed win rate, and its [0, 1] score around the player's own average (0.5 = average). */
+export function winComponent(
+  wWins: number,
+  w: number,
+  base: number,
+  cfg: Pick<EngineConfig["comfort"], "smoothingK" | "winRateSpread">,
+): { smoothed: number; value: number } {
+  const smoothed = (wWins + cfg.smoothingK * base) / (w + cfg.smoothingK);
+  return { smoothed, value: clamp01(0.5 + (smoothed - base) / (2 * cfg.winRateSpread)) };
+}
+
 /**
- * Comfort factor per champion from the player's own history and mastery.
- * - Win rate: recency-weighted (half-life from config), smoothed toward the player's
- *   own overall win rate with k from config: (wins + k·base) / (games + k).
- * - Experience: 1 − e^(−weightedGames / scale).
- * - Mastery: percentile of mastery points among the player's champions.
- * When a role is given, games on the champion in other roles count with
- * offRoleGameWeight, so comfort reflects how well the player plays it *there*.
+ * Comfort per champion from the player's own history and mastery, as two signals:
+ *
+ * - **Champion skill** (any role, fades slowly): mastery points as a percentile of the
+ *   player's pool (fading when the champion hasn't been played for a long time),
+ *   mastery milestone grades, and a long-window win rate across all roles.
+ * - **Current form** (this role, fades quickly): recent games and win rate; games in
+ *   other roles count with form.offRoleGameWeight.
+ *
+ * Win rates are smoothed toward the player's own average: (wins + k·base) / (games + k).
  */
 export function computeComfort(
   games: PlayerGame[],
@@ -33,50 +68,71 @@ export function computeComfort(
   cfg: EngineConfig["comfort"],
   role: Position | null = null,
 ): Map<ChampionId, ComfortStats> {
-  const halfLifeMs = cfg.recencyHalfLifeDays * DAY_MS;
-  const recency = (g: PlayerGame) => Math.pow(0.5, Math.max(0, now - g.endedAt) / halfLifeMs);
   const inRole = (g: PlayerGame) => !role || !g.position || g.position === role;
-  const weight = (g: PlayerGame) => recency(g) * (inRole(g) ? 1 : cfg.offRoleGameWeight);
+  const formWeight = (g: PlayerGame) =>
+    halfLifeWeight(now - g.endedAt, cfg.form.halfLifeDays) * (inRole(g) ? 1 : cfg.form.offRoleGameWeight);
+  const skillWeight = (g: PlayerGame) => halfLifeWeight(now - g.endedAt, cfg.skill.halfLifeDays);
 
-  // The player's own average is the smoothing target, over all their games.
-  const totalW = games.reduce((s, g) => s + recency(g), 0);
-  const base = totalW > 0 ? games.reduce((s, g) => s + (g.win ? recency(g) : 0), 0) / totalW : 0.5;
+  const average = (weight: (g: PlayerGame) => number) => {
+    const total = games.reduce((s, g) => s + weight(g), 0);
+    return total > 0 ? games.reduce((s, g) => s + (g.win ? weight(g) : 0), 0) / total : 0.5;
+  };
+  const formBase = average(formWeight);
+  const skillBase = average(skillWeight);
 
   const byChamp = new Map<ChampionId, PlayerGame[]>();
   for (const g of games) byChamp.set(g.championId, [...(byChamp.get(g.championId) ?? []), g]);
   const masteryById = new Map(masteries.map((m) => [m.championId, m]));
   const allPoints = masteries.map((m) => m.points);
-
   const ids = new Set<ChampionId>([...byChamp.keys(), ...masteries.filter((m) => m.points > 0).map((m) => m.championId)]);
-  const mixTotal = cfg.mix.winRate + cfg.mix.experience + cfg.mix.mastery || 1;
   const out = new Map<ChampionId, ComfortStats>();
 
   for (const id of ids) {
     const list = byChamp.get(id) ?? [];
-    const w = list.reduce((s, g) => s + weight(g), 0);
-    const wWins = list.reduce((s, g) => s + (g.win ? weight(g) : 0), 0);
-    const smoothed = (wWins + cfg.smoothingK * base) / (w + cfg.smoothingK);
-    const wins = list.filter((g) => g.win).length;
     const mastery = masteryById.get(id);
+    const sum = (f: (g: PlayerGame) => number) => list.reduce((s, g) => s + f(g), 0);
 
-    const winComponent = clamp01(0.5 + (smoothed - base) / (2 * cfg.winRateSpread));
+    // Champion skill: transfers across roles, fades slowly.
+    const staleness = mastery?.lastPlayTime ? halfLifeWeight(now - mastery.lastPlayTime, cfg.skill.masteryStaleHalfLifeDays) : 1;
+    const masteryValue = mastery && mastery.points > 0 ? percentile(mastery.points, allPoints) * staleness : null;
+    const grades = gradeScore(mastery?.grades, cfg.skill.gradeScale);
+    const longWin = list.length ? winComponent(sum((g) => (g.win ? skillWeight(g) : 0)), sum(skillWeight), skillBase, cfg).value : null;
+    const skill = mixAvailable([
+      { value: masteryValue, weight: cfg.skill.mix.mastery },
+      { value: grades, weight: cfg.skill.mix.grades },
+      { value: longWin, weight: cfg.skill.mix.winRate },
+    ]);
+
+    // Current form: this role, recent games.
+    const w = sum(formWeight);
+    const recent = winComponent(sum((g) => (g.win ? formWeight(g) : 0)), w, formBase, cfg);
     const experience = 1 - Math.exp(-w / cfg.experienceScaleGames);
-    const masteryComponent = mastery && mastery.points > 0 ? percentile(mastery.points, allPoints) : 0;
-    const score =
-      (cfg.mix.winRate * winComponent + cfg.mix.experience * experience + cfg.mix.mastery * masteryComponent) / mixTotal;
+    const form = mixAvailable([
+      { value: recent.value, weight: cfg.form.mix.winRate },
+      { value: experience, weight: cfg.form.mix.experience },
+    ]);
+
+    const score = mixAvailable([
+      { value: skill, weight: cfg.mix.skill },
+      { value: form, weight: cfg.mix.form },
+    ]);
 
     const gamesByPosition: Record<string, number> = {};
     for (const g of list) if (g.position) gamesByPosition[g.position] = (gamesByPosition[g.position] ?? 0) + 1;
     const roleList = role ? list.filter((g) => g.position === role) : [];
+    const wins = list.filter((g) => g.win).length;
 
     out.set(id, {
       championId: id,
       games: list.length,
       weightedGames: w,
       winRate: list.length ? wins / list.length : null,
-      smoothedWinRate: smoothed,
+      smoothedWinRate: recent.smoothed,
       masteryLevel: mastery?.level ?? null,
       masteryPoints: mastery?.points ?? 0,
+      grades: mastery?.grades ?? [],
+      skill: clamp01(skill),
+      form: clamp01(form),
       score: clamp01(score),
       gamesByPosition,
       role,

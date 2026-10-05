@@ -31,8 +31,19 @@ export function loadEnv(start: string): AppEnv {
   return readEnv(process.env);
 }
 
+export class EnvError extends Error {}
+
+/** Riot routing values are short lower-case identifiers such as "euw1" or "europe". */
+const ROUTING = /^[a-z0-9]+$/;
+
 export function readEnv(env: NodeJS.ProcessEnv): AppEnv {
   const blank = (v: string | undefined) => (v && v.trim() ? v.trim() : null);
+  for (const name of ["RIOT_PLATFORM", "RIOT_REGION"] as const) {
+    const v = blank(env[name]);
+    if (v !== null && !ROUTING.test(v)) {
+      throw new EnvError(`${name} in .env must be a Riot routing value like "euw1" or "europe" (got "${v.slice(0, 40)}")`);
+    }
+  }
   return {
     lolInstallDir: blank(env.LOL_INSTALL_DIR) ?? "C:\\Riot Games\\League of Legends",
     riotApiKey: blank(env.RIOT_API_KEY),

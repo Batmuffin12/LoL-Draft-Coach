@@ -4,7 +4,7 @@
  */
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { app, BrowserWindow, ipcMain, screen } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
@@ -14,12 +14,19 @@ import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
 import { PersonalCoach } from "./personal-coach";
 import { computeDockBounds, createWin32Finder, sameRect, type Rect } from "./dock";
-import { loadEnv } from "./env";
+import { loadEnv, type AppEnv } from "./env";
 
 const PANEL_WIDTH = 340;
 const DOCK_POLL_MS = 500;
 
-const env = loadEnv(app.getAppPath());
+/** Loaded .env, or the reason it couldn't be used (shown to the user, then the app quits). */
+const envResult = ((): { env: AppEnv } | { error: Error } => {
+  try {
+    return { env: loadEnv(app.getAppPath()) };
+  } catch (err) {
+    return { error: err as Error };
+  }
+})();
 
 let win: BrowserWindow | null = null;
 let latest: ViewState | null = null;
@@ -89,6 +96,13 @@ function scheduleScreenshot(): void {
 
 async function main(): Promise<void> {
   await app.whenReady();
+  if ("error" in envResult) {
+    // A broken .env is a setup problem: say exactly what to fix.
+    dialog.showErrorBox("LoL Draft Coach: check your .env", envResult.error.message);
+    app.quit();
+    return;
+  }
+  const { env } = envResult;
 
   const override = overrideCredentials();
   const connector = new LcuConnector({

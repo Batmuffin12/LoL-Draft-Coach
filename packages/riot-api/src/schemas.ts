@@ -47,6 +47,8 @@ export const MasteryListSchema = z.array(
     championLevel: z.number().int(),
     championPoints: z.number(),
     lastPlayTime: z.number().optional(),
+    /** End-of-game grades for the current mastery milestone, e.g. ["S", "A+"]. */
+    milestoneGrades: z.array(z.string()).optional(),
   }),
 );
 export type Mastery = z.infer<typeof MasteryListSchema>[number];

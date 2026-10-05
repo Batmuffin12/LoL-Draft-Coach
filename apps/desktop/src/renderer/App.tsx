@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { ChampView, DraftView, PickView, SlotView, ViewState } from "../shared/view";
+import type { ChampView, DraftView, PickView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -128,6 +128,43 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
   );
 }
 
+function Roles({ roles }: { roles: RoleView[] }) {
+  if (!roles.length) return null;
+  return (
+    <section className="card roles">
+      <h2>Your roles</h2>
+      <p className="muted small">Ranked by your recent results. Information only — you choose your positions.</p>
+      <ol>
+        {roles.map((r, i) => (
+          <li key={r.role} className={`role${r.enoughData ? "" : " thin"}`}>
+            <span className="rank">{r.enoughData ? i + 1 : "·"}</span>
+            <div className="role-body">
+              <div className="pick-head">
+                <strong className="role-name">{r.role}</strong>
+                <span className="muted small">
+                  {r.games} game{r.games === 1 ? "" : "s"} · {Math.round(r.winRate * 100)}% win rate
+                </span>
+              </div>
+              {r.enoughData ? (
+                <div className="role-champs">
+                  {r.champions.map((c) => (
+                    <span key={c.id} className="role-champ">
+                      <Icon champ={c} size={22} />
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="muted small">Not enough games to judge</span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export function App() {
   const [state, setState] = useState<ViewState | null>(null);
   useEffect(() => window.coach.onState(setState), []);
@@ -188,11 +225,16 @@ export function App() {
             </section>
           </>
         ) : (
+          <>
           <section className="card idle">
             <p>No champ select in progress.</p>
             <p className="muted small">Open a lobby (a custom draft lobby works) and the draft will show up here live.</p>
-            {state.status.profile.state !== "idle" && <Picks picks={[]} role={state.pickRole} state={state} />}
+            {state.status.profile.state !== "idle" && state.status.profile.state !== "ready" && (
+              <Picks picks={[]} role={state.pickRole} state={state} />
+            )}
           </section>
+          <Roles roles={state.roles} />
+          </>
         )}
       </main>
     </div>
