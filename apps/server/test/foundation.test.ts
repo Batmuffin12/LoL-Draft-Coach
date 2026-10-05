@@ -40,7 +40,7 @@ describe("migrations", () => {
 
   it("match the Drizzle schema (every Drizzle column exists in the migrated tables)", () => {
     const db = openDb(":memory:");
-    for (const table of [schema.users, schema.invites, schema.matches, schema.userMatches, schema.userMasteries]) {
+    for (const table of [schema.users, schema.invites, schema.matches, schema.userMatches, schema.userMasteries, schema.collectorCursors, schema.collectorRuns, schema.metaSnapshots]) {
       const name = (table as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]!;
       const cols = (db.$client.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map((c) => c.name);
       for (const col of Object.values(table) as { name?: string }[]) {
@@ -61,7 +61,11 @@ describe("GET /health", () => {
     const app = createApp({ db: openDb(":memory:"), version: "test", riot: null });
     const res = await app.request("/health");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", riotKey: "missing", patch: null, newestMatchAt: null });
+    expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", riotKey: "missing",
+      patch: null,
+      newestMatchAt: null,
+      collector: { stale: false, lastDataAt: null, running: false, lastRun: null, snapshots: [] },
+    });
   });
 
   it("reports a Riot key the server has and whether Riot rejected it", async () => {

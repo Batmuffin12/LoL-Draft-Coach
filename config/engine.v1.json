@@ -193,5 +193,49 @@
     "minLossShare": 0.2,
     "minLossesForEvidence": 5
   },
+  "rating": {
+    "bands": {
+      "1": { "meta": 0.8, "lane": 0.8, "counter": 0.8, "synergy": 0.8, "team": 1, "personal": 1.3 },
+      "2": { "meta": 1, "lane": 1, "counter": 1, "synergy": 1, "team": 1, "personal": 1.1 },
+      "3": { "meta": 1, "lane": 1.1, "counter": 1.1, "synergy": 1, "team": 1.1, "personal": 1 },
+      "4": { "meta": 1, "lane": 1.2, "counter": 1.2, "synergy": 1.1, "team": 1.2, "personal": 0.9 }
+    },
+    "priorGames": { "meta": 150, "pair": 60 },
+    "minGames": { "meta": 30, "pair": 15 },
+    "counterWeight": 0.4,
+    "synergyWeight": 0.5,
+    "offMetaPenalty": 20,
+    "teamRatingScale": 10,
+    "personal": {
+      "comfortScale": 160,
+      "neutralComfort": 0.5,
+      "fullComfort": 0.65,
+      "learningPenalty": 50,
+      "includeUnplayed": true
+    },
+    "blind": {
+      "riskAversion": 0.5,
+      "riskQuantile": 0.2,
+      "maxOpponents": 15,
+      "safeMaxLoss": 14
+    },
+    "lastPickCounterBoost": 1.5,
+    "bans": {
+      "minPickRate": 0.02,
+      "metaWeight": 0.5,
+      "offRoleWeight": 0.25,
+      "hoverTopN": 3,
+      "hoverTopNWhenSuggested": 1,
+      "protectPicks": 3,
+      "topN": 3
+    },
+    "explain": {
+      "minDeltaWin": 0.005,
+      "maxReasons": 4,
+      "clearGapWin": 0.015,
+      "powerCurveGap": 0.05,
+      "barScaleWin": 0.08
+    }
+  },
   "topN": 3
 }

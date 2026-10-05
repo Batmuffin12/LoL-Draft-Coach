@@ -14,6 +14,8 @@ import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
+import { ConfigSource } from "./config-source";
+import { MetaSource } from "./meta-source";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
@@ -154,13 +156,29 @@ async function main(): Promise<void> {
     });
     await profiles.init();
   }
+  // Live meta snapshots come from the coach server (none in dev-only direct mode).
+  const serverProfiles = profiles instanceof ServerProfileSource ? profiles : null;
+  const meta = serverProfiles
+    ? new MetaSource({ client: () => serverProfiles.serverClient, cacheDir: join(app.getPath("userData"), "meta") })
+    : null;
   const coach = new PersonalCoach({
     connector,
     ddragon,
     config,
     profiles,
     riotId: env.riotId,
+    meta,
   });
+  // Scoring config from the server (tuning without a release); the bundled copy until then.
+  if (serverProfiles) {
+    const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
+    remoteConfig.on("config", (c) => coach.setConfig(c));
+    await remoteConfig.loadCached();
+    void remoteConfig.refresh();
+    serverProfiles.on("account", (a) => {
+      if (a.state === "registered") void remoteConfig.refresh();
+    });
+  }
   if (profiles instanceof ServerProfileSource) {
     const server = profiles;
     ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {

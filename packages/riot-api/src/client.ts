@@ -3,11 +3,13 @@ import { RateLimiter, type Priority } from "./rate-limiter";
 import {
   AccountSchema,
   LeagueEntriesSchema,
+  LeaguePlayersSchema,
   MasteryListSchema,
   MatchIdsSchema,
   MatchSchema,
   type Account,
   type LeagueEntry,
+  type LeaguePlayer,
   type Mastery,
   type Match,
 } from "./schemas";
@@ -146,6 +148,24 @@ export class RiotApi {
       "league-v4.entries-by-puuid",
       `/lol/league/v4/entries/by-puuid/${encodeURIComponent(puuid)}`,
       LeagueEntriesSchema,
+      priority,
+    );
+    return list ?? [];
+  }
+
+  /**
+   * One page of ranked players in a tier and division (League-V4, below Master).
+   * Pages start at 1; an empty page means the list has ended.
+   */
+  async leaguePlayers(
+    query: { queue: string; tier: string; division: string; page: number },
+    priority: Priority = "collector",
+  ): Promise<LeaguePlayer[]> {
+    const list = await this.request(
+      this.opts.platform,
+      "league-v4.entries-by-tier",
+      `/lol/league/v4/entries/${encodeURIComponent(query.queue)}/${encodeURIComponent(query.tier)}/${encodeURIComponent(query.division)}?page=${query.page}`,
+      LeaguePlayersSchema,
       priority,
     );
     return list ?? [];

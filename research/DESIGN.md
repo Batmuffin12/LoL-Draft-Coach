@@ -27,7 +27,7 @@ Design principles (all from the spec or Phase 3):
 | Champion traits | `ChampionTraits { id, riot: { roles[], damageType, attackType, difficulty, style, damage, durability, crowdControl, mobility, utility, tagPrimary, tagSecondary }, measured: ChampionAttributes + powerCurve }` | LCU `/lol-game-data/assets/v1/champions/{id}.json` or CommunityDragon (Riot ratings) + collector (measured) | per patch |
 | Meta tables | `ChampionRoleStats { championId, role, band, games, wins, picks, bans }`, `MatchupStats { a, roleA, b, roleB, band, games, wins }`, `DuoStats` (same shape, allies), `BuildStats` (rune pages, item sequences, spells, skill orders with games/wins), `MetricReference` (per role & band: percentiles of each playstyle metric), `MetricImportance` (per role & band) | Collector | hourly |
 | Items/runes catalogue | Data Dragon `item.json`, `runesReforged.json`, `summoner.json` | Data Dragon | per patch |
-| Live game (in-game only) | `allgamedata` (champions, items, levels, scores; only what the client shows) | Live Client Data API | every ~5 s in game |
+| Live game (in-game only) | `playerlist` (both teams' champions, items, levels, scores), `activeplayer` (your gold and stats), `eventdata` (kill feed), `gamestats`; only what the client shows | Live Client Data API | every ~3 s in game (`liveClient.pollMs`) |
 | Advice log | `AdviceRecord { gameId, shown: Recommendation[], picked, followed, result }` | our server | per game |
 
 ### Outputs
@@ -37,7 +37,7 @@ Design principles (all from the spec or Phase 3):
 | Ban suggestions | ban phase | top 3 `{ championId, threat, reasons[] }` |
 | Pick suggestions | pick phase, live | top 3 `Recommendation { championId, expectedWin, terms: Term[], confidence: "clear" \| "close" \| "thin", reasons: Reason[], whyNot?: Reason }` |
 | Loadout | after lock-in (hover too) | `{ runes: RunePage + reasons, spells, skillOrder, starting, core[], situational[] (each with reason) }` |
-| Live item advice | in game | next-item category + reason |
+| Live item advice | in game | next item + 2 alternatives, each with reasons and confidence; best component to buy now with your gold (see "Item ranking") |
 | Playstyle card | lobby / profile | 8 axes `{ score 0–100, n, sentence }` |
 | Pool view | lobby / profile | tiers (core / secondary / learning / dormant) + coverage holes per role |
 | New champions | profile | top 3 per role `{ championId, fit, reasons[], firstGamesPlan }` |
@@ -163,13 +163,76 @@ Source: collector `BuildStats` for (champion, role) in your band **plus the band
 | Spells | Most picked pair with WR guard (same rule). | |
 | Skill order | Most common max order from timelines (`SKILL_LEVEL_UP` events). | |
 | Starting items, core | Most common first-completed 2–3 legendary sequence; "completed item" = Data Dragon item with no `into` and cost ≥ `items.legendaryMinGold` (derived, not listed). | "Core: {a} → {b}; {n} games, {wr}%." |
-| Situational items | Same **lift** method on items vs enemy traits (heals: measured `effectiveHealAndShielding`/`totalHeal` per champion; magic share; frontline). | "Mortal Reminder: bought 3× more vs heavy healing; enemy Soraka + Aatrox heal for 30% of their damage." |
+| Situational items | Same **lift** method on items vs enemy traits (heals: measured `effectiveHealAndShielding`/`totalHeal` per champion; magic share; frontline), measured **at purchase time** from timelines (see "Item ranking" below), not from end-of-game items. | "Mortal Reminder: bought 3× more vs heavy healing; enemy Soraka + Aatrox heal for 30% of their damage." |
 
 The lift method finds anti-heal, MR, armour answers **from data** without listing them in code — compliant with no-hardcoding, and automatically right after item reworks.
 
-### Live item adjustments (in game)
+### Item ranking (M6 pre-game, M8 live)
 
-From the Live Client Data API (only what the client shows): enemy items and scores → enemy damage profile weighted by each enemy's gold proxy (item value from Data Dragon + kills). Rule: if the profile shifts so that the highest-lift situational item changes vs the pre-game plan, suggest it as the next item with reason "Enemy {champ} is ahead (3/0, 2 items) and 85% of their team's item gold is physical → armour next." No enemy cooldowns, no hidden info.
+Added Oct 5, 2026 (D23). One pure function, `rankItems(state, snapshot, ddragon, config)` in `packages/engine`, serves both the loadout (M6, `state` = draft only) and live advice (M8, `state` = sanitized Live Client poll). Same features at training time and at play time: the collector rebuilds from timelines exactly what the Live Client API would have shown at the moment of each purchase.
+
+#### Considerations (what the research says pros and good tools get right)
+
+| # | Consideration | Source | What we do |
+| --- | --- | --- | --- |
+| C1 | **Raw item win rate is biased**: items are bought by players who are already winning ("the winning game bought the item"). Heartsteel on Shen: 54.15% raw vs 53.66% win odds at the moment of purchase. | [buildzcrank](https://buildzcrank.com/en/blog/why-lol-item-win-rate-stats-lie/), [Svojanovsky](https://tomas-svojanovsky.medium.com/the-hidden-bias-in-league-of-legends-item-win-rates-a-data-driven-analysis-of-shen-and-heartsteel-b1a1ecbfd174) | Never rank by raw WR. Use **win added** = result − expected win given the game state at purchase (below). |
+| C2 | Completing items **on time** is a power spike; timing matters as much as the choice. | buildzcrank | Purchase minute is a feature; affordability and "complete now" are part of the advice. |
+| C3 | Build against **the fed carry first**, not the theoretical comp ("Zed 7/1, Syndra 1/4 → armour even though they have magic damage"). Re-check after each completed item and when one champion keeps killing you. | [hexgate](https://hexgate.app/blog/how-to-counter-build/) | Threat weight per enemy from their item gold + who killed you (kill feed). |
+| C4 | Resist the damage you actually take: vs 80% physical, MR protects 20% of the damage. | [Mobalytics](https://mobalytics.gg/blog/league-of-legends-items-guide-situational/), [wiki: gold efficiency](https://wiki.leagueoflegends.com/en-us/Gold_efficiency) | Enemy damage profile = measured champion damage split, refined by the stats on their items. |
+| C5 | Answers like anti-heal: buy the **component early**, the full item later; don't rush it. | hexgate, [Dignitas](https://dignitas.gg/articles/itemization-in-league-of-legends-how-to-maximize-your-gold-revenue-and-invest-in-the-correct-item-builds) | Buy path from Data Dragon `from`/`into`; component suggestion when gold is short. |
+| C6 | Ahead → protect the lead (more defence); behind → comeback potential. | Dignitas | Own gold lead vs lane opponent is a feature; lift is learned per state bin. |
+| C7 | Small samples are noise ("anything under a few hundred games"). | buildzcrank | Empirical-Bayes smoothing, `minGames`, confidence label, fallback to core path. |
+| C8 | An ML win-predictor + explanation (LIME) can recommend items, but needs high-rank data and is opaque. | [Smit 2019](https://www.cs.ru.nl/bachelors-theses/2019/Robin_Smit___4043561___A_machine_learning_approach_for_recommending_items_in_League_of_Legends.pdf) | Start with additive, explainable terms (same model form as §4); ML only later, offline, if backtests show it wins. |
+| C9 | Riot: highlight decisions and **give multiple choices**; nothing "previously unknown to the player". | [Riot developer docs](https://developer.riotgames.com/docs/lol) | Top 1 + 2 alternatives with reasons; only Live Client fields (= scoreboard + kill feed). |
+
+#### Training data (collector, M6)
+
+From Match-V5 **timelines** (`ITEM_PURCHASED`, `ITEM_SOLD`, `ITEM_UNDO`, `ITEM_DESTROYED` events; `participantFrames` every minute with `totalGold`, `level`):
+
+1. Replay each match's item events to know every participant's inventory at every minute (undo and sell handled).
+2. For each **completed** item (Data Dragon: no `into`, or boots tier 2; cost ≥ `items.legendaryMinGold`), store one `item_purchases` row: champion, role, band, patch, item, build slot `k` (1st, 2nd… completed item), minute, own gold diff vs lane opponent, team gold diff, the **enemy profile at that minute** (features below, computed from the enemies' inventories then), the allies' inventories' answer coverage, and the result. No PUUIDs, no names.
+3. **Expected win** `E(state)`: a smoothed table over (minute bucket × team gold-diff bucket), per band, fitted in `packages/meta`. Pure and explainable; a logistic curve can replace it later.
+4. **Win added** for item `i` at slot `k`: `WA(i,k) = smoothed mean(result − E(state))` over its purchases, shrunk toward 0 with `items.priorGames`. This is C1's "purchase win probability" correction.
+5. **Situational lift** for item `i` vs trait `t`: `P(buy i at k | t high) / P(buy i at k | t low)`, from band **and** band above (good-player behaviour), within the same state bin.
+6. **Substitutes**: items that share an "answer class" are found from data: two items whose lifts on the same trait are both high and are rarely bought together on one team. Lets us say "an ally already brought anti-heal" without a hardcoded list.
+
+#### Live features (M8, every `liveClient.pollMs`, recomputed only when an inventory, level or score changes)
+
+| Feature | Computed from (Live Client only) |
+| --- | --- |
+| Enemy item gold `g_e` | Sum of Data Dragon `gold.total` of each enemy's items (components included) |
+| Threat weight `w_e` | `g_e / mean(g)` + `items.deathWeight` × share of **your** deaths caused by `e` (kill feed `ChampionKill` events, mapped to champions in the sanitizer) |
+| Enemy damage split | Per enemy: blend of the champion's measured physical/magic/true split (collector) and the split of stat gold on their items; blend weight = `g_e / (g_e + items.profilePriorGold)`, so off-builds (AP Shaco) show up as they build |
+| Team damage profile | `Σ w_e · split_e` (normalised) |
+| Other enemy traits | Healing, burst, crit/attack-speed, crowd control, tankiness (their armour/MR/HP stat gold): measured champion attributes × `w_e`, plus item stats from Data Dragon |
+| Ally coverage | Which answer classes allies already hold; allied frontline (allies' defensive stat gold) |
+| Own state | `activePlayer.currentGold`, inventory, level, game time, own item gold vs lane opponent's |
+| Stat gold value | Gold per stat point derived from the cheapest single-stat basic items in Data Dragon (wiki method), recomputed each patch |
+
+#### Scoring
+
+Candidates: items with `maps["11"]`, `inStore` not false, `requiredChampion` empty or yours, not already owned (or a substitute already owned), and bought at slot `k` by ≥ `items.minShare` of your champion-role in band + band above. This keeps the advice inside builds that real players use.
+
+```
+score(i) = base(i, k)                                  // core-path strength: smoothed log-odds of WA at this slot
+         + Σ_t lift_t(i) · intensity_t(game)           // situational need, traits weighted by threat
+         − redundancy(i | allies, own items)           // substitute already on your team
+         + spike(i)                                    // can complete now / one component away
+```
+
+All terms are in log-odds (rating) units, like §4, so each becomes an explanation `Term`. **Guard:** an item whose `WA` is significantly negative at this slot is never the top pick, however high its lift.
+
+#### Output
+
+- **Next item** + up to 2 alternatives, each with ≤ 2 reasons and a confidence label from sample size (C7, C9).
+- **Buy now**: with your `currentGold`, the best component on the path to the top item (Data Dragon `from`, minus what you own), or "complete {item} now".
+- **Hysteresis:** the top item changes only if the new one beats it by `items.switchMargin` for `items.stablePolls` polls, so advice doesn't flicker with every kill.
+- Example reason: "Zed (5/1) holds 38% of enemy item gold and killed you 3 times; 72% of their gold is physical → Plated Steelcaps next (bought 2.4× more in this spot, +1.8 pp win added, 3,412 games)."
+- Fallbacks: not enough data → the core path from the loadout; unknown item id (patch mismatch) → ignored; `gameMode` not classic SR or no `activePlayer` (spectating) → no advice.
+
+#### Evaluation (before shipping M8)
+
+Offline backtest in the collector test set: replay held-out timelines and, at each real completed-item purchase, compare our top 3 with what band-above players bought (top-3 hit rate) and check that agreeing with us has a positive average `WA`. The thresholds for shipping go in config.
 
 ---
 
@@ -243,7 +306,7 @@ Why this design: it gives **one** concrete thing, chosen by evidence that it mat
 
 ## 9. Config additions (`config/engine.v2.json`)
 
-`terms.{meta,lane,counter,synergy,team,personal}.priorGames`, `bands.{id}.{term}` weights, `personal.learningPenalty`, `personal.learningScale`, `blind.riskAversion`, `pickOrder.lastPickCounterBoost`, `bans.{minPickRate,metaWeight}`, `builds.{minShare,minMatchupGames}`, `items.legendaryMinGold`, `explain.{minDeltaWin,maxReasons,minGames,clearGap}`, `pool.{coreMin,coreGames,secondaryMin,learningWindowDays,dormantMastery,dormantDays}`, `coverage.damageShare`, `newChamps.{maxGames,maxMastery,weights}`, `playstyle.{halfLifeDays,minGamesPerRole,minMetrics,axes:{name:[metric ids]}}`, `growth.{window,targetStep,checkGames}`. New `config/explain.v1.json` (templates). v1 stays loadable until the migration ships.
+`terms.{meta,lane,counter,synergy,team,personal}.priorGames`, `bands.{id}.{term}` weights, `personal.learningPenalty`, `personal.learningScale`, `blind.riskAversion`, `pickOrder.lastPickCounterBoost`, `bans.{minPickRate,metaWeight}`, `builds.{minShare,minMatchupGames}`, `items.{legendaryMinGold,minShare,priorGames,profilePriorGold,deathWeight,switchMargin,stablePolls,maxReasons}`, `items.stateBins.{minutes,goldDiff}`, `liveClient.pollMs`, `collector.timelineShare`, `explain.{minDeltaWin,maxReasons,minGames,clearGap}`, `pool.{coreMin,coreGames,secondaryMin,learningWindowDays,dormantMastery,dormantDays}`, `coverage.damageShare`, `newChamps.{maxGames,maxMastery,weights}`, `playstyle.{halfLifeDays,minGamesPerRole,minMetrics,axes:{name:[metric ids]}}`, `growth.{window,targetStep,checkGames}`. New `config/explain.v1.json` (templates). v1 stays loadable until the migration ships.
 
 Note: axis → metric lists are **metric names from the Riot API**, not game facts, so keeping them in config is consistent with the no-hardcoding rule (they say *which Riot fields to read*, like queue ids in `app.v1.json`).
 
@@ -253,7 +316,7 @@ Note: axis → metric lists are **metric names from the Riot API**, not game fac
 | --- | --- | --- |
 | Playstyle baseline from lane opponents in your games | Analysing other players | Aggregated into percentile references only; never stored with identity (current `minimizeMatch` already drops PUUIDs); never displayed per player. |
 | Bans | none | Draft only. |
-| Live item advice | "info previously unknown to the player" | Only Live Client Data API fields (what the scoreboard shows). No timers. |
+| Live item advice | "info previously unknown to the player"; other players' identities; "dictating decisions" | Only Live Client Data API fields (what the scoreboard and kill feed show). No timers. `sanitizeLiveGame()` drops every Riot ID and summoner name (kill events are mapped to champions first). Always 3 options with reasons; never buys anything. |
 | Rune/item import | "dictating decisions"; LCU writes | User click only; never on champ select actions (D6, needs approval). |
 | Friends' leaderboard (F11) | sharing personal data | Opt-in, friends only, own data only; later. |
 | Arena | augment stats | Arena queues not supported; never compute augment stats. |

@@ -46,6 +46,11 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
     if (one !== undefined) return v === 1 ? one : (many ?? "");
     if (v === undefined) return "";
     if (fmt === "pct" && typeof v === "number") return String(Math.round(v * 100));
+    if (fmt === "pct1" && typeof v === "number") return (v * 100).toFixed(1);
+    if (fmt === "signedPct1" && typeof v === "number") {
+      const s = (v * 100).toFixed(1);
+      return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s;
+    }
     if (fmt === "champion" && typeof v === "number") return championName(v);
     return String(v);
   });

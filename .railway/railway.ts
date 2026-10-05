@@ -6,7 +6,7 @@
  * Secrets (RIOT_API_KEY, ADMIN_TOKEN) are never in this file: preserve() keeps the values
  * already stored in Railway.
  */
-import { defineRailway, github, preserve, project, service, volume } from "railway/iac";
+import { defineRailway, github, image, preserve, project, ref, service, volume } from "railway/iac";
 
 const REGION = "europe-west4-drams3a"; // Netherlands: closest to EUW players and Riot's "europe" routing.
 const MB = 1024 * 1024;
@@ -61,7 +61,34 @@ export default defineRailway(() => {
     },
   });
 
+  // Daily Railway backups of the volume (SQLite: users, invites, histories, collected games).
+  // A snapshot taken mid-write is like a power cut, which SQLite's WAL mode recovers from.
+  // The SDK's volumeMounts helper drops backup schedules, so set it on the compiled attachment.
+  const attachment = (server as { volumeAttachments?: Record<string, { backupSchedules?: string[] }> }).volumeAttachments?.["ldc-server-volume"];
+  if (!attachment) throw new Error("ldc-server-volume attachment not found: check the volume name");
+  attachment.backupSchedules = ["DAILY"];
+
+  // The hourly meta wake-up (research/DECISIONS.md D22). A cron container runs curl for a few
+  // seconds and exits; billed only while it runs. The request wakes the server, which collects
+  // inside its time budget, publishes snapshots, then goes idle and sleeps again.
+  // The collector can't be its own cron container: the volume attaches to one service only.
+  const wake = service("ldc-meta-wake", {
+    source: image("curlimages/curl:8.16.0"),
+    deploy: {
+      startCommand:
+        'sh -c \'curl -fsS --retry 6 --retry-all-errors --retry-delay 10 --max-time 60 -X POST -H "Authorization: Bearer $ADMIN_TOKEN" "https://$SERVER_DOMAIN/admin/collect"\'',
+      cronSchedule: "7 * * * *", // hourly, at minute 7 (UTC)
+      restartPolicyType: "NEVER",
+      limitOverride: { containers: { cpu: 1, memoryBytes: 64 * MB } },
+    },
+    replicas: { [REGION]: 1 },
+    env: {
+      ADMIN_TOKEN: ref(server, "ADMIN_TOKEN"),
+      SERVER_DOMAIN: ref(server, "RAILWAY_PUBLIC_DOMAIN"),
+    },
+  });
+
   return project("lol-draft-coach", {
-    resources: [server, data],
+    resources: [server, data, wake],
   });
 });

@@ -93,6 +93,9 @@ importers:
       '@ldc/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@ldc/meta':
+        specifier: workspace:*
+        version: link:../../packages/meta
       '@ldc/riot-api':
         specifier: workspace:*
         version: link:../../packages/riot-api
@@ -167,6 +170,18 @@ importers:
       tsx:
         specifier: ^4
         version: 4.23.15
+
+  packages/meta:
+    dependencies:
+      '@ldc/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   packages/riot-api:
     dependencies:

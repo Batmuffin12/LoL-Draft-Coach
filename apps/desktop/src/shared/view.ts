@@ -43,10 +43,32 @@ export interface DraftView {
 export interface PickView {
   champion: ChampView;
   score: number;
+  /** Predicted win chance in this draft (live meta), or null without a meta snapshot. */
+  expectedWin: number | null;
   factors: FactorScores;
   reasons: string[];
   offMeta: boolean;
 }
+
+/** The champion the local player has locked in, and how it looks in this draft. */
+export interface MyPickView {
+  champion: ChampView;
+  role: string | null;
+  /** Predicted win chance in this draft (live meta only). */
+  expectedWin: number | null;
+  reasons: string[];
+}
+
+/** A suggested ban (ban phase, live meta only). */
+export interface BanView {
+  champion: ChampView;
+  reasons: string[];
+}
+
+/** The live meta the picks are based on. */
+export type MetaView =
+  | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
+  | { state: "error"; message: string };
 
 /** A champion in the player's pool for a role. */
 export interface PoolChampView {
@@ -124,6 +146,14 @@ export interface ViewState {
   draft: DraftView | null;
   picks: PickView[];
   pickAdvice: PickAdviceView;
+  /** Ban suggestions while the local player is banning (empty otherwise). */
+  bans: BanView[];
+  /** Extra bans for the champion the player hovers before or during bans (null when not hovering). */
+  hoverBans: { champion: ChampView; bans: BanView[] } | null;
+  /** Set once the local player has locked in a champion (suggestions stop then). */
+  myPick: MyPickView | null;
+  /** Null until a snapshot is loaded (or in dev-only direct mode, which has no meta). */
+  meta: MetaView | null;
   /** Role the picks are for, if known. */
   pickRole: string | null;
   /** Your roles ranked by recent results, for the lobby. */
@@ -141,6 +171,10 @@ export function emptyViewState(): ViewState {
     draft: null,
     picks: [],
     pickAdvice: { whyNot: null, confidence: null },
+    bans: [],
+    hoverBans: null,
+    myPick: null,
+    meta: null,
     pickRole: null,
     roles: [],
     playstyle: [],

@@ -36,22 +36,7 @@ export interface AttributeSample {
   self?: boolean;
 }
 
-/** Attributes measured from match data (never labelled by hand). */
-export interface ChampionAttributes {
-  championId: ChampionId;
-  samples: number;
-  physicalShare: number;
-  magicShare: number;
-  trueShare: number;
-  /** Damage taken + mitigated per minute, as a percentile among measured champions (0..1). */
-  frontline: number;
-  /** CC seconds per minute, as a percentile among measured champions (0..1). */
-  engage: number;
-  /** Share of other players' samples per position (the player's own games excluded). */
-  roleShares: Record<Position, number>;
-  /** Number of other players' samples behind roleShares. */
-  roleSamples: number;
-}
+export type { ChampionAttributes } from "@ldc/shared";
 
 export interface ComfortStats {
   championId: ChampionId;

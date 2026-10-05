@@ -9,3 +9,7 @@ export * from "./matches";
 export * from "./explain";
 export * from "./playstyle";
 export * from "./pool";
+export * from "./rating";
+export * from "./meta-index";
+export * from "./draft-roles";
+export * from "./live";

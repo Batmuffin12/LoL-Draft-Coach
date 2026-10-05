@@ -69,6 +69,15 @@ export const MatchSchema = z.looseObject({
     gameVersion: z.string().default(""),
     queueId: z.number().int(),
     participants: z.array(ParticipantSchema),
+    /** Per team: the champions it banned (championId -1 = no ban). */
+    teams: z
+      .array(
+        z.looseObject({
+          teamId: z.number().int(),
+          bans: z.array(z.looseObject({ championId: z.number().int(), pickTurn: z.number().int().optional() })).default([]),
+        }),
+      )
+      .optional(),
   }),
 });
 export type Match = z.infer<typeof MatchSchema>;
@@ -97,3 +106,19 @@ export const LeagueEntriesSchema = z.array(
   }),
 );
 export type LeagueEntry = z.infer<typeof LeagueEntriesSchema>[number];
+
+/**
+ * League-V4 LeagueEntryDTO from the by-tier list ("entries/{queue}/{tier}/{division}").
+ * Only the PUUID is used (summonerId is deprecated); it is never stored with collected matches.
+ */
+export const LeaguePlayersSchema = z.array(
+  z.looseObject({
+    puuid: z.string().min(1),
+    queueType: z.string(),
+    tier: z.string(),
+    rank: z.string().optional(),
+    /** Riot marks accounts that stopped playing; their games are mostly too old for the meta. */
+    inactive: z.boolean().optional(),
+  }),
+);
+export type LeaguePlayer = z.infer<typeof LeaguePlayersSchema>[number];

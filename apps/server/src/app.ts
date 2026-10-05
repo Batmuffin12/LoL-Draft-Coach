@@ -4,10 +4,15 @@ import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { RiotApiError, RiotKeyError } from "@ldc/riot-api";
 import { timingSafeEqual } from "node:crypto";
+import { gunzipSync } from "node:zlib";
+import { eq } from "drizzle-orm";
+import { newestPatch } from "@ldc/meta";
 import { AccountError, createInvite, deleteUser, publicUser, registerUser, touchUser, userByToken, type AccountLookup, type User } from "./accounts";
 import { bearerToken, sha256 } from "./auth";
 import type { Db } from "./db";
+import { metaSnapshots } from "./db/schema";
 import { WindowLimiter } from "./limits";
+import type { MetaJob } from "./meta-job";
 import { loadProfile } from "./profile";
 import type { SyncScheduler } from "./sync-scheduler";
 
@@ -28,8 +33,39 @@ export interface AppDeps {
    * this (ms). Keeps data fresh without a timer, so the server can sleep when unused.
    */
   syncWhenStaleMs?: number | null;
-  /** Enables POST /admin/invites for the owner (bearer token). */
+  /** Enables POST /admin/invites and POST /admin/collect for the owner (bearer token). */
   adminToken?: string | null;
+  /** The hourly collector/aggregator; null when not configured. */
+  meta?: Pick<MetaJob, "run" | "running" | "lastRun"> | null;
+  /** /health reports the collector as stale when it stored no new game for this long (ms). */
+  collectorStaleAfterMs?: number;
+  /** Served by GET /config (scoring weights, thresholds and wording); absent: no route. */
+  publicConfig?: Record<string, unknown> | null;
+}
+
+/** Collector status and data freshness for /health. */
+function metaHealth(deps: AppDeps) {
+  const snaps = deps.db
+    .select({ band: metaSnapshots.band, createdAt: metaSnapshots.createdAt, matches: metaSnapshots.matches, patch: metaSnapshots.patch, newestMatchAt: metaSnapshots.newestMatchAt })
+    .from(metaSnapshots)
+    .all();
+  const last = deps.meta?.lastRun() ?? null;
+  // When the collector last stored a new game: the spec's "is it still receiving data" signal.
+  const lastData = (deps.db.$client.prepare("SELECT max(stored_at) AS t FROM matches WHERE source = 'collector'").get() as { t: number | null }).t;
+  const staleAfterMs = deps.collectorStaleAfterMs ?? 6 * 3_600_000;
+  const now = (deps.now ?? Date.now)();
+  return {
+    patch: newestPatch(snaps.map((s) => s.patch)),
+    newestMatchAt: snaps.length ? Math.max(...snaps.map((s) => s.newestMatchAt ?? 0)) || null : null,
+    collector: {
+      // Stale: no new collected game for staleAfter (e.g. the dev key expired, or the cron stopped).
+      stale: deps.meta ? lastData === null || now - lastData > staleAfterMs : false,
+      lastDataAt: lastData,
+      running: deps.meta?.running ?? false,
+      lastRun: last && { startedAt: last.startedAt, finishedAt: last.finishedAt, newMatches: last.newMatches, riotCalls: last.riotCalls, error: last.error },
+      snapshots: snaps.map((s) => ({ band: s.band, createdAt: s.createdAt, matches: s.matches })),
+    },
+  };
 }
 
 const InviteBody = z.object({
@@ -76,27 +112,49 @@ export function createApp(deps: AppDeps): Hono<Env> {
         database,
         // "missing": no key configured; "rejected": Riot refused it (dev keys expire every 24 h).
         riotKey: !deps.riot ? "missing" : deps.riotKeyRejected?.() ? "rejected" : "ok",
-        // Filled in by the collector (milestone 5).
-        patch: null,
-        newestMatchAt: null,
+        ...(database === "ok" ? metaHealth(deps) : {}),
       },
       database === "ok" ? 200 : 503,
     );
   });
 
-  // Owner-only: create invite codes without shell access to the server.
+  // Owner-only routes (bearer ADMIN_TOKEN); they don't exist when no token is set.
   if (deps.adminToken) {
     const expected = sha256(deps.adminToken);
     const adminLimiter = new WindowLimiter(20, 60_000);
-    app.post("/admin/invites", async (c) => {
+    const requireAdmin = createMiddleware(async (c, next) => {
       if (!adminLimiter.allow(clientKey(c), now())) return c.json({ error: "rate_limited" }, 429);
       const token = bearerToken(c.req.header("authorization"));
       // Compare fixed-length hashes in constant time.
       if (!token || !timingSafeEqual(Buffer.from(sha256(token)), Buffer.from(expected))) return c.json({ error: "not_found" }, 404);
+      await next();
+    });
+    app.use("/admin/*", requireAdmin);
+
+    // Create invite codes without shell access to the server.
+    app.post("/admin/invites", async (c) => {
       const body = InviteBody.safeParse(await c.req.json().catch(() => ({})));
       if (!body.success) return c.json({ error: "invalid_body", message: "Send { note?, days? }." }, 400);
       const { code, expiresAt } = createInvite(deps.db, { note: body.data.note, ttlDays: body.data.days ?? 14, now: now() });
       return c.json({ code, expiresAt }, 201);
+    });
+
+    // The hourly wake-up (a Railway cron calls this): collect, aggregate, publish, then idle.
+    app.post("/admin/collect", (c) => {
+      if (!deps.meta) return c.json({ error: "meta_unavailable", message: "The meta job isn't configured." }, 503);
+      const alreadyRunning = deps.meta.running;
+      deps.meta.run().catch((err: unknown) => console.error("meta run failed:", err));
+      return c.json({ started: !alreadyRunning, running: true }, 202);
+    });
+  }
+
+  // Scoring config (weights, thresholds, wording), so tuning needs no app release.
+  if (deps.publicConfig) {
+    const body = JSON.stringify(deps.publicConfig);
+    const etag = `"${sha256(body).slice(0, 32)}"`;
+    app.get("/config", (c) => {
+      if (c.req.header("if-none-match") === etag) return c.body(null, 304, { etag });
+      return c.body(body, 200, { "content-type": "application/json", etag });
     });
   }
 
@@ -130,6 +188,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
   });
   app.use("/me", requireUser);
   app.use("/me/*", requireUser);
+  app.use("/meta/*", requireUser);
 
   app.get("/me", (c) => c.json({ user: publicUser(c.get("user")) }));
 
@@ -152,6 +211,21 @@ export function createApp(deps: AppDeps): Hono<Env> {
   });
 
   app.get("/me/sync", (c) => c.json({ sync: deps.sync?.state(c.get("user").id) ?? { state: "idle" } }));
+
+  // Meta snapshot for a band (anonymous aggregates; for registered users only, no data brokering).
+  app.get("/meta/:band", (c) => {
+    const band = Number(c.req.param("band"));
+    if (!Number.isInteger(band)) return c.json({ error: "invalid_band", message: "band must be a number." }, 400);
+    const row = deps.db.select().from(metaSnapshots).where(eq(metaSnapshots.band, band)).get();
+    if (!row) return c.json({ error: "no_snapshot", message: `No meta snapshot for band ${band} yet.` }, 404);
+    const headers = { etag: row.etag, "cache-control": "private, no-cache" };
+    if (c.req.header("if-none-match") === row.etag) return c.body(null, 304, headers);
+    // Stored gzipped; sent as is to clients that accept gzip (every real one does).
+    if (/\bgzip\b/.test(c.req.header("accept-encoding") ?? "")) {
+      return c.body(new Uint8Array(row.body), 200, { ...headers, "content-type": "application/json", "content-encoding": "gzip" });
+    }
+    return c.body(gunzipSync(row.body).toString("utf8"), 200, { ...headers, "content-type": "application/json" });
+  });
 
   app.delete("/me", (c) => {
     deleteUser(deps.db, c.get("user").id);

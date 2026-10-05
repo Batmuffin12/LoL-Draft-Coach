@@ -40,6 +40,9 @@ Railway bills **usage**: memory at about $10 per GB-month, CPU at about $20 per 
 | **Fast hand-over** | `overlapSeconds: 0`, `drainingSeconds: 10` | A volume can't be shared, so no overlap; old containers stop quickly. | A few seconds of downtime per deploy. |
 | **Small transfers** | gzip on API responses; `?since=` incremental profiles | A full 200-game profile is 632 KB gzipped (7.9 MB raw), and later fetches only send new games. | |
 | **Small data** | 200 games per user, orphaned matches deleted | Volume stays in the MB range. | |
+| **Hourly wake, not always on** | `ldc-meta-wake` cron → `POST /admin/collect` | The collector runs inside the server (a volume attaches to one service only), and only when woken; no timer keeps it awake. | The meta refreshes hourly, not continuously. A rejected dev key stops collecting; snapshots keep the last data. |
+| **Daily backups** | `backupSchedules: ["DAILY"]` on the volume (Railway-managed) | Users and invites can't be re-created from Riot; a lost volume would mean everyone registers again. Collected games could be re-collected, but restoring is faster. | Backups use storage; at ≤ 0.7 GB the cost should be cents a month (est.; not measured: check `railway usage` after a week). Restore point is up to a day old. |
+| **Bounded meta data** | `maxStoredMatches` 50k per band, `windowDays` 30, only the `challenges` fields the engine reads | Caps disk (~650 MB per band) and keeps aggregation streaming inside the 256 MB heap. | |
 
 ### Expected monthly cost (est.)
 
@@ -57,9 +60,13 @@ Plus the Hobby plan's $5/month, which you pay anyway for the other projects.
 
 ### What would change the picture
 
-- **Milestone 5 (collector).** Collecting meta data needs regular work. To keep sleeping, run the collector as a **Railway cron service** (`cronSchedule` in the IaC file, e.g. hourly) instead of a 24/7 loop: it starts, collects and aggregates for a few minutes, then exits. Expect +$0.50–2/month (est.).
+- **Milestone 5 (collector), as built.** The `ldc-meta-wake` cron service (`curlimages/curl`, `7 * * * *`) POSTs `/admin/collect` once an hour and exits after a few seconds. The server wakes, collects for at most `collector.budgetSeconds` (900 s) or `maxMatchesPerRun` (450 matches) inside Riot's rate limit, aggregates, publishes the snapshots, then sleeps again: awake about 20–25 min per hour. Estimate: memory ~0.15 GB × ~37% of the month ≈ $0.55, CPU ~0.1 vCPU while awake ≈ $0.75, volume ≤ 0.7 GB (50k matches per band at ~13 KB) ≈ $0.10, cron container ≈ $0: **about +$1.40/month** (est.; measure after a week). Cheaper knobs: a smaller `budgetSeconds` in `config/meta.v1.json`, or a sparser `cronSchedule` (e.g. every 2 hours) in `.railway/railway.ts`.
 - **More users** mean more awake hours; costs stay well under $5 for dozens of friends (est.).
 - **The workspace limit.** Usage limits are per workspace and have no expiry. Currently set: **soft $20 (email alert), hard $25** (2026-10-05), meant for the billing period ending **2026-10-16**. Review then: keep, change (`railway usage limit set --target workspace --soft 20 --hard 25 --workspace "ofek ben simchon's Projects"`) or remove (`railway usage limit remove --workspace "ofek ben simchon's Projects"`).
+
+## Backups and restore
+
+Railway takes a daily backup of `ldc-server-volume` (the SQLite file `/data/ldc.sqlite`), set in `.railway/railway.ts`. To restore: Railway dashboard → project `lol-draft-coach` → `ldc-server-volume` → **Backups** → pick a day → **Restore**, then redeploy `ldc-server`. Restoring is an operation, not a setting, so it's fine to do in the dashboard. After a restore, users whose registration happened after the backup must register again with a new invite; everything else (games, meta) catches up on its own within hours.
 
 ## Riot API key
 
@@ -87,3 +94,5 @@ railway service status --service ldc-server                          # deploymen
 | 2026-10-05 | First deploy (0.4.0), 200-game sync for one user | $0.0002 | $11.88 | Idle memory 81 MB, CPU < 0.01 vCPU |
 | 2026-10-05 | IaC adopted; sleep on, background timer off, 256 MB heap, 1 vCPU / 512 MB limits | | | Expected ≈ $0.30/month (see above). Memory after deploy: 31 MB; service seen `SLEEPING` while idle |
 | 2026-10-05 | Workspace limits set: soft $20, hard $25 | | $11.88 | Review on 2026-10-16 (end of billing period) |
+| 2026-10-05 | M5 collector and the `ldc-meta-wake` cron written; `infra:plan` shows 1 to add. **Not applied yet** | | | Expected ≈ +$1.40/month. Apply after M5 is merged and deployed. Local run: 60 matches, 73 Riot calls, 13 s |
+| 2026-10-05 | Daily volume backups added to `.railway/railway.ts` (`infra:plan`: 1 change); applied together with the cron at the M5 merge | | | Est. cents per month; check after a week |

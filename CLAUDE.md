@@ -13,7 +13,7 @@
 | Releases | Nothing published yet. First build for friends = **v1.0.0**; choose the public update location then (docs/DEPLOY.md). |
 | Railway limits | Workspace soft $20 / hard $25, set 2026-10-05 for the period ending 2026-10-16: review then (docs/CLOUD.md). |
 | Railway | Live: project `lol-draft-coach`, service `ldc-server` (europe-west4), https://ldc-server-production-c9e7.up.railway.app. Infrastructure is code in `.railway/railway.ts` (`pnpm infra:plan` / `pnpm infra:apply`); never change settings in the dashboard. Costs and the cost log: `docs/CLOUD.md`. The service sleeps when unused: no background timers that make outbound requests. |
-| Milestones | 1 (v0.1.0), 2 (v0.2.0), 3 (v0.3.0, server + friends) and 4 (v0.4.0, the coach explains) done: the MVP. Next: 5 live meta (collector, rating-based engine v2), then 6 loadout, 7 grow, 8 in game + polish. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
+| Milestones | 1 (v0.1.0), 2 (v0.2.0), 3 (v0.3.0, server + friends), 4 (v0.4.0, the coach explains) and 5 (v0.5.0, live meta: hourly collector, engine v2, bans) done. Next: 6 loadout, 7 grow, 8 in game + polish. The suggestion engine needs an upgrade later, once production data builds up (owner, 2026-10-06): re-run `pnpm --filter @ldc/server backtest` first. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
 | Fixtures | Synthetic draft + one real Ranked Flex recording (`packages/lcu/fixtures/recorded/`). Record more with `pnpm --filter @ldc/lcu record`. |
 | Gotchas | Git Bash rewrites args like `/data` into Windows paths: use `MSYS_NO_PATHCONV=1` for railway CLI calls with absolute paths. Run Railway IaC through `pnpm infra:plan` (the SDK can't launch the npm `.cmd` shim of the CLI). better-sqlite3 13 ships prebuilt binaries: do NOT add it to `onlyBuiltDependencies` (that triggers a node-gyp build that fails without VS tools). Don't leave a shell `cd`-ed inside node_modules on Windows (file locks break pnpm). The LCU PUUID is NOT valid for the Riot API (per-key encrypted PUUIDs): resolve gameName#tagLine via Account-V1. `RIOT_ID` must be quoted in .env. A fresh dev key can take ~30s to activate. |
 
@@ -26,7 +26,7 @@ Direct mode (dev only): in a development build with `RIOT_API_KEY` set and `SERV
 - **Riot compliance**:
   - No game memory access. Use only the LCU, the Riot API, the Live Client Data API and (optionally, later) Overwolf events.
   - Suggest, never decide: never auto-pick, auto-ban, auto-lock, or call any LCU endpoint that acts on champ select. The LCU HTTP client only does reads (GET) and WebSocket subscribes. **Single exception (approved Oct 5, 2026):** a separate, flag-gated LCU writer may create a rune page and write an item set, and only in direct response to the player clicking an import button. No other LCU writes, ever.
-  - Never show teammates' or enemies' names, ranks or histories. Draft data passes through `sanitizeChampSelect()` (packages/lcu) before it reaches the engine or the UI. Only the local player's own identity is used, and only for their own data. Other players appear only as anonymous aggregates.
+  - Never show teammates' or enemies' names, ranks or histories. Draft data passes through `sanitizeChampSelect()` (packages/lcu) and live game data through `sanitizeLiveGame()` (packages/live-client, milestone 8) before it reaches the engine or the UI. Only the local player's own identity is used, and only for their own data. Other players appear only as anonymous aggregates.
   - In-game advice uses only what the client shows (Live Client Data API). No enemy cooldown or ultimate tracking.
   - No Arena augment or item win rates anywhere.
   - No data brokering. Collector rows are stored without PUUIDs or names.
@@ -60,6 +60,8 @@ pnpm --filter @ldc/lcu record   # record a live champ select into an anonymised 
 pnpm --filter @ldc/lcu mock     # fake League client replaying a fixture; then set LDC_LCU_OVERRIDE as printed
 pnpm --filter @ldc/server dev   # run the server locally (reads .env); SERVER_URL=http://localhost:8787 puts the desktop in server mode
 pnpm --filter @ldc/server invite "note"   # create a one-time invite code
+pnpm --filter @ldc/server collect --seconds 120   # one collector wake-up against DATABASE_PATH (reads .env); production uses POST /admin/collect hourly
+pnpm --filter @ldc/server backtest                # check engine v2's predictions on held-out collected games (DATABASE_PATH)
 pnpm --filter @ldc/desktop dist:win      # Windows installer (LDC_SERVER_URL, LDC_UPDATE_URL: see docs/DEPLOY.md)
 ```
 
@@ -69,8 +71,8 @@ Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_SCREENSHOT=path.png`
 
 - `apps/desktop`: Electron (ow-electron-compatible) + React + Vite panel. Main process = adapters + engine; renderer = UI only.
 - `apps/server`: Hono + SQLite (better-sqlite3 + Drizzle). Users, invites, profiles, meta snapshots, config, advice log; jobs for user sync, collector and hourly aggregation, all in one process.
-- `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev` (frozen), later `packages/live-client`: adapters. `packages/engine`: scoring. Later `packages/meta`: aggregation.
-- `config/`: `engine.v1.json` (factor weights per band, smoothing, playstyle axes, pool thresholds), `explain.v1.json` (all wording of reasons, axis/metric labels and formats; text never contains numbers the engine didn't produce), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime; the server will serve them from `/config`.
+- `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev` (frozen), later `packages/live-client`: adapters. `packages/engine`: scoring (v1 from your own data; v2 in rating points from a band's `MetaSnapshot`, used when one is loaded). `packages/meta`: pure aggregation of collected matches into snapshots (`BandAggregator`).
+- `config/`: `engine.v1.json` (factor weights per band, smoothing, playstyle axes, pool thresholds; `rating`: engine v2 term weights per band, priors, blind-pick, bans), `meta.v1.json` (aggregation window/half-life and the collector's per-wake budget), `explain.v1.json` (all wording of reasons, axis/metric labels and formats; text never contains numbers the engine didn't produce), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime; the server serves the scoring config from `GET /config` (ETag).
 - `.railway/railway.ts`: Railway infrastructure as code (service, volume, domain, sleep, limits, non-secret variables). `docs/CLOUD.md`: cost choices and cost log.
 - `research/`: the Oct 5, 2026 research and roadmap (data sources, competitors, design, architecture, decisions, assumptions).
 - Node 22 LTS target (`.nvmrc`), TypeScript strict, ESM.

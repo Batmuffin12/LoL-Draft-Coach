@@ -33,6 +33,10 @@ export function summarizeMatch(match: Match): MatchSummary {
     gameVersion: info.gameVersion,
     endedAt: info.gameEndTimestamp ?? info.gameCreation + durationSec * 1000,
     durationSec,
+    // Champion ids only (-1 = a skipped ban). Absent when Riot sent no team data.
+    ...(info.teams
+      ? { bans: info.teams.flatMap((t) => t.bans.filter((b) => b.championId > 0).map((b) => ({ teamId: t.teamId, championId: b.championId }))) }
+      : {}),
     participants: info.participants.map((p) => ({
       championId: p.championId,
       teamId: p.teamId,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { AccountView, ChampView, DraftView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
+import type { AccountView, BanView, ChampView, DraftView, MetaView, MyPickView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -105,7 +105,13 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
                     </span>
                   )}
                 </strong>
-                <span className="score">{Math.round(p.score * 100)}</span>
+                {p.expectedWin !== null ? (
+                  <span className="score" title="Predicted win chance in this draft, from the live meta in your rank and your own games">
+                    ≈ {Math.round(p.expectedWin * 100)}%
+                  </span>
+                ) : (
+                  <span className="score">{Math.round(p.score * 100)}</span>
+                )}
               </div>
               <div className="factors">
                 {(Object.keys(p.factors) as FactorName[])
@@ -131,6 +137,99 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
       {state.pickAdvice.whyNot && picks.length > 0 && <p className="why-not">{state.pickAdvice.whyNot}</p>}
       <p className="disclaimer">Suggestions only — you choose and lock your champion.</p>
     </section>
+  );
+}
+
+/** The champion you locked in, and how it looks in this draft. Runes and items will go here (milestone 6). */
+function YourPick({ pick }: { pick: MyPickView }) {
+  return (
+    <section className="card picks your-pick">
+      <h2 className="picks-head">
+        <span>
+          Your pick{pick.role ? <span className="muted"> · {pick.role}</span> : null}
+        </span>
+      </h2>
+      <div className="pick">
+        <Icon champ={pick.champion} size={48} />
+        <div className="pick-body">
+          <div className="pick-head">
+            <strong>{pick.champion.name}</strong>
+            {pick.expectedWin !== null && (
+              <span className="score" title="Predicted win chance in this draft, from the live meta in your rank and your own games">
+                ≈ {Math.round(pick.expectedWin * 100)}%
+              </span>
+            )}
+          </div>
+          {pick.reasons.length > 0 && (
+            <ul className="reasons">
+              {pick.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <p className="muted small">Locked in. Runes and items for {pick.champion.name} will show here.</p>
+    </section>
+  );
+}
+
+/** Ban suggestions (ban phase, live meta). */
+function BanList({ bans, start = 1 }: { bans: BanView[]; start?: number }) {
+  return (
+    <ol>
+      {bans.map((b, i) => (
+        <li key={b.champion.id} className="pick">
+          <span className="rank">{start + i}</span>
+          <Icon champ={b.champion} size={32} />
+          <div className="pick-body">
+            <strong>{b.champion.name}</strong>
+            <ul className="reasons">
+              {b.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Ban suggestions, plus extra ones for the champion you're hovering. */
+function BanSuggestions({ bans, hover }: { bans: BanView[]; hover: ViewState["hoverBans"] }) {
+  if (!bans.length && !hover?.bans.length) return null;
+  return (
+    <section className="card picks bans-card">
+      <h2 className="picks-head">
+        <span>Suggested bans</span>
+      </h2>
+      <BanList bans={bans} />
+      {hover && hover.bans.length > 0 && (
+        <>
+          <h3 className="hover-bans-head">
+            <Icon champ={hover.champion} size={18} /> For your {hover.champion.name}
+          </h3>
+          <BanList bans={hover.bans} start={bans.length + 1} />
+        </>
+      )}
+      <p className="disclaimer">Suggestions only — you choose your ban.</p>
+    </section>
+  );
+}
+
+/** "Live meta · patch 16.19 · 2,140 games · 12 min old" (or why there is none). */
+function MetaLine({ meta }: { meta: MetaView | null }) {
+  const now = useNow(60_000);
+  if (!meta) return null;
+  if (meta.state === "error") return <span className="muted" title={meta.message}> · no live meta yet</span>;
+  const minutes = Math.max(0, Math.round((now - meta.createdAt) / 60_000));
+  const age = minutes < 60 ? `${minutes} min old` : `${Math.round(minutes / 60)} h old`;
+  return (
+    <span className="muted" title={`Rank band ${meta.band}: ${meta.matches.toLocaleString()} recent ranked games${meta.offline ? " (server unreachable: using the last copy)" : ""}`}>
+      {" "}· live meta{meta.patch ? ` ${meta.patch}` : ""}, {meta.matches.toLocaleString()} games, {age}
+      {meta.offline ? " (offline)" : ""}
+    </span>
   );
 }
 
@@ -336,6 +435,7 @@ export function App() {
           <span>{lcuLabel}</span>
           {status.gameflowPhase && <span className="muted"> · {status.gameflowPhase}</span>}
           {status.band !== null && <span className="muted"> · band {status.band}</span>}
+          <MetaLine meta={state.meta} />
         </div>
 
         {state.account && state.account.state !== "registered" && (
@@ -356,7 +456,8 @@ export function App() {
               <Timer draft={draft} />
             </section>
 
-            <Picks picks={state.picks} role={state.pickRole} state={state} />
+            <BanSuggestions bans={state.bans} hover={state.hoverBans} />
+            {state.myPick ? <YourPick pick={state.myPick} /> : <Picks picks={state.picks} role={state.pickRole} state={state} />}
 
             <section className="card teams">
               <div>

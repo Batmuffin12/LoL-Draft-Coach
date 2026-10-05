@@ -22,7 +22,7 @@ The app covers the whole game, from the ban phase to the post-game review.
 | Pick phase    | Pick coach             | Top 3 picks, ranked, with pro-style reasoning; updates as each enemy locks in                              |
 | Pick phase    | Pick-order awareness   | Safe blind picks when you pick early, counter-picks when you pick late                                     |
 | After lock-in | Full loadout           | Runes, summoner spells, skill order, starting items and core build; one-click import of runes and item set |
-| In game       | Live build adjustments | Next-item advice that adapts to the game (for example, armor when the enemy ADC is fed), from Riot's Live Client Data API |
+| In game       | Live build adjustments | Next item plus 2 alternatives that adapt to the game, from Riot's Live Client Data API: both teams' items, who is fed, who keeps killing you, what your allies already cover, and your own gold and inventory (for example, armor when the enemy ADC is fed; skip anti-heal if an ally has it; buy the component you can afford now). Ranked by win added at the moment of purchase, never raw item win rate |
 | After game    | Learning loop          | Records whether you followed the advice and the result, so recommendations adapt to you                    |
 | Lobby / profile | Playstyle card       | Eight named axes (early pressure, fighting, farming, vision, risk control, objectives, roaming, playmaking) as "top X%" of your role and rank |
 | Lobby / profile | Pool and gaps        | Your pool as main / comfortable / learning / rusty, and what it lacks per role (for example, no AP jungler) |
@@ -160,6 +160,8 @@ Nothing about champions, items, runes, patches or the meta is hardcoded: every g
 | Win rates, matchups, counters, builds, skill orders           | Collector, per rank band, recency weighted                          |
 | Champion attributes (damage type, frontline, CC, power curve) | Derived from Match-V5 stats and timelines, recomputed with the meta |
 | Item categories for in-game adjustments                       | Data Dragon item stats (armor, magic resist, and so on)             |
+| Item answer classes (anti-heal, penetration…) and substitutes | Derived from collector purchase lift; never a hand-made list        |
+| Gold value per stat point, buy paths                          | Data Dragon basic items and `from` / `into`, per patch              |
 | Jev question options                                          | Built per request from current candidates and items                 |
 | Riot rate limits                                              | Read from Riot's rate-limit response headers                        |
 | Scoring weights, thresholds, smoothing values                 | Config with defaults; later tuned from the advice log               |
@@ -224,6 +226,7 @@ Below a minimum game count the app shows "not enough data" instead of a number. 
 | champion_stats      | Win and pick rate per champion, role, band and patch window |
 | matchups            | Win rate per champion pair and role, per band               |
 | builds              | Item paths, rune pages and skill orders with win rates      |
+| item_purchases      | Completed items from timelines: slot, minute, game state and enemy profile at purchase, result (no PUUIDs) |
 | champion_attributes | Derived attributes per champion and patch window            |
 | advice_log          | Advice given, whether followed, game result                 |
 | invites             | One-time invite codes (hashed), who used them               |
@@ -247,7 +250,7 @@ The app must stay within Riot's rules so users never risk their accounts. These 
 
 - **No game memory access.** Riot blocks memory access for unknown third-party apps from October 6, 2026 ([Riot Support](https://support.riotgames.com/en-us/riot/performance/game-memory-access-removed-for-third-party-apps)). Use only the LCU, the Riot API, Riot's Live Client Data API and (optionally) Overwolf events.
 - **Suggest, never decide.** Riot does not approve apps that dictate player decisions ([Riot Developer Portal](https://developer.riotgames.com/docs/lol)). Show ranked options with reasoning; never auto-pick, auto-ban or auto-lock. The only League client writes allowed are **creating a rune page and writing an item set, each only on an explicit click by the player**; nothing ever acts on champ select picks, bans or locks.
-- **In-game advice uses only what the client shows** (Live Client Data API). No enemy cooldown or ultimate tracking (banned by Riot since March 2025).
+- **In-game advice uses only what the client shows** (Live Client Data API). No enemy cooldown or ultimate tracking (banned by Riot since March 2025). Live game data passes through `sanitizeLiveGame()` (packages/live-client), which drops every Riot ID and summoner name, before it reaches the engine or the UI. Item advice always offers alternatives and never buys anything.
 - **Riot notice.** Show "LoL Draft Coach isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties" where players can see it.
 - **No player identities in ranked champ select.** Score champions and the draft only, never teammates' names, ranks or histories.
 - **No Arena augment or item win rates**, anywhere in the app.
@@ -288,6 +291,6 @@ Revised Oct 5, 2026 after the research in [research/ROADMAP.md](../research/ROAD
 3. **Server and friends** (v0.3.0): Hono + SQLite server holding the one Riot key, invite codes and tokens, server-side sync of each user's games (keeping the richer match data), desktop in server mode, CI, Windows installer with auto-update. Done when a friend gets picks without a Riot key on their PC.
 4. **The coach explains** (v0.4.0): reasons, "why not your usual pick", confidence labels; playstyle card; pool tiers and gaps. Done when the panel explains every pick from your own data.
 5. **Live meta** (v0.5.0): collector and hourly snapshots for EUW bands; rating-based engine with matchup, counter, synergy and meta factors; blind-pick safety; ban suggestions. Done when stats refresh hourly and enemy picks change the ranking.
-6. **Loadout** (v0.6.0): runes, spells, skill order and items; situational choices found from data with reasons; one-click import on click.
+6. **Loadout** (v0.6.0): runes, spells, skill order and items; situational choices found from data with reasons; one-click import on click. Item-ranking groundwork: match timelines, `item_purchases`, win added at purchase time, and the pure `rankItems()` engine function.
 7. **Grow** (v0.7.0): new-champion recommender, growth focus, post-game card, monthly report.
-8. **In game and polish** (v0.8.0): next-item advice from the Live Client Data API, crash reporting, optional Claude wording, production key past ~10 users.
+8. **In game and polish** (v0.8.0): live item ranking from the Live Client Data API (both teams' items, your gold and inventory, the kill feed), checked by a backtest before release; crash reporting, optional Claude wording, production key past ~10 users.
