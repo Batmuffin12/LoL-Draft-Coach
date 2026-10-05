@@ -2,6 +2,21 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.4.0] — 2026-10-05 — Milestone 4: The coach explains
+
+Completes the MVP (milestones 3 + 4): friends can use it, and it says why.
+
+### Added
+- **Why, not just what.** Pick reasons are structured (template id + the engine's numbers); all wording lives in `config/explain.v1.json`, so text can never invent a stat.
+  - "Why not your usual pick": e.g. "Your Naafiri is banned or taken", "Picked over your X: your team needs magic damage", or that it's off-meta in the role.
+  - Confidence label from our own data: Clear pick / Close call / Not much data yet (replaces Jev's confidence in the UI).
+- **Your style** (lobby): 8 axes per role (early pressure, fighting, farming, vision, staying alive, objectives, roaming, playmaking) as percentiles of Riot's per-player metrics against the other players in that role in your matches, each with its strongest piece of evidence. Metric lists and labels are config.
+- **Your roles and pool** (lobby): champions per role as Main / Comfortable / Learning / Rusty, and the draft needs your main picks don't cover (magic, physical, frontline, crowd control), shown only when your own losses back them up, plus the learning or rusty champions that would cover each gap.
+
+### Changed
+- Direct (dev-only) mode now caches the same anonymised match summaries as the server (`matches-v2`), so every feature works in both modes.
+- `recommendPicks` returns structured reasons; `advisePicks` adds the why-not line and confidence.
+
 ## [0.3.0] — 2026-10-05 — Milestone 3: Server and friends
 
 Friends can now use the coach with their own accounts. The Riot API key lives only on the server.
