@@ -27,5 +27,8 @@
     "@types/better-sqlite3": "^9.6.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15"
+  },
+  "exports": {
+    ".": "./src/index.ts"
   }
 }

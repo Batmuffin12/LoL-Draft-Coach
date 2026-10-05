@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { ChampView, DraftView, PickView, RoleView, SlotView, ViewState } from "../shared/view";
+import type { AccountView, ChampView, DraftView, PickView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -165,6 +165,84 @@ function Roles({ roles }: { roles: RoleView[] }) {
   );
 }
 
+
+const RIOT_NOTICE =
+  "LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties.";
+
+/** First run (or after sign-out): connect this PC to the coach server with an invite code. */
+function Onboarding({ account, lcuConnected }: { account: AccountView; lcuConnected: boolean }) {
+  const [serverUrl, setServerUrl] = useState(account.serverUrl ?? account.defaultServerUrl ?? "");
+  const [code, setCode] = useState("");
+  const busy = account.state === "registering";
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!busy) void window.coach.register(serverUrl, code);
+  };
+  return (
+    <section className="card onboarding">
+      <h2>{account.state === "mismatch" ? "Different account" : "Connect to your coach"}</h2>
+      {account.state === "mismatch" ? (
+        <p>{account.message}</p>
+      ) : (
+        <p className="muted small">
+          Paste the invite code you were given. Your Riot ID is read from the League client you’re logged into, and only your own games are
+          loaded.
+        </p>
+      )}
+      <form className="form" onSubmit={submit}>
+        <label htmlFor="server-url">Server address</label>
+        <input id="server-url" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} placeholder="coach.example.app" autoComplete="off" spellCheck={false} />
+        <label htmlFor="invite-code">Invite code</label>
+        <input id="invite-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="XXXX-XXXX-XXXX" autoComplete="off" spellCheck={false} />
+        <button className="btn primary" type="submit" disabled={busy || !code.trim() || !serverUrl.trim() || !lcuConnected}>
+          {busy ? "Connecting…" : "Connect"}
+        </button>
+      </form>
+      {!lcuConnected && <p className="muted small">Open the League client and log in first.</p>}
+      {account.state === "error" && account.message && <p className="warn small">{account.message}</p>}
+      {account.state === "unregistered" && account.message && <p className="warn small">{account.message}</p>}
+    </section>
+  );
+}
+
+/** Who the app is connected as, with sign-out and data deletion (confirmed in the page). */
+function AccountFooter({ account }: { account: AccountView | null }) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <footer className="account-footer small">
+      {account === null ? (
+        <span className="muted">Developer mode: your games come straight from the Riot API key in .env.</span>
+      ) : account.state === "registered" ? (
+        <div className="account-row">
+          <span className="muted">Connected as {account.riotId}</span>
+          {confirming ? (
+            <span className="confirm">
+              Delete everything the coach stores about you?
+              <button className="btn danger" onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
+                Delete
+              </button>
+              <button className="btn" onClick={() => setConfirming(false)}>
+                Keep
+              </button>
+            </span>
+          ) : (
+            <span className="actions">
+              <button className="btn" onClick={() => void window.coach.signOut()}>
+                Sign out
+              </button>
+              <button className="btn" onClick={() => setConfirming(true)}>
+                Delete my data
+              </button>
+            </span>
+          )}
+          {account.message && <span className="warn">{account.message}</span>}
+        </div>
+      ) : null}
+      <p className="legal">{RIOT_NOTICE}</p>
+    </footer>
+  );
+}
+
 export function App() {
   const [state, setState] = useState<ViewState | null>(null);
   useEffect(() => window.coach.onState(setState), []);
@@ -194,6 +272,10 @@ export function App() {
           {status.gameflowPhase && <span className="muted"> · {status.gameflowPhase}</span>}
           {status.band !== null && <span className="muted"> · band {status.band}</span>}
         </div>
+
+        {state.account && state.account.state !== "registered" && (
+          <Onboarding account={state.account} lcuConnected={status.lcu === "connected"} />
+        )}
 
         {state.notices.map((n) => (
           <p key={n} className="warn small">
@@ -236,6 +318,7 @@ export function App() {
           <Roles roles={state.roles} />
           </>
         )}
+        <AccountFooter account={state.account} />
       </main>
     </div>
   );

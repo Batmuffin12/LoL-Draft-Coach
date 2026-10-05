@@ -4,7 +4,7 @@
  */
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { app, BrowserWindow, dialog, ipcMain, screen } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
@@ -12,12 +12,17 @@ import { IPC, type ViewState } from "../shared/view";
 import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
+import { AccountStore } from "./account-store";
 import { PersonalCoach } from "./personal-coach";
+import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { computeDockBounds, createWin32Finder, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 
 const PANEL_WIDTH = 340;
 const DOCK_POLL_MS = 500;
+
+// Dev aid: LDC_USER_DATA_DIR keeps a test run (another account, a clean first run) out of your real profile.
+if (process.env.LDC_USER_DATA_DIR) app.setPath("userData", process.env.LDC_USER_DATA_DIR);
 
 /** Loaded .env, or the reason it couldn't be used (shown to the user, then the app quits). */
 const envResult = ((): { env: AppEnv } | { error: Error } => {
@@ -110,20 +115,48 @@ async function main(): Promise<void> {
   });
   const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
-  // Interim (until apps/server exists in milestone 3): the key is read here in the main
-  // process from the local .env and never sent to the renderer.
-  const riot = env.riotApiKey
-    ? new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion })
-    : null;
-  const matchesDir = join(app.getPath("userData"), "matches");
+  const mode = profileMode({ packaged: app.isPackaged, riotApiKey: env.riotApiKey, serverUrl: env.serverUrl });
+  let profiles: DirectProfileSource | ServerProfileSource | null = null;
+  if (mode === "direct" && env.riotApiKey) {
+    // Development only: the key from the local .env, used here in the main process and
+    // never sent to the renderer. Packaged builds always use the coach server.
+    const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
+    const matchesDir = join(app.getPath("userData"), "matches");
+    profiles = new DirectProfileSource({
+      riot,
+      history: config.app.history,
+      bands: config.bands,
+      storeFor: (puuid) => new MatchStore(matchesDir, puuid),
+    });
+  } else {
+    const box = {
+      encrypt: (plain: string) =>
+        safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : `raw:${plain}`,
+      decrypt: (sealed: string) =>
+        sealed.startsWith("enc:") ? safeStorage.decryptString(Buffer.from(sealed.slice(4), "base64")) : sealed.replace(/^raw:/, ""),
+    };
+    profiles = new ServerProfileSource({
+      accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
+      defaultServerUrl: env.serverUrl,
+    });
+    await profiles.init();
+  }
   const coach = new PersonalCoach({
     connector,
     ddragon,
     config,
-    riot,
+    profiles,
     riotId: env.riotId,
-    storeFor: (puuid) => new MatchStore(matchesDir, puuid),
   });
+  if (profiles instanceof ServerProfileSource) {
+    const server = profiles;
+    ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {
+      if (typeof serverUrl !== "string" || typeof inviteCode !== "string") return;
+      await server.register(serverUrl, inviteCode);
+    });
+    ipcMain.handle(IPC.signOut, () => server.signOut());
+    ipcMain.handle(IPC.deleteData, () => server.deleteData());
+  }
 
   win = createWindow();
   coach.on("state", (s) => {

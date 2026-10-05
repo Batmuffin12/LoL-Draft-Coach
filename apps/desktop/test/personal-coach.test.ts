@@ -9,6 +9,7 @@ import { RiotApi, type Match } from "@ldc/riot-api";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { MatchStore, minimizeMatch } from "../src/main/match-store";
 import { PersonalCoach } from "../src/main/personal-coach";
+import { DirectProfileSource } from "../src/main/profile-source";
 import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
 import type { ViewState } from "../src/shared/view";
 import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, waitFor } from "./helpers";
@@ -95,13 +96,16 @@ async function startCoach(riot: RiotApi | null, overrides: Record<string, unknow
   });
   const creds = await server.start();
   const matchesDir = tmp("ldc-pc-");
+  const profiles = riot
+    ? new DirectProfileSource({ riot, history: config.app.history, bands: config.bands, storeFor: (puuid) => new MatchStore(matchesDir, puuid) })
+    : null;
   coach = new PersonalCoach({
     connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
     ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
     config,
-    riot,
+    profiles,
+    noProfileMessage: "No Riot API key configured. Set RIOT_API_KEY in your .env to get personal picks.",
     riotId,
-    storeFor: (puuid) => new MatchStore(matchesDir, puuid),
   });
   const states: ViewState[] = [];
   coach.on("state", (s) => states.push(s));
@@ -177,7 +181,7 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
 describe("compliance", () => {
   it("the panel code never calls LCU endpoints that act on champ select", () => {
     const dir = join(__dirname, "..", "src");
-    const files = ["main/index.ts", "main/coach.ts", "main/personal-coach.ts", "preload/index.ts"];
+    const files = ["main/index.ts", "main/coach.ts", "main/personal-coach.ts", "main/profile-source.ts", "preload/index.ts"];
     for (const f of files) {
       const text = readFileSync(join(dir, f), "utf8");
       expect(text, f).not.toMatch(/method:\s*"(POST|PATCH|PUT|DELETE)"|\/actions\/\d|lol-champ-select\/v1\/session\/actions/);

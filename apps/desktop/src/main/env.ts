@@ -22,6 +22,8 @@ export interface AppEnv {
   riotPlatform: string;
   riotRegion: string;
   jevEnabled: boolean;
+  /** Coach server address (SERVER_URL); when set, the app uses the server even in development. */
+  serverUrl: string | null;
 }
 
 /** Loads .env into process.env (secrets stay in the main process) and reads app settings. */
@@ -52,5 +54,6 @@ export function readEnv(env: NodeJS.ProcessEnv): AppEnv {
     riotPlatform: blank(env.RIOT_PLATFORM) ?? "euw1",
     riotRegion: blank(env.RIOT_REGION) ?? "europe",
     jevEnabled: env.JEV_ENABLED?.trim() === "true",
+    serverUrl: blank(env.SERVER_URL),
   };
 }
