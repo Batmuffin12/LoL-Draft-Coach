@@ -7,6 +7,7 @@ const DAY = 86_400_000;
 const NOW = 1_800_000_000_000;
 const config = parseMetaConfig(JSON.parse(readFileSync(new URL("../../../config/meta.v1.json", import.meta.url), "utf8")));
 const cfg = { ...config.aggregation, minPairGames: 1, minAttributeSamples: 1, minReferenceSamples: 1, referenceQuantiles: 5 };
+const base = { band: 2, now: NOW, config: cfg, metrics: [] as string[] };
 
 const ROLES = ["top", "jungle", "middle", "bottom", "utility"];
 
@@ -129,6 +130,17 @@ describe("aggregateBand", () => {
     const a = s.attributes.find((x) => x.championId === 1)!;
     expect(a.physicalShare).toBeCloseTo(2 / 3, 2);
     expect(a.roleShares).toEqual({ top: 1 });
+  });
+
+  it("caps reference values per role and metric, keeping the newest games", () => {
+    const games = [0, 1, 2].map((i) => {
+      const m = match(`M${i}`, BLUE, RED, true, i);
+      for (const p of m.participants) p.challenges = { killParticipation: 1 - i / 10 };
+      return m;
+    });
+    const s = aggregateBand({ ...base, matches: games, config: { ...cfg, referenceMaxSamples: 2 }, metrics: ["challenges.killParticipation"] });
+    // Two newest top players: both from match M0 (age 0), value 1.
+    expect(s.references.top!["challenges.killParticipation"]).toEqual({ n: 2, quantiles: [1, 1, 1, 1, 1] });
   });
 
   it("never carries player identifiers into the snapshot", () => {

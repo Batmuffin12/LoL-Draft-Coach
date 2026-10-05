@@ -1,5 +1,5 @@
-import { deriveChampionAttributes, halfLifeWeight, readMetric, type AttributeSample } from "@ldc/engine";
-import type { ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId } from "@ldc/shared";
+import { addAttributeSample, attributesFromTotals, halfLifeWeight, readMetric, type AttributeTotals } from "@ldc/engine";
+import type { ChampionId, ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId } from "@ldc/shared";
 import type { AggregationConfig } from "./config";
 
 const DAY_MS = 86_400_000;
@@ -59,59 +59,76 @@ class PairCounter {
   }
 }
 
-export interface AggregateInput {
+export interface AggregatorOptions {
   band: RankBandId;
-  /** Collected matches of this band (any order). Players' identities are never part of them. */
-  matches: MatchSummary[];
   now: number;
   config: AggregationConfig;
-  /** Playstyle metric names to publish references for (engine config playstyle axes). */
+  /** Playstyle metric names to publish references for (engine config playstyle axes; a leading "-" is ignored). */
   metrics: string[];
 }
 
 /**
- * Turns a band's collected matches into its meta snapshot. Pure: no I/O.
+ * Streams a band's collected matches into its meta snapshot. Pure: no I/O; feed it
+ * matches newest first so playstyle references (capped at referenceMaxSamples per
+ * role and metric) describe the current game.
+ *
  * Each game is weighted by recency (half-life), so the meta moves smoothly as players
- * adapt instead of jumping at patch boundaries. Only positioned, non-remake games count.
+ * adapt instead of jumping at patch boundaries. Only positioned, non-remake games
+ * inside the window count. Matches carry no player identities.
  */
-export function aggregateBand(input: AggregateInput): MetaSnapshot {
-  const { config: cfg, now } = input;
-  const usable = input.matches.filter(
-    (m) =>
-      m.endedAt > now - cfg.windowDays * DAY_MS &&
+export class BandAggregator {
+  private readonly champions = new Map<string, ChampionRoleStat>();
+  private readonly roleGames: Record<Position, number> = {};
+  private readonly matchups = new PairCounter();
+  private readonly duos = new PairCounter();
+  private readonly attributes = new Map<ChampionId, AttributeTotals>();
+  private readonly metricValues = new Map<Position, Map<string, number[]>>();
+  private readonly metrics: string[];
+  private readonly patches = new Set<string | null>();
+  private count = 0;
+  private newest: number | null = null;
+
+  constructor(private readonly opts: AggregatorOptions) {
+    this.metrics = [...new Set(opts.metrics.map((m) => m.replace(/^-/, "")))];
+  }
+
+  /** Whether a match counts at all (inside the window, not a remake, every player positioned). */
+  usable(m: MatchSummary): boolean {
+    const cfg = this.opts.config;
+    return (
+      m.endedAt > this.opts.now - cfg.windowDays * DAY_MS &&
       m.durationSec >= cfg.minDurationSec &&
       m.participants.length > 0 &&
-      m.participants.every((p) => p.position),
-  );
+      m.participants.every((p) => p.position)
+    );
+  }
 
-  const champions = new Map<string, ChampionRoleStat>();
-  const roleGames: Record<Position, number> = {};
-  const matchups = new PairCounter();
-  const duos = new PairCounter();
-  const samples: AttributeSample[] = [];
-  const metricValues = new Map<Position, Map<string, number[]>>();
-  const metrics = [...new Set(input.metrics.map((m) => m.replace(/^-/, "")))];
-
-  for (const m of usable) {
-    const w = halfLifeWeight(now - m.endedAt, cfg.halfLifeDays);
+  /** Adds one match; returns false when it was skipped. */
+  add(m: MatchSummary): boolean {
+    if (!this.usable(m)) return false;
+    const cfg = this.opts.config;
+    const w = halfLifeWeight(this.opts.now - m.endedAt, cfg.halfLifeDays);
+    this.count++;
+    this.newest = Math.max(this.newest ?? 0, m.endedAt);
+    this.patches.add(patchOf(m.gameVersion));
     const ps = m.participants;
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i]!;
       const key = `${p.championId}|${p.position}`;
-      let c = champions.get(key);
-      if (!c) champions.set(key, (c = { championId: p.championId, role: p.position, games: 0, wins: 0, n: 0 }));
+      let c = this.champions.get(key);
+      if (!c) this.champions.set(key, (c = { championId: p.championId, role: p.position, games: 0, wins: 0, n: 0 }));
       c.games += w;
       if (p.win) c.wins += w;
       c.n++;
-      roleGames[p.position] = (roleGames[p.position] ?? 0) + w;
+      this.roleGames[p.position] = (this.roleGames[p.position] ?? 0) + w;
 
       for (let j = i + 1; j < ps.length; j++) {
         const q = ps[j]!;
-        if (q.teamId === p.teamId) duos.add(p, q, p.win, w);
-        else matchups.add(p, q, p.win, w);
+        if (q.teamId === p.teamId) this.duos.add(p, q, p.win, w);
+        else this.matchups.add(p, q, p.win, w);
       }
 
-      samples.push({
+      addAttributeSample(this.attributes, {
         championId: p.championId,
         position: p.position,
         physicalDamage: p.physicalDamage,
@@ -123,56 +140,67 @@ export function aggregateBand(input: AggregateInput): MetaSnapshot {
         durationSec: m.durationSec,
       });
 
-      let byMetric = metricValues.get(p.position);
-      if (!byMetric) metricValues.set(p.position, (byMetric = new Map()));
-      for (const metric of metrics) {
+      let byMetric = this.metricValues.get(p.position);
+      if (!byMetric) this.metricValues.set(p.position, (byMetric = new Map()));
+      for (const metric of this.metrics) {
+        let list = byMetric.get(metric);
+        if (list && list.length >= cfg.referenceMaxSamples) continue;
         const v = readMetric(p, m.durationSec, metric);
         if (v === null) continue;
-        let list = byMetric.get(metric);
         if (!list) byMetric.set(metric, (list = []));
         list.push(v);
       }
     }
+    return true;
   }
 
-  const references: MetaSnapshot["references"] = {};
-  for (const [role, byMetric] of metricValues) {
-    const out: Record<string, { n: number; quantiles: number[] }> = {};
-    for (const [metric, values] of byMetric) {
-      if (values.length < cfg.minReferenceSamples) continue;
-      out[metric] = { n: values.length, quantiles: quantiles(values.sort((a, b) => a - b), cfg.referenceQuantiles) };
+  finish(): MetaSnapshot {
+    const cfg = this.opts.config;
+    const references: MetaSnapshot["references"] = {};
+    for (const [role, byMetric] of this.metricValues) {
+      const out: Record<string, { n: number; quantiles: number[] }> = {};
+      for (const [metric, values] of byMetric) {
+        if (values.length < cfg.minReferenceSamples) continue;
+        out[metric] = { n: values.length, quantiles: quantiles([...values].sort((a, b) => a - b), cfg.referenceQuantiles) };
+      }
+      if (Object.keys(out).length) references[role] = out;
     }
-    if (Object.keys(out).length) references[role] = out;
+
+    const attributes = [...attributesFromTotals(this.attributes.values(), cfg.minAttributeSamples).values()]
+      .map((a) => ({
+        ...a,
+        physicalShare: round(a.physicalShare),
+        magicShare: round(a.magicShare),
+        trueShare: round(a.trueShare),
+        frontline: round(a.frontline),
+        engage: round(a.engage),
+        roleShares: Object.fromEntries(Object.entries(a.roleShares).map(([k, v]) => [k, round(v)])),
+      }))
+      .sort((a, b) => a.championId - b.championId);
+
+    return {
+      format: 1,
+      band: this.opts.band,
+      createdAt: this.opts.now,
+      patch: newestPatch(this.patches),
+      matches: this.count,
+      newestMatchAt: this.newest,
+      halfLifeDays: cfg.halfLifeDays,
+      roleGames: Object.fromEntries(Object.entries(this.roleGames).map(([k, v]) => [k, round(v)])),
+      champions: [...this.champions.values()]
+        .map((c) => ({ ...c, games: round(c.games), wins: round(c.wins) }))
+        .sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role)),
+      matchups: this.matchups.list(cfg.minPairGames),
+      duos: this.duos.list(cfg.minPairGames),
+      attributes,
+      references,
+    };
   }
-
-  const attributes = [...deriveChampionAttributes(samples, cfg.minAttributeSamples).values()]
-    .map((a) => ({
-      ...a,
-      physicalShare: round(a.physicalShare),
-      magicShare: round(a.magicShare),
-      trueShare: round(a.trueShare),
-      frontline: round(a.frontline),
-      engage: round(a.engage),
-      roleShares: Object.fromEntries(Object.entries(a.roleShares).map(([k, v]) => [k, round(v)])),
-    }))
-    .sort((a, b) => a.championId - b.championId);
-
-  return {
-    format: 1,
-    band: input.band,
-    createdAt: now,
-    patch: newestPatch(usable.map((m) => patchOf(m.gameVersion))),
-    matches: usable.length,
-    newestMatchAt: usable.length ? Math.max(...usable.map((m) => m.endedAt)) : null,
-    halfLifeDays: cfg.halfLifeDays,
-    roleGames: Object.fromEntries(Object.entries(roleGames).map(([k, v]) => [k, round(v)])),
-    champions: [...champions.values()]
-      .map((c) => ({ ...c, games: round(c.games), wins: round(c.wins) }))
-      .sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role)),
-    matchups: matchups.list(cfg.minPairGames),
-    duos: duos.list(cfg.minPairGames),
-    attributes,
-    references,
-  };
 }
 
+/** Aggregates a list of matches in one go (sorted newest first internally). */
+export function aggregateBand(input: AggregatorOptions & { matches: MatchSummary[] }): MetaSnapshot {
+  const agg = new BandAggregator(input);
+  for (const m of [...input.matches].sort((a, b) => b.endedAt - a.endedAt)) agg.add(m);
+  return agg.finish();
+}

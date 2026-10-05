@@ -2,6 +2,81 @@ import type { ChampionId } from "@ldc/shared";
 import { percentile } from "./comfort";
 import type { AttributeSample, ChampionAttributes } from "./types";
 
+/** Running sums for one champion's attributes (lets large data sets be streamed). */
+export interface AttributeTotals {
+  championId: ChampionId;
+  n: number;
+  physical: number;
+  magic: number;
+  true: number;
+  /** Damage taken + self-mitigated. */
+  tank: number;
+  ccSeconds: number;
+  minutes: number;
+  /** Other players' samples per position (the player's own excluded). */
+  roles: Record<string, number>;
+  others: number;
+}
+
+/** Adds one sample to the totals map. */
+export function addAttributeSample(totals: Map<ChampionId, AttributeTotals>, s: AttributeSample): void {
+  let t = totals.get(s.championId);
+  if (!t) {
+    t = { championId: s.championId, n: 0, physical: 0, magic: 0, true: 0, tank: 0, ccSeconds: 0, minutes: 0, roles: {}, others: 0 };
+    totals.set(s.championId, t);
+  }
+  t.n++;
+  t.physical += s.physicalDamage;
+  t.magic += s.magicDamage;
+  t.true += s.trueDamage;
+  t.tank += s.damageTaken + s.selfMitigated;
+  t.ccSeconds += s.ccSeconds;
+  t.minutes += Math.max(1, s.durationSec / 60);
+  if (!s.self) {
+    t.others++;
+    if (s.position) t.roles[s.position] = (t.roles[s.position] ?? 0) + 1;
+  }
+}
+
+/**
+ * Champion attributes from accumulated totals. Champions with fewer than `minSamples`
+ * samples are left out ("not enough data"); frontline and engage are percentiles among
+ * the champions that remain.
+ */
+export function attributesFromTotals(totals: Iterable<AttributeTotals>, minSamples: number): Map<ChampionId, ChampionAttributes> {
+  const raws = [...totals]
+    .filter((t) => t.n >= minSamples)
+    .map((t) => {
+      const dmg = t.physical + t.magic + t.true || 1;
+      return {
+        t,
+        phys: t.physical / dmg,
+        magic: t.magic / dmg,
+        tru: t.true / dmg,
+        tank: t.tank / t.minutes,
+        cc: t.ccSeconds / t.minutes,
+      };
+    });
+  const tanks = raws.map((r) => r.tank);
+  const ccs = raws.map((r) => r.cc);
+  return new Map(
+    raws.map((r) => [
+      r.t.championId,
+      {
+        championId: r.t.championId,
+        samples: r.t.n,
+        physicalShare: r.phys,
+        magicShare: r.magic,
+        trueShare: r.tru,
+        frontline: percentile(r.tank, tanks),
+        engage: percentile(r.cc, ccs),
+        roleShares: r.t.others ? Object.fromEntries(Object.entries(r.t.roles).map(([k, v]) => [k, v / r.t.others])) : {},
+        roleSamples: r.t.others,
+      },
+    ]),
+  );
+}
+
 /**
  * Derives champion attributes from match participants, as the spec requires
  * (measured, not labelled):
@@ -12,70 +87,7 @@ import type { AttributeSample, ChampionAttributes } from "./types";
  * Champions with fewer than `minSamples` samples are left out ("not enough data").
  */
 export function deriveChampionAttributes(samples: AttributeSample[], minSamples: number): Map<ChampionId, ChampionAttributes> {
-  const groups = new Map<ChampionId, AttributeSample[]>();
-  for (const s of samples) groups.set(s.championId, [...(groups.get(s.championId) ?? []), s]);
-
-  interface Raw {
-    id: ChampionId;
-    n: number;
-    phys: number;
-    magic: number;
-    tru: number;
-    tank: number;
-    cc: number;
-    roles: Record<string, number>;
-    others: number;
-  }
-  const raws: Raw[] = [];
-  for (const [id, list] of groups) {
-    if (list.length < minSamples) continue;
-    let phys = 0;
-    let magic = 0;
-    let tru = 0;
-    let minutes = 0;
-    let tank = 0;
-    let cc = 0;
-    const roles: Record<string, number> = {};
-    for (const s of list) {
-      phys += s.physicalDamage;
-      magic += s.magicDamage;
-      tru += s.trueDamage;
-      tank += s.damageTaken + s.selfMitigated;
-      cc += s.ccSeconds;
-      minutes += Math.max(1, s.durationSec / 60);
-      if (s.position && !s.self) roles[s.position] = (roles[s.position] ?? 0) + 1;
-    }
-    const others = list.filter((s) => !s.self).length;
-    const dmg = phys + magic + tru || 1;
-    raws.push({
-      id,
-      n: list.length,
-      phys: phys / dmg,
-      magic: magic / dmg,
-      tru: tru / dmg,
-      tank: tank / minutes,
-      cc: cc / minutes,
-      roles: others ? Object.fromEntries(Object.entries(roles).map(([k, v]) => [k, v / others])) : {},
-      others,
-    });
-  }
-
-  const tanks = raws.map((r) => r.tank);
-  const ccs = raws.map((r) => r.cc);
-  return new Map(
-    raws.map((r) => [
-      r.id,
-      {
-        championId: r.id,
-        samples: r.n,
-        physicalShare: r.phys,
-        magicShare: r.magic,
-        trueShare: r.tru,
-        frontline: percentile(r.tank, tanks),
-        engage: percentile(r.cc, ccs),
-        roleShares: r.roles,
-        roleSamples: r.others,
-      },
-    ]),
-  );
+  const totals = new Map<ChampionId, AttributeTotals>();
+  for (const s of samples) addAttributeSample(totals, s);
+  return attributesFromTotals(totals.values(), minSamples);
 }

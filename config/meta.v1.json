@@ -8,6 +8,7 @@
     "minPairGames": 2,
     "minAttributeSamples": 10,
     "referenceQuantiles": 21,
+    "referenceMaxSamples": 4000,
     "minReferenceSamples": 40
   },
   "collector": {
@@ -17,6 +18,6 @@
     "matchesPerPlayer": 5,
     "budgetSeconds": 900,
     "maxMatchesPerRun": 450,
-    "playerQueueSize": 400
+    "maxStoredMatches": 50000
   }
 }

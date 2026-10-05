@@ -16,6 +16,8 @@ export const MetaConfigSchema = z.object({
     minAttributeSamples: z.number().int().min(1),
     /** Number of evenly spaced quantiles stored per playstyle reference (min … max). */
     referenceQuantiles: z.number().int().min(3).max(101),
+    /** References use at most this many values per role and metric (the newest games). */
+    referenceMaxSamples: z.number().int().min(1),
     /** Values a role/metric needs before a reference is published. */
     minReferenceSamples: z.number().int().min(1),
   }),
@@ -30,8 +32,8 @@ export const MetaConfigSchema = z.object({
     /** Upper bounds for one wake-up: wall time, and new matches fetched. */
     budgetSeconds: z.number().positive(),
     maxMatchesPerRun: z.number().int().min(1),
-    /** Players kept in the sampling queue per band (refilled from League-V4 when empty). */
-    playerQueueSize: z.number().int().min(1),
+    /** Collected matches kept per band (newest first); older ones are pruned to bound disk and memory. */
+    maxStoredMatches: z.number().int().min(1),
   }),
 });
 export type MetaConfig = z.infer<typeof MetaConfigSchema>;
