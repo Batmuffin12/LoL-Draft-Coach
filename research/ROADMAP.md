@@ -76,12 +76,17 @@ Milestone numbers continue the spec's (M1, M2 done). Each one gets its own branc
 
 ### M6: Loadout (v0.6.0): value ★★★★☆, effort M
 Runes, spells, skill order, starting and core items from `BuildStats`. Matchup-conditioned rune pages when the sample is big enough. Situational runes and items by **lift**, each with a reason chip. Optional one-click import if D6 is approved.
+Item ranking groundwork (D23, DESIGN.md "Item ranking"):
+1. `riot-api`: match timeline endpoint. The collector fetches timelines for a configurable share of matches (`collector.timelineShare`), because each timeline costs one more call.
+2. `packages/meta`: replay item events into inventories per minute → `item_purchases` rows (state at purchase, enemy profile then, ally coverage, result; no PUUIDs). Expected-win table, **win added** per item and slot, situational lift within state bins, substitute items found from data.
+3. `packages/engine`: `rankItems()` (pure). In M6 it ranks the pre-game core and situational items from the draft alone.
+*Done when:* the loadout's item picks come from win added and lift, not raw win rate, and the backtest runs on held-out timelines.
 
 ### M7: Grow (v0.7.0): value ★★★★☆, effort M
 New-champion recommender (traits from the LCU / CommunityDragon plus measured stats, with reasons and a first-games plan). Growth focus (selection, target, rolling progress). Post-game card through `POST /advice` (also the advice log). Monthly report. Practice-draft mode on the mock client (F10).
 
 ### M8: In game and polish (v0.8.0): value ★★★☆☆, effort M
-`packages/live-client` with next-item advice. Sentry (free tier). Patch-day release checklist. Optional LLM wording with a spend cap. Production-key application if you're past about 10 users. Then a code-signing certificate if friends complain about the SmartScreen warning.
+`packages/live-client` (read-only, Zod, port 2999) with `sanitizeLiveGame()` that drops every Riot ID. `GameWatcher` polls and feeds `rankItems()` with **both teams' items**, your gold and inventory, and the kill feed: next item + 2 alternatives with reasons, best component to buy with your current gold, no flicker. Record an anonymised live-game fixture first and confirm A15 (are enemy items live or last seen?). Ship only if the backtest beats the plain core path. Sentry (free tier). Patch-day release checklist. Optional LLM wording with a spend cap. Production-key application if you're past about 10 users. Then a code-signing certificate if friends complain about the SmartScreen warning.
 
 ### Later or optional
 Overwolf overlay window. Friends' opt-in focus leaderboard (F11). Patch diff for your pool (F12). Pro-play signal from Leaguepedia. Tuning weights by logistic regression once about 500 logged games exist. Asking OP.GG for permission to use their endpoint.

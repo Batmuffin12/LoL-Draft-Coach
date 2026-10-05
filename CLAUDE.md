@@ -26,7 +26,7 @@ Direct mode (dev only): in a development build with `RIOT_API_KEY` set and `SERV
 - **Riot compliance**:
   - No game memory access. Use only the LCU, the Riot API, the Live Client Data API and (optionally, later) Overwolf events.
   - Suggest, never decide: never auto-pick, auto-ban, auto-lock, or call any LCU endpoint that acts on champ select. The LCU HTTP client only does reads (GET) and WebSocket subscribes. **Single exception (approved Oct 5, 2026):** a separate, flag-gated LCU writer may create a rune page and write an item set, and only in direct response to the player clicking an import button. No other LCU writes, ever.
-  - Never show teammates' or enemies' names, ranks or histories. Draft data passes through `sanitizeChampSelect()` (packages/lcu) before it reaches the engine or the UI. Only the local player's own identity is used, and only for their own data. Other players appear only as anonymous aggregates.
+  - Never show teammates' or enemies' names, ranks or histories. Draft data passes through `sanitizeChampSelect()` (packages/lcu) and live game data through `sanitizeLiveGame()` (packages/live-client, milestone 8) before it reaches the engine or the UI. Only the local player's own identity is used, and only for their own data. Other players appear only as anonymous aggregates.
   - In-game advice uses only what the client shows (Live Client Data API). No enemy cooldown or ultimate tracking.
   - No Arena augment or item win rates anywhere.
   - No data brokering. Collector rows are stored without PUUIDs or names.
