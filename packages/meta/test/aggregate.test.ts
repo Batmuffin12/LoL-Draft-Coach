@@ -176,6 +176,15 @@ describe("aggregateBand", () => {
     expect(aggregateBand({ ...base, matches: games.filter((m) => m.matchId.startsWith("R")), config: trendCfg }).trending).toEqual([]);
   });
 
+  it("doesn't call a pick-rate wobble a trend when it's within sampling noise", () => {
+    // 8% of 1,000 earlier games vs 12% of 250 recent ones: 1.5x and above 2%, but under 2 standard errors.
+    const games: MatchSummary[] = [];
+    for (let i = 0; i < 1000; i++) games.push(match(`B${i}`, [i < 80 ? 1 : 9, 2, 3, 4, 5], RED, i % 2 === 0, 10));
+    for (let i = 0; i < 250; i++) games.push(match(`R${i}`, [i < 30 ? 1 : 9, 2, 3, 4, 5], RED, i % 2 === 0, 1));
+    const s = aggregateBand({ ...base, matches: games, config: { ...cfg, trend: config.aggregation.trend } });
+    expect(s.trending?.some((t) => t.championId === 1)).toBe(false);
+  });
+
   it("measures each champion's power curve: win rate in short vs long games", () => {
     const pc = { ...cfg, powerCurve: config.aggregation.powerCurve };
     const short = (i: number) => match(`S${i}`, BLUE, RED, true, 0, { durationSec: 20 * 60 }); // blue wins early

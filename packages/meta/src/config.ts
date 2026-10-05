@@ -30,7 +30,7 @@ export const MetaConfigSchema = z.object({
       /** Pick rate trend: recent ≥ pickRateFactor × before, and recent ≥ minPickRate (0..1). */
       pickRateFactor: z.number().min(1),
       minPickRate: z.number().min(0).max(1),
-      /** Win rate trend: a rise of at least minWinRateRise (0..1) and minZ standard errors. */
+      /** Win rate trend: a rise of at least minWinRateRise (0..1). Both trends must also be minZ standard errors clear of noise. */
       minWinRateRise: z.number().min(0).max(1),
       minZ: z.number().min(0),
     }),

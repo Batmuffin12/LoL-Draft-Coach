@@ -209,11 +209,15 @@ export class BandAggregator {
       if (c.rN < t.minGames || c.bN < t.minGames) continue;
       const pick = { before: c.bN / this.beforeMatches, recent: c.rN / this.recentMatches };
       const win = { before: c.bW / c.bN, recent: c.rW / c.rN };
-      const pickRising = pick.recent >= t.minPickRate && pick.recent >= t.pickRateFactor * pick.before;
-      const pooled = (c.rW + c.bW) / (c.rN + c.bN);
-      const se = Math.sqrt(pooled * (1 - pooled) * (1 / c.rN + 1 / c.bN));
-      const rise = win.recent - win.before;
-      const winRising = rise >= t.minWinRateRise && se > 0 && rise / se >= t.minZ;
+      // Both rises must be clear of sampling noise (two-proportion z-test), not just large.
+      const z = (k1: number, n1: number, k2: number, n2: number) => {
+        const p = (k1 + k2) / (n1 + n2);
+        const se = Math.sqrt(p * (1 - p) * (1 / n1 + 1 / n2));
+        return se > 0 ? (k1 / n1 - k2 / n2) / se : 0;
+      };
+      const pickRising =
+        pick.recent >= t.minPickRate && pick.recent >= t.pickRateFactor * pick.before && z(c.rN, this.recentMatches, c.bN, this.beforeMatches) >= t.minZ;
+      const winRising = win.recent - win.before >= t.minWinRateRise && z(c.rW, c.rN, c.bW, c.bN) >= t.minZ;
       if (!pickRising && !winRising) continue;
       out.push({
         championId: c.championId,
