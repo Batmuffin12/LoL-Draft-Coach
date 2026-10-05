@@ -10,10 +10,13 @@
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r test",
     "check": "pnpm typecheck && pnpm test",
-    "desktop": "pnpm --filter @ldc/desktop start"
+    "desktop": "pnpm --filter @ldc/desktop start",
+    "infra:plan": "node scripts/railway-iac.mjs plan",
+    "infra:apply": "node scripts/railway-iac.mjs apply"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "railway": "^3.12.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }

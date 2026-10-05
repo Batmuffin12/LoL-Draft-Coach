@@ -124,3 +124,28 @@ describe("/me/sync", () => {
     expect((await app.request("/me/sync", { method: "POST", headers: { authorization: "Bearer ldc_t" } })).status).toBe(503);
   });
 });
+
+describe("sync on demand (no background timer)", () => {
+  it("starts a sync when the profile is fetched and the games are stale, not when fresh", async () => {
+    const db = openDb(":memory:");
+    let now = NOW;
+    const requests: number[] = [];
+    const sync = { request: async (id: number) => (requests.push(id), { newMatches: 0, totalMatches: 0, band: 2 }), state: () => ({ state: "idle" as const }), forget: () => {} };
+    const account = { accountByRiotId: async (gameName: string, tagLine: string) => ({ puuid: "PO", gameName, tagLine }) };
+    const app = createApp({ db, version: "test", riot: account, sync, syncWhenStaleMs: 30 * 60_000, now: () => now, registerPerMinute: 100 });
+    const code = createInvite(db, { ttlDays: 1, now: NOW }).code;
+    const { token } = (await (await app.request("/users", { method: "POST", body: JSON.stringify({ inviteCode: code, riotId: "Ofek#EUW" }), headers: { "content-type": "application/json" } })).json()) as { token: string };
+    requests.length = 0; // registration itself requests the first sync
+    const get = () => app.request("/me/profile", { headers: { authorization: `Bearer ${token}` } });
+
+    await get(); // never synced
+    expect(requests).toEqual([1]);
+    db.$client.prepare("UPDATE users SET last_sync_at = ?").run(NOW);
+    now = NOW + 10 * 60_000;
+    await get(); // fresh
+    expect(requests).toEqual([1]);
+    now = NOW + 31 * 60_000;
+    await get(); // stale
+    expect(requests).toEqual([1, 1]);
+  });
+});

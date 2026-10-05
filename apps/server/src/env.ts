@@ -13,6 +13,13 @@ export const ServerEnvSchema = z.object({
   RIOT_KEY_TYPE: z.preprocess(blankToUndefined, z.enum(["development", "personal", "production"]).default("development")),
   RIOT_PLATFORM: z.preprocess(blankToUndefined, routing.default("euw1")),
   RIOT_REGION: z.preprocess(blankToUndefined, routing.default("europe")),
+  /**
+   * Minutes between background sync passes over recently active users; 0 turns the
+   * loop off (the server can then sleep when unused; profiles still refresh on request).
+   */
+  SYNC_INTERVAL_MINUTES: z.preprocess(blankToUndefined, z.coerce.number().min(0).max(1440).default(5)),
+  /** A user's games are refreshed when older than this many minutes. */
+  SYNC_STALE_MINUTES: z.preprocess(blankToUndefined, z.coerce.number().min(1).max(10080).default(30)),
   /** Owner-only token for POST /admin/invites; the route doesn't exist when unset. */
   ADMIN_TOKEN: z.preprocess(blankToUndefined, z.string().min(32, "must be at least 32 characters").optional()),
 });

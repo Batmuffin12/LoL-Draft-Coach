@@ -21,6 +21,11 @@ export interface AppDeps {
   now?: () => number;
   /** Registration attempts allowed per client per minute. */
   registerPerMinute?: number;
+  /**
+   * When set, GET /me/profile starts a background sync if the user's games are older than
+   * this (ms). Keeps data fresh without a timer, so the server can sleep when unused.
+   */
+  syncWhenStaleMs?: number | null;
   /** Enables POST /admin/invites for the owner (bearer token). */
   adminToken?: string | null;
 }
@@ -130,6 +135,9 @@ export function createApp(deps: AppDeps): Hono<Env> {
     const since = raw === undefined ? undefined : Number(raw);
     if (since !== undefined && !Number.isFinite(since)) return c.json({ error: "invalid_since", message: "since must be epoch milliseconds." }, 400);
     const user = c.get("user");
+    if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs)) {
+      deps.sync.request(user.id).catch(() => {});
+    }
     return c.json({ ...loadProfile(deps.db, user, since), sync: deps.sync?.state(user.id) ?? { state: "idle" } });
   });
 

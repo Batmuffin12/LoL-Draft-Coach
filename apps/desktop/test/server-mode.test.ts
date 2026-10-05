@@ -11,7 +11,7 @@ import { AccountStore, type SecretBox } from "../src/main/account-store";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { profileMode, ServerProfileSource } from "../src/main/profile-source";
-import { normalizeServerUrl, ServerError } from "../src/main/server-client";
+import { normalizeServerUrl, ServerClient, ServerError, WAKE_RETRY_DELAYS_MS } from "../src/main/server-client";
 import type { AccountView } from "../src/shared/view";
 import { fakeDdragonFetch, fakeRiotFetch, waitFor } from "./helpers";
 
@@ -144,9 +144,24 @@ describe("ServerProfileSource against the real server API", () => {
     expect(s.account).toMatchObject({ state: "unregistered", message: expect.stringMatching(/Register again/) });
   });
 
+  it("retries while a sleeping server wakes up (502s, dropped connections)", async () => {
+    let calls = 0;
+    const waking = (async () => {
+      calls++;
+      if (calls === 1) throw new Error("ECONNRESET");
+      if (calls === 2) return new Response("Bad Gateway", { status: 502 });
+      return Response.json({ sync: { state: "idle" } });
+    }) as typeof fetch;
+    const waits: number[] = [];
+    const client = new ServerClient(BASE, "t", waking, async (ms) => void waits.push(ms));
+    expect(await client.syncState()).toEqual({ state: "idle" });
+    expect(calls).toBe(3);
+    expect(waits).toEqual(WAKE_RETRY_DELAYS_MS.slice(0, 2));
+  });
+
   it("explains an unreachable server", async () => {
     const offline = (() => Promise.reject(new Error("ECONNREFUSED"))) as typeof fetch;
-    const s = new ServerProfileSource({ accounts: new AccountStore(join(tmp("ldc-acct-"), "a.json"), box), defaultServerUrl: null, fetch: offline });
+    const s = new ServerProfileSource({ accounts: new AccountStore(join(tmp("ldc-acct-"), "a.json"), box), defaultServerUrl: null, fetch: offline, sleep: async () => {} });
     await s.init();
     await s.load({ gameName: "Me", tagLine: "EUW" }, { bandFromApi: false });
     await s.register("coach.example", "AAAA-BBBB-CCCC");
