@@ -14,6 +14,7 @@ import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
+import { ConfigSource } from "./config-source";
 import { MetaSource } from "./meta-source";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
@@ -168,6 +169,16 @@ async function main(): Promise<void> {
     riotId: env.riotId,
     meta,
   });
+  // Scoring config from the server (tuning without a release); the bundled copy until then.
+  if (serverProfiles) {
+    const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
+    remoteConfig.on("config", (c) => coach.setConfig(c));
+    await remoteConfig.loadCached();
+    void remoteConfig.refresh();
+    serverProfiles.on("account", (a) => {
+      if (a.state === "registered") void remoteConfig.refresh();
+    });
+  }
   if (profiles instanceof ServerProfileSource) {
     const server = profiles;
     ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {

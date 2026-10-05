@@ -75,10 +75,24 @@ export class PersonalCoach extends Coach {
   private queueSupported = true;
   /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
   private metaIndex: MetaIndex | null = null;
+  /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */
+  private config: LoadedConfig;
 
   constructor(private readonly p: PersonalCoachDeps) {
     super(p);
+    this.config = p.config;
     this.band = p.config.bands.defaultBand;
+  }
+
+  /** Applies a new scoring config (from the server) and recomputes everything shown. */
+  setConfig(config: LoadedConfig): void {
+    this.config = config;
+    this.comfortByRole.clear();
+    if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
+    if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
+    this.updateRoleAdvice();
+    this.updatePlaystyle();
+    this.onDraft();
   }
 
   /** The Riot ID of the player logged into the client, once known. */
@@ -135,7 +149,7 @@ export class PersonalCoach extends Coach {
       this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
       this.updateRoleAdvice();
       this.onDraft();
-      if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.p.config.bands));
+      if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
       if (me?.gameName && me.tagLine) {
         this.identity = { gameName: me.gameName, tagLine: me.tagLine };
         await this.p.profiles?.load(this.identity, { bandFromApi: !ranked });
@@ -175,7 +189,7 @@ export class PersonalCoach extends Coach {
 
   private setSnapshot(snapshot: MetaSnapshot | null): void {
     if (snapshot && snapshot.band !== this.band) return;
-    this.metaIndex = snapshot ? new MetaIndex(snapshot, this.p.config.engine.rating) : null;
+    this.metaIndex = snapshot ? new MetaIndex(snapshot, this.config.engine.rating) : null;
     this.updateRoleAdvice();
     this.updatePlaystyle();
     this.onDraft();
@@ -187,7 +201,7 @@ export class PersonalCoach extends Coach {
   }
 
   private setProfile(profile: PersonalProfile): void {
-    const { engine } = this.p.config;
+    const { engine } = this.config;
     const first = this.profile === null;
     this.profile = profile;
     this.comfortByRole.clear();
@@ -201,7 +215,7 @@ export class PersonalCoach extends Coach {
   /** Playstyle per role (lobby card): percentiles against others in the role in the player's own games. */
   private updatePlaystyle(): void {
     if (!this.profile) return;
-    const { engine, explain } = this.p.config;
+    const { engine, explain } = this.config;
     const now = Date.now();
     const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
     const views: PlaystyleView[] = [];
@@ -251,11 +265,11 @@ export class PersonalCoach extends Coach {
       this.profile.games,
       this.profile.masteries,
       Date.now(),
-      this.p.config.engine,
+      this.config.engine,
       this.intendedPositions,
       this.attrs,
     ).map((r) => {
-      const { explain } = this.p.config;
+      const { explain } = this.config;
       const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, explain.templates, String);
       const pool = r.enoughData
         ? analyzePool({
@@ -266,7 +280,7 @@ export class PersonalCoach extends Coach {
             attributes: this.attrs,
             intendedPositions: this.intendedPositions,
             now: Date.now(),
-            config: this.p.config.engine,
+            config: this.config.engine,
           })
         : null;
       return {
@@ -306,7 +320,7 @@ export class PersonalCoach extends Coach {
     const key = role ?? "";
     let comfort = this.comfortByRole.get(key);
     if (!comfort) {
-      comfort = computeComfort(this.profile!.games, this.profile!.masteries, Date.now(), this.p.config.engine.comfort, role);
+      comfort = computeComfort(this.profile!.games, this.profile!.masteries, Date.now(), this.config.engine.comfort, role);
       this.comfortByRole.set(key, comfort);
     }
     return comfort;
@@ -334,7 +348,7 @@ export class PersonalCoach extends Coach {
       this.update({ picks: [], bans: [], myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
-    const { engine } = this.p.config;
+    const { engine } = this.config;
     const role = draftRole(this.draft, this.profile.games);
     const comfort = this.comfortFor(role);
     const input = {
@@ -357,7 +371,7 @@ export class PersonalCoach extends Coach {
         return undefined;
       }
     };
-    const { templates } = this.p.config.explain;
+    const { templates } = this.config.explain;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
     const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);
 
@@ -379,7 +393,7 @@ export class PersonalCoach extends Coach {
       });
       return;
     }
-    const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.p.config.explain.settings);
+    const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.config.explain.settings);
     const views: PickView[] = advice.picks.map((p) => ({
       champion: champView(p.championId, lookup)!,
       score: p.score,

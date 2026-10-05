@@ -204,6 +204,14 @@ export class ServerClient {
     return { notModified: false, snapshot, etag: res.headers.get("etag") };
   }
 
+  /** The server's scoring config (raw JSON; the caller validates it). 304 when the ETag matches. */
+  async config(etag?: string | null): Promise<{ notModified: true } | { notModified: false; config: unknown; etag: string | null }> {
+    const res = await this.send("GET", "/config", undefined, etag ? { "if-none-match": etag } : {});
+    if (res.status === 304) return { notModified: true };
+    const config = await this.parse(res, z.unknown());
+    return { notModified: false, config, etag: res.headers.get("etag") };
+  }
+
   async deleteMe(): Promise<void> {
     await this.request("DELETE", "/me", z.undefined());
   }
