@@ -204,6 +204,7 @@
     "minGames": { "meta": 30, "pair": 15 },
     "counterWeight": 0.4,
     "synergyWeight": 0.5,
+    "offMetaPenalty": 20,
     "teamRatingScale": 40,
     "personal": {
       "comfortScale": 80,

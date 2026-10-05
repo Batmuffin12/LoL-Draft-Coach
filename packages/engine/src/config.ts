@@ -113,6 +113,8 @@ export const EngineConfigSchema = z.object({
     /** Cross-lane opponents and allies matter less than the lane opponent (0..1). */
     counterWeight: unit,
     synergyWeight: unit,
+    /** Rating points off a pick the player plays in a role that isn't meta for the champion. */
+    offMetaPenalty: z.number().min(0),
     /** Team needs (0..1, 0.5 = neutral) to rating points: (score - 0.5) · ratingScale. */
     teamRatingScale: z.number().min(0),
     personal: z.object({

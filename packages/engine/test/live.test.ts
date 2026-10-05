@@ -223,6 +223,15 @@ describe("adviseLivePicks", () => {
     expect(off.picks.map((p) => p.championId)).not.toContain(103);
   });
 
+  it("puts an off-meta habit behind the same pick in its usual role", () => {
+    // The player's 101 games are in middle; in the band, 101 only plays middle. Ask for top.
+    const top = adviseLivePicks(input(draft(), { role: "top", comfort: computeComfort(games.map((g) => ({ ...g, position: "top" })), [], NOW, config.comfort, "top") }));
+    const p = top.picks.find((x) => x.championId === 101)!;
+    expect(p.offMeta).toBe(true);
+    expect(p.terms!.find((t) => t.name === "meta")!.rating).toBeCloseTo(-config.rating.offMetaPenalty);
+    expect(text(p.reasons)).toMatch(/Off-meta in top/);
+  });
+
   it("adds synergy with allies already picked", () => {
     const withJungle = draft();
     withJungle.myTeam[1]!.championId = 401;

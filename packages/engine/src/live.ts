@@ -113,7 +113,8 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
 
   // Meta: the champion's strength in this role and band.
   const metaStat = index.champion(id, role);
-  const meta = w.meta * index.metaRating(id, role);
+  // An off-meta pick (the player's habit, not the champion's usual role) starts behind.
+  const meta = w.meta * index.metaRating(id, role) - (offMeta ? cfg.offMetaPenalty : 0);
   if (metaStat.n >= cfg.minGames.meta) {
     note(reason(meta >= 0 ? "meta.strong" : "meta.weak", { winRate: metaStat.wins / metaStat.games, games: metaStat.n, role }), meta);
   }
