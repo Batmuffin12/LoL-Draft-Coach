@@ -176,3 +176,38 @@ describe("/me", () => {
     expect((await me(token)).status).toBe(401);
   });
 });
+
+describe("POST /admin/invites", () => {
+  const ADMIN = "a".repeat(40);
+  const post = (app: ReturnType<typeof createApp>, token: string | null, body: unknown = {}) =>
+    app.request("/admin/invites", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    });
+
+  it("creates a working invite for the owner", async () => {
+    const db = openDb(":memory:");
+    const app = createApp({ db, version: "test", riot: fakeRiot(), now: () => NOW, adminToken: ADMIN, registerPerMinute: 100 });
+    const res = await post(app, ADMIN, { note: "for Dana", days: 3 });
+    expect(res.status).toBe(201);
+    const { code, expiresAt } = (await res.json()) as { code: string; expiresAt: number };
+    expect(expiresAt).toBe(NOW + 3 * DAY);
+    expect(db.select().from(schema.invites).all()[0]?.note).toBe("for Dana");
+    const reg = await app.request("/users", { method: "POST", body: JSON.stringify({ inviteCode: code, riotId: "Ofek#EUW" }), headers: { "content-type": "application/json" } });
+    expect(reg.status).toBe(201);
+  });
+
+  it("looks like it doesn't exist without the right token, or when no admin token is configured", async () => {
+    const app = createApp({ db: openDb(":memory:"), version: "test", riot: fakeRiot(), adminToken: ADMIN });
+    expect((await post(app, null)).status).toBe(404);
+    expect((await post(app, "b".repeat(40))).status).toBe(404);
+    const off = createApp({ db: openDb(":memory:"), version: "test", riot: fakeRiot() });
+    expect((await post(off, ADMIN)).status).toBe(404);
+  });
+
+  it("validates the body", async () => {
+    const app = createApp({ db: openDb(":memory:"), version: "test", riot: fakeRiot(), adminToken: ADMIN });
+    expect((await post(app, ADMIN, { days: -1 })).status).toBe(400);
+  });
+});
