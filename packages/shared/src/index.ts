@@ -161,6 +161,69 @@ export interface UserMatch {
   me: number;
 }
 
+/** Attributes measured from match data (never labelled by hand). */
+export interface ChampionAttributes {
+  championId: ChampionId;
+  samples: number;
+  physicalShare: number;
+  magicShare: number;
+  trueShare: number;
+  /** Damage taken + mitigated per minute, as a percentile among measured champions (0..1). */
+  frontline: number;
+  /** CC seconds per minute, as a percentile among measured champions (0..1). */
+  engage: number;
+  /** Share of other players' samples per position (the player's own games excluded). */
+  roleShares: Record<Position, number>;
+  /** Number of other players' samples behind roleShares. */
+  roleSamples: number;
+}
+
+/** A champion in a role, in one rank band. Games and wins are recency-weighted sums. */
+export interface ChampionRoleStat {
+  championId: ChampionId;
+  role: Position;
+  games: number;
+  wins: number;
+  /** Unweighted number of games (for "not enough data" checks and display). */
+  n: number;
+}
+
+/**
+ * Two champions in a match, stored once per pair: [championA, roleA, championB, roleB,
+ * games, winsOfA, n]. In `matchups` they were opponents (same role = lane matchup), in
+ * `duos` allies. Games and wins are recency-weighted; n is the unweighted count.
+ */
+export type PairStat = [ChampionId, Position, ChampionId, Position, number, number, number];
+
+/**
+ * The live meta for one rank band, published by the server about hourly. Built from
+ * anonymous collected matches only (no player identities). The desktop scores drafts
+ * from it locally.
+ */
+export interface MetaSnapshot {
+  /** Snapshot format; bumped on breaking changes. */
+  format: 1;
+  band: RankBandId;
+  createdAt: number;
+  /** Most recent patch in the data ("major.minor" from Match-V5 gameVersion), if any. */
+  patch: string | null;
+  /** Matches behind the snapshot (unweighted). */
+  matches: number;
+  newestMatchAt: number | null;
+  halfLifeDays: number;
+  /** Recency-weighted games per role (all champions), for pick rates. */
+  roleGames: Record<Position, number>;
+  champions: ChampionRoleStat[];
+  matchups: PairStat[];
+  duos: PairStat[];
+  attributes: ChampionAttributes[];
+  /**
+   * Playstyle references: per role and metric, evenly spaced quantiles (min … max) of
+   * the metric over all collected players in that role.
+   */
+  references: Record<Position, Record<string, { n: number; quantiles: number[] }>>;
+}
+
 /** Status shown in the panel. */
 export type ConnectionState = "searching" | "connected" | "disconnected";
 

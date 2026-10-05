@@ -168,6 +168,18 @@ importers:
         specifier: ^4
         version: 4.23.15
 
+  packages/meta:
+    dependencies:
+      '@ldc/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   packages/riot-api:
     dependencies:
       '@ldc/shared':

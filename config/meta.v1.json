@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "description": "Live meta: how collected matches are weighted and aggregated into per-band snapshots, and how much the collector gathers per hourly wake-up. Tiers per band come from rank-bands.v1.json; queue values are Riot's.",
+  "aggregation": {
+    "halfLifeDays": 10,
+    "windowDays": 30,
+    "minDurationSec": 300,
+    "minPairGames": 2,
+    "minAttributeSamples": 10,
+    "referenceQuantiles": 21,
+    "minReferenceSamples": 40
+  },
+  "collector": {
+    "leagueQueue": "RANKED_SOLO_5x5",
+    "queueId": 420,
+    "divisions": ["I", "II", "III", "IV"],
+    "matchesPerPlayer": 5,
+    "budgetSeconds": 900,
+    "maxMatchesPerRun": 450,
+    "playerQueueSize": 400
+  }
+}
