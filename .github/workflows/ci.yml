@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      # Tests never launch Electron; skip downloading its binary.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Server bundle builds
+        run: pnpm --filter @ldc/server build
+
+  secrets:
+    name: No keys or tokens in the repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Look for Riot API keys and coach tokens
+        run: |
+          if git grep -nE 'RGAPI-[0-9a-fA-F-]{20,}|ldc_[A-Za-z0-9_-]{40,}' -- . ':!pnpm-lock.yaml'; then
+            echo "::error::A Riot API key or a coach token is committed. Remove it and rotate it."
+            exit 1
+          fi
