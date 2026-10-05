@@ -22,8 +22,14 @@ The app covers the whole game, from the ban phase to the post-game review.
 | Pick phase    | Pick coach             | Top 3 picks, ranked, with pro-style reasoning; updates as each enemy locks in                              |
 | Pick phase    | Pick-order awareness   | Safe blind picks when you pick early, counter-picks when you pick late                                     |
 | After lock-in | Full loadout           | Runes, summoner spells, skill order, starting items and core build; one-click import of runes and item set |
-| In game       | Live build adjustments | Hotkey overlay that adapts items to the game (for example, armor when the enemy ADC is fed)                |
+| In game       | Live build adjustments | Next-item advice that adapts to the game (for example, armor when the enemy ADC is fed), from Riot's Live Client Data API |
 | After game    | Learning loop          | Records whether you followed the advice and the result, so recommendations adapt to you                    |
+| Lobby / profile | Playstyle card       | Eight named axes (early pressure, fighting, farming, vision, risk control, objectives, roaming, playmaking) as "top X%" of your role and rank |
+| Lobby / profile | Pool and gaps        | Your pool as main / comfortable / learning / rusty, and what it lacks per role (for example, no AP jungler) |
+| Profile       | New champions          | Champions that play like the ones you're good at, fill a gap, are strong in your rank, with reasons        |
+| After game / profile | Growth focus    | One measurable focus at a time (for example, CS at 10 on your main) with a target and progress; monthly report |
+
+Rune page and item set import happen **only when the player clicks**; the app never picks, bans or locks (see Compliance).
 
 Supported queues at launch: Ranked Solo/Duo, Ranked Flex and Normal Draft. ARAM and Arena come later with their own logic; Arena augment and item win rates are never shown.
 
@@ -31,7 +37,7 @@ Supported queues at launch: Ranked Solo/Duo, Ranked Flex and Normal Draft. ARAM 
 
 A scoring engine ranks every champion you own; an LLM only explains the result. Keeping the numbers in code means the reasoning can never invent stats.
 
-Each candidate gets a score from five factors:
+Each candidate gets a score from six factors:
 
 | Factor        | What it measures                                                      | Source                                                    |
 | ------------- | --------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -39,13 +45,18 @@ Each candidate gets a score from five factors:
 | Lane matchup  | Win rate against the enemy laner, once revealed                       | Live meta pipeline                                        |
 | Team needs    | AD/AP balance, frontline, engage, early vs. scaling                   | Draft state + champion attributes derived from match data |
 | Counter value | How well it answers all enemy picks                                   | Live meta pipeline                                        |
+| Synergy       | How well it does with the allies already picked                       | Live meta pipeline                                        |
 | Meta strength | Current win and pick rate, trend direction                            | Live meta pipeline                                        |
+
+From the live-meta milestone on, factors are scored in **rating points** (log-odds, as in the open-source DraftGap): each factor is a delta over what was already expected, smoothed toward that expectation with prior games, and they add up to a predicted win chance for the draft ("≈ 54%"). This keeps every reason on one scale ("+2.1% into Darius, 1,240 games") and makes "why this over your usual pick" meaningful. Details: [research/DESIGN.md](../research/DESIGN.md) §4.
 
 Factor weights live in a versioned config file, one set per rank band, not in code, so they can be tuned without a release. Scores are precomputed during the ban phase so the top picks appear instantly when your turn starts.
 
-The explanation is generated from templates filled with the factor breakdown and Jev's decisions (for example: "The enemy is a dive comp (91% confidence) and your team has no frontline, so Ornn over your comfort Aatrox"). Templates are free, instant and can never invent a stat. Claude's API is an optional later layer for more natural, coach-like wording.
+The explanation is generated from templates filled with the factor breakdown (for example: "Your team has no frontline and Ornn is +3% into their dive comp, so Ornn over your comfort Aatrox"). Each pick also shows "why not your usual pick" and a confidence label computed from our own data: **Clear pick** (a clear gap to #2), **Close call**, or **Not enough data** (thin samples). Templates are free, instant and can never invent a stat. Claude's API is an optional later layer for more natural, coach-like wording; its output is checked so it can only repeat numbers the templates gave it.
 
-## Jev decision layer
+## Jev decision layer (optional, off the critical path)
+
+**Decision (Oct 5, 2026):** Jev has no public docs or key yet, so nothing depends on it. Confidence labels come from our own sample sizes (above). The adapter stays in `packages/jev` behind `JEV_ENABLED=false`; the rest of this section applies only if Jev becomes usable.
 
 [Jev](https://www.infoq.com/news/2026/10/typesafe-ai-jev-released/) from TypeSafe AI is a decision model: it returns typed answers (yes/no, one of N, a score) with a probability and a confidence value instead of text. It assists the scoring engine; it never replaces the real match data.
 
@@ -73,7 +84,9 @@ All data is current: Data Dragon defines what exists this patch, the collector d
 | [League Client API (LCU)](https://github.com/CommunityDragon/awesome-league)                                       | Live draft, your summoner, owned champions, rune page import          | Local HTTPS + WebSocket via the lockfile; unofficial, so it can change without notice |
 | [Riot Games API](https://developer.riotgames.com/docs/lol)                                                         | Account-V1, Match-V5 (with timelines), Champion-Mastery-V4, League-V4 | Personal key: covers you and a small private group, not a public release              |
 | Data Dragon                                                                                                        | Champions, items, runes, icons for the current patch                  | Checked on every launch via versions.json; refreshed automatically on a new patch     |
-| [Overwolf game events](https://dev.overwolf.com/ow-electron/live-game-data-gep/supported-games/league-of-legends/) | In-game data for the overlay                                          | Enabled per app by Overwolf                                                           |
+| [Live Client Data API](https://developer.riotgames.com/docs/lol) (`https://127.0.0.1:2999/liveclientdata/`)       | In-game items, levels and scores for next-item advice                 | Official Riot API, local, no key; only what the scoreboard shows                      |
+| LCU game data / [CommunityDragon](https://www.communitydragon.org/documentation)                                  | Riot's champion ratings (damage, durability, CC, mobility, utility, difficulty, class tags) for champion similarity | Same file the client uses; CommunityDragon mirrors it for the server                  |
+| [Overwolf game events](https://dev.overwolf.com/ow-electron/live-game-data-gep/supported-games/league-of-legends/) | Optional: a true in-game overlay window                               | Enabled per app by Overwolf; not needed for in-game data                              |
 | Live meta pipeline (our collector)                                                                                 | Win rates, matchups, counters, builds, trends                         | See below                                                                             |
 | Esports data (optional)                                                                                            | Pro-play pick priority                                                | For example Leaguepedia; check its terms                                              |
 
@@ -109,18 +122,18 @@ Every outside service sits behind its own adapter, so when Riot changes somethin
 
 &#91;embedded content: system architecture · desktop app, backend, external services\]
 
-The desktop app sends the live draft to the Recommendation API and gets back picks and reasoning. The server asks Jev for typed decisions and can optionally call Claude for coach-style text. All API keys (Riot, Jev, Claude) live only on the server.
+**Decision (Oct 5, 2026): the server ships data, the desktop scores drafts.** The server holds the one Riot API key, fetches each user's games, runs the collector, and publishes an hourly **meta snapshot** per rank band plus a **profile** per user and the scoring **config**. The desktop downloads these and runs the same pure engine locally on every draft update. This makes picks instant in champ select, keeps working on the last snapshot if the server is briefly down, costs almost no server CPU, and the live draft never leaves the player's PC. Weights, thresholds and templates are served from `/config`, so tuning doesn't need an app release. The server can optionally call Claude for coach-style wording. All API keys (Riot, Claude) live only on the server.
 
 **Code structure** (one TypeScript repo):
 
 | Folder                                                   | Responsibility                                                                   |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `apps/desktop`                                           | Overlay UI and client connections                                                |
-| `apps/server`                                            | Recommendation API                                                               |
-| `apps/collector`                                         | Match collection and meta recalculation; runs in the same process as the server  |
-| `packages/engine`                                        | Scoring logic and explanation templates as pure functions, no network calls      |
-| `packages/riot-api`, `packages/lcu`, `packages/overwolf` | One adapter per outside service                                                  |
-| `packages/jev`                                           | Jev adapter: question definitions, confidence thresholds, fallback to the engine |
+| `apps/server`                                            | API (users, profiles, meta snapshots, config, advice log) and background jobs: user sync, collector, hourly aggregation; one process |
+| `packages/engine`                                        | Scoring, playstyle, pool, new champions, growth and explanation templates as pure functions, no network calls |
+| `packages/meta`                                          | Pure aggregation of collected matches into stats, matchups, duos and builds     |
+| `packages/riot-api`, `packages/lcu`, `packages/live-client`, `packages/ddragon` | One adapter per outside service (Overwolf later, only for an overlay window) |
+| `packages/jev`                                           | Jev adapter, frozen behind a disabled flag (optional)                            |
 | `packages/shared`                                        | Data types used everywhere                                                       |
 
 **Maintainability practices:**
@@ -173,15 +186,19 @@ A reworked or newly buffed champion updates automatically. An optional overrides
 
 ### API contract
 
-The desktop app talks only to our server; each friend gets a bearer token, stored hashed on the server.
+The desktop app talks only to our server; each friend gets a bearer token, stored hashed on the server. Friends register with a one-time **invite code** from the owner; the Riot ID is read from the League client they are logged into (Riot Sign-On needs a production key).
 
-| Endpoint             | Purpose                                                                                        |
-| -------------------- | ---------------------------------------------------------------------------------------------- |
-| `POST /users`        | Register a user by Riot ID; returns their token                                                |
-| `POST /recommend`    | Draft state in; ranked picks or bans with factor breakdown, Jev confidence and explanation out |
-| `GET /loadout`       | Runes, spells, skill order and items for a champion, role and band                             |
-| `POST /games/result` | Advice given, whether it was followed, and the outcome                                         |
-| `GET /health`        | Collector status, time of newest data, current patch                                           |
+| Endpoint                | Purpose                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| `POST /users`           | Invite code + Riot ID in; returns the user's token                                          |
+| `GET /me/profile`       | The user's minimised games, mastery, band, playstyle, pool and growth (incremental)         |
+| `POST /me/sync`         | Fetch the user's new games now (after a game ends)                                          |
+| `DELETE /me`            | Delete all of the user's data                                                               |
+| `GET /meta/:band`       | Meta snapshot for a band: champion stats, matchups, duos, builds (with ETag)                |
+| `GET /config`           | Engine weights, thresholds and explanation templates (with ETag)                            |
+| `POST /advice`          | Advice given, whether it was followed, and the outcome                                      |
+| `GET /health`           | Collector status, time of newest data, current patch                                        |
+| `POST /recommend`       | Debug only: same engine run server-side                                                     |
 
 ### Rate-limit sharing
 
@@ -209,6 +226,10 @@ Below a minimum game count the app shows "not enough data" instead of a number. 
 | builds              | Item paths, rune pages and skill orders with win rates      |
 | champion_attributes | Derived attributes per champion and patch window            |
 | advice_log          | Advice given, whether followed, game result                 |
+| invites             | One-time invite codes (hashed), who used them               |
+| user_matches        | Which participant in a stored match is the user             |
+| meta_snapshots      | Published snapshot per band and version                     |
+| growth_snapshots    | Playstyle axes and rank over time; current growth focus     |
 
 Matches older than about two patches are pruned to keep the database small.
 
@@ -224,8 +245,10 @@ Matches older than about two patches are pruned to keep the database small.
 
 The app must stay within Riot's rules so users never risk their accounts. These are hard product rules, not preferences:
 
-- **No game memory access.** Riot blocks memory access for unknown third-party apps from October 6, 2026 ([Riot Support](https://support.riotgames.com/en-us/riot/performance/game-memory-access-removed-for-third-party-apps)). Use only the LCU, the Riot API and Overwolf events.
-- **Suggest, never decide.** Riot does not approve apps that dictate player decisions ([Riot Developer Portal](https://developer.riotgames.com/docs/lol)). Show ranked options with reasoning; never auto-pick, auto-ban or auto-lock.
+- **No game memory access.** Riot blocks memory access for unknown third-party apps from October 6, 2026 ([Riot Support](https://support.riotgames.com/en-us/riot/performance/game-memory-access-removed-for-third-party-apps)). Use only the LCU, the Riot API, Riot's Live Client Data API and (optionally) Overwolf events.
+- **Suggest, never decide.** Riot does not approve apps that dictate player decisions ([Riot Developer Portal](https://developer.riotgames.com/docs/lol)). Show ranked options with reasoning; never auto-pick, auto-ban or auto-lock. The only League client writes allowed are **creating a rune page and writing an item set, each only on an explicit click by the player**; nothing ever acts on champ select picks, bans or locks.
+- **In-game advice uses only what the client shows** (Live Client Data API). No enemy cooldown or ultimate tracking (banned by Riot since March 2025).
+- **Riot notice.** Show "LoL Draft Coach isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties" where players can see it.
 - **No player identities in ranked champ select.** Score champions and the draft only, never teammates' names, ranks or histories.
 - **No Arena augment or item win rates**, anywhere in the app.
 - **No data brokering.** Riot data is not resold or passed to other companies.
@@ -250,14 +273,21 @@ Decisions (all answered):
 - [ ] Personal tool only, or a public product? Decided: personal use plus a few friends.
 - [ ] Region: decided, EUW.
 - [ ] Ranks: decided, Gold to Platinum.
-- [ ] Budget: decided, Railway Hobby at $5 per month.
+- [ ] Budget: decided, Railway Hobby at $5 per month (Oracle Cloud Always Free as the $0 fallback).
+- [ ] Rune and item-set import: decided, allowed on an explicit click only.
+- [ ] Where drafts are scored: decided, on the desktop from server snapshots.
+- [ ] Jev: decided, optional and off the critical path.
+- [ ] Coaching scope: decided, add playstyle, new champions and growth tracking.
 
 ## Roadmap
 
-Build in five milestones, each usable on its own:
+Revised Oct 5, 2026 after the research in [research/ROADMAP.md](../research/ROADMAP.md). Milestones 1 and 2 are done. Each milestone is usable on its own; 3 and 4 form the MVP.
 
-1. **Foundation:** repo setup, LCU adapter, live champ select printed to a basic Electron panel. Done when a real draft shows up live.
-2. **Personal coach:** pull your match history, scoring engine on comfort and team needs, top 3 picks in the panel. Done when it recommends from your pool.
-3. **Live meta:** server, collector and database for EUW; matchup, counter and build data feed the engine. Done when stats refresh hourly.
-4. **Pro reasoning and loadout:** template explanations, Jev decision layer (comp reading, final pick, bans), runes, spells, skill order, one-click import. Optional Claude explanations after that.
-5. **Product polish:** in-game Overwolf overlay, installer and auto-updates, crash reporting, learning loop, then share the installer with friends.
+1. **Foundation** (v0.1.0, done): repo setup, LCU adapter, live champ select in an Electron panel.
+2. **Personal coach** (v0.2.0, done): your match history, comfort and team-needs scoring, top 3 picks from your pool.
+3. **Server and friends** (v0.3.0): Hono + SQLite server holding the one Riot key, invite codes and tokens, server-side sync of each user's games (keeping the richer match data), desktop in server mode, CI, Windows installer with auto-update. Done when a friend gets picks without a Riot key on their PC.
+4. **The coach explains** (v0.4.0): reasons, "why not your usual pick", confidence labels; playstyle card; pool tiers and gaps. Done when the panel explains every pick from your own data.
+5. **Live meta** (v0.5.0): collector and hourly snapshots for EUW bands; rating-based engine with matchup, counter, synergy and meta factors; blind-pick safety; ban suggestions. Done when stats refresh hourly and enemy picks change the ranking.
+6. **Loadout** (v0.6.0): runes, spells, skill order and items; situational choices found from data with reasons; one-click import on click.
+7. **Grow** (v0.7.0): new-champion recommender, growth focus, post-game card, monthly report.
+8. **In game and polish** (v0.8.0): next-item advice from the Live Client Data API, crash reporting, optional Claude wording, production key past ~10 users.
