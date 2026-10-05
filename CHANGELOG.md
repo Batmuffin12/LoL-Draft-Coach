@@ -2,6 +2,15 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.4.1] — 2026-10-05
+
+### Added
+- `POST /admin/invites` (owner-only, `ADMIN_TOKEN` bearer): create invite codes from your PC without shell access to the server. Answers 404 without the right token.
+- First deployment on Railway (project `lol-draft-coach`, service `ldc-server`, volume at `/data`).
+
+### Changed
+- `docs/DEPLOY.md`: invites from your PC; usage limits apply to the whole Railway workspace.
+
 ## [0.4.0] — 2026-10-05 — Milestone 4: The coach explains
 
 Completes the MVP (milestones 3 + 4): friends can use it, and it says why.

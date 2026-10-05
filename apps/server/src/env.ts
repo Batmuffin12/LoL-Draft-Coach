@@ -13,6 +13,8 @@ export const ServerEnvSchema = z.object({
   RIOT_KEY_TYPE: z.preprocess(blankToUndefined, z.enum(["development", "personal", "production"]).default("development")),
   RIOT_PLATFORM: z.preprocess(blankToUndefined, routing.default("euw1")),
   RIOT_REGION: z.preprocess(blankToUndefined, routing.default("europe")),
+  /** Owner-only token for POST /admin/invites; the route doesn't exist when unset. */
+  ADMIN_TOKEN: z.preprocess(blankToUndefined, z.string().min(32, "must be at least 32 characters").optional()),
 });
 export type ServerEnv = z.infer<typeof ServerEnvSchema>;
 

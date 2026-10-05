@@ -17,27 +17,33 @@ The repo includes `railway.json`, which tells Railway how to build and start the
    | `RIOT_PLATFORM` | `euw1` |
    | `RIOT_REGION` | `europe` |
    | `DATABASE_PATH` | `/data/ldc.sqlite` |
+   | `ADMIN_TOKEN` | A long random string (lets you create invites from your PC, see step 2) |
 
    Railway sets `PORT` itself.
 4. **Make it reachable.** Open Settings → Networking → Generate Domain. You'll get an address such as `https://ldc-production.up.railway.app`.
-5. **Set a usage limit.** Open Workspace → Usage → set a hard limit (for example $10), so a bug can't run up the bill.
+5. **Set a usage limit.** Open Workspace → Usage → set a hard limit, so a bug can't run up the bill. Limits apply to the **whole workspace**: set it above what your other projects already use, or the limit will stop them too.
 6. **Check it.** Open `https://<your-domain>/health`. You should see `"status":"ok"` and `"riotKey":true`.
 
 Every push to `main` that touches the server, the packages or `config/` redeploys it. Railway uses `/health` to decide whether a deploy succeeded.
 
 ## 2. Create an invite for each friend
 
-Each invite works once and lasts 14 days. From Railway, open the service → ⋯ → Shell (or run `railway run` locally with the Railway CLI), then:
+Each invite works once and lasts 14 days. Only a hash of each code is stored, so copy the code when it's printed. Your own account works the same way: create an invite for yourself.
 
-```sh
-node apps/server/dist/invite.js "for Dana"
-# Invite code: 7KQ2-M9XD-4TRB
-# Valid until 2026-10-19 (14 days), one use. Note: for Dana
+**From your PC (recommended).** Set `ADMIN_TOKEN` (at least 32 random characters) in the Railway variables and the same value in your local `.env`, then:
+
+```powershell
+$t = (Select-String -Path .env -Pattern "^ADMIN_TOKEN=(.+)$").Matches.Groups[1].Value
+Invoke-RestMethod -Method Post -Uri https://<your-domain>/admin/invites -Headers @{ Authorization = "Bearer $t" } -ContentType "application/json" -Body '{"note":"for Dana","days":14}'
 ```
 
-Use `--days 30` for a longer validity period. Only a hash of each code is stored, so copy the code when it's printed.
+Without a valid token, `/admin/invites` answers 404, as if it didn't exist.
 
-Your own account works the same way: create an invite for yourself.
+**From the container** (needs an SSH key registered with `railway ssh keys add`):
+
+```sh
+railway ssh --service <service> -- node apps/server/dist/invite.js "for Dana" --days 30
+```
 
 ## 3. Build the installer
 

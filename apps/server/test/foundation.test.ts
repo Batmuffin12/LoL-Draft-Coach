@@ -10,12 +10,14 @@ describe("server env", () => {
     const env = readServerEnv({});
     expect(env).toMatchObject({ PORT: 8787, RIOT_KEY_TYPE: "development", RIOT_PLATFORM: "euw1", RIOT_REGION: "europe" });
     expect(env.RIOT_API_KEY).toBeUndefined();
+    expect(env.ADMIN_TOKEN).toBeUndefined();
   });
 
   it("treats blank values as unset and rejects bad routing values with a clear error", () => {
     expect(readServerEnv({ RIOT_API_KEY: "  ", PORT: "" }).RIOT_API_KEY).toBeUndefined();
     expect(() => readServerEnv({ RIOT_PLATFORM: "EUW 1" })).toThrow(ServerEnvError);
     expect(() => readServerEnv({ RIOT_PLATFORM: "EUW 1" })).toThrow(/RIOT_PLATFORM/);
+    expect(() => readServerEnv({ ADMIN_TOKEN: "short" })).toThrow(/ADMIN_TOKEN/);
   });
 });
 

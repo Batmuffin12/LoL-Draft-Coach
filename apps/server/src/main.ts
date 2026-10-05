@@ -10,7 +10,7 @@ import { openDb } from "./db";
 import { readServerEnv } from "./env";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.4.0";
+const VERSION = "0.4.1";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);
@@ -27,7 +27,7 @@ const sync = riot
       activeWithinMs: 14 * 24 * 60 * MINUTE,
     })
   : null;
-const app = createApp({ db, version: VERSION, riot, sync });
+const app = createApp({ db, version: VERSION, riot, sync, adminToken: env.ADMIN_TOKEN ?? null });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`LoL Draft Coach server ${VERSION} listening on :${info.port}`);

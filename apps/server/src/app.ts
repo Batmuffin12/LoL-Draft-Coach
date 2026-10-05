@@ -3,8 +3,9 @@ import { compress } from "hono/compress";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { RiotApiError, RiotKeyError } from "@ldc/riot-api";
-import { AccountError, deleteUser, publicUser, registerUser, touchUser, userByToken, type AccountLookup, type User } from "./accounts";
-import { bearerToken } from "./auth";
+import { timingSafeEqual } from "node:crypto";
+import { AccountError, createInvite, deleteUser, publicUser, registerUser, touchUser, userByToken, type AccountLookup, type User } from "./accounts";
+import { bearerToken, sha256 } from "./auth";
 import type { Db } from "./db";
 import { WindowLimiter } from "./limits";
 import { loadProfile } from "./profile";
@@ -20,7 +21,14 @@ export interface AppDeps {
   now?: () => number;
   /** Registration attempts allowed per client per minute. */
   registerPerMinute?: number;
+  /** Enables POST /admin/invites for the owner (bearer token). */
+  adminToken?: string | null;
 }
+
+const InviteBody = z.object({
+  note: z.string().max(100).optional(),
+  days: z.number().positive().max(365).optional(),
+});
 
 type Env = { Variables: { user: User } };
 
@@ -67,6 +75,22 @@ export function createApp(deps: AppDeps): Hono<Env> {
       database === "ok" ? 200 : 503,
     );
   });
+
+  // Owner-only: create invite codes without shell access to the server.
+  if (deps.adminToken) {
+    const expected = sha256(deps.adminToken);
+    const adminLimiter = new WindowLimiter(20, 60_000);
+    app.post("/admin/invites", async (c) => {
+      if (!adminLimiter.allow(clientKey(c), now())) return c.json({ error: "rate_limited" }, 429);
+      const token = bearerToken(c.req.header("authorization"));
+      // Compare fixed-length hashes in constant time.
+      if (!token || !timingSafeEqual(Buffer.from(sha256(token)), Buffer.from(expected))) return c.json({ error: "not_found" }, 404);
+      const body = InviteBody.safeParse(await c.req.json().catch(() => ({})));
+      if (!body.success) return c.json({ error: "invalid_body", message: "Send { note?, days? }." }, 400);
+      const { code, expiresAt } = createInvite(deps.db, { note: body.data.note, ttlDays: body.data.days ?? 14, now: now() });
+      return c.json({ code, expiresAt }, 201);
+    });
+  }
 
   app.post("/users", async (c) => {
     if (!registerLimiter.allow(clientKey(c), now())) return c.json({ error: "rate_limited", message: "Too many attempts. Try again in a minute." }, 429);
