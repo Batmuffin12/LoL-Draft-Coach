@@ -39,6 +39,7 @@ const app = createApp({
   syncWhenStaleMs: env.SYNC_STALE_MINUTES * MINUTE,
   adminToken: env.ADMIN_TOKEN ?? null,
   meta,
+  collectorStaleAfterMs: config.meta.collector.staleAfterHours * 60 * MINUTE,
   publicConfig: { app: config.app, engine: config.engine, bands: config.bands, explain: config.explain },
 });
 

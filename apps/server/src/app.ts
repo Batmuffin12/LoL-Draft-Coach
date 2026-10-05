@@ -37,6 +37,8 @@ export interface AppDeps {
   adminToken?: string | null;
   /** The hourly collector/aggregator; null when not configured. */
   meta?: Pick<MetaJob, "run" | "running" | "lastRun"> | null;
+  /** /health reports the collector as stale when it stored no new game for this long (ms). */
+  collectorStaleAfterMs?: number;
   /** Served by GET /config (scoring weights, thresholds and wording); absent: no route. */
   publicConfig?: Record<string, unknown> | null;
 }
@@ -48,10 +50,17 @@ function metaHealth(deps: AppDeps) {
     .from(metaSnapshots)
     .all();
   const last = deps.meta?.lastRun() ?? null;
+  // When the collector last stored a new game: the spec's "is it still receiving data" signal.
+  const lastData = (deps.db.$client.prepare("SELECT max(stored_at) AS t FROM matches WHERE source = 'collector'").get() as { t: number | null }).t;
+  const staleAfterMs = deps.collectorStaleAfterMs ?? 6 * 3_600_000;
+  const now = (deps.now ?? Date.now)();
   return {
     patch: newestPatch(snaps.map((s) => s.patch)),
     newestMatchAt: snaps.length ? Math.max(...snaps.map((s) => s.newestMatchAt ?? 0)) || null : null,
     collector: {
+      // Stale: no new collected game for staleAfter (e.g. the dev key expired, or the cron stopped).
+      stale: deps.meta ? lastData === null || now - lastData > staleAfterMs : false,
+      lastDataAt: lastData,
       running: deps.meta?.running ?? false,
       lastRun: last && { startedAt: last.startedAt, finishedAt: last.finishedAt, newMatches: last.newMatches, riotCalls: last.riotCalls, error: last.error },
       snapshots: snaps.map((s) => ({ band: s.band, createdAt: s.createdAt, matches: s.matches })),

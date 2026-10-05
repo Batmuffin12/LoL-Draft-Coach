@@ -34,6 +34,8 @@ export const MetaConfigSchema = z.object({
     maxMatchesPerRun: z.number().int().min(1),
     /** Collected matches kept per band (newest first); older ones are pruned to bound disk and memory. */
     maxStoredMatches: z.number().int().min(1),
+    /** /health calls the collector stale after this many hours without a new game. */
+    staleAfterHours: z.number().positive(),
   }),
 });
 export type MetaConfig = z.infer<typeof MetaConfigSchema>;

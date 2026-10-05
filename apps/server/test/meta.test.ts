@@ -266,6 +266,23 @@ describe("meta routes", () => {
     expect(health.collector.snapshots).toHaveLength(1);
   });
 
+  it("flags the collector as stale when no new game arrived for staleAfter, without failing the health check", async () => {
+    const db = openDb(":memory:");
+    let now = NOW;
+    const app = createApp({ db, version: "t", riot: null, meta: new MetaJob(db, fakeRiot(), settings, { now: () => now, log: () => {} }), collectorStaleAfterMs: 3_600_000, now: () => now });
+    const health = async () => {
+      const res = await app.request("/health");
+      return { status: res.status, collector: ((await res.json()) as { collector: { stale: boolean; lastDataAt: number | null } }).collector };
+    };
+    expect(await health()).toMatchObject({ status: 200, collector: { stale: true, lastDataAt: null } }); // never collected
+    db.insert(schema.matches)
+      .values({ matchId: "m", queueId: 420, gameVersion: "16.19", endedAt: NOW, durationSec: 1800, summary: { matchId: "m" } as never, source: "collector", storedAt: NOW, band: 2 })
+      .run();
+    expect((await health()).collector).toMatchObject({ stale: false, lastDataAt: NOW });
+    now = NOW + 2 * 3_600_000;
+    expect(await health()).toMatchObject({ status: 200, collector: { stale: true } });
+  });
+
   it("starts the collector only for the owner", async () => {
     const { app, job } = setup();
     expect((await app.request("/admin/collect", { method: "POST" })).status).toBe(404);

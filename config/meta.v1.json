@@ -18,6 +18,7 @@
     "matchesPerPlayer": 5,
     "budgetSeconds": 900,
     "maxMatchesPerRun": 450,
-    "maxStoredMatches": 50000
+    "maxStoredMatches": 50000,
+    "staleAfterHours": 6
   }
 }

@@ -64,7 +64,7 @@ describe("GET /health", () => {
     expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", riotKey: "missing",
       patch: null,
       newestMatchAt: null,
-      collector: { running: false, lastRun: null, snapshots: [] },
+      collector: { stale: false, lastDataAt: null, running: false, lastRun: null, snapshots: [] },
     });
   });
 
