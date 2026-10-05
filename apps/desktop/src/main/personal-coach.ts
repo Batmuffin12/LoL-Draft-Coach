@@ -128,7 +128,7 @@ export class PersonalCoach extends Coach {
 
   private setProfile(profile: PersonalProfile): void {
     const { engine } = this.p.config;
-    this.profile = { games: [...profile.games], samples: [...profile.samples], masteries: profile.masteries };
+    this.profile = profile;
     this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateRoleAdvice();

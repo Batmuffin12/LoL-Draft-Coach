@@ -7,7 +7,7 @@ import { LcuConnector } from "@ldc/lcu";
 import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
 import { RiotApi, type Match } from "@ldc/riot-api";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { MatchStore, minimizeMatch } from "../src/main/match-store";
+import { MatchStore, toUserMatch } from "../src/main/match-store";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { DirectProfileSource } from "../src/main/profile-source";
 import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
@@ -27,12 +27,12 @@ describe("config loading", () => {
 });
 
 describe("match store", () => {
-  it("keeps no identifiers when minimising a match", async () => {
+  it("keeps no identifiers when storing a match", async () => {
     const riot = riotWith(fakeRiotFetch().fetchFn);
     const match = (await riot.match("EUW1_1000")) as Match;
-    const stored = minimizeMatch(match, LOCAL_PUUID);
-    expect(stored.me).toMatchObject({ championId: 103, position: "middle" });
-    expect(stored.samples).toHaveLength(10);
+    const stored = toUserMatch(match, LOCAL_PUUID);
+    expect(stored.match.participants[stored.me]).toMatchObject({ championId: 103, position: "middle" });
+    expect(stored.match.participants).toHaveLength(10);
     expect(JSON.stringify(stored)).not.toMatch(/puuid|other-|name-|mock-local/);
   });
 

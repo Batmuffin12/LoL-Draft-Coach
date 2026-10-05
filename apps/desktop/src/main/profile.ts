@@ -1,13 +1,18 @@
-import type { AttributeSample, MasteryEntry, PlayerGame } from "@ldc/engine";
+import { attributeSamples, playerGame, type AttributeSample, type MasteryEntry, type PlayerGame } from "@ldc/engine";
+import type { UserMatch } from "@ldc/shared";
 import type { RiotApi } from "@ldc/riot-api";
 import type { AppConfig } from "./config";
-import { minimizeMatch, type MatchStore } from "./match-store";
+import { toUserMatch, type MatchStore } from "./match-store";
 
 /** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
 export const MATCH_IDS_PAGE = 100;
 
 export interface PersonalProfile {
+  /** The player's own matches, newest first, with every (anonymised) participant. */
+  matches: UserMatch[];
+  /** Derived from `matches`: the player's own games. */
   games: PlayerGame[];
+  /** Derived from `matches`: every participant as an attribute sample. */
   samples: AttributeSample[];
   masteries: MasteryEntry[];
 }
@@ -55,26 +60,33 @@ export async function loadProfile(opts: LoadProfileOptions): Promise<PersonalPro
   }
   const ids = sortMatchIdsNewestFirst(idLists.flat()).slice(0, history.matchCount);
 
-  const profile: PersonalProfile = { games: [], samples: [], masteries };
+  const matches: UserMatch[] = [];
   for (let i = 0; i < ids.length; i++) {
     const id = ids[i]!;
     let stored = await store.get(id);
     if (!stored) {
       const match = await riot.match(id);
       if (match) {
-        stored = minimizeMatch(match, puuid);
+        stored = toUserMatch(match, puuid);
         await store.put(stored);
       }
     }
-    if (stored) {
-      const me = stored.me;
-      if (me) profile.games.push(me);
-      // A champion appears once per match, so the player's own sample is the one on their champion.
-      profile.samples.push(...stored.samples.map((s) => ({ ...s, self: me !== null && s.championId === me.championId })));
-    }
+    if (stored && stored.me >= 0) matches.push(stored);
     const done = i + 1;
-    if (done % every === 0 || done === ids.length) opts.onProgress?.(done, ids.length, profile);
+    if (done % every === 0 || done === ids.length) opts.onProgress?.(done, ids.length, profileFromMatches(matches, masteries));
   }
+  const profile = profileFromMatches(matches, masteries);
   if (ids.length === 0) opts.onProgress?.(0, 0, profile);
   return profile;
+}
+
+/** Builds a profile from the player's own matches (any order) and mastery. */
+export function profileFromMatches(matches: UserMatch[], masteries: MasteryEntry[]): PersonalProfile {
+  const sorted = [...matches].sort((a, b) => b.match.endedAt - a.match.endedAt);
+  return {
+    matches: sorted,
+    games: sorted.map(playerGame).filter((g): g is PlayerGame => g !== null),
+    samples: sorted.flatMap(attributeSamples),
+    masteries,
+  };
 }

@@ -1,11 +1,11 @@
 import { EventEmitter } from "node:events";
-import { attributeSamples, bandFromRankedEntries, mainRole, playerGame, type AppConfig, type PlayerGame, type RankBandConfig } from "@ldc/engine";
+import { bandFromRankedEntries, mainRole, type AppConfig, type PlayerGame, type RankBandConfig } from "@ldc/engine";
 import { RiotKeyError, type RiotApi } from "@ldc/riot-api";
 import type { CoachStatus, RankBandId, UserMatch } from "@ldc/shared";
 import type { AccountView } from "../shared/view";
 import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
-import { loadProfile, type PersonalProfile } from "./profile";
+import { loadProfile, profileFromMatches, type PersonalProfile } from "./profile";
 import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile } from "./server-client";
 
 /** The local player's Riot ID, read from the League client (or RIOT_ID in .env for the mock client). */
@@ -224,7 +224,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.registeredAs = null;
     this.matches.clear();
     this.setAccount({ state: "unregistered", riotId: null, serverUrl: null, message: null });
-    this.emit("profile", { games: [], samples: [], masteries: [] });
+    this.emit("profile", profileFromMatches([], []));
     this.emit("status", { state: "idle" });
   }
 
@@ -255,18 +255,16 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     const keep = new Set(p.matchIds);
     for (const id of this.matches.keys()) if (!keep.has(id)) this.matches.delete(id);
 
-    const list = [...this.matches.values()].sort((a, b) => b.match.endedAt - a.match.endedAt);
-    const profile: PersonalProfile = {
-      games: list.map(playerGame).filter((g): g is PlayerGame => g !== null),
-      samples: list.flatMap(attributeSamples),
-      masteries: p.masteries.map((m) => ({
+    const profile = profileFromMatches(
+      [...this.matches.values()],
+      p.masteries.map((m) => ({
         championId: m.championId,
         level: m.level,
         points: m.points,
         ...(m.lastPlayTime !== undefined ? { lastPlayTime: m.lastPlayTime } : {}),
         ...(m.grades ? { grades: m.grades } : {}),
       })),
-    };
+    );
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
     this.emit("profile", profile);
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
