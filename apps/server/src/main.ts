@@ -11,7 +11,7 @@ import { readServerEnv } from "./env";
 import { MetaJob } from "./meta-job";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.4.3";
+const VERSION = "0.5.0";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);

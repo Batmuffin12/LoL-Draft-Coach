@@ -1,6 +1,6 @@
 {
   "name": "@ldc/server",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "private": true,
   "description": "LoL Draft Coach server: users, profiles, meta snapshots and background jobs (Hono + SQLite)",
   "type": "module",

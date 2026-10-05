@@ -2,6 +2,28 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.5.0] — Unreleased — Milestone 5: Live meta
+
+The coach now knows what is strong in your rank right now, and enemy picks change its advice.
+
+### Added
+- **Collector** (server): samples Gold–Platinum players from League-V4 and stores their recent ranked games, anonymised (no PUUIDs or names; only a page cursor is kept between runs). Runs in one bounded wake-up (`POST /admin/collect`, owner token) inside Riot's rate limit, at collector priority so players' own requests go first. Settings in `config/meta.v1.json`; local runs with `pnpm --filter @ldc/server collect`.
+- **`@ldc/meta`**: pure, streaming aggregation into a snapshot per rank band: recency-weighted champion stats per role, lane and cross-lane matchups, ally duos, measured champion attributes and playstyle references.
+- **`GET /meta/:band`** (registered users, gzipped, ETag) and **`GET /config`** (ETag). `/health` shows the patch, the newest game and the collector's last run.
+- **Engine v2** (used when a snapshot is loaded): every pick gets a predicted win chance ("≈ 54%") from six terms in rating points — meta strength, lane matchup, counters, synergy, team needs and your comfort — each a change over what was expected, smoothed toward it with prior games. Reasons quote the numbers: "+3.1% into Zed (1,240 games)".
+  - Enemy roles are inferred from the band's data; a revealed lane opponent changes the ranking.
+  - Blind picks are rated by their likely opponents ("Safe blind pick" / "Risky blind pick"); counters count more when you pick last.
+  - Strong champions you haven't played can be suggested, with a learning cost.
+  - "Why not your usual pick" names the term that decided it.
+- **Ban suggestions** in your ban turn: champions picked often in your band that beat your best picks or are simply strong; never your own top picks or an ally's.
+- **Your pick**: after you lock in, the panel shows your champion with its predicted win chance and reasons, instead of suggestions.
+- Desktop: downloads and caches the band's snapshot (revalidated at most every 30 minutes) and keeps coaching from the cached copy when the server is down; the status line shows the meta's patch, size and age. Uses the server's scoring config (validated, cached), so tuning needs no release.
+- Playstyle percentiles use the band's references once a snapshot is loaded.
+- Railway: `ldc-meta-wake` cron service (hourly) in `.railway/railway.ts`; the server still sleeps between wake-ups (est. +$1.40/month, docs/CLOUD.md).
+
+### Fixed
+- Your own locked-in champion no longer shows as "banned or taken".
+
 ## [0.4.3] — 2026-10-05
 
 ### Added
