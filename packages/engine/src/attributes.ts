@@ -24,6 +24,7 @@ export function deriveChampionAttributes(samples: AttributeSample[], minSamples:
     tank: number;
     cc: number;
     roles: Record<string, number>;
+    others: number;
   }
   const raws: Raw[] = [];
   for (const [id, list] of groups) {
@@ -55,6 +56,7 @@ export function deriveChampionAttributes(samples: AttributeSample[], minSamples:
       tank: tank / minutes,
       cc: cc / minutes,
       roles: others ? Object.fromEntries(Object.entries(roles).map(([k, v]) => [k, v / others])) : {},
+      others,
     });
   }
 
@@ -72,6 +74,7 @@ export function deriveChampionAttributes(samples: AttributeSample[], minSamples:
         frontline: percentile(r.tank, tanks),
         engage: percentile(r.cc, ccs),
         roleShares: r.roles,
+        roleSamples: r.others,
       },
     ]),
   );

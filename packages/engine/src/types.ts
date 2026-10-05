@@ -49,6 +49,8 @@ export interface ChampionAttributes {
   engage: number;
   /** Share of other players' samples per position (the player's own games excluded). */
   roleShares: Record<Position, number>;
+  /** Number of other players' samples behind roleShares. */
+  roleSamples: number;
 }
 
 export interface ComfortStats {

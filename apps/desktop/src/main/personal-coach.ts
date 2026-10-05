@@ -79,6 +79,8 @@ export class PersonalCoach extends Coach {
       const me = await this.p.connector.getCurrentSummoner();
       const ranked = await this.p.connector.getRankedStats().catch(() => null);
       this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
+      this.updateRoleAdvice();
+      this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.p.config.bands));
       if (me?.gameName && me.tagLine) await this.loadByRiotId(me.gameName, me.tagLine, false);
       else await this.loadFromRiotId(); // e.g. the mock client, which has no account
@@ -170,7 +172,14 @@ export class PersonalCoach extends Coach {
         return undefined;
       }
     };
-    const roles = adviseRoles(this.profile.games, this.profile.masteries, Date.now(), this.p.config.engine).map((r) => ({
+    const roles = adviseRoles(
+      this.profile.games,
+      this.profile.masteries,
+      Date.now(),
+      this.p.config.engine,
+      this.intendedPositions,
+      this.attributes,
+    ).map((r) => ({
       role: r.role,
       games: r.games,
       winRate: r.winRate,
