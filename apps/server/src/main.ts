@@ -10,7 +10,7 @@ import { openDb } from "./db";
 import { readServerEnv } from "./env";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.4.1";
+const VERSION = "0.4.2";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);
@@ -21,18 +21,27 @@ const riot = env.RIOT_API_KEY
   : null;
 const sync = riot
   ? new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands }, {
-      tickMs: 5 * MINUTE,
-      // Refresh a user's games every 30 minutes while they've used the app in the last 14 days.
-      staleAfterMs: 30 * MINUTE,
+      tickMs: Math.max(1, env.SYNC_INTERVAL_MINUTES) * MINUTE,
+      // Refresh a user's games when older than SYNC_STALE_MINUTES while they've used the app in the last 14 days.
+      staleAfterMs: env.SYNC_STALE_MINUTES * MINUTE,
       activeWithinMs: 14 * 24 * 60 * MINUTE,
     })
   : null;
-const app = createApp({ db, version: VERSION, riot, sync, adminToken: env.ADMIN_TOKEN ?? null });
+const app = createApp({
+  db,
+  version: VERSION,
+  riot,
+  sync,
+  syncWhenStaleMs: env.SYNC_STALE_MINUTES * MINUTE,
+  adminToken: env.ADMIN_TOKEN ?? null,
+});
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`LoL Draft Coach server ${VERSION} listening on :${info.port}`);
   if (!riot) console.warn("RIOT_API_KEY is not set: registration and syncing are off until it is.");
-  sync?.start();
+  // With SYNC_INTERVAL_MINUTES=0 there is no timer: syncs run on request only, and the
+  // server sends no outbound traffic while unused, so Railway can put it to sleep.
+  if (env.SYNC_INTERVAL_MINUTES > 0) sync?.start();
 });
 
 const shutdown = () => {

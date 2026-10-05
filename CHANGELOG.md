@@ -2,6 +2,17 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.4.2] — 2026-10-05
+
+### Added
+- Railway infrastructure as code: `.railway/railway.ts` (service, volume, domain, sleep, limits, non-secret variables), applied with no drift; `pnpm infra:plan` / `pnpm infra:apply`.
+- `docs/CLOUD.md`: what runs, every cost choice and its trade-off, expected monthly cost, how to check usage, and a cost log.
+
+### Changed
+- Cost: the service sleeps when unused. The background sync timer is off on Railway (`SYNC_INTERVAL_MINUTES=0`); a user's games sync when they open the app (if older than `SYNC_STALE_MINUTES`) and after each game. Heap capped at 256 MB; 1 vCPU / 512 MB container limits.
+- The desktop app retries for up to ~19 s while a sleeping server wakes up (502/503/504 or dropped connections).
+- `railway.json` removed (deprecated Config as Code; Railway can't use both).
+
 ## [0.4.1] — 2026-10-05
 
 ### Added

@@ -4,27 +4,24 @@ How to put the coach server on Railway and give the app to friends. One-time set
 
 ## 1. Deploy the server on Railway
 
-The repo includes `railway.json`, which tells Railway how to build and start the server.
+The live setup is already defined in code: [`.railway/railway.ts`](../.railway/railway.ts). Cost choices and how to check usage are in [docs/CLOUD.md](CLOUD.md). It is deployed today as project `lol-draft-coach`, service `ldc-server`, at `https://ldc-server-production-c9e7.up.railway.app`.
 
-1. **New project.** In Railway, click New Project → Deploy from GitHub repo, and pick `LoL-Draft-Coach`. Leave the root directory at the repo root, because the build needs the whole pnpm workspace and `config/`.
-2. **Add a volume.** In the service, open Settings → Volumes → Add Volume and mount it at `/data`.
-3. **Set the variables** in the Variables tab:
+To recreate it (for example in a new workspace):
 
-   | Variable | Value |
-   | --- | --- |
-   | `RIOT_API_KEY` | Your personal key (or a development key while you wait; it expires every 24 h) |
-   | `RIOT_KEY_TYPE` | `personal` (or `development`) |
-   | `RIOT_PLATFORM` | `euw1` |
-   | `RIOT_REGION` | `europe` |
-   | `DATABASE_PATH` | `/data/ldc.sqlite` |
-   | `ADMIN_TOKEN` | A long random string (lets you create invites from your PC, see step 2) |
+1. `railway login`, then `railway init --name lol-draft-coach` in the repo (creates and links the project).
+2. In `.railway/railway.ts`, remove the `networking.serviceDomains` entry (the old domain belongs to the old project), then `pnpm infra:apply`. This creates the service from GitHub, the `/data` volume and all non-secret settings.
+3. Set the secrets (they are never in the file):
 
-   Railway sets `PORT` itself.
-4. **Make it reachable.** Open Settings → Networking → Generate Domain. You'll get an address such as `https://ldc-production.up.railway.app`.
-5. **Set a usage limit.** Open Workspace → Usage → set a hard limit, so a bug can't run up the bill. Limits apply to the **whole workspace**: set it above what your other projects already use, or the limit will stop them too.
-6. **Check it.** Open `https://<your-domain>/health`. You should see `"status":"ok"` and `"riotKey":true`.
+   ```sh
+   railway variables --service ldc-server --set "RIOT_API_KEY=RGAPI-..." --set "RIOT_KEY_TYPE=personal" --set "ADMIN_TOKEN=<32+ random characters>"
+   ```
+4. `railway domain --service ldc-server`, then put the new domain back into `networking.serviceDomains` and run `pnpm infra:plan`, which should be up to date.
+5. Check `https://<domain>/health`: you should see `"status":"ok"` and `"riotKey":true`.
+6. Usage limits are per **workspace**: set a hard limit above what the workspace's other projects already use (see docs/CLOUD.md).
 
-Every push to `main` that touches the server, the packages or `config/` redeploys it. Railway uses `/health` to decide whether a deploy succeeded.
+Pushes to `main` that touch the server, the packages, `config/` or `.railway/` redeploy it. Railway uses `/health` to decide whether a deploy succeeded. The service sleeps when unused (no compute billed); the first request wakes it in a few seconds.
+
+When the personal Riot key arrives: `railway variables --service ldc-server --set "RIOT_API_KEY=..." --set "RIOT_KEY_TYPE=personal"`.
 
 ## 2. Create an invite for each friend
 

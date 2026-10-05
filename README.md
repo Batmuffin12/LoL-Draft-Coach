@@ -2,7 +2,7 @@
 
 A Windows app that coaches you through League of Legends champion select: it watches the draft live and suggests picks from your own champion pool, with the reasoning behind each one. It only ever **suggests** — it never picks, bans or locks for you.
 
-The full product spec is in [docs/SPEC.md](docs/SPEC.md), the research behind the current plan in [research/ROADMAP.md](research/ROADMAP.md), and how to deploy the server and share the app in [docs/DEPLOY.md](docs/DEPLOY.md). Notes for contributors (and Claude Code sessions) are in [CLAUDE.md](CLAUDE.md).
+The full product spec is in [docs/SPEC.md](docs/SPEC.md), the research behind the current plan in [research/ROADMAP.md](research/ROADMAP.md), how to deploy the server and share the app in [docs/DEPLOY.md](docs/DEPLOY.md), and the cloud setup and its costs in [docs/CLOUD.md](docs/CLOUD.md). Notes for contributors (and Claude Code sessions) are in [CLAUDE.md](CLAUDE.md).
 
 **Friends:** you only need the installer and an invite code; see [docs/DEPLOY.md](docs/DEPLOY.md#4-what-a-friend-does).
 

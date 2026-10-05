@@ -72,31 +72,52 @@ export function normalizeServerUrl(raw: string): string {
  * Talks to apps/server. The only network peer for player data in server mode:
  * the Riot API key never reaches this app.
  */
+/**
+ * Waits between retries while the server wakes up. The server sleeps when unused (to save
+ * cost); the first request to a sleeping service can fail with 502/503/504 or a dropped
+ * connection while it boots.
+ */
+export const WAKE_RETRY_DELAYS_MS = [1_000, 2_000, 3_000, 5_000, 8_000];
+const WAKING_STATUSES = new Set([502, 503, 504]);
+
 export class ServerClient {
   private readonly fetchFn: typeof fetch;
+  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(
     readonly baseUrl: string,
     private token: string | null,
     fetchFn?: typeof fetch,
+    sleep?: (ms: number) => Promise<void>,
   ) {
     this.fetchFn = fetchFn ?? fetch;
+    this.sleep = sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
   private async request<T extends z.ZodType>(method: string, path: string, schema: T, body?: unknown): Promise<z.infer<T>> {
-    let res: Response;
-    try {
-      res = await this.fetchFn(`${this.baseUrl}${path}`, {
-        method,
-        headers: {
-          accept: "application/json",
-          ...(body !== undefined ? { "content-type": "application/json" } : {}),
-          ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
-        },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-      });
-    } catch (err) {
-      throw new ServerError(0, "unreachable", `Can't reach the coach server at ${this.baseUrl} (${(err as Error).message}).`);
+    let res: Response | null = null;
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt <= WAKE_RETRY_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) await this.sleep(WAKE_RETRY_DELAYS_MS[attempt - 1]!);
+      try {
+        res = await this.fetchFn(`${this.baseUrl}${path}`, {
+          method,
+          headers: {
+            accept: "application/json",
+            ...(body !== undefined ? { "content-type": "application/json" } : {}),
+            ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
+          },
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        });
+        lastError = null;
+        if (!WAKING_STATUSES.has(res.status)) break;
+      } catch (err) {
+        res = null;
+        lastError = err as Error;
+      }
+    }
+    if (!res) {
+      throw new ServerError(0, "unreachable", `Can't reach the coach server at ${this.baseUrl} (${lastError?.message ?? "no response"}).`);
     }
     if (res.status === 204) return schema.parse(undefined);
     const json = (await res.json().catch(() => null)) as unknown;

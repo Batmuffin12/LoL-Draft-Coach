@@ -121,6 +121,8 @@ export interface ServerProfileSourceDeps {
   fetch?: typeof fetch;
   /** How often to poll while the server is syncing. */
   pollMs?: number;
+  /** Wait function for wake-up retries (tests pass a no-op). */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 /**
@@ -160,7 +162,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   async init(): Promise<void> {
     const a = await this.deps.accounts.load();
     if (!a) return this.setAccount({ state: "unregistered" });
-    this.client = new ServerClient(a.serverUrl, a.token, this.deps.fetch);
+    this.client = new ServerClient(a.serverUrl, a.token, this.deps.fetch, this.deps.sleep);
     this.registeredAs = a.riotId;
     this.setAccount({ state: "registered", riotId: a.riotId, serverUrl: a.serverUrl, message: null });
   }
@@ -203,7 +205,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.setAccount({ state: "registering", message: null });
     try {
       const serverUrl = normalizeServerUrl(serverUrlInput);
-      const client = new ServerClient(serverUrl, null, this.deps.fetch);
+      const client = new ServerClient(serverUrl, null, this.deps.fetch, this.deps.sleep);
       const r = await client.register(inviteCode, riotId);
       await this.deps.accounts.save({ serverUrl, token: r.token, riotId: r.riotId });
       this.client = client;

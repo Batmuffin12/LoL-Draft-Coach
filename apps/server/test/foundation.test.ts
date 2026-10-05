@@ -11,6 +11,8 @@ describe("server env", () => {
     expect(env).toMatchObject({ PORT: 8787, RIOT_KEY_TYPE: "development", RIOT_PLATFORM: "euw1", RIOT_REGION: "europe" });
     expect(env.RIOT_API_KEY).toBeUndefined();
     expect(env.ADMIN_TOKEN).toBeUndefined();
+    expect(env).toMatchObject({ SYNC_INTERVAL_MINUTES: 5, SYNC_STALE_MINUTES: 30 });
+    expect(readServerEnv({ SYNC_INTERVAL_MINUTES: "0" }).SYNC_INTERVAL_MINUTES).toBe(0);
   });
 
   it("treats blank values as unset and rejects bad routing values with a clear error", () => {

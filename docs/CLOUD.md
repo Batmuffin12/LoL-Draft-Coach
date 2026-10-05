@@ -1,0 +1,77 @@
+# Cloud: Railway setup and cost
+
+The single place to track how LoL Draft Coach runs in the cloud and what it costs. Update the **cost log** at the bottom whenever you check usage or change a setting.
+
+## What runs
+
+| Resource | Name | Where | Notes |
+| --- | --- | --- | --- |
+| Project | `lol-draft-coach` | Workspace "ofek ben simchon's Projects" | Environment `production` |
+| Service | `ldc-server` | `europe-west4` (Netherlands) | Built from GitHub `Batmuffin12/LoL-Draft-Coach`, branch `main`; deploys on push when server files change |
+| Volume | `ldc-server-volume` | mounted at `/data` | SQLite database (`/data/ldc.sqlite`), 5 GB max, alerts at 80/95/100% |
+| Domain | `ldc-server-production-c9e7.up.railway.app` | | Health check: `/health` |
+
+## Infrastructure as code
+
+[`.railway/railway.ts`](../.railway/railway.ts) is the source of truth for the setup above: build, start command, sleep, limits, region, volume, domain and non-secret variables. Change it there, never in the dashboard, so git history is the history of the cloud.
+
+```powershell
+pnpm infra:plan    # preview what would change on Railway (read-only)
+pnpm infra:apply   # apply the changes (asks to confirm)
+```
+
+- **Secrets** (`RIOT_API_KEY`, `ADMIN_TOKEN`) and `RIOT_KEY_TYPE` are `preserve()` in the file, so their values stay only in Railway. Change them with `railway variables --service ldc-server --set "RIOT_API_KEY=..."`.
+- **Drift check:** `pnpm infra:plan` should print "already up to date". If it lists changes nobody made in code, someone changed the dashboard; copy the change into the file or apply the file.
+- **Ordering:** a service can't be managed by both IaC and the old `railway.json`, which was removed when IaC was adopted (2026-10-05). When changing the build or start command, `infra:apply` first, then push the code that needs it.
+- `scripts/railway-iac.mjs` wraps the CLI. On Windows, an npm-installed Railway CLI is a `.cmd` shim that the IaC SDK can't run; the wrapper points it at the real `railway.exe`.
+
+## Cost choices
+
+Railway bills **usage**: memory at about $10 per GB-month, CPU at about $20 per vCPU-month, volume at $0.15 per GB-month and egress at $0.05 per GB, on top of the Hobby plan's $5/month, which includes $5 of usage across the **whole workspace** ([pricing](https://railway.com/pricing)). The other projects in the workspace already use more than $5, so every cent this service uses is billed.
+
+| Choice | Setting | Why | Trade-off |
+| --- | --- | --- | --- |
+| **Sleep when unused** | `sleepApplication: true` | No compute is billed while asleep. The service sleeps 5–10 min after its last outbound traffic ([Railway docs](https://docs.railway.com/reference/app-sleeping)). | The first request after sleeping takes a few seconds and can return a 502. The desktop app retries for up to ~19 s (`WAKE_RETRY_DELAYS_MS`). |
+| **No background timer** | `SYNC_INTERVAL_MINUTES=0` | A timer that syncs users every few minutes would keep the service awake. Games now sync when a player opens the app (if older than `SYNC_STALE_MINUTES=30`) and after each game ends. | Data is only as fresh as the last time someone used the app, which is all the app needs. |
+| **Small heap** | `node --max-old-space-size=256` | Memory is billed per GB-minute; V8 keeps the heap small instead of growing toward the container limit. Measured idle: ~81 MB. | A sync of 200 games fits easily; raise it if the collector (milestone 5) needs more. |
+| **Hard ceilings** | 1 vCPU, 512 MB | A runaway bug can't scale the bill. Usage, not the limit, is billed. | Raise if the collector needs it. |
+| **One replica, one region** | 1 × `europe-west4` | Friends are on EUW; Riot's `europe` routing is there too. | No redundancy (fine for a friends' app). |
+| **Fewer deploys** | `watchPatterns` | Only server-relevant changes rebuild and redeploy. | |
+| **Fast hand-over** | `overlapSeconds: 0`, `drainingSeconds: 10` | A volume can't be shared, so no overlap; old containers stop quickly. | A few seconds of downtime per deploy. |
+| **Small transfers** | gzip on API responses; `?since=` incremental profiles | A full 200-game profile is 632 KB gzipped (7.9 MB raw), and later fetches only send new games. | |
+| **Small data** | 200 games per user, orphaned matches deleted | Volume stays in the MB range. | |
+
+### Expected monthly cost (est.)
+
+Assumes 5–10 friends with the service awake about 4 hours a day in total:
+
+| | Awake 4 h/day (with sleep) | Always on |
+| --- | --- | --- |
+| Memory (~0.1 GB) | ~$0.17 | ~$1.00 |
+| CPU (~0.02 vCPU average) | ~$0.07 | ~$0.40 |
+| Volume (<0.5 GB) | <$0.08 | <$0.08 |
+| Egress (<1 GB) | <$0.05 | <$0.05 |
+| **This service** | **≈ $0.30** | **≈ $1.50** |
+
+Plus the Hobby plan's $5/month, which you pay anyway for the other projects.
+
+### What would change the picture
+
+- **Milestone 5 (collector).** Collecting meta data needs regular work. To keep sleeping, run the collector as a **Railway cron service** (`cronSchedule` in the IaC file, e.g. hourly) instead of a 24/7 loop: it starts, collects and aggregates for a few minutes, then exits. Expect +$0.50–2/month (est.).
+- **More users** mean more awake hours; costs stay well under $5 for dozens of friends (est.).
+- **The workspace limit.** The usage limit is per workspace. Set a hard limit above what the other projects already use (they were at $11.88 on 2026-10-05), e.g. $25: `railway usage limit set --hard 25 --soft 20 --workspace "ofek ben simchon's Projects"`.
+
+## How to check
+
+```sh
+railway usage projects --workspace "ofek ben simchon's Projects"   # cost so far this billing period, per project
+railway metrics --service ldc-server --since 7d                      # CPU, memory, network, volume
+railway service status --service ldc-server                          # deployment state (SLEEPING when asleep)
+```
+
+## Cost log
+
+| Date | Event | This project (period to date) | Workspace | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-10-05 | First deploy (0.4.0), 200-game sync for one user | $0.0002 | $11.88 | Idle memory 81 MB, CPU < 0.01 vCPU |
+| 2026-10-05 | IaC adopted; sleep on, background timer off, 256 MB heap, 1 vCPU / 512 MB limits | | | Expected ≈ $0.30/month (see above) |
