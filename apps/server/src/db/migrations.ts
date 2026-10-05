@@ -1,0 +1,60 @@
+import type { Database } from "better-sqlite3";
+
+export interface Migration {
+  version: number;
+  name: string;
+  sql: string;
+}
+
+/**
+ * Forward-only SQL migrations, applied in order inside a transaction each.
+ * Never edit a migration that has shipped: add a new one.
+ */
+export const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    name: "users and invites",
+    sql: `
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        puuid TEXT NOT NULL UNIQUE,
+        game_name TEXT NOT NULL,
+        tag_line TEXT NOT NULL,
+        token_hash TEXT NOT NULL UNIQUE,
+        band INTEGER,
+        created_at INTEGER NOT NULL,
+        last_sync_at INTEGER
+      );
+      CREATE TABLE invites (
+        code_hash TEXT PRIMARY KEY,
+        note TEXT,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        used_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        used_at INTEGER
+      );
+    `,
+  },
+];
+
+/** Applies every migration newer than the database's version. Returns the versions applied. */
+export function migrate(sqlite: Database, migrations: Migration[] = MIGRATIONS): number[] {
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at INTEGER NOT NULL
+  )`);
+  const done = new Set(
+    (sqlite.prepare("SELECT version FROM schema_migrations").all() as { version: number }[]).map((r) => r.version),
+  );
+  const applied: number[] = [];
+  for (const m of [...migrations].sort((a, b) => a.version - b.version)) {
+    if (done.has(m.version)) continue;
+    sqlite.transaction(() => {
+      sqlite.exec(m.sql);
+      sqlite.prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)").run(m.version, m.name, Date.now());
+    })();
+    applied.push(m.version);
+  }
+  return applied;
+}
