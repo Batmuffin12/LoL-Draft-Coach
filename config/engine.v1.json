@@ -205,7 +205,7 @@
     "counterWeight": 0.4,
     "synergyWeight": 0.5,
     "offMetaPenalty": 20,
-    "teamRatingScale": 40,
+    "teamRatingScale": 10,
     "personal": {
       "comfortScale": 80,
       "neutralComfort": 0.5,
