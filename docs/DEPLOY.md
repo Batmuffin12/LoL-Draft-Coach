@@ -16,12 +16,12 @@ To recreate it (for example in a new workspace):
    railway variables --service ldc-server --set "RIOT_API_KEY=RGAPI-..." --set "RIOT_KEY_TYPE=personal" --set "ADMIN_TOKEN=<32+ random characters>"
    ```
 4. `railway domain --service ldc-server`, then put the new domain back into `networking.serviceDomains` and run `pnpm infra:plan`, which should be up to date.
-5. Check `https://<domain>/health`: you should see `"status":"ok"` and `"riotKey":true`.
+5. Check `https://<domain>/health`: you should see `"status":"ok"` and `"riotKey":"ok"` (`"rejected"` means Riot refused the key, for example an expired development key; `"missing"` means none is set).
 6. Usage limits are per **workspace**: set a hard limit above what the workspace's other projects already use (see docs/CLOUD.md).
 
 Pushes to `main` that touch the server, the packages, `config/` or `.railway/` redeploy it. Railway uses `/health` to decide whether a deploy succeeded. The service sleeps when unused (no compute billed); the first request wakes it in a few seconds.
 
-When the personal Riot key arrives: `railway variables --service ldc-server --set "RIOT_API_KEY=..." --set "RIOT_KEY_TYPE=personal"`.
+Swapping the Riot key (daily for a development key; once for the personal key): `pnpm riot:key RGAPI-... [--personal]` updates `.env` and Railway and waits for the server (see docs/CLOUD.md).
 
 ## 2. Create an invite for each friend
 
@@ -53,7 +53,11 @@ pnpm --filter @ldc/desktop dist:win
 
 The installer is written to `apps/desktop/release/LoL-Draft-Coach-Setup-<version>.exe`.
 
-### Optional: automatic updates
+### Releases and automatic updates
+
+Nothing is published yet. The first build shared with friends will be **v1.0.0**; until then, versions stay 0.x (one per milestone) and installers are local test builds. Decide where releases are published (below) when preparing v1.0.0.
+
+#### Automatic updates
 
 The repo is private, and a GitHub token must never ship inside the app, so updates need a public download location:
 

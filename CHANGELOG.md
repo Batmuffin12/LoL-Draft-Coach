@@ -2,6 +2,16 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.4.3] — 2026-10-05
+
+### Added
+- `pnpm riot:key RGAPI-... [--personal]`: checks a new Riot key, updates `.env` and the Railway service, and waits until the live server uses it. (Development keys can't be refreshed automatically; Riot only allows regenerating them by hand.)
+- `/health` reports `riotKey` as `"ok"`, `"rejected"` (e.g. an expired development key) or `"missing"`.
+
+### Changed
+- Railway workspace usage limits set (soft $20, hard $25), with a review date in docs/CLOUD.md.
+- Release plan recorded: first build for friends will be v1.0.0.
+
 ## [0.4.2] — 2026-10-05
 
 ### Added

@@ -16,6 +16,8 @@ export interface AppDeps {
   version: string;
   /** Null when the server has no Riot API key: registration answers 503. */
   riot: AccountLookup | null;
+  /** True once Riot has rejected the key (e.g. an expired development key). */
+  riotKeyRejected?: () => boolean;
   /** Runs user syncs; null when the server has no Riot key. */
   sync?: Pick<SyncScheduler, "request" | "state" | "forget"> | null;
   now?: () => number;
@@ -72,7 +74,8 @@ export function createApp(deps: AppDeps): Hono<Env> {
         status: database === "ok" ? "ok" : "degraded",
         version: deps.version,
         database,
-        riotKey: deps.riot !== null,
+        // "missing": no key configured; "rejected": Riot refused it (dev keys expire every 24 h).
+        riotKey: !deps.riot ? "missing" : deps.riotKeyRejected?.() ? "rejected" : "ok",
         // Filled in by the collector (milestone 5).
         patch: null,
         newestMatchAt: null,

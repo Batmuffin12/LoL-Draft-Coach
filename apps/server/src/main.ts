@@ -10,7 +10,7 @@ import { openDb } from "./db";
 import { readServerEnv } from "./env";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.4.2";
+const VERSION = "0.4.3";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);
@@ -31,6 +31,7 @@ const app = createApp({
   db,
   version: VERSION,
   riot,
+  riotKeyRejected: () => riot?.keyProblem != null,
   sync,
   syncWhenStaleMs: env.SYNC_STALE_MINUTES * MINUTE,
   adminToken: env.ADMIN_TOKEN ?? null,
