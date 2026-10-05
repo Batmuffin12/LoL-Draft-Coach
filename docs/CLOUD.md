@@ -41,7 +41,6 @@ Railway bills **usage**: memory at about $10 per GB-month, CPU at about $20 per 
 | **Small transfers** | gzip on API responses; `?since=` incremental profiles | A full 200-game profile is 632 KB gzipped (7.9 MB raw), and later fetches only send new games. | |
 | **Small data** | 200 games per user, orphaned matches deleted | Volume stays in the MB range. | |
 | **Hourly wake, not always on** | `ldc-meta-wake` cron → `POST /admin/collect` | The collector runs inside the server (a volume attaches to one service only), and only when woken; no timer keeps it awake. | The meta refreshes hourly, not continuously. A rejected dev key stops collecting; snapshots keep the last data. |
-| **Daily backups** | `backupSchedules: ["DAILY"]` on the volume (Railway-managed) | Users and invites can't be re-created from Riot; a lost volume would mean everyone registers again. Collected games could be re-collected, but restoring is faster. | Backups use storage; at ≤ 0.7 GB the cost should be cents a month (est.; not measured: check `railway usage` after a week). Restore point is up to a day old. |
 | **Bounded meta data** | `maxStoredMatches` 50k per band, `windowDays` 30, only the `challenges` fields the engine reads | Caps disk (~650 MB per band) and keeps aggregation streaming inside the 256 MB heap. | |
 
 ### Expected monthly cost (est.)
@@ -66,7 +65,9 @@ Plus the Hobby plan's $5/month, which you pay anyway for the other projects.
 
 ## Backups and restore
 
-Railway takes a daily backup of `ldc-server-volume` (the SQLite file `/data/ldc.sqlite`), set in `.railway/railway.ts`. To restore: Railway dashboard → project `lol-draft-coach` → `ldc-server-volume` → **Backups** → pick a day → **Restore**, then redeploy `ldc-server`. Restoring is an operation, not a setting, so it's fine to do in the dashboard. After a restore, users whose registration happened after the backup must register again with a new invite; everything else (games, meta) catches up on its own within hours.
+**There are no backups yet.** Railway's volume backups are a [Pro-plan feature](https://docs.railway.com/volumes/backups); this workspace is on Hobby, where the schedule is silently ignored (tried 2026-10-06), so it was removed from `.railway/railway.ts`.
+
+What a lost volume would cost: the `users` and `invites` tables can't be re-created (everyone registers again with a new invite). Everything else comes back on its own: each user's games re-sync from Riot when they open the app, and the collector refills the meta within days. A free alternative (an owner-only download of the users and invites to your PC) is a possible follow-up.
 
 ## Riot API key
 
@@ -96,3 +97,4 @@ railway service status --service ldc-server                          # deploymen
 | 2026-10-05 | Workspace limits set: soft $20, hard $25 | | $11.88 | Review on 2026-10-16 (end of billing period) |
 | 2026-10-05 | M5 collector and the `ldc-meta-wake` cron written; `infra:plan` shows 1 to add. **Not applied yet** | | | Expected ≈ +$1.40/month. Apply after M5 is merged and deployed. Local run: 60 matches, 73 Riot calls, 13 s |
 | 2026-10-05 | Daily volume backups added to `.railway/railway.ts` (`infra:plan`: 1 change); applied together with the cron at the M5 merge | | | Est. cents per month; check after a week |
+| 2026-10-06 | v0.5.0 deployed; `ldc-meta-wake` hourly cron applied. Volume backups **not** applied: Pro-plan only (workspace is on Hobby); removed from the IaC file | | | Cron as estimated (+$1.40/month); no backup cost |
