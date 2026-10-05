@@ -121,3 +121,11 @@ main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: 
 .axis.high .diverging .fill { background: var(--ok); }
 .axis.low .diverging .fill { background: #ffb86b; }
 .axis-detail { font-size: 10.5px; color: var(--muted); }
+.role-champ-text { display: inline-flex; flex-direction: column; line-height: 1.15; color: var(--text); }
+.role-champ .tier { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.role-champ.tier-main .tier { color: var(--gold); }
+.role-champ.tier-learning .tier { color: var(--blue); }
+.role-champ.tier-rusty .role-champ-text { color: var(--muted); }
+.hole { margin: 6px 0 0 !important; padding: 4px 6px; border-radius: 4px; background: rgba(255, 184, 107, 0.08); }
+.hole strong { color: #ffb86b; font-weight: 600; }
+.hole .covered { color: var(--text); }

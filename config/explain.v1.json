@@ -27,7 +27,17 @@
     "playstyle.metric": "{metric}: you {you}, typical {reference}",
     "playstyle.level.high": "Strength",
     "playstyle.level.mid": "Around typical",
-    "playstyle.level.low": "Room to grow"
+    "playstyle.level.low": "Room to grow",
+    "pool.tier.main": "Main",
+    "pool.tier.comfortable": "Comfortable",
+    "pool.tier.learning": "Learning",
+    "pool.tier.rusty": "Rusty",
+    "pool.hole.magic": "No magic-damage pick",
+    "pool.hole.physical": "No physical-damage pick",
+    "pool.hole.frontline": "No frontline pick",
+    "pool.hole.engage": "No crowd-control pick",
+    "pool.hole.evidence": "Your team lacked it in {lacking} of your last {losses} {role} {losses|loss|losses}",
+    "pool.hole.coveredBy": "{champions} would cover it"
   },
   "settings": {
     "clearGap": 0.05,

@@ -6,6 +6,7 @@ import {
   deriveChampionAttributes,
   draftRole,
   advisePicks,
+  analyzePool,
   computePlaystyle,
   formatMetric,
   metricLabel,
@@ -197,15 +198,62 @@ export class PersonalCoach extends Coach {
       this.p.config.engine,
       this.intendedPositions,
       this.attributes,
-    ).map((r) => ({
-      role: r.role,
-      games: r.games,
-      winRate: r.winRate,
-      score: r.score,
-      enoughData: r.enoughData,
-      champions: r.topChampions.map((id) => champView(id, lookup)!),
-    }));
+    ).map((r) => {
+      const { explain } = this.p.config;
+      const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, explain.templates, String);
+      const pool = r.enoughData
+        ? analyzePool({
+            role: r.role,
+            comfort: this.comfortFor(r.role),
+            masteries: this.profile!.masteries,
+            matches: this.profile!.matches,
+            attributes: this.attributes,
+            intendedPositions: this.intendedPositions,
+            now: Date.now(),
+            config: this.p.config.engine,
+          })
+        : null;
+      return {
+        role: r.role,
+        games: r.games,
+        winRate: r.winRate,
+        score: r.score,
+        enoughData: r.enoughData,
+        pool: (pool?.champions ?? []).map((c) => ({
+          champion: champView(c.championId, lookup)!,
+          tier: c.tier,
+          tierLabel: say(`pool.tier.${c.tier}`),
+          games: c.games,
+          winRate: c.winRate,
+        })),
+        holes: (pool?.holes ?? []).map((h) => ({
+          text: say(`pool.hole.${h.need}`),
+          evidence: h.losses > 0 ? say("pool.hole.evidence", { lacking: h.lossesLacking, losses: h.losses, role: r.role }) : null,
+          coveredBy: h.coveredBy.length
+            ? say("pool.hole.coveredBy", {
+                champions: h.coveredBy
+                  .map((id) => {
+                    const c = pool!.champions.find((x) => x.championId === id)!;
+                    return `${champView(id, lookup)!.name} (${say(`pool.tier.${c.tier}`).toLowerCase()})`;
+                  })
+                  .join(" and "),
+              })
+            : null,
+        })),
+      };
+    });
     this.update({ roles });
+  }
+
+  /** Comfort for a role, cached until the profile changes. */
+  private comfortFor(role: Position | null): Map<ChampionId, ComfortStats> {
+    const key = role ?? "";
+    let comfort = this.comfortByRole.get(key);
+    if (!comfort) {
+      comfort = computeComfort(this.profile!.games, this.profile!.masteries, Date.now(), this.p.config.engine.comfort, role);
+      this.comfortByRole.set(key, comfort);
+    }
+    return comfort;
   }
 
   /** On a new champ select: read which champions are pickable and whether the queue is supported. */
@@ -231,12 +279,7 @@ export class PersonalCoach extends Coach {
     }
     const { engine } = this.p.config;
     const role = draftRole(this.draft, this.profile.games);
-    const key = role ?? "";
-    let comfort = this.comfortByRole.get(key);
-    if (!comfort) {
-      comfort = computeComfort(this.profile.games, this.profile.masteries, Date.now(), engine.comfort, role);
-      this.comfortByRole.set(key, comfort);
-    }
+    const comfort = this.comfortFor(role);
     const advice = advisePicks({
       draft: this.draft,
       pickable: this.pickable,

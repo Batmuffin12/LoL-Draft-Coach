@@ -77,6 +77,27 @@ export const EngineConfigSchema = z.object({
     minReferenceSamples: z.number().int().min(1),
     axes: z.record(z.string(), z.object({ metrics: z.array(z.string().regex(/^-?[\w.]+$/)).min(1) })),
   }),
+  /** Champion pool tiers per role, and the draft needs the pool should cover. */
+  pool: z.object({
+    /** Main: at least coreGames in the role and comfort >= coreMin. */
+    coreMin: unit,
+    coreGames: z.number().int().min(1),
+    /** Comfortable: comfort >= secondaryMin. */
+    secondaryMin: unit,
+    /** Learning: first played within learningWindowDays and at most learningMaxGames games. */
+    learningWindowDays: z.number().positive(),
+    learningMaxGames: z.number().int().min(1),
+    /** Rusty: at least dormantMastery points, unplayed for dormantDays, and a listed role fit. */
+    dormantMastery: z.number().min(0),
+    dormantDays: z.number().positive(),
+    maxPerTier: z.number().int().min(1),
+    /** A champion covers a need at these measured levels (shares and percentiles, 0..1). */
+    coverage: z.object({ damageShare: unit, frontline: unit, engage: unit }),
+    /** A hole is shown only when the team lacked it in at least this share of the player's losses in the role... */
+    minLossShare: unit,
+    /** ...unless there are fewer losses than this to judge by (then it's shown without evidence). */
+    minLossesForEvidence: z.number().int().min(1),
+  }),
   topN: z.number().int().positive(),
 });
 export type EngineConfig = z.infer<typeof EngineConfigSchema>;

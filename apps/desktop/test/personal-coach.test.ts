@@ -141,7 +141,8 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     // Lobby role advice from the same history: middle (19 games) first, bottom (4) after.
     const roles = coach!.state.roles;
     expect(roles[0]).toMatchObject({ role: "middle", games: 19, enoughData: true });
-    expect(roles[0]!.champions.map((c) => c.name)).toContain("Ahri");
+    expect(roles[0]!.pool.map((c) => c.champion.name)).toContain("Ahri");
+    expect(roles[0]!.pool.find((c) => c.champion.name === "Ahri")?.tierLabel).toBeTruthy();
     expect(roles.find((r) => r.role === "bottom")?.enoughData).toBe(false);
     // No other mid players in these fake games, so there's nothing to compare against: no playstyle
     // rather than a guess (positive cases: engine playstyle tests).

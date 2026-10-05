@@ -48,6 +48,23 @@ export interface PickView {
   offMeta: boolean;
 }
 
+/** A champion in the player's pool for a role. */
+export interface PoolChampView {
+  champion: ChampView;
+  tier: "main" | "comfortable" | "learning" | "rusty";
+  tierLabel: string;
+  games: number;
+  winRate: number | null;
+}
+
+/** A draft need the role's pool doesn't cover, with evidence from the player's losses. */
+export interface PoolHoleView {
+  text: string;
+  evidence: string | null;
+  /** e.g. "Lillia (learning) would cover it". */
+  coveredBy: string | null;
+}
+
 /** One role in the lobby's role advice (information only; never sets positions). */
 export interface RoleView {
   role: string;
@@ -55,7 +72,9 @@ export interface RoleView {
   winRate: number;
   score: number;
   enoughData: boolean;
-  champions: ChampView[];
+  /** The pool for this role in tiers (main first). */
+  pool: PoolChampView[];
+  holes: PoolHoleView[];
 }
 
 /**

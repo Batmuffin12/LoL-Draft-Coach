@@ -176,5 +176,22 @@
       }
     }
   },
+  "pool": {
+    "coreMin": 0.55,
+    "coreGames": 8,
+    "secondaryMin": 0.4,
+    "learningWindowDays": 21,
+    "learningMaxGames": 7,
+    "dormantMastery": 50000,
+    "dormantDays": 60,
+    "maxPerTier": 4,
+    "coverage": {
+      "damageShare": 0.6,
+      "frontline": 0.65,
+      "engage": 0.65
+    },
+    "minLossShare": 0.2,
+    "minLossesForEvidence": 5
+  },
   "topN": 3
 }

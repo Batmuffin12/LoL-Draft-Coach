@@ -181,7 +181,7 @@ function Roles({ roles }: { roles: RoleView[] }) {
   if (!roles.length) return null;
   return (
     <section className="card roles">
-      <h2>Your roles</h2>
+      <h2>Your roles and pool</h2>
       <p className="muted small">Ranked by your recent results. Information only — you choose your positions.</p>
       <ol>
         {roles.map((r, i) => (
@@ -195,14 +195,30 @@ function Roles({ roles }: { roles: RoleView[] }) {
                 </span>
               </div>
               {r.enoughData ? (
-                <div className="role-champs">
-                  {r.champions.map((c) => (
-                    <span key={c.id} className="role-champ">
-                      <Icon champ={c} size={22} />
-                      {c.name}
-                    </span>
+                <>
+                  <div className="role-champs">
+                    {r.pool.map((c) => (
+                      <span
+                        key={c.champion.id}
+                        className={`role-champ tier-${c.tier}`}
+                        title={`${c.tierLabel}: ${c.games} game${c.games === 1 ? "" : "s"} in this role${c.winRate === null ? "" : `, ${Math.round(c.winRate * 100)}% win rate`}`}
+                      >
+                        <Icon champ={c.champion} size={22} dim={c.tier === "rusty"} />
+                        <span className="role-champ-text">
+                          {c.champion.name}
+                          <span className="tier">{c.tierLabel}</span>
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  {r.holes.map((h) => (
+                    <p key={h.text} className="hole small">
+                      <strong>{h.text}</strong>
+                      {h.evidence && <span className="muted"> · {h.evidence}</span>}
+                      {h.coveredBy && <span className="covered"> {h.coveredBy}.</span>}
+                    </p>
                   ))}
-                </div>
+                </>
               ) : (
                 <span className="muted small">Not enough games to judge</span>
               )}
