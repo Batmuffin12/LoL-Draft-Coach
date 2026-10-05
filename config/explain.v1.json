@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "English wording for the coach's reasons. Slots: {name} inserts a value, {name:pct} a 0..1 share as a whole percent, {name:champion} a champion name, {name|one|many} picks the singular or plural word by the number in that slot. Numbers always come from the engine. axes/metrics give display names and number formats (percent, decimal, integer) for the playstyle card.",
+  "description": "English wording for the coach's reasons. Slots: {name} inserts a value, {name:pct} a 0..1 share as a whole percent, {name:pct1} with one decimal, {name:signedPct1} a change with its sign (+2.1), {name:champion} a champion name, {name|one|many} picks the singular or plural word by the number in that slot. Numbers always come from the engine. axes/metrics give display names and number formats (percent, decimal, integer) for the playstyle card.",
   "templates": {
     "comfort.role": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate",
     "comfort.roleWithAll": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate ({allGames} games in all roles)",
@@ -37,7 +37,26 @@
     "pool.hole.frontline": "No frontline pick",
     "pool.hole.engage": "No crowd-control pick",
     "pool.hole.evidence": "Your team lacked it in {lacking} of your last {losses} {role} {losses|loss|losses}",
-    "pool.hole.coveredBy": "{champions} would cover it"
+    "pool.hole.coveredBy": "{champions} would cover it",
+    "meta.strong": "Strong in {role} in your rank: {winRate:pct1}% win rate ({games} games)",
+    "meta.weak": "Weak in {role} in your rank right now: {winRate:pct1}% win rate ({games} games)",
+    "lane.good": "{delta:signedPct1}% into {enemy:champion} ({games} games)",
+    "lane.bad": "But {delta:signedPct1}% into {enemy:champion} ({games} games)",
+    "blind.safe": "Safe blind pick: its worst common {role} matchup is {worst:signedPct1}%",
+    "blind.risky": "Risky blind pick: {delta:signedPct1}% into {enemy:champion} ({games} games)",
+    "counter.good": "Good against their {enemy:champion}: {delta:signedPct1}% ({games} games)",
+    "counter.bad": "Weak against their {enemy:champion}: {delta:signedPct1}% ({games} games)",
+    "synergy.good": "Works with your {ally:champion}: {delta:signedPct1}% ({games} games)",
+    "personal.new": "New to you: expect a few learning games",
+    "whyNot.meta": "Picked over your {champion:champion}: stronger in your rank right now ({delta:signedPct1}%)",
+    "whyNot.lane": "Picked over your {champion:champion}: a better lane into {enemy:champion} ({delta:signedPct1}%)",
+    "whyNot.counter": "Picked over your {champion:champion}: better against their team ({delta:signedPct1}%)",
+    "whyNot.synergy": "Picked over your {champion:champion}: works better with your team ({delta:signedPct1}%)",
+    "whyNot.team": "Picked over your {champion:champion}: fills what your team is missing ({delta:signedPct1}%)",
+    "whyNot.personal": "Picked over your {champion:champion}: you play it better in this role ({delta:signedPct1}%)",
+    "ban.counters": "Beats your top {picks} picks by {delta:signedPct1}% on average; picked in {pickRate:pct}% of games",
+    "ban.meta": "Strong in {role}: {winRate:pct1}% win rate, picked in {pickRate:pct}% of games",
+    "expectedWin": "≈ {win:pct}% in this draft"
   },
   "settings": {
     "clearGap": 0.05,

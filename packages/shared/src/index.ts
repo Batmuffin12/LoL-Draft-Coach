@@ -87,15 +87,40 @@ export interface Reason {
   slots: Record<string, string | number>;
 }
 
+/** The parts of a rating-based (engine v2) score. */
+export type TermName = "meta" | "lane" | "counter" | "synergy" | "team" | "personal";
+
+/** One part of a pick's predicted win chance, in rating points (log-odds × 400 / ln 10). */
+export interface Term {
+  name: TermName;
+  /** Weighted rating points this term adds (negative = hurts). */
+  rating: number;
+  /** The same as a change in win chance at 50% (0.021 = +2.1 points). */
+  deltaWin: number;
+  /** Games behind the term's statistic (0 when it has no data). */
+  games: number;
+}
+
 export interface PickRecommendation {
   championId: ChampionId;
-  /** Weighted total in [0, 1]. */
+  /** Weighted total in [0, 1] (engine v2: the predicted win chance). */
   score: number;
+  /** Engine v2 only: predicted win chance in this draft, and its parts. */
+  expectedWin?: number;
+  terms?: Term[];
   factors: FactorScores;
   /** The data behind the score, most important first. */
   reasons: Reason[];
   /** The player plays it in this role, but it isn't a recommended/meta role for the champion. */
   offMeta: boolean;
+}
+
+/** A suggested ban: how much of a threat the champion is to you in this band, and why. */
+export interface BanSuggestion {
+  championId: ChampionId;
+  /** Expected rating points the champion costs you, weighted by how often it's picked. */
+  threat: number;
+  reasons: Reason[];
 }
 
 /** How sure the top pick is: a clear gap, a close call, or thin data. */

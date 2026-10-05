@@ -98,9 +98,67 @@ export const EngineConfigSchema = z.object({
     /** ...unless there are fewer losses than this to judge by (then it's shown without evidence). */
     minLossesForEvidence: z.number().int().min(1),
   }),
+  /**
+   * Engine v2 (live meta): every factor is a term in rating points (400·log10 odds), each a
+   * change over what was already expected, smoothed toward that expectation. Used when a
+   * meta snapshot is loaded; the factor weights in `bands` are the fallback without one.
+   */
+  rating: z.object({
+    /** Term weights per rank band. */
+    bands: z.record(z.string().regex(/^\d+$/), z.object({ meta: weight, lane: weight, counter: weight, synergy: weight, team: weight, personal: weight })),
+    /** Prior games: how strongly thin statistics are pulled toward what was expected. */
+    priorGames: z.object({ meta: z.number().min(0), pair: z.number().min(0) }),
+    /** Statistics with fewer games are not shown as reasons ("not enough data"). */
+    minGames: z.object({ meta: z.number().int().min(0), pair: z.number().int().min(0) }),
+    /** Cross-lane opponents and allies matter less than the lane opponent (0..1). */
+    counterWeight: unit,
+    synergyWeight: unit,
+    /** Team needs (0..1, 0.5 = neutral) to rating points: (score - 0.5) · ratingScale. */
+    teamRatingScale: z.number().min(0),
+    personal: z.object({
+      /** Comfort (0..1) to rating points: (comfort - neutralComfort) · comfortScale. */
+      comfortScale: z.number().min(0),
+      neutralComfort: unit,
+      /** Rating points for a champion the player has never played; also the floor for low comfort. */
+      learningPenalty: z.number().min(0),
+      /** Suggest champions the player hasn't played yet (they carry the learning penalty). */
+      includeUnplayed: z.boolean(),
+    }),
+    /** Lane opponent unknown: expected matchup over likely opponents, minus a share of the bad tail. */
+    blind: z.object({
+      riskAversion: z.number().min(0),
+      /** Quantile (0..1) of the opponents' matchup deltas taken as the bad tail. */
+      riskQuantile: unit,
+      /** Most-played opponents considered. */
+      maxOpponents: z.number().int().min(1),
+      /** A blind pick is "safe" when its bad tail is no worse than this (rating points). */
+      safeMaxLoss: z.number().min(0),
+    }),
+    /** The counter term counts this much more when every enemy has picked. */
+    lastPickCounterBoost: z.number().min(1),
+    bans: z.object({
+      /** Champions picked in fewer games than this share (0..1) aren't considered. */
+      minPickRate: unit,
+      /** Weight of a champion's own strength next to how badly it beats your picks. */
+      metaWeight: z.number().min(0),
+      /** How many of your best picks a ban should protect. */
+      protectPicks: z.number().int().min(1),
+      topN: z.number().int().min(1),
+    }),
+    explain: z.object({
+      /** Terms smaller than this change in win chance (0..1) give no reason. */
+      minDeltaWin: unit,
+      maxReasons: z.number().int().min(1),
+      /** Predicted win-chance gap (0..1) between #1 and #2 for a "clear pick". */
+      clearGapWin: unit,
+      /** Factor bars: this change in win chance fills a bar from the middle to the end. */
+      barScaleWin: z.number().positive(),
+    }),
+  }),
   topN: z.number().int().positive(),
 });
 export type EngineConfig = z.infer<typeof EngineConfigSchema>;
+export type RatingConfig = EngineConfig["rating"];
 
 export const RankBandConfigSchema = z.object({
   version: z.number().int().positive(),
