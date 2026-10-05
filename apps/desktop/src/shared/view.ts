@@ -50,6 +50,15 @@ export interface PickView {
   offMeta: boolean;
 }
 
+/** The champion the local player has locked in, and how it looks in this draft. */
+export interface MyPickView {
+  champion: ChampView;
+  role: string | null;
+  /** Predicted win chance in this draft (live meta only). */
+  expectedWin: number | null;
+  reasons: string[];
+}
+
 /** A suggested ban (ban phase, live meta only). */
 export interface BanView {
   champion: ChampView;
@@ -139,6 +148,8 @@ export interface ViewState {
   pickAdvice: PickAdviceView;
   /** Ban suggestions while the local player is banning (empty otherwise). */
   bans: BanView[];
+  /** Set once the local player has locked in a champion (suggestions stop then). */
+  myPick: MyPickView | null;
   /** Null until a snapshot is loaded (or in dev-only direct mode, which has no meta). */
   meta: MetaView | null;
   /** Role the picks are for, if known. */
@@ -159,6 +170,7 @@ export function emptyViewState(): ViewState {
     picks: [],
     pickAdvice: { whyNot: null, confidence: null },
     bans: [],
+    myPick: null,
     meta: null,
     pickRole: null,
     roles: [],

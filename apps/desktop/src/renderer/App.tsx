@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { AccountView, BanView, ChampView, DraftView, MetaView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
+import type { AccountView, BanView, ChampView, DraftView, MetaView, MyPickView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -136,6 +136,40 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
       </ol>
       {state.pickAdvice.whyNot && picks.length > 0 && <p className="why-not">{state.pickAdvice.whyNot}</p>}
       <p className="disclaimer">Suggestions only — you choose and lock your champion.</p>
+    </section>
+  );
+}
+
+/** The champion you locked in, and how it looks in this draft. Runes and items will go here (milestone 6). */
+function YourPick({ pick }: { pick: MyPickView }) {
+  return (
+    <section className="card picks your-pick">
+      <h2 className="picks-head">
+        <span>
+          Your pick{pick.role ? <span className="muted"> · {pick.role}</span> : null}
+        </span>
+      </h2>
+      <div className="pick">
+        <Icon champ={pick.champion} size={48} />
+        <div className="pick-body">
+          <div className="pick-head">
+            <strong>{pick.champion.name}</strong>
+            {pick.expectedWin !== null && (
+              <span className="score" title="Predicted win chance in this draft, from the live meta in your rank and your own games">
+                ≈ {Math.round(pick.expectedWin * 100)}%
+              </span>
+            )}
+          </div>
+          {pick.reasons.length > 0 && (
+            <ul className="reasons">
+              {pick.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <p className="muted small">Locked in. Runes and items for {pick.champion.name} will show here.</p>
     </section>
   );
 }
@@ -408,7 +442,7 @@ export function App() {
             </section>
 
             <BanSuggestions bans={state.bans} />
-            <Picks picks={state.picks} role={state.pickRole} state={state} />
+            {state.myPick ? <YourPick pick={state.myPick} /> : <Picks picks={state.picks} role={state.pickRole} state={state} />}
 
             <section className="card teams">
               <div>

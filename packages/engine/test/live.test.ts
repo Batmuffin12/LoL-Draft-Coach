@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { ChampionRoleStat, DraftState, MetaSnapshot, PairStat, Reason } from "@ldc/shared";
 import {
   adviseLivePicks,
+  assessPick,
   assignRoles,
   computeComfort,
   deltaWin,
@@ -243,6 +244,16 @@ describe("adviseLivePicks", () => {
   it("says when the meta has too little data, and otherwise how clear the top pick is", () => {
     expect(adviseLivePicks(input(draft([201]), { index: index(snapshot({ gamesScale: 0.02 })) })).confidence).toBe("thin");
     expect(adviseLivePicks(input(draft([201]))).confidence).toMatch(/clear|close/);
+  });
+});
+
+describe("assessPick", () => {
+  it("scores the player's locked-in champion even though the draft counts it as taken", () => {
+    const d = draft([201]);
+    const p = assessPick(input(d, { unavailable: new Set([201, 102]) }), 102);
+    expect(p.championId).toBe(102);
+    expect(p.expectedWin).toBeGreaterThan(0.5);
+    expect(text(p.reasons)).toMatch(/into #201 \(300 games\)/);
   });
 });
 

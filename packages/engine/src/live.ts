@@ -295,6 +295,21 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
 }
 
 /**
+ * How a champion the player has already locked in looks in this draft: predicted win
+ * chance, terms and reasons, scored like a suggestion. The champion itself is not treated
+ * as taken (it's the player's own pick).
+ */
+export function assessPick(input: LiveInput, championId: ChampionId): PickRecommendation {
+  const unavailable = new Set(input.unavailable);
+  unavailable.delete(championId);
+  const own = { ...input, unavailable };
+  const ctx = context(own);
+  const comfort = input.comfort.get(championId);
+  const fit = comfort ? roleFit(championId, comfort, ctx.role, input.intendedPositions, ctx.attributes, input.config.roles) : "meta";
+  return scoreCandidate(championId, comfort, fit === "offMeta", own, ctx).pick;
+}
+
+/**
  * Ban suggestions for the ban phase: champions that are picked often in the band and
  * either beat the player's best picks for their role or are simply strong. Champions the
  * player would pick, allies have shown, or that are already gone are never suggested.

@@ -145,5 +145,13 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(picks.every((p) => p.expectedWin !== null && p.expectedWin > 0 && p.expectedWin < 1)).toBe(true);
     const strong = picks.find((p) => p.champion.id === 245);
     expect(strong?.reasons.join(" ")).toMatch(/Strong in middle in your rank: 56\.0% win rate \(400 games\)/);
+
+    // Once the player locks in, suggestions stop and the panel shows their own pick.
+    while (coach.state.myPick === null && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await waitFor(() => coach!.state.myPick !== null);
+    expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, role: "middle" });
+    expect(coach.state.myPick!.expectedWin).toBeGreaterThan(0);
+    expect(coach.state.picks).toEqual([]);
+    expect(coach.state.pickAdvice.whyNot).toBeNull();
   });
 });

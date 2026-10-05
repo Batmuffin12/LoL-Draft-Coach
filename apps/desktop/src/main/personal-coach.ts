@@ -15,6 +15,7 @@ import {
   renderReason,
   weightsForBand,
   adviseLivePicks,
+  assessPick,
   suggestBans,
   MetaIndex,
   type ChampionAttributes,
@@ -39,6 +40,15 @@ export interface PersonalCoachDeps extends CoachDeps {
   riotId: string | null;
   /** Live meta snapshots (server mode); null: score from the player's own data only (engine v1). */
   meta?: MetaSource | null;
+}
+
+/** The champion the local player has locked in (their pick action is completed), or null. */
+export function lockedPick(draft: DraftState): ChampionId | null {
+  const action = draft.actions.find((a) => a.type === "pick" && a.actorCellId === draft.localCellId && a.completed && a.championId > 0);
+  if (action) return action.championId;
+  // After the pick phase (finalization), the seat's champion is final even if actions are trimmed.
+  const me = draft.myTeam.find((s) => s.isLocalPlayer);
+  return draft.timerPhase === "FINALIZATION" && me && me.championId > 0 ? me.championId : null;
 }
 
 /** The local player is banning right now, or the draft is in the planning phase before bans. */
@@ -321,7 +331,7 @@ export class PersonalCoach extends Coach {
     if (this.draft && !this.hadDraft) void this.onChampSelectStart();
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
-      this.update({ picks: [], bans: [], pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], bans: [], myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.p.config;
@@ -340,7 +350,6 @@ export class PersonalCoach extends Coach {
     };
     // Live meta (engine v2) when the band's snapshot is loaded; the player's own data otherwise.
     const live = this.metaIndex ? { ...input, index: this.metaIndex, band: this.band } : null;
-    const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.p.config.explain.settings);
     const lookup = (id: number) => {
       try {
         return this.deps.ddragon.champion(id);
@@ -351,6 +360,26 @@ export class PersonalCoach extends Coach {
     const { templates } = this.p.config.explain;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
     const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);
+
+    // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
+    const locked = lockedPick(this.draft);
+    if (locked !== null) {
+      const assessed = live ? assessPick(live, locked) : null;
+      this.update({
+        picks: [],
+        bans: [],
+        pickAdvice: { whyNot: null, confidence: null },
+        pickRole: role,
+        myPick: {
+          champion: champView(locked, lookup)!,
+          role,
+          expectedWin: assessed?.expectedWin ?? null,
+          reasons: assessed ? assessed.reasons.map(say) : [],
+        },
+      });
+      return;
+    }
+    const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.p.config.explain.settings);
     const views: PickView[] = advice.picks.map((p) => ({
       champion: champView(p.championId, lookup)!,
       score: p.score,
@@ -367,6 +396,6 @@ export class PersonalCoach extends Coach {
       live && banningNow(this.draft)
         ? suggestBans(live).map((b) => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say) }))
         : [];
-    this.update({ picks: views, pickAdvice, bans, pickRole: role });
+    this.update({ picks: views, pickAdvice, bans, myPick: null, pickRole: role });
   }
 }
