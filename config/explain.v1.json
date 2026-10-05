@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "description": "English wording for the coach's reasons. Slots: {name} inserts a value, {name:pct} a 0..1 share as a whole percent, {name:champion} a champion name, {name|one|many} picks the singular or plural word by the number in that slot. Numbers always come from the engine. axes/metrics give display names and number formats (percent, decimal, integer) for the playstyle card.",
+  "templates": {
+    "comfort.role": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate",
+    "comfort.roleWithAll": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate ({allGames} games in all roles)",
+    "comfort.otherRoles": "{games} recent {games|game|games} in other roles, {winRate:pct}% win rate",
+    "comfort.any": "{games} recent {games|game|games}, {winRate:pct}% win rate",
+    "mastery": "Mastery {level}, {kPoints}k points",
+    "mastery.grades": "Mastery {level}, {kPoints}k points, grades {grades}",
+    "team.magic": "Adds magic damage (your team is {physical:pct}% physical so far)",
+    "team.physical": "Adds physical damage (your team is {magic:pct}% magic so far)",
+    "team.frontline": "Adds the frontline your team is missing",
+    "team.engage": "Adds crowd control your team is missing",
+    "offMeta.usual": "Off-meta in {role} (usually {usual})",
+    "offMeta": "Off-meta in {role}",
+    "whyNot.unavailable": "Your {champion:champion} is banned or taken",
+    "whyNot.team.magic": "Picked over your {champion:champion}: your team needs magic damage",
+    "whyNot.team.physical": "Picked over your {champion:champion}: your team needs physical damage",
+    "whyNot.team.frontline": "Picked over your {champion:champion}: your team needs a frontline",
+    "whyNot.team.engage": "Picked over your {champion:champion}: your team needs crowd control",
+    "whyNot.offMeta": "Picked over your {champion:champion}: it's off-meta in {role}",
+    "whyNot.notPickable": "Your {champion:champion} isn't available to you in this queue",
+    "confidence.clear": "Clear pick",
+    "confidence.close": "Close call",
+    "confidence.thin": "Not much data yet",
+    "playstyle.metric": "{metric}: you {you}, typical {reference}",
+    "playstyle.level.high": "Strength",
+    "playstyle.level.mid": "Around typical",
+    "playstyle.level.low": "Room to grow",
+    "pool.tier.main": "Main",
+    "pool.tier.comfortable": "Comfortable",
+    "pool.tier.learning": "Learning",
+    "pool.tier.rusty": "Rusty",
+    "pool.hole.magic": "No magic-damage pick",
+    "pool.hole.physical": "No physical-damage pick",
+    "pool.hole.frontline": "No frontline pick",
+    "pool.hole.engage": "No crowd-control pick",
+    "pool.hole.evidence": "Your team lacked it in {lacking} of your last {losses} {role} {losses|loss|losses}",
+    "pool.hole.coveredBy": "{champions} would cover it"
+  },
+  "settings": {
+    "clearGap": 0.05,
+    "minGames": 3,
+    "minMasteryPoints": 20000,
+    "playstyleHigh": 0.58,
+    "playstyleLow": 0.42
+  },
+  "axes": {
+    "earlyPressure": "Early pressure",
+    "fighting": "Fighting",
+    "farming": "Farming",
+    "vision": "Vision",
+    "riskControl": "Staying alive",
+    "objectives": "Objectives",
+    "roaming": "Roaming",
+    "playmaking": "Playmaking (CC)"
+  },
+  "metrics": {
+    "challenges.takedownsFirstXMinutes": {
+      "label": "takedowns before 10 min",
+      "format": "decimal"
+    },
+    "challenges.earlyLaningPhaseGoldExpAdvantage": {
+      "label": "early lane lead",
+      "format": "decimal"
+    },
+    "challenges.laningPhaseGoldExpAdvantage": {
+      "label": "lane lead at 14 min",
+      "format": "decimal"
+    },
+    "challenges.maxCsAdvantageOnLaneOpponent": {
+      "label": "biggest CS lead",
+      "format": "integer"
+    },
+    "challenges.turretPlatesTaken": {
+      "label": "turret plates",
+      "format": "decimal"
+    },
+    "challenges.killsOnLanersEarlyJungleAsJungler": {
+      "label": "early gank kills",
+      "format": "decimal"
+    },
+    "challenges.initialCrabCount": {
+      "label": "first scuttle crabs",
+      "format": "decimal"
+    },
+    "challenges.enemyJungleMonsterKills": {
+      "label": "enemy jungle camps taken",
+      "format": "decimal"
+    },
+    "challenges.killParticipation": {
+      "label": "kill participation",
+      "format": "percent"
+    },
+    "challenges.teamDamagePercentage": {
+      "label": "share of team damage",
+      "format": "percent"
+    },
+    "challenges.damagePerMinute": {
+      "label": "damage per minute",
+      "format": "integer"
+    },
+    "challenges.soloKills": {
+      "label": "solo kills",
+      "format": "decimal"
+    },
+    "csPerMinute": {
+      "label": "CS per minute",
+      "format": "decimal"
+    },
+    "challenges.laneMinionsFirst10Minutes": {
+      "label": "CS at 10 min",
+      "format": "integer"
+    },
+    "challenges.jungleCsBefore10Minutes": {
+      "label": "jungle CS at 10 min",
+      "format": "integer"
+    },
+    "challenges.goldPerMinute": {
+      "label": "gold per minute",
+      "format": "integer"
+    },
+    "challenges.visionScorePerMinute": {
+      "label": "vision score per minute",
+      "format": "decimal"
+    },
+    "challenges.controlWardsPlaced": {
+      "label": "control wards",
+      "format": "decimal"
+    },
+    "challenges.wardTakedowns": {
+      "label": "wards cleared",
+      "format": "decimal"
+    },
+    "challenges.visionScoreAdvantageLaneOpponent": {
+      "label": "vision lead over your opponent",
+      "format": "percent"
+    },
+    "deathsPerMinute": {
+      "label": "deaths per minute",
+      "format": "decimal"
+    },
+    "challenges.deathsByEnemyChamps": {
+      "label": "deaths to champions",
+      "format": "decimal"
+    },
+    "challenges.dragonTakedowns": {
+      "label": "dragons",
+      "format": "decimal"
+    },
+    "challenges.riftHeraldTakedowns": {
+      "label": "heralds",
+      "format": "decimal"
+    },
+    "challenges.baronTakedowns": {
+      "label": "barons",
+      "format": "decimal"
+    },
+    "challenges.turretTakedowns": {
+      "label": "turrets",
+      "format": "decimal"
+    },
+    "objectiveDamagePerMinute": {
+      "label": "objective damage per minute",
+      "format": "integer"
+    },
+    "challenges.killsOnOtherLanesEarlyJungleAsLaner": {
+      "label": "early kills in other lanes",
+      "format": "decimal"
+    },
+    "challenges.getTakedownsInAllLanesEarlyJungleAsLaner": {
+      "label": "early takedowns in every lane",
+      "format": "decimal"
+    },
+    "challenges.moreEnemyJungleThanOpponent": {
+      "label": "enemy jungle taken vs opponent",
+      "format": "decimal"
+    },
+    "ccPerMinute": {
+      "label": "CC seconds per minute",
+      "format": "decimal"
+    },
+    "challenges.enemyChampionImmobilizations": {
+      "label": "enemy immobilisations",
+      "format": "decimal"
+    },
+    "challenges.pickKillWithAlly": {
+      "label": "picks with an ally",
+      "format": "decimal"
+    }
+  }
+}

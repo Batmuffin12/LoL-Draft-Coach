@@ -1,11 +1,21 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { parseAppConfig, parseEngineConfig, parseRankBandConfig, type AppConfig, type EngineConfig, type RankBandConfig } from "@ldc/engine";
+import {
+  parseAppConfig,
+  parseEngineConfig,
+  parseExplainConfig,
+  parseRankBandConfig,
+  type AppConfig,
+  type EngineConfig,
+  type ExplainConfig,
+  type RankBandConfig,
+} from "@ldc/engine";
 
 export interface ServerConfig {
   app: AppConfig;
   engine: EngineConfig;
   bands: RankBandConfig;
+  explain: ExplainConfig;
 }
 
 /** The repo's config/ folder: LDC_CONFIG_DIR, or the nearest config/ walking up from `start`. */
@@ -27,5 +37,6 @@ export function loadServerConfig(dir: string): ServerConfig {
     app: parseAppConfig(read("app.v1.json")),
     engine: parseEngineConfig(read("engine.v1.json")),
     bands: parseRankBandConfig(read("rank-bands.v1.json")),
+    explain: parseExplainConfig(read("explain.v1.json")),
   };
 }

@@ -48,6 +48,23 @@ export interface PickView {
   offMeta: boolean;
 }
 
+/** A champion in the player's pool for a role. */
+export interface PoolChampView {
+  champion: ChampView;
+  tier: "main" | "comfortable" | "learning" | "rusty";
+  tierLabel: string;
+  games: number;
+  winRate: number | null;
+}
+
+/** A draft need the role's pool doesn't cover, with evidence from the player's losses. */
+export interface PoolHoleView {
+  text: string;
+  evidence: string | null;
+  /** e.g. "Lillia (learning) would cover it". */
+  coveredBy: string | null;
+}
+
 /** One role in the lobby's role advice (information only; never sets positions). */
 export interface RoleView {
   role: string;
@@ -55,7 +72,9 @@ export interface RoleView {
   winRate: number;
   score: number;
   enoughData: boolean;
-  champions: ChampView[];
+  /** The pool for this role in tiers (main first). */
+  pool: PoolChampView[];
+  holes: PoolHoleView[];
 }
 
 /**
@@ -72,15 +91,45 @@ export interface AccountView {
   message: string | null;
 }
 
+/** One playstyle axis as the lobby shows it. */
+export interface AxisView {
+  axis: string;
+  label: string;
+  /** 0..100: average percentile against others in the role. */
+  score: number;
+  level: "high" | "mid" | "low";
+  levelLabel: string;
+  /** The metric that moves this axis most, e.g. "deaths per minute: you 0.3, typical 0.2". */
+  detail: string | null;
+  games: number;
+}
+
+/** The player's playstyle in one role. */
+export interface PlaystyleView {
+  role: string;
+  games: number;
+  axes: AxisView[];
+}
+
+/** The explanation for the pick list as a whole. */
+export interface PickAdviceView {
+  /** "Picked over your usual X because …", or null. */
+  whyNot: string | null;
+  confidence: { level: "clear" | "close" | "thin"; label: string } | null;
+}
+
 export interface ViewState {
   account: AccountView | null;
   status: CoachStatus;
   draft: DraftView | null;
   picks: PickView[];
+  pickAdvice: PickAdviceView;
   /** Role the picks are for, if known. */
   pickRole: string | null;
   /** Your roles ranked by recent results, for the lobby. */
   roles: RoleView[];
+  /** Your playstyle per role with enough games (most played first). */
+  playstyle: PlaystyleView[];
   notices: string[];
   docked: boolean;
 }
@@ -91,8 +140,10 @@ export function emptyViewState(): ViewState {
     status: { lcu: "searching", gameflowPhase: null, patch: null, band: null, profile: { state: "idle" } },
     draft: null,
     picks: [],
+    pickAdvice: { whyNot: null, confidence: null },
     pickRole: null,
     roles: [],
+    playstyle: [],
     notices: [],
     docked: true,
   };

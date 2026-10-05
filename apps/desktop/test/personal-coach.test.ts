@@ -7,7 +7,7 @@ import { LcuConnector } from "@ldc/lcu";
 import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
 import { RiotApi, type Match } from "@ldc/riot-api";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { MatchStore, minimizeMatch } from "../src/main/match-store";
+import { MatchStore, toUserMatch } from "../src/main/match-store";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { DirectProfileSource } from "../src/main/profile-source";
 import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
@@ -27,12 +27,12 @@ describe("config loading", () => {
 });
 
 describe("match store", () => {
-  it("keeps no identifiers when minimising a match", async () => {
+  it("keeps no identifiers when storing a match", async () => {
     const riot = riotWith(fakeRiotFetch().fetchFn);
     const match = (await riot.match("EUW1_1000")) as Match;
-    const stored = minimizeMatch(match, LOCAL_PUUID);
-    expect(stored.me).toMatchObject({ championId: 103, position: "middle" });
-    expect(stored.samples).toHaveLength(10);
+    const stored = toUserMatch(match, LOCAL_PUUID);
+    expect(stored.match.participants[stored.me]).toMatchObject({ championId: 103, position: "middle" });
+    expect(stored.match.participants).toHaveLength(10);
     expect(JSON.stringify(stored)).not.toMatch(/puuid|other-|name-|mock-local/);
   });
 
@@ -135,12 +135,18 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     // Riot's positions come from the client (fixture): Ahri/Ekko/Akali are all listed for middle.
     expect(picks.every((p) => !p.offMeta)).toBe(true);
     expect(picks.find((p) => p.champion.id === 103)!.reasons.join(" ")).toMatch(/grades S A+/);
+    // The list as a whole is explained: a confidence label from our own data.
+    expect(coach!.state.pickAdvice.confidence?.label).toMatch(/Clear pick|Close call|Not much data yet/);
 
     // Lobby role advice from the same history: middle (19 games) first, bottom (4) after.
     const roles = coach!.state.roles;
     expect(roles[0]).toMatchObject({ role: "middle", games: 19, enoughData: true });
-    expect(roles[0]!.champions.map((c) => c.name)).toContain("Ahri");
+    expect(roles[0]!.pool.map((c) => c.champion.name)).toContain("Ahri");
+    expect(roles[0]!.pool.find((c) => c.champion.name === "Ahri")?.tierLabel).toBeTruthy();
     expect(roles.find((r) => r.role === "bottom")?.enoughData).toBe(false);
+    // No other mid players in these fake games, so there's nothing to compare against: no playstyle
+    // rather than a guess (positive cases: engine playstyle tests).
+    expect(coach!.state.playstyle).toEqual([]);
 
     // Compliance: nothing identity-like ever reaches the panel.
     expect(JSON.stringify(states)).not.toMatch(/puuid|mock-local|other-|name-|gameName|tagLine/i);

@@ -93,3 +93,39 @@ main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: 
 .account-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
 .account-row .actions, .account-row .confirm { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .legal { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+.picks-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.confidence {
+  font-size: 10px; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; text-transform: none;
+  border: 1px solid var(--line); color: var(--muted); font-weight: 600; white-space: nowrap;
+}
+.confidence.clear { color: var(--ok); border-color: rgba(60, 207, 142, 0.45); }
+.confidence.close { color: var(--gold); border-color: rgba(200, 170, 110, 0.45); }
+.confidence.thin { color: var(--muted); }
+.why-not { margin: 8px 0 0; padding: 6px 8px; border-left: 2px solid var(--gold); background: rgba(200, 170, 110, 0.08); font-size: 12px; }
+.role-tabs { display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+.tab {
+  background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+  padding: 2px 9px; font: inherit; font-size: 11px; text-transform: capitalize; cursor: pointer;
+}
+.tab.on { color: var(--text); border-color: var(--gold); }
+.tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.axes { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.axis { display: flex; flex-direction: column; gap: 3px; }
+.axis-head { display: flex; justify-content: space-between; font-size: 12px; }
+.axis-score { font-variant-numeric: tabular-nums; color: var(--muted); }
+.axis.high .axis-score { color: var(--ok); }
+.axis.low .axis-score { color: #ffb86b; }
+.diverging { position: relative; height: 6px; border-radius: 3px; background: #1c2433; overflow: hidden; }
+.diverging .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--muted); opacity: 0.6; }
+.diverging .fill { position: absolute; top: 0; bottom: 0; background: var(--muted); }
+.axis.high .diverging .fill { background: var(--ok); }
+.axis.low .diverging .fill { background: #ffb86b; }
+.axis-detail { font-size: 10.5px; color: var(--muted); }
+.role-champ-text { display: inline-flex; flex-direction: column; line-height: 1.15; color: var(--text); }
+.role-champ .tier { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.role-champ.tier-main .tier { color: var(--gold); }
+.role-champ.tier-learning .tier { color: var(--blue); }
+.role-champ.tier-rusty .role-champ-text { color: var(--muted); }
+.hole { margin: 6px 0 0 !important; padding: 4px 6px; border-radius: 4px; background: rgba(255, 184, 107, 0.08); }
+.hole strong { color: #ffb86b; font-weight: 600; }
+.hole .covered { color: var(--text); }

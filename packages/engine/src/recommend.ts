@@ -1,5 +1,6 @@
-import type { ChampionId, DraftState, FactorName, FactorScores, PickRecommendation, Position } from "@ldc/shared";
+import type { ChampionId, DraftState, FactorName, FactorScores, PickAdvice, PickRecommendation, Position, Reason } from "@ldc/shared";
 import type { EngineConfig, FactorWeights } from "./config";
+import { confidenceOf, reason, type ExplainConfig } from "./explain";
 import { scoreTeamNeeds, teamProfile } from "./team-needs";
 import type { ChampionAttributes, ComfortStats, PlayerGame } from "./types";
 
@@ -80,16 +81,11 @@ export function roleFit(
   return (comfort.gamesByPosition[role] ?? 0) >= roles.offMetaMinGames ? "offMeta" : null;
 }
 
-/**
- * Ranks the player's own champion pool for this draft. Pure: no I/O.
- * Pool = champions the player has games or mastery on, that are pickable and available,
- * and that fit the role. Off-meta picks the player plays stay in, tagged and penalised.
- */
-export function recommendPicks(input: RecommendInput): PickRecommendation[] {
+/** Scores every eligible champion in the player's pool (unsorted, not cut to topN). */
+function scoreCandidates(input: RecommendInput): PickRecommendation[] {
   const { comfort, attributes, role, config } = input;
   const pickable = new Set(input.pickable);
   const profile = teamProfile(allyChampions(input.draft), attributes);
-
 
   const out: PickRecommendation[] = [];
   for (const [id, c] of comfort) {
@@ -103,30 +99,95 @@ export function recommendPicks(input: RecommendInput): PickRecommendation[] {
     const factors: FactorScores = {
       comfort: c.score,
       teamNeeds: team.score,
-      laneMatchup: null, // milestone 3 (live meta)
-      counterValue: null, // milestone 3
-      metaStrength: null, // milestone 3
+      laneMatchup: null, // milestone 5 (live meta)
+      counterValue: null, // milestone 5
+      metaStrength: null, // milestone 5
     };
-    const reasons: string[] = [];
-    const plural = (n: number) => (n === 1 ? "" : "s");
+    const reasons: Reason[] = [];
     if (role && c.gamesInRole && c.winRateInRole !== null) {
-      const extra = c.games > c.gamesInRole ? ` (${c.games} games in all roles)` : "";
-      reasons.push(`${c.gamesInRole} recent ${role} game${plural(c.gamesInRole)}, ${Math.round(c.winRateInRole * 100)}% win rate${extra}`);
+      reasons.push(
+        c.games > c.gamesInRole
+          ? reason("comfort.roleWithAll", { games: c.gamesInRole, role, winRate: c.winRateInRole, allGames: c.games })
+          : reason("comfort.role", { games: c.gamesInRole, role, winRate: c.winRateInRole }),
+      );
     } else if (c.games > 0 && c.winRate !== null) {
-      reasons.push(`${c.games} recent game${plural(c.games)}${role ? " in other roles" : ""}, ${Math.round(c.winRate * 100)}% win rate`);
+      reasons.push(reason(role ? "comfort.otherRoles" : "comfort.any", { games: c.games, winRate: c.winRate }));
     }
     if (c.masteryLevel !== null) {
-      const grades = c.grades.length ? `, grades ${c.grades.join(" ")}` : "";
-      reasons.push(`Mastery ${c.masteryLevel}, ${Math.round(c.masteryPoints / 1000)}k points${grades}`);
+      const kPoints = Math.round(c.masteryPoints / 1000);
+      reasons.push(
+        c.grades.length
+          ? reason("mastery.grades", { level: c.masteryLevel, kPoints, grades: c.grades.join(" ") })
+          : reason("mastery", { level: c.masteryLevel, kPoints }),
+      );
     }
     reasons.push(...team.reasons);
-    if (offMeta) {
+    if (offMeta && role) {
       const listed = input.intendedPositions.get(id);
-      reasons.push(`Off-meta in ${role}${listed?.length ? ` (usually ${listed.join(" / ")})` : ""}`);
+      reasons.push(listed?.length ? reason("offMeta.usual", { role, usual: listed.join(" / ") }) : reason("offMeta", { role }));
     }
     const score = combineFactors(factors, input.weights) * (offMeta ? 1 - config.roles.offMetaPenalty : 1);
     out.push({ championId: id, score, factors, reasons, offMeta });
   }
+  return out;
+}
 
-  return out.sort((a, b) => b.score - a.score || a.championId - b.championId).slice(0, config.topN);
+const byScore = (a: PickRecommendation, b: PickRecommendation) => b.score - a.score || a.championId - b.championId;
+
+/**
+ * Ranks the player's own champion pool for this draft. Pure: no I/O.
+ * Pool = champions the player has games or mastery on, that are pickable and available,
+ * and that fit the role. Off-meta picks the player plays stay in, tagged and penalised.
+ */
+export function recommendPicks(input: RecommendInput): PickRecommendation[] {
+  return scoreCandidates(input).sort(byScore).slice(0, input.config.topN);
+}
+
+/**
+ * The player's usual pick for the role: their highest-comfort champion that they have
+ * played and that fits the role (whether or not it is available right now).
+ */
+export function usualPick(input: RecommendInput): ComfortStats | null {
+  let best: ComfortStats | null = null;
+  for (const c of input.comfort.values()) {
+    const played = input.role ? (c.gamesInRole ?? 0) : c.games;
+    if (played <= 0) continue;
+    if (!roleFit(c.championId, c, input.role, input.intendedPositions, input.attributes, input.config.roles)) continue;
+    if (!best || c.score > best.score || (c.score === best.score && c.championId < best.championId)) best = c;
+  }
+  return best;
+}
+
+/**
+ * Ranked picks with the explanation for the list: why #1 beats the player's usual pick
+ * for this role, and how sure the coach is (from sample sizes and the score gap).
+ */
+export function advisePicks(input: RecommendInput, explain: ExplainConfig["settings"]): PickAdvice {
+  const all = scoreCandidates(input).sort(byScore);
+  const picks = all.slice(0, input.config.topN);
+  const top = picks[0];
+  if (!top) return { picks, whyNot: null, confidence: null };
+
+  const topComfort = input.comfort.get(top.championId);
+  const confidence = confidenceOf(
+    { score: top.score, games: topComfort?.games ?? 0, masteryPoints: topComfort?.masteryPoints ?? 0 },
+    picks[1],
+    explain,
+  );
+
+  let whyNot: Reason | null = null;
+  const usual = usualPick(input);
+  if (usual && usual.championId !== top.championId) {
+    const champion = usual.championId;
+    const pickable = new Set(input.pickable);
+    const scored = all.find((p) => p.championId === champion);
+    if (input.unavailable.has(champion)) whyNot = reason("whyNot.unavailable", { champion });
+    else if (pickable.size && !pickable.has(champion)) whyNot = reason("whyNot.notPickable", { champion });
+    else if (scored?.offMeta && !top.offMeta && input.role) whyNot = reason("whyNot.offMeta", { champion, role: input.role });
+    else if (scored && (top.factors.teamNeeds ?? 0) > (scored.factors.teamNeeds ?? 0)) {
+      const need = top.reasons.find((r) => r.id.startsWith("team."));
+      if (need) whyNot = reason(`whyNot.${need.id}`, { champion });
+    }
+  }
+  return { picks, whyNot, confidence };
 }

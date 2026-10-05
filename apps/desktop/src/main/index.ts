@@ -133,7 +133,8 @@ async function main(): Promise<void> {
     // Development only: the key from the local .env, used here in the main process and
     // never sent to the renderer. Packaged builds always use the coach server.
     const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
-    const matchesDir = join(app.getPath("userData"), "matches");
+    // v2: full anonymised match summaries (0.4+); the older trimmed cache is ignored.
+    const matchesDir = join(app.getPath("userData"), "matches-v2");
     profiles = new DirectProfileSource({
       riot,
       history: config.app.history,

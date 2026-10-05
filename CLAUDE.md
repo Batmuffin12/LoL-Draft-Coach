@@ -11,7 +11,7 @@
 | Jev (TypeSafe AI) | **Optional, off the critical path** (decided Oct 5, 2026). `packages/jev` stays frozen behind `JEV_ENABLED=false`. Confidence labels come from our own sample sizes. Do not guess Jev's API. |
 | Sentry | Milestone 8. |
 | Railway | Server host (Hobby plan, usage limit). Config in `railway.json`; steps in `docs/DEPLOY.md`. Deploying needs the owner's Railway account. Oracle Cloud Always Free is the $0 fallback. |
-| Milestones | 1 (v0.1.0), 2 (v0.2.0) and 3 (v0.3.0, server + friends) done. Next: 4 the coach explains (MVP = 3 + 4), then 5 live meta, 6 loadout, 7 grow, 8 in game + polish. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
+| Milestones | 1 (v0.1.0), 2 (v0.2.0), 3 (v0.3.0, server + friends) and 4 (v0.4.0, the coach explains) done: the MVP. Next: 5 live meta (collector, rating-based engine v2), then 6 loadout, 7 grow, 8 in game + polish. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
 | Fixtures | Synthetic draft + one real Ranked Flex recording (`packages/lcu/fixtures/recorded/`). Record more with `pnpm --filter @ldc/lcu record`. |
 | Gotchas | better-sqlite3 13 ships prebuilt binaries: do NOT add it to `onlyBuiltDependencies` (that triggers a node-gyp build that fails without VS tools). Don't leave a shell `cd`-ed inside node_modules on Windows (file locks break pnpm). The LCU PUUID is NOT valid for the Riot API (per-key encrypted PUUIDs): resolve gameName#tagLine via Account-V1. `RIOT_ID` must be quoted in .env. A fresh dev key can take ~30s to activate. |
 
@@ -68,6 +68,6 @@ Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_SCREENSHOT=path.png`
 - `apps/desktop`: Electron (ow-electron-compatible) + React + Vite panel. Main process = adapters + engine; renderer = UI only.
 - `apps/server`: Hono + SQLite (better-sqlite3 + Drizzle). Users, invites, profiles, meta snapshots, config, advice log; jobs for user sync, collector and hourly aggregation, all in one process.
 - `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev` (frozen), later `packages/live-client`: adapters. `packages/engine`: scoring. Later `packages/meta`: aggregation.
-- `config/`: `engine.v1.json` (factor weights per band, smoothing), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime; the server will serve them from `/config`.
+- `config/`: `engine.v1.json` (factor weights per band, smoothing, playstyle axes, pool thresholds), `explain.v1.json` (all wording of reasons, axis/metric labels and formats; text never contains numbers the engine didn't produce), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime; the server will serve them from `/config`.
 - `research/`: the Oct 5, 2026 research and roadmap (data sources, competitors, design, architecture, decisions, assumptions).
 - Node 22 LTS target (`.nvmrc`), TypeScript strict, ESM.

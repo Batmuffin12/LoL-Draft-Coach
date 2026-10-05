@@ -5,14 +5,20 @@ import {
   computeComfort,
   deriveChampionAttributes,
   draftRole,
+  advisePicks,
+  analyzePool,
+  computePlaystyle,
+  formatMetric,
+  metricLabel,
+  playstyleRoles,
   mainRole,
-  recommendPicks,
+  renderReason,
   weightsForBand,
   type ChampionAttributes,
   type ComfortStats,
 } from "@ldc/engine";
 import type { ChampionId, Position, RankBandId } from "@ldc/shared";
-import type { PickView } from "../shared/view";
+import type { PickView, PlaystyleView } from "../shared/view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -128,11 +134,52 @@ export class PersonalCoach extends Coach {
 
   private setProfile(profile: PersonalProfile): void {
     const { engine } = this.p.config;
-    this.profile = { games: [...profile.games], samples: [...profile.samples], masteries: profile.masteries };
+    this.profile = profile;
     this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateRoleAdvice();
+    this.updatePlaystyle();
     this.onDraft();
+  }
+
+  /** Playstyle per role (lobby card): percentiles against others in the role in the player's own games. */
+  private updatePlaystyle(): void {
+    if (!this.profile) return;
+    const { engine, explain } = this.p.config;
+    const now = Date.now();
+    const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
+    const views: PlaystyleView[] = [];
+    for (const role of playstyleRoles(this.profile.matches, engine.playstyle).slice(0, 3)) {
+      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle);
+      if (!ps) continue;
+      views.push({
+        role,
+        games: ps.games,
+        axes: ps.axes.map((a) => {
+          const m = a.metrics[0];
+          const lv = level(a.score);
+          return {
+            axis: a.axis,
+            label: explain.axes[a.axis] ?? a.axis,
+            score: Math.round(a.score * 100),
+            level: lv,
+            levelLabel: renderReason({ id: `playstyle.level.${lv}`, slots: {} }, explain.templates, String),
+            detail: m
+              ? renderReason(
+                  {
+                    id: "playstyle.metric",
+                    slots: { metric: metricLabel(m.metric, explain), you: formatMetric(m.you, m.metric, explain), reference: formatMetric(m.reference, m.metric, explain) },
+                  },
+                  explain.templates,
+                  String,
+                )
+              : null,
+            games: a.games,
+          };
+        }),
+      });
+    }
+    this.update({ playstyle: views });
   }
 
   private updateRoleAdvice(): void {
@@ -151,15 +198,62 @@ export class PersonalCoach extends Coach {
       this.p.config.engine,
       this.intendedPositions,
       this.attributes,
-    ).map((r) => ({
-      role: r.role,
-      games: r.games,
-      winRate: r.winRate,
-      score: r.score,
-      enoughData: r.enoughData,
-      champions: r.topChampions.map((id) => champView(id, lookup)!),
-    }));
+    ).map((r) => {
+      const { explain } = this.p.config;
+      const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, explain.templates, String);
+      const pool = r.enoughData
+        ? analyzePool({
+            role: r.role,
+            comfort: this.comfortFor(r.role),
+            masteries: this.profile!.masteries,
+            matches: this.profile!.matches,
+            attributes: this.attributes,
+            intendedPositions: this.intendedPositions,
+            now: Date.now(),
+            config: this.p.config.engine,
+          })
+        : null;
+      return {
+        role: r.role,
+        games: r.games,
+        winRate: r.winRate,
+        score: r.score,
+        enoughData: r.enoughData,
+        pool: (pool?.champions ?? []).map((c) => ({
+          champion: champView(c.championId, lookup)!,
+          tier: c.tier,
+          tierLabel: say(`pool.tier.${c.tier}`),
+          games: c.games,
+          winRate: c.winRate,
+        })),
+        holes: (pool?.holes ?? []).map((h) => ({
+          text: say(`pool.hole.${h.need}`),
+          evidence: h.losses > 0 ? say("pool.hole.evidence", { lacking: h.lossesLacking, losses: h.losses, role: r.role }) : null,
+          coveredBy: h.coveredBy.length
+            ? say("pool.hole.coveredBy", {
+                champions: h.coveredBy
+                  .map((id) => {
+                    const c = pool!.champions.find((x) => x.championId === id)!;
+                    return `${champView(id, lookup)!.name} (${say(`pool.tier.${c.tier}`).toLowerCase()})`;
+                  })
+                  .join(" and "),
+              })
+            : null,
+        })),
+      };
+    });
     this.update({ roles });
+  }
+
+  /** Comfort for a role, cached until the profile changes. */
+  private comfortFor(role: Position | null): Map<ChampionId, ComfortStats> {
+    const key = role ?? "";
+    let comfort = this.comfortByRole.get(key);
+    if (!comfort) {
+      comfort = computeComfort(this.profile!.games, this.profile!.masteries, Date.now(), this.p.config.engine.comfort, role);
+      this.comfortByRole.set(key, comfort);
+    }
+    return comfort;
   }
 
   /** On a new champ select: read which champions are pickable and whether the queue is supported. */
@@ -180,18 +274,13 @@ export class PersonalCoach extends Coach {
     if (this.draft && !this.hadDraft) void this.onChampSelectStart();
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
-      this.update({ picks: [], pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.p.config;
     const role = draftRole(this.draft, this.profile.games);
-    const key = role ?? "";
-    let comfort = this.comfortByRole.get(key);
-    if (!comfort) {
-      comfort = computeComfort(this.profile.games, this.profile.masteries, Date.now(), engine.comfort, role);
-      this.comfortByRole.set(key, comfort);
-    }
-    const picks = recommendPicks({
+    const comfort = this.comfortFor(role);
+    const advice = advisePicks({
       draft: this.draft,
       pickable: this.pickable,
       unavailable: unavailableChampions(this.draft),
@@ -201,7 +290,7 @@ export class PersonalCoach extends Coach {
       role,
       weights: weightsForBand(this.band, engine),
       config: engine,
-    });
+    }, this.p.config.explain.settings);
     const lookup = (id: number) => {
       try {
         return this.deps.ddragon.champion(id);
@@ -209,13 +298,20 @@ export class PersonalCoach extends Coach {
         return undefined;
       }
     };
-    const views: PickView[] = picks.map((p) => ({
+    const { templates } = this.p.config.explain;
+    const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
+    const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);
+    const views: PickView[] = advice.picks.map((p) => ({
       champion: champView(p.championId, lookup)!,
       score: p.score,
       factors: p.factors,
-      reasons: p.reasons,
+      reasons: p.reasons.map(say),
       offMeta: p.offMeta,
     }));
-    this.update({ picks: views, pickRole: role });
+    const pickAdvice = {
+      whyNot: advice.whyNot ? say(advice.whyNot) : null,
+      confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
+    };
+    this.update({ picks: views, pickAdvice, pickRole: role });
   }
 }

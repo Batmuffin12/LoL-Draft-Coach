@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { AccountView, ChampView, DraftView, PickView, RoleView, SlotView, ViewState } from "../shared/view";
+import type { AccountView, ChampView, DraftView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -73,8 +73,13 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
   const profile = state.status.profile;
   return (
     <section className="card picks">
-      <h2>
-        Suggested picks{role ? <span className="muted"> · {role}</span> : null}
+      <h2 className="picks-head">
+        <span>
+          Suggested picks{role ? <span className="muted"> · {role}</span> : null}
+        </span>
+        {state.pickAdvice.confidence && picks.length > 0 && (
+          <span className={`confidence ${state.pickAdvice.confidence.level}`}>{state.pickAdvice.confidence.label}</span>
+        )}
       </h2>
       {profile.state === "loading" && (
         <p className="muted">
@@ -123,7 +128,51 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
           </li>
         ))}
       </ol>
+      {state.pickAdvice.whyNot && picks.length > 0 && <p className="why-not">{state.pickAdvice.whyNot}</p>}
       <p className="disclaimer">Suggestions only — you choose and lock your champion.</p>
+    </section>
+  );
+}
+
+/** Your playstyle per role: each axis is a diverging bar around "typical" (50) for players in that role in your games. */
+function Playstyle({ styles }: { styles: PlaystyleView[] }) {
+  const [role, setRole] = useState<string | null>(null);
+  if (!styles.length) return null;
+  const current = styles.find((p) => p.role === role) ?? styles[0]!;
+  return (
+    <section className="card playstyle">
+      <h2>Your style</h2>
+      {styles.length > 1 && (
+        <div className="role-tabs" role="tablist">
+          {styles.map((p) => (
+            <button key={p.role} role="tab" aria-selected={p.role === current.role} className={`tab${p.role === current.role ? " on" : ""}`} onClick={() => setRole(p.role)}>
+              {p.role}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="muted small">
+        Your last {current.games} {current.role} games, compared with the other {current.role} players in your matches. 50 is typical.
+      </p>
+      <ul className="axes">
+        {current.axes.map((a) => {
+          const left = Math.min(a.score, 50);
+          const width = Math.abs(a.score - 50);
+          return (
+            <li key={a.axis} className={`axis ${a.level}`} title={`${a.label}: ${a.score} (${a.levelLabel}), ${a.games} games`}>
+              <div className="axis-head">
+                <span>{a.label}</span>
+                <span className="axis-score">{a.score}</span>
+              </div>
+              <div className="diverging" aria-hidden="true">
+                <span className="mid" />
+                <span className="fill" style={{ left: `${left}%`, width: `${width}%` }} />
+              </div>
+              {a.detail && <span className="axis-detail">{a.detail}</span>}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -132,7 +181,7 @@ function Roles({ roles }: { roles: RoleView[] }) {
   if (!roles.length) return null;
   return (
     <section className="card roles">
-      <h2>Your roles</h2>
+      <h2>Your roles and pool</h2>
       <p className="muted small">Ranked by your recent results. Information only — you choose your positions.</p>
       <ol>
         {roles.map((r, i) => (
@@ -146,14 +195,30 @@ function Roles({ roles }: { roles: RoleView[] }) {
                 </span>
               </div>
               {r.enoughData ? (
-                <div className="role-champs">
-                  {r.champions.map((c) => (
-                    <span key={c.id} className="role-champ">
-                      <Icon champ={c} size={22} />
-                      {c.name}
-                    </span>
+                <>
+                  <div className="role-champs">
+                    {r.pool.map((c) => (
+                      <span
+                        key={c.champion.id}
+                        className={`role-champ tier-${c.tier}`}
+                        title={`${c.tierLabel}: ${c.games} game${c.games === 1 ? "" : "s"} in this role${c.winRate === null ? "" : `, ${Math.round(c.winRate * 100)}% win rate`}`}
+                      >
+                        <Icon champ={c.champion} size={22} dim={c.tier === "rusty"} />
+                        <span className="role-champ-text">
+                          {c.champion.name}
+                          <span className="tier">{c.tierLabel}</span>
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  {r.holes.map((h) => (
+                    <p key={h.text} className="hole small">
+                      <strong>{h.text}</strong>
+                      {h.evidence && <span className="muted"> · {h.evidence}</span>}
+                      {h.coveredBy && <span className="covered"> {h.coveredBy}.</span>}
+                    </p>
                   ))}
-                </div>
+                </>
               ) : (
                 <span className="muted small">Not enough games to judge</span>
               )}
@@ -315,6 +380,7 @@ export function App() {
               <Picks picks={[]} role={state.pickRole} state={state} />
             )}
           </section>
+          <Playstyle styles={state.playstyle} />
           <Roles roles={state.roles} />
           </>
         )}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Scoring weights and settings. Factor weights are per rank band; factors without data are skipped and the rest re-normalised.",
+  "description": "Scoring weights and settings. Factor weights are per rank band; factors without data are skipped and the rest re-normalised. playstyle.axes list Riot metric names (challenges.<field> or a derived per-minute value); a leading - means lower is better.",
   "bands": {
     "1": {
       "comfort": 0.45,
@@ -102,6 +102,96 @@
       "winRate": 0.6,
       "experience": 0.4
     }
+  },
+  "playstyle": {
+    "halfLifeDays": 60,
+    "minGamesPerRole": 8,
+    "minMetrics": 2,
+    "minReferenceSamples": 20,
+    "axes": {
+      "earlyPressure": {
+        "metrics": [
+          "challenges.takedownsFirstXMinutes",
+          "challenges.earlyLaningPhaseGoldExpAdvantage",
+          "challenges.laningPhaseGoldExpAdvantage",
+          "challenges.maxCsAdvantageOnLaneOpponent",
+          "challenges.turretPlatesTaken",
+          "challenges.killsOnLanersEarlyJungleAsJungler",
+          "challenges.initialCrabCount",
+          "challenges.enemyJungleMonsterKills"
+        ]
+      },
+      "fighting": {
+        "metrics": [
+          "challenges.killParticipation",
+          "challenges.teamDamagePercentage",
+          "challenges.damagePerMinute",
+          "challenges.soloKills"
+        ]
+      },
+      "farming": {
+        "metrics": [
+          "csPerMinute",
+          "challenges.laneMinionsFirst10Minutes",
+          "challenges.jungleCsBefore10Minutes",
+          "challenges.goldPerMinute"
+        ]
+      },
+      "vision": {
+        "metrics": [
+          "challenges.visionScorePerMinute",
+          "challenges.controlWardsPlaced",
+          "challenges.wardTakedowns",
+          "challenges.visionScoreAdvantageLaneOpponent"
+        ]
+      },
+      "riskControl": {
+        "metrics": [
+          "-deathsPerMinute",
+          "-challenges.deathsByEnemyChamps"
+        ]
+      },
+      "objectives": {
+        "metrics": [
+          "challenges.dragonTakedowns",
+          "challenges.riftHeraldTakedowns",
+          "challenges.baronTakedowns",
+          "challenges.turretTakedowns",
+          "objectiveDamagePerMinute"
+        ]
+      },
+      "roaming": {
+        "metrics": [
+          "challenges.killsOnOtherLanesEarlyJungleAsLaner",
+          "challenges.getTakedownsInAllLanesEarlyJungleAsLaner",
+          "challenges.moreEnemyJungleThanOpponent"
+        ]
+      },
+      "playmaking": {
+        "metrics": [
+          "ccPerMinute",
+          "challenges.enemyChampionImmobilizations",
+          "challenges.pickKillWithAlly"
+        ]
+      }
+    }
+  },
+  "pool": {
+    "coreMin": 0.55,
+    "coreGames": 8,
+    "secondaryMin": 0.4,
+    "learningWindowDays": 21,
+    "learningMaxGames": 7,
+    "dormantMastery": 50000,
+    "dormantDays": 60,
+    "maxPerTier": 4,
+    "coverage": {
+      "damageShare": 0.6,
+      "frontline": 0.65,
+      "engage": 0.65
+    },
+    "minLossShare": 0.2,
+    "minLossesForEvidence": 5
   },
   "topN": 3
 }
