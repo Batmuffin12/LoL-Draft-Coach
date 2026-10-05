@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MatchSummary, UserMatch } from "@ldc/shared";
+import type { MatchSummary, MetaSnapshot, UserMatch } from "@ldc/shared";
 
 /** Loose: checks the fields the app uses, tolerates new ones. */
 const PublicUserSchema = z.looseObject({
@@ -43,6 +43,39 @@ export interface ServerProfile {
   matchIds: string[];
   sync: ServerSyncState;
 }
+
+/**
+ * Meta snapshot (GET /meta/:band). Loose: checks the shape of what the engine reads and
+ * tolerates new fields. Pairs are [championA, roleA, championB, roleB, games, winsOfA, n].
+ */
+const PairSchema = z.tuple([z.number(), z.string(), z.number(), z.string(), z.number(), z.number(), z.number()]);
+export const MetaSnapshotSchema = z.looseObject({
+  format: z.literal(1),
+  band: z.number().int(),
+  createdAt: z.number(),
+  patch: z.string().nullable(),
+  matches: z.number(),
+  newestMatchAt: z.number().nullable(),
+  halfLifeDays: z.number(),
+  roleGames: z.record(z.string(), z.number()),
+  champions: z.array(z.looseObject({ championId: z.number(), role: z.string(), games: z.number(), wins: z.number(), n: z.number() })),
+  matchups: z.array(PairSchema),
+  duos: z.array(PairSchema),
+  attributes: z.array(
+    z.looseObject({
+      championId: z.number(),
+      samples: z.number(),
+      physicalShare: z.number(),
+      magicShare: z.number(),
+      trueShare: z.number(),
+      frontline: z.number(),
+      engage: z.number(),
+      roleShares: z.record(z.string(), z.number()),
+      roleSamples: z.number(),
+    }),
+  ),
+  references: z.record(z.string(), z.record(z.string(), z.looseObject({ n: z.number(), quantiles: z.array(z.number()) }))),
+});
 
 const ErrorBodySchema = z.looseObject({ error: z.string(), message: z.string().optional() });
 
@@ -94,7 +127,8 @@ export class ServerClient {
     this.sleep = sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
-  private async request<T extends z.ZodType>(method: string, path: string, schema: T, body?: unknown): Promise<z.infer<T>> {
+  /** Sends a request, retrying while a sleeping server wakes up. */
+  private async send(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Response> {
     let res: Response | null = null;
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= WAKE_RETRY_DELAYS_MS.length; attempt++) {
@@ -106,6 +140,7 @@ export class ServerClient {
             accept: "application/json",
             ...(body !== undefined ? { "content-type": "application/json" } : {}),
             ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
+            ...headers,
           },
           ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         });
@@ -119,6 +154,14 @@ export class ServerClient {
     if (!res) {
       throw new ServerError(0, "unreachable", `Can't reach the coach server at ${this.baseUrl} (${lastError?.message ?? "no response"}).`);
     }
+    return res;
+  }
+
+  private async request<T extends z.ZodType>(method: string, path: string, schema: T, body?: unknown): Promise<z.infer<T>> {
+    return this.parse(await this.send(method, path, body), schema);
+  }
+
+  private async parse<T extends z.ZodType>(res: Response, schema: T): Promise<z.infer<T>> {
     if (res.status === 204) return schema.parse(undefined);
     const json = (await res.json().catch(() => null)) as unknown;
     if (!res.ok) {
@@ -148,6 +191,17 @@ export class ServerClient {
 
   async syncState(): Promise<ServerSyncState> {
     return (await this.request("GET", "/me/sync", z.looseObject({ sync: SyncStateSchema }))).sync;
+  }
+
+  /**
+   * The meta snapshot for a band. With the ETag of the copy we already have, the server
+   * answers 304 and nothing is downloaded.
+   */
+  async meta(band: number, etag?: string | null): Promise<{ notModified: true } | { notModified: false; snapshot: MetaSnapshot; etag: string | null }> {
+    const res = await this.send("GET", `/meta/${band}`, undefined, etag ? { "if-none-match": etag } : {});
+    if (res.status === 304) return { notModified: true };
+    const snapshot = (await this.parse(res, MetaSnapshotSchema)) as MetaSnapshot;
+    return { notModified: false, snapshot, etag: res.headers.get("etag") };
   }
 
   async deleteMe(): Promise<void> {

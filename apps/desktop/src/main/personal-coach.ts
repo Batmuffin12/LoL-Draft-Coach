@@ -14,11 +14,15 @@ import {
   mainRole,
   renderReason,
   weightsForBand,
+  adviseLivePicks,
+  suggestBans,
+  MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
 } from "@ldc/engine";
-import type { ChampionId, Position, RankBandId } from "@ldc/shared";
-import type { PickView, PlaystyleView } from "../shared/view";
+import type { ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
+import type { BanView, PickView, PlaystyleView } from "../shared/view";
+import type { MetaSource } from "./meta-source";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -33,6 +37,14 @@ export interface PersonalCoachDeps extends CoachDeps {
   noProfileMessage?: string;
   /** Riot ID from .env ("Name#TAG"), used when the client reports no account (mock client / demo). */
   riotId: string | null;
+  /** Live meta snapshots (server mode); null: score from the player's own data only (engine v1). */
+  meta?: MetaSource | null;
+}
+
+/** The local player is banning right now, or the draft is in the planning phase before bans. */
+function banningNow(draft: DraftState): boolean {
+  if (draft.timerPhase === "PLANNING") return true;
+  return draft.actions.some((a) => a.inProgress && !a.completed && a.type === "ban" && a.actorCellId === draft.localCellId);
 }
 
 /**
@@ -51,6 +63,8 @@ export class PersonalCoach extends Coach {
   private attributes = new Map<ChampionId, ChampionAttributes>();
   private pickable: ChampionId[] = [];
   private queueSupported = true;
+  /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
+  private metaIndex: MetaIndex | null = null;
 
   constructor(private readonly p: PersonalCoachDeps) {
     super(p);
@@ -73,6 +87,15 @@ export class PersonalCoach extends Coach {
       profiles.on("band", (band) => this.setBand(band));
       profiles.on("account", (account) => this.update({ account }));
       if (profiles.account) this.update({ account: profiles.account });
+    }
+    const { meta } = this.p;
+    if (meta) {
+      meta.on("snapshot", (s) => this.setSnapshot(s));
+      meta.on("status", (st) => this.update({ meta: st.state === "none" ? null : st }));
+      if (meta.snapshot) this.setSnapshot(meta.snapshot);
+      profiles?.on("account", (a) => {
+        if (a.state === "registered") this.refreshMeta(true);
+      });
     }
     this.p.ddragon.on("patch", () => this.updateRoleAdvice()); // champion names/icons for the lobby
     this.p.connector.on("status", (s) => {
@@ -127,18 +150,41 @@ export class PersonalCoach extends Coach {
   }
 
   private setBand(band: RankBandId): void {
+    const changed = band !== this.band;
     this.band = band;
     this.update({ status: { ...this.view.status, band } });
+    if (changed && this.metaIndex && this.metaIndex.snapshot.band !== band) this.setSnapshot(null);
+    this.refreshMeta(false);
     this.onDraft();
+  }
+
+  /** Asks for the band's snapshot (cached copy first; the server at most every 30 minutes unless forced). */
+  private refreshMeta(force: boolean): void {
+    void this.p.meta?.refresh(this.band, { force });
+  }
+
+  private setSnapshot(snapshot: MetaSnapshot | null): void {
+    if (snapshot && snapshot.band !== this.band) return;
+    this.metaIndex = snapshot ? new MetaIndex(snapshot, this.p.config.engine.rating) : null;
+    this.updateRoleAdvice();
+    this.updatePlaystyle();
+    this.onDraft();
+  }
+
+  /** Measured champion attributes: the band's (big sample) when loaded, else from the player's own games. */
+  private get attrs(): Map<ChampionId, ChampionAttributes> {
+    return this.metaIndex ? new Map([...this.attributes, ...this.metaIndex.attributes]) : this.attributes;
   }
 
   private setProfile(profile: PersonalProfile): void {
     const { engine } = this.p.config;
+    const first = this.profile === null;
     this.profile = profile;
     this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateRoleAdvice();
     this.updatePlaystyle();
+    if (first) this.refreshMeta(false);
     this.onDraft();
   }
 
@@ -150,7 +196,7 @@ export class PersonalCoach extends Coach {
     const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
     const views: PlaystyleView[] = [];
     for (const role of playstyleRoles(this.profile.matches, engine.playstyle).slice(0, 3)) {
-      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle);
+      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle, this.metaIndex?.snapshot.references[role]);
       if (!ps) continue;
       views.push({
         role,
@@ -197,7 +243,7 @@ export class PersonalCoach extends Coach {
       Date.now(),
       this.p.config.engine,
       this.intendedPositions,
-      this.attributes,
+      this.attrs,
     ).map((r) => {
       const { explain } = this.p.config;
       const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, explain.templates, String);
@@ -207,7 +253,7 @@ export class PersonalCoach extends Coach {
             comfort: this.comfortFor(r.role),
             masteries: this.profile!.masteries,
             matches: this.profile!.matches,
-            attributes: this.attributes,
+            attributes: this.attrs,
             intendedPositions: this.intendedPositions,
             now: Date.now(),
             config: this.p.config.engine,
@@ -259,6 +305,7 @@ export class PersonalCoach extends Coach {
   /** On a new champ select: read which champions are pickable and whether the queue is supported. */
   private async onChampSelectStart(): Promise<void> {
     const { connector, config } = this.p;
+    this.refreshMeta(false);
     this.pickable = await connector.getPickableChampionIds().catch(() => []);
     const session = await connector.getGameflowSession().catch(() => null);
     const queueId = session?.gameData?.queue?.id;
@@ -274,13 +321,13 @@ export class PersonalCoach extends Coach {
     if (this.draft && !this.hadDraft) void this.onChampSelectStart();
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
-      this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], bans: [], pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.p.config;
     const role = draftRole(this.draft, this.profile.games);
     const comfort = this.comfortFor(role);
-    const advice = advisePicks({
+    const input = {
       draft: this.draft,
       pickable: this.pickable,
       unavailable: unavailableChampions(this.draft),
@@ -290,7 +337,10 @@ export class PersonalCoach extends Coach {
       role,
       weights: weightsForBand(this.band, engine),
       config: engine,
-    }, this.p.config.explain.settings);
+    };
+    // Live meta (engine v2) when the band's snapshot is loaded; the player's own data otherwise.
+    const live = this.metaIndex ? { ...input, index: this.metaIndex, band: this.band } : null;
+    const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.p.config.explain.settings);
     const lookup = (id: number) => {
       try {
         return this.deps.ddragon.champion(id);
@@ -304,6 +354,7 @@ export class PersonalCoach extends Coach {
     const views: PickView[] = advice.picks.map((p) => ({
       champion: champView(p.championId, lookup)!,
       score: p.score,
+      expectedWin: p.expectedWin ?? null,
       factors: p.factors,
       reasons: p.reasons.map(say),
       offMeta: p.offMeta,
@@ -312,6 +363,10 @@ export class PersonalCoach extends Coach {
       whyNot: advice.whyNot ? say(advice.whyNot) : null,
       confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
     };
-    this.update({ picks: views, pickAdvice, pickRole: role });
+    const bans: BanView[] =
+      live && banningNow(this.draft)
+        ? suggestBans(live).map((b) => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say) }))
+        : [];
+    this.update({ picks: views, pickAdvice, bans, pickRole: role });
   }
 }

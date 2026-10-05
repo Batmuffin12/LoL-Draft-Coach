@@ -149,6 +149,11 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     return this.view;
   }
 
+  /** The client for the registered server (null until registered). Used for meta snapshots too. */
+  get serverClient(): ServerClient | null {
+    return this.view.state === "registered" ? this.client : null;
+  }
+
   stop(): void {
     this.stopped = true;
   }

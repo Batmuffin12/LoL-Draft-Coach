@@ -14,6 +14,7 @@ import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
+import { MetaSource } from "./meta-source";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
@@ -154,12 +155,18 @@ async function main(): Promise<void> {
     });
     await profiles.init();
   }
+  // Live meta snapshots come from the coach server (none in dev-only direct mode).
+  const serverProfiles = profiles instanceof ServerProfileSource ? profiles : null;
+  const meta = serverProfiles
+    ? new MetaSource({ client: () => serverProfiles.serverClient, cacheDir: join(app.getPath("userData"), "meta") })
+    : null;
   const coach = new PersonalCoach({
     connector,
     ddragon,
     config,
     profiles,
     riotId: env.riotId,
+    meta,
   });
   if (profiles instanceof ServerProfileSource) {
     const server = profiles;

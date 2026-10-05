@@ -1,0 +1,149 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { gzipSync } from "node:zlib";
+import { afterEach, describe, expect, it } from "vitest";
+import { DataDragon } from "@ldc/ddragon";
+import { LcuConnector } from "@ldc/lcu";
+import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
+import { RiotApi } from "@ldc/riot-api";
+import { createApp, createInvite, openDb, SyncScheduler } from "@ldc/server";
+import type { MetaSnapshot } from "@ldc/shared";
+import { AccountStore, type SecretBox } from "../src/main/account-store";
+import { findConfigDir, loadConfig } from "../src/main/config";
+import { MetaSource, type MetaStatus } from "../src/main/meta-source";
+import { PersonalCoach } from "../src/main/personal-coach";
+import { ServerProfileSource } from "../src/main/profile-source";
+import { ServerClient, ServerError } from "../src/main/server-client";
+import { fakeDdragonFetch, fakeRiotFetch, waitFor } from "./helpers";
+
+const config = loadConfig(findConfigDir(__dirname));
+const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
+const NOW = Date.now();
+
+/** A small band-2 snapshot: in middle, 245 is strong and 103 is average. */
+function snapshot(createdAt = NOW): MetaSnapshot {
+  const stat = (championId: number, games: number, wr: number) => ({ championId, role: "middle", games, wins: games * wr, n: games });
+  return {
+    format: 1,
+    band: 2,
+    createdAt,
+    patch: "16.19",
+    matches: 1000,
+    newestMatchAt: createdAt,
+    halfLifeDays: 10,
+    roleGames: { top: 2000, jungle: 2000, middle: 2000, bottom: 2000, utility: 2000 },
+    champions: [stat(103, 400, 0.5), stat(245, 400, 0.56), stat(84, 300, 0.49), stat(238, 300, 0.5)],
+    matchups: [],
+    duos: [],
+    attributes: [],
+    references: {},
+  };
+}
+
+/** A stand-in server client that answers meta requests from a list of scripted responses. */
+function fakeClient(responses: (() => Awaited<ReturnType<ServerClient["meta"]>>)[]) {
+  const calls: (string | null | undefined)[] = [];
+  const client = {
+    async meta(_band: number, etag?: string | null) {
+      calls.push(etag);
+      const next = responses.shift();
+      if (!next) throw new ServerError(0, "unreachable", "Can't reach the coach server");
+      return next();
+    },
+  } as unknown as ServerClient;
+  return { client, calls };
+}
+
+describe("MetaSource", () => {
+  it("downloads the band's snapshot, caches it, and revalidates with the ETag", async () => {
+    const dir = tmp("ldc-meta-");
+    const { client, calls } = fakeClient([() => ({ notModified: false, snapshot: snapshot(), etag: '"v1"' }), () => ({ notModified: true })]);
+    let t = NOW;
+    const src = new MetaSource({ client: () => client, cacheDir: dir, now: () => t, minIntervalMs: 1000 });
+    const statuses: MetaStatus[] = [];
+    src.on("status", (s) => statuses.push(s));
+    await src.refresh(2);
+    expect(src.snapshot?.patch).toBe("16.19");
+    expect(statuses.at(-1)).toMatchObject({ state: "ready", band: 2, matches: 1000, offline: false });
+
+    await src.refresh(2); // within the interval: no request
+    expect(calls).toEqual([null]);
+    t += 2000;
+    await src.refresh(2);
+    expect(calls).toEqual([null, '"v1"']);
+
+    // A fresh start reads the cache before asking the server, and stays usable offline.
+    const offline = new MetaSource({ client: () => fakeClient([]).client, cacheDir: dir });
+    const seen: MetaStatus[] = [];
+    offline.on("status", (s) => seen.push(s));
+    await offline.refresh(2);
+    expect(offline.snapshot?.band).toBe(2);
+    expect(seen.at(-1)).toMatchObject({ state: "ready", offline: true });
+  });
+
+  it("reports why there is no meta when nothing is cached and the server can't help", async () => {
+    const src = new MetaSource({ client: () => fakeClient([]).client, cacheDir: tmp("ldc-meta-") });
+    const seen: MetaStatus[] = [];
+    src.on("status", (s) => seen.push(s));
+    await src.refresh(2);
+    expect(seen.at(-1)).toMatchObject({ state: "error" });
+    const none = new MetaSource({ client: () => null, cacheDir: tmp("ldc-meta-") });
+    const st: MetaStatus[] = [];
+    none.on("status", (s) => st.push(s));
+    await none.refresh(2);
+    expect(st).toEqual([{ state: "none" }]);
+  });
+});
+
+describe("PersonalCoach with the live meta (mock client + real server API)", () => {
+  let lcu: MockLcuServer | null = null;
+  let coach: PersonalCoach | null = null;
+  afterEach(async () => {
+    coach?.stop();
+    await lcu?.stop();
+  });
+
+  it("scores picks as a predicted win chance once the band's snapshot arrives", async () => {
+    const db = openDb(":memory:");
+    const json = JSON.stringify(snapshot());
+    db.$client
+      .prepare("INSERT INTO meta_snapshots (band, created_at, etag, matches, patch, newest_match_at, size_bytes, body) VALUES (2, ?, ?, 1000, '16.19', ?, 0, ?)")
+      .run(NOW, '"snap"', NOW, gzipSync(json));
+    const riot = new RiotApi({ apiKey: "test", keyType: "development", platform: "euw1", region: "europe", fetch: fakeRiotFetch().fetchFn });
+    const sync = new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands }, { tickMs: 1e9, staleAfterMs: 1e9, activeWithinMs: 1e9, log: () => {} });
+    const app = createApp({ db, version: "test", riot, sync, registerPerMinute: 100 });
+    const fetchFn = ((input: string | URL | Request, init?: RequestInit) => app.request(String(input), init)) as typeof fetch;
+    const box: SecretBox = { encrypt: (s) => s, decrypt: (s) => s };
+    const profiles = new ServerProfileSource({ accounts: new AccountStore(join(tmp("ldc-acct-"), "a.json"), box), defaultServerUrl: "https://coach.test", fetch: fetchFn, pollMs: 5 });
+    await profiles.init();
+    const meta = new MetaSource({ client: () => profiles.serverClient, cacheDir: tmp("ldc-meta-") });
+
+    lcu = new MockLcuServer(loadFixture("synthetic-draft-pick"), {
+      "/lol-summoner/v1/current-summoner": { puuid: "client-only", gameName: "Me", tagLine: "EUW" },
+      "/lol-ranked/v1/current-ranked-stats": { queues: [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD", division: "I" }] },
+    });
+    const creds = await lcu.start();
+    coach = new PersonalCoach({
+      connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
+      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      config,
+      profiles,
+      riotId: null,
+      meta,
+    });
+    await coach.start();
+    await waitFor(() => coach!.currentIdentity !== null);
+    await profiles.register("https://coach.test", createInvite(db, { ttlDays: 1, now: Date.now() }).code);
+    await waitFor(() => coach!.state.status.profile.state === "ready");
+    await waitFor(() => coach!.state.meta?.state === "ready");
+    expect(coach.state.meta).toMatchObject({ state: "ready", band: 2, patch: "16.19", matches: 1000 });
+
+    while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await waitFor(() => coach!.state.picks.length > 0);
+    const picks = coach.state.picks;
+    expect(picks.every((p) => p.expectedWin !== null && p.expectedWin > 0 && p.expectedWin < 1)).toBe(true);
+    const strong = picks.find((p) => p.champion.id === 245);
+    expect(strong?.reasons.join(" ")).toMatch(/Strong in middle in your rank: 56\.0% win rate \(400 games\)/);
+  });
+});
