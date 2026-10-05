@@ -10,7 +10,7 @@ import { openDb } from "./db";
 import { readServerEnv } from "./env";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.3.0-dev";
+const VERSION = "0.3.0";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);

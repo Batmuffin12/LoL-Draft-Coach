@@ -2,6 +2,26 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.3.0] — 2026-10-05 — Milestone 3: Server and friends
+
+Friends can now use the coach with their own accounts. The Riot API key lives only on the server.
+
+### Added
+- `apps/server` (Hono + SQLite via better-sqlite3 + Drizzle), deployable to Railway (`railway.json`, `docs/DEPLOY.md`).
+  - One-time invite codes (`invite` command), registration by Riot ID through Account-V1, hashed bearer tokens, `GET/DELETE /me` (deleting removes all of a user's data).
+  - Server-side sync of each user's games, mastery, ranked entries and band, on registration and every 30 minutes while they're active. Matches are stored anonymised (no PUUIDs or names) and shared between friends who played together.
+  - Richer match data kept for the coaching milestones: KDA, CS, gold, vision, items, spells, rune pages and Riot's `challenges` metrics (124 per player in live EUW games).
+  - `GET /me/profile` (incremental with `?since=`, gzip), `POST/GET /me/sync`, `/health`, per-client rate limit on registration.
+- Desktop server mode: connect with a server address and invite code (Riot ID read from the logged-in client), account footer with sign out and data deletion, detection of a different account in the client.
+- Windows installer (electron-builder NSIS); `LDC_SERVER_URL` bakes in the server address; opt-in auto-update via `LDC_UPDATE_URL`.
+- GitHub Actions CI on Ubuntu and Windows, with a check that blocks committed keys and tokens.
+- Riot "isn't endorsed" notice in the panel.
+- Research and revised roadmap (`research/`), with the approved decisions written into `docs/SPEC.md` and `CLAUDE.md`.
+
+### Changed
+- Calling the Riot API from the desktop is now development-only ("direct mode"); packaged builds always use the server.
+- `PersonalCoach` gets the player's history from a `ProfileSource` (server or direct) instead of loading it itself.
+
 ## [0.2.5] — 2026-10-05
 
 ### Fixed
