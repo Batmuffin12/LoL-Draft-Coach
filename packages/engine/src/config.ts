@@ -159,6 +159,8 @@ export const EngineConfigSchema = z.object({
       maxReasons: z.number().int().min(1),
       /** Predicted win-chance gap (0..1) between #1 and #2 for a "clear pick". */
       clearGapWin: unit,
+      /** A champion's power curve is mentioned when long- and short-game win rates differ by this much (0..1). */
+      powerCurveGap: unit,
       /** Factor bars: this change in win chance fills a bar from the middle to the end. */
       barScaleWin: z.number().positive(),
     }),

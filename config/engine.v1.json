@@ -230,6 +230,7 @@
       "minDeltaWin": 0.005,
       "maxReasons": 4,
       "clearGapWin": 0.015,
+      "powerCurveGap": 0.05,
       "barScaleWin": 0.08
     }
   },

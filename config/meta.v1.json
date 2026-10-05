@@ -10,6 +10,10 @@
     "referenceQuantiles": 21,
     "referenceMaxSamples": 4000,
     "minReferenceSamples": 40,
+    "powerCurve": {
+      "earlyMinutes": 25,
+      "lateMinutes": 32
+    },
     "trend": {
       "recentDays": 3,
       "minGames": 30,

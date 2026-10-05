@@ -1,5 +1,5 @@
 import { addAttributeSample, attributesFromTotals, halfLifeWeight, readMetric, type AttributeTotals } from "@ldc/engine";
-import type { ChampionId, ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId, TrendingChampion } from "@ldc/shared";
+import type { ChampionAttributes, ChampionId, ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId, TrendingChampion } from "@ldc/shared";
 import type { AggregationConfig } from "./config";
 
 const DAY_MS = 86_400_000;
@@ -92,6 +92,7 @@ export class BandAggregator {
   /** Unweighted counts for trends: recent days vs the rest of the window. */
   private readonly trendCounts = new Map<string, { championId: ChampionId; role: Position; rN: number; rW: number; bN: number; bW: number }>();
   private recentMatches = 0;
+  private readonly powerCurves = new Map<ChampionId, { early: { n: number; w: number }; late: { n: number; w: number } }>();
   private beforeMatches = 0;
   private newest: number | null = null;
 
@@ -172,6 +173,16 @@ export class BandAggregator {
         durationSec: m.durationSec,
       });
 
+      // Power curve: results in short vs long games.
+      const minutes = m.durationSec / 60;
+      const phase = minutes < cfg.powerCurve.earlyMinutes ? "early" : minutes > cfg.powerCurve.lateMinutes ? "late" : null;
+      if (phase) {
+        let pc = this.powerCurves.get(p.championId);
+        if (!pc) this.powerCurves.set(p.championId, (pc = { early: { n: 0, w: 0 }, late: { n: 0, w: 0 } }));
+        pc[phase].n++;
+        if (p.win) pc[phase].w++;
+      }
+
       let byMetric = this.metricValues.get(p.position);
       if (!byMetric) this.metricValues.set(p.position, (byMetric = new Map()));
       for (const metric of this.metrics) {
@@ -216,6 +227,13 @@ export class BandAggregator {
     return out.sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role));
   }
 
+  private powerCurveOf(id: ChampionId): Pick<ChampionAttributes, "powerCurve"> {
+    const pc = this.powerCurves.get(id);
+    if (!pc) return {};
+    const side = (s: { n: number; w: number }) => ({ games: s.n, winRate: s.n ? round(s.w / s.n) : 0 });
+    return { powerCurve: { early: side(pc.early), late: side(pc.late) } };
+  }
+
   finish(): MetaSnapshot {
     const cfg = this.opts.config;
     const references: MetaSnapshot["references"] = {};
@@ -237,6 +255,7 @@ export class BandAggregator {
         frontline: round(a.frontline),
         engage: round(a.engage),
         roleShares: Object.fromEntries(Object.entries(a.roleShares).map(([k, v]) => [k, round(v)])),
+        ...this.powerCurveOf(a.championId),
       }))
       .sort((a, b) => a.championId - b.championId);
 

@@ -176,6 +176,16 @@ describe("aggregateBand", () => {
     expect(aggregateBand({ ...base, matches: games.filter((m) => m.matchId.startsWith("R")), config: trendCfg }).trending).toEqual([]);
   });
 
+  it("measures each champion's power curve: win rate in short vs long games", () => {
+    const pc = { ...cfg, powerCurve: config.aggregation.powerCurve };
+    const short = (i: number) => match(`S${i}`, BLUE, RED, true, 0, { durationSec: 20 * 60 }); // blue wins early
+    const long = (i: number) => match(`L${i}`, BLUE, RED, i < 1, 0, { durationSec: 40 * 60 }); // blue mostly loses late
+    const mid = match("M", BLUE, RED, true, 0, { durationSec: 28 * 60 }); // between: counted in neither
+    const s = aggregateBand({ ...base, config: pc, matches: [short(0), short(1), short(2), long(0), long(1), long(2), long(3), mid] });
+    expect(s.attributes.find((a) => a.championId === 1)?.powerCurve).toEqual({ early: { games: 3, winRate: 1 }, late: { games: 4, winRate: 0.25 } });
+    expect(s.attributes.find((a) => a.championId === 11)?.powerCurve).toEqual({ early: { games: 3, winRate: 0 }, late: { games: 4, winRate: 0.75 } });
+  });
+
   it("never carries player identifiers into the snapshot", () => {
     const m = match("A", BLUE, RED, true);
     (m.participants[0] as unknown as Record<string, unknown>).puuid = "SECRET-PUUID";

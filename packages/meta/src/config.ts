@@ -20,6 +20,8 @@ export const MetaConfigSchema = z.object({
     referenceMaxSamples: z.number().int().min(1),
     /** Values a role/metric needs before a reference is published. */
     minReferenceSamples: z.number().int().min(1),
+    /** Power curve: win rate in games shorter than earlyMinutes vs longer than lateMinutes. */
+    powerCurve: z.object({ earlyMinutes: z.number().positive(), lateMinutes: z.number().positive() }),
     /** Trending champions: the last recentDays compared with the rest of the window. */
     trend: z.object({
       recentDays: z.number().positive(),

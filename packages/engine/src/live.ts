@@ -130,6 +130,15 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   if (metaStat.n >= cfg.minGames.meta) {
     note(reason(meta >= 0 ? "meta.strong" : "meta.weak", { winRate: metaStat.wins / metaStat.games, games: metaStat.n, role }), meta);
   }
+  // Power curve (information only): does it win short games or long ones?
+  const curve = ctx.attributes.get(id)?.powerCurve;
+  if (curve && curve.early.games >= cfg.minGames.meta && curve.late.games >= cfg.minGames.meta) {
+    const gap = curve.late.winRate - curve.early.winRate;
+    if (Math.abs(gap) >= cfg.explain.powerCurveGap) {
+      const slots = { early: curve.early.winRate, late: curve.late.winRate };
+      notes.push({ r: reason(gap > 0 ? "power.late" : "power.early", slots), weight: cfg.explain.minDeltaWin, positive: true });
+    }
+  }
   // Rising in the band lately: information only (no evidence yet that trends add to the win chance).
   const rising = trendReason(index, id, role);
   if (rising) notes.push({ r: rising, weight: cfg.explain.minDeltaWin, positive: true });

@@ -265,6 +265,19 @@ describe("adviseLivePicks", () => {
     expect(text(ban.reasons)).toMatch(/Rising in top: picked in 50% of games \(was 30%\) and winning 56\.0% \(was 50\.0%\)/);
   });
 
+  it("mentions a measured power curve only when it's clear and backed by enough games", () => {
+    const attr = (championId: number, early: number, late: number, games = 100) => ({
+      championId, samples: 400, physicalShare: 0.5, magicShare: 0.5, trueShare: 0, frontline: 0.5, engage: 0.5,
+      roleShares: { middle: 1 }, roleSamples: 400,
+      powerCurve: { early: { games, winRate: early }, late: { games, winRate: late } },
+    });
+    const idx = index({ ...snapshot(), attributes: [attr(103, 0.47, 0.55), attr(101, 0.5, 0.52), attr(102, 0.6, 0.4, 5)] });
+    const reasons = (id: number) => text(adviseLivePicks(input(draft(), { index: idx })).picks.find((p) => p.championId === id)!.reasons);
+    expect(reasons(103)).toMatch(/Scales: wins 55\.0% of long games vs 47\.0% of short ones/);
+    expect(reasons(101)).not.toMatch(/Scales|Strong early/); // small gap
+    expect(reasons(102)).not.toMatch(/Scales|Strong early/); // too few games
+  });
+
   it("adds synergy with allies already picked", () => {
     const withJungle = draft();
     withJungle.myTeam[1]!.championId = 401;

@@ -61,7 +61,9 @@
     "ban.banRate": "Banned in {banRate:pct}% of games in your rank",
     "trend.pick": "Trending in {role}: picked in {recent:pct}% of games lately, up from {before:pct}%",
     "trend.win": "Trending in {role}: winning {recent:pct1}% lately, up from {before:pct1}% ({games} recent games)",
-    "trend.both": "Rising in {role}: picked in {pickRecent:pct}% of games (was {pickBefore:pct}%) and winning {winRecent:pct1}% (was {winBefore:pct1}%)"
+    "trend.both": "Rising in {role}: picked in {pickRecent:pct}% of games (was {pickBefore:pct}%) and winning {winRecent:pct1}% (was {winBefore:pct1}%)",
+    "power.late": "Scales: wins {late:pct1}% of long games vs {early:pct1}% of short ones",
+    "power.early": "Strong early: wins {early:pct1}% of short games vs {late:pct1}% of long ones"
   },
   "settings": {
     "clearGap": 0.05,
