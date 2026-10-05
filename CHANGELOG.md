@@ -19,10 +19,21 @@ The coach now knows what is strong in your rank right now, and enemy picks chang
 - **Your pick**: after you lock in, the panel shows your champion with its predicted win chance and reasons, instead of suggestions.
 - Desktop: downloads and caches the band's snapshot (revalidated at most every 30 minutes) and keeps coaching from the cached copy when the server is down; the status line shows the meta's patch, size and age. Uses the server's scoring config (validated, cached), so tuning needs no release.
 - Playstyle percentiles use the band's references once a snapshot is loaded.
-- Railway: `ldc-meta-wake` cron service (hourly) in `.railway/railway.ts`; the server still sleeps between wake-ups (est. +$1.40/month, docs/CLOUD.md).
+- **Ban rates**: stored games keep each team's bans (champion ids only); suggested bans say "Banned in 36% of games in your rank".
+- **Trending champions** (spec, collector step 5): champion-roles whose pick or win rate rose clearly in the last 3 days (size and statistical thresholds in `config/meta.v1.json`); picks and bans say so. Information only.
+- **Power curve** (game-length half): each champion's win rate in short vs long games; picks say "Scales: wins 55.0% of long games vs 47.0% of short ones" when clear. The gold-at-15 half needs timelines (milestone 6).
+- **Backtest**: `pnpm --filter @ldc/server backtest` checks engine v2's predictions on held-out collected games (log-loss vs a coin flip with a game-level interval, calibration, each term alone, setting sweeps).
+- `/health` flags a stale collector (no new game for 6 hours) without failing the health check.
+- Railway (as code, applied at the merge): `ldc-meta-wake` hourly cron (the server still sleeps between wake-ups; est. +$1.40/month) and daily volume backups (docs/CLOUD.md).
+
+### Changed
+- Comfort outweighs meta, but every champion you're comfortable on counts the same, so the draft chooses among them instead of always your single most-played champion; a never-played champion starts well behind (D25).
+- Team-needs strength cut 40 → 10 after the first backtest showed it made predictions worse (D24).
 
 ### Fixed
 - Your own locked-in champion no longer shows as "banned or taken".
+- A champion that clearly plays a role in the band no longer gets the off-meta penalty there.
+- A rank-band change during a meta download is queued, not dropped.
 
 ## [0.4.3] — 2026-10-05
 

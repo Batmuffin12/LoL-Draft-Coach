@@ -61,6 +61,7 @@ pnpm --filter @ldc/lcu mock     # fake League client replaying a fixture; then s
 pnpm --filter @ldc/server dev   # run the server locally (reads .env); SERVER_URL=http://localhost:8787 puts the desktop in server mode
 pnpm --filter @ldc/server invite "note"   # create a one-time invite code
 pnpm --filter @ldc/server collect --seconds 120   # one collector wake-up against DATABASE_PATH (reads .env); production uses POST /admin/collect hourly
+pnpm --filter @ldc/server backtest                # check engine v2's predictions on held-out collected games (DATABASE_PATH)
 pnpm --filter @ldc/desktop dist:win      # Windows installer (LDC_SERVER_URL, LDC_UPDATE_URL: see docs/DEPLOY.md)
 ```
 
