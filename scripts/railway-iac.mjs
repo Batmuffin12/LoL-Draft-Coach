@@ -5,21 +5,8 @@
 // "railway" is a .cmd shim that Node can't execute, so the check fails. This points "_" at
 // the real railway executable first.
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
-function railwayExecutable() {
-  if (process.platform === "win32" && process.env.APPDATA) {
-    const exe = join(process.env.APPDATA, "npm", "node_modules", "@railway", "cli", "bin", "railway.exe");
-    if (existsSync(exe)) return exe;
-  }
-  return "railway";
-}
+import { railwayExecutable, railwaySpawnOptions } from "./railway-cli.mjs";
 
 const exe = railwayExecutable();
-const result = spawnSync(exe, ["config", ...process.argv.slice(2)], {
-  stdio: "inherit",
-  env: { ...process.env, _: exe },
-  shell: exe === "railway" && process.platform === "win32",
-});
+const result = spawnSync(exe, ["config", ...process.argv.slice(2)], railwaySpawnOptions(exe, { stdio: "inherit", env: { ...process.env, _: exe } }));
 process.exit(result.status ?? 1);

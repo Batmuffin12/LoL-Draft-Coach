@@ -6,10 +6,12 @@
 
 | Item | Status |
 | --- | --- |
-| Riot API key | Development key (expires every 24h) in `.env` as `RIOT_API_KEY`. Personal key applied for. From milestone 3 the key lives **only on the server**. |
+| Riot API key | Development key (expires every 24h) in `.env` and on the Railway service. Swap both with `pnpm riot:key RGAPI-... [--personal]`; `/health` shows `riotKey: "rejected"` when it has expired. Personal key applied for. The key lives only on the server (and the local .env for dev). |
 | Overwolf | Developer access **pending** and no longer needed for data: in-game data comes from Riot's Live Client Data API. Overwolf is optional, only for an overlay window later. Keep `apps/desktop` ow-electron-compatible: only standard Electron APIs. |
 | Jev (TypeSafe AI) | **Optional, off the critical path** (decided Oct 5, 2026). `packages/jev` stays frozen behind `JEV_ENABLED=false`. Confidence labels come from our own sample sizes. Do not guess Jev's API. |
 | Sentry | Milestone 8. |
+| Releases | Nothing published yet. First build for friends = **v1.0.0**; choose the public update location then (docs/DEPLOY.md). |
+| Railway limits | Workspace soft $20 / hard $25, set 2026-10-05 for the period ending 2026-10-16: review then (docs/CLOUD.md). |
 | Railway | Live: project `lol-draft-coach`, service `ldc-server` (europe-west4), https://ldc-server-production-c9e7.up.railway.app. Infrastructure is code in `.railway/railway.ts` (`pnpm infra:plan` / `pnpm infra:apply`); never change settings in the dashboard. Costs and the cost log: `docs/CLOUD.md`. The service sleeps when unused: no background timers that make outbound requests. |
 | Milestones | 1 (v0.1.0), 2 (v0.2.0), 3 (v0.3.0, server + friends) and 4 (v0.4.0, the coach explains) done: the MVP. Next: 5 live meta (collector, rating-based engine v2), then 6 loadout, 7 grow, 8 in game + polish. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
 | Fixtures | Synthetic draft + one real Ranked Flex recording (`packages/lcu/fixtures/recorded/`). Record more with `pnpm --filter @ldc/lcu record`. |

@@ -61,7 +61,16 @@ describe("GET /health", () => {
     const app = createApp({ db: openDb(":memory:"), version: "test", riot: null });
     const res = await app.request("/health");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", riotKey: false, patch: null, newestMatchAt: null });
+    expect(await res.json()).toEqual({ status: "ok", version: "test", database: "ok", riotKey: "missing", patch: null, newestMatchAt: null });
+  });
+
+  it("reports a Riot key the server has and whether Riot rejected it", async () => {
+    let rejected = false;
+    const riot = { accountByRiotId: async () => null };
+    const app = createApp({ db: openDb(":memory:"), version: "test", riot, riotKeyRejected: () => rejected });
+    expect(await (await app.request("/health")).json()).toMatchObject({ riotKey: "ok" });
+    rejected = true;
+    expect(await (await app.request("/health")).json()).toMatchObject({ riotKey: "rejected" });
   });
 
   it("reports degraded when the database is closed", async () => {
