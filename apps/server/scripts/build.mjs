@@ -1,4 +1,4 @@
-// Bundles the server and the invite command (with the workspace packages they use) into ESM files for Node 22.
+// Bundles the server, the invite and collect commands (with the workspace packages they use) into ESM files for Node 22.
 import { build } from "esbuild";
 
 const common = {
@@ -17,4 +17,5 @@ const common = {
 await Promise.all([
   build({ ...common, entryPoints: ["src/main.ts"], outfile: "dist/main.js" }),
   build({ ...common, entryPoints: ["src/invite-cli.ts"], outfile: "dist/invite.js" }),
+  build({ ...common, entryPoints: ["src/collect-cli.ts"], outfile: "dist/collect.js" }),
 ]);

@@ -8,6 +8,7 @@ import { createApp } from "./app";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
 import { readServerEnv } from "./env";
+import { MetaJob } from "./meta-job";
 import { SyncScheduler } from "./sync-scheduler";
 
 const VERSION = "0.4.3";
@@ -27,6 +28,8 @@ const sync = riot
       activeWithinMs: 14 * 24 * 60 * MINUTE,
     })
   : null;
+// Collector + aggregator: started only by POST /admin/collect (hourly cron), never by a timer here.
+const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine });
 const app = createApp({
   db,
   version: VERSION,
@@ -35,6 +38,8 @@ const app = createApp({
   sync,
   syncWhenStaleMs: env.SYNC_STALE_MINUTES * MINUTE,
   adminToken: env.ADMIN_TOKEN ?? null,
+  meta,
+  publicConfig: { app: config.app, engine: config.engine, bands: config.bands, explain: config.explain },
 });
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {

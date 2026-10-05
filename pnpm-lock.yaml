@@ -93,6 +93,9 @@ importers:
       '@ldc/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@ldc/meta':
+        specifier: workspace:*
+        version: link:../../packages/meta
       '@ldc/riot-api':
         specifier: workspace:*
         version: link:../../packages/riot-api

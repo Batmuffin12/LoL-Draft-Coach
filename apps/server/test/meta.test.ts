@@ -1,0 +1,286 @@
+import { gunzipSync } from "node:zlib";
+import { describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { MatchSchema, RiotApiError, RiotKeyError, type LeaguePlayer, type Match } from "@ldc/riot-api";
+import type { MetaSnapshot } from "@ldc/shared";
+import { createApp } from "../src/app";
+import { sha256 } from "../src/auth";
+import { collect, nextCursor, pruneCollected, type CollectorRiot, type CollectOptions } from "../src/collector";
+import { findConfigDir, loadServerConfig } from "../src/config";
+import { openDb, schema, type Db } from "../src/db";
+import { activeBands, challengeFields, MetaJob, publishSnapshot } from "../src/meta-job";
+
+const NOW = 1_800_000_000_000;
+const MIN = 60_000;
+const config = loadServerConfig(findConfigDir(process.cwd()));
+const settings = { meta: config.meta, bands: config.bands, engine: config.engine };
+
+/** Ten players; champion 100+i; blue (first five) wins. */
+function rawMatch(id: string, endedAt: number, queueId = 420): Match {
+  return MatchSchema.parse({
+    metadata: { matchId: id },
+    info: {
+      gameCreation: endedAt - 1_800_000,
+      gameDuration: 1800,
+      gameEndTimestamp: endedAt,
+      gameVersion: "16.19.1",
+      queueId,
+      participants: Array.from({ length: 10 }, (_, i) => ({
+        puuid: `SECRET-${id}-${i}`,
+        riotIdGameName: `Name${i}`,
+        championId: 100 + i,
+        teamId: i < 5 ? 100 : 200,
+        teamPosition: ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"][i % 5],
+        win: i < 5,
+        challenges: { killParticipation: 0.5, someUnusedChallenge: 3 },
+      })),
+    },
+  });
+}
+
+interface Fake extends CollectorRiot {
+  calls: string[];
+}
+
+/** Each League-V4 page has `perPage` players until `pages`; each player has 2 games, the second shared with the next player. */
+function fakeRiot(opts: { pages?: number; perPage?: number; failFor?: string; keyError?: boolean } = {}): Fake {
+  const calls: string[] = [];
+  const pages = opts.pages ?? 2;
+  const perPage = opts.perPage ?? 3;
+  return {
+    calls,
+    async leaguePlayers(q) {
+      calls.push(`league:${q.tier}:${q.division}:${q.page}`);
+      if (opts.keyError) throw new RiotKeyError(401, "league", "rejected");
+      if (q.page > pages) return [];
+      const list = Array.from({ length: perPage }, (_, i): LeaguePlayer => ({ puuid: `P-${q.tier}-${q.division}-${q.page}-${i}`, queueType: q.queue, tier: q.tier }));
+      return [{ puuid: "P-INACTIVE", queueType: q.queue, tier: q.tier, inactive: true }, ...list];
+    },
+    async matchIdsByPuuid(puuid, query = {}) {
+      calls.push(`ids:${puuid}:${query.queue}:${query.count}:${query.startTime}`);
+      if (puuid === opts.failFor) throw new RiotApiError(500, "ids");
+      return [`EUW1_${puuid}-a`, `EUW1_${puuid}-b`];
+    },
+    async match(id) {
+      calls.push(`match:${id}`);
+      return rawMatch(id, NOW - 5 * MIN);
+    },
+  };
+}
+
+function options(over: Partial<CollectOptions["collector"]> = {}, now = () => NOW): CollectOptions {
+  return {
+    bands: [2],
+    bandConfig: config.bands,
+    collector: { ...config.meta.collector, ...over },
+    keepChallenges: challengeFields(config.engine),
+    now,
+    deadline: NOW + 60_000,
+    since: NOW - 30 * 86_400_000,
+    random: () => 0,
+  };
+}
+
+const collected = (db: Db) => db.select().from(schema.matches).all();
+
+function addUser(db: Db, token: string, band: number | null) {
+  return db
+    .insert(schema.users)
+    .values({ puuid: `U-${token}`, gameName: "Me", tagLine: "EUW", tokenHash: sha256(token), createdAt: NOW, band })
+    .returning()
+    .get();
+}
+
+describe("collector", () => {
+  it("stores anonymised, band-tagged matches inside the match budget, with only the challenges the engine reads", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const r = await collect(db, riot, options({ maxMatchesPerRun: 4 }));
+    expect(r.newMatches).toBe(4);
+    expect(r.perBand).toEqual({ 2: 4 });
+    const rows = collected(db);
+    expect(rows).toHaveLength(4);
+    expect(rows.every((m) => m.band === 2 && m.source === "collector")).toBe(true);
+    const text = JSON.stringify(rows);
+    expect(text).not.toContain("SECRET");
+    expect(text).not.toContain("Name0");
+    expect(rows[0]!.summary.participants[0]!.challenges).toEqual({ killParticipation: 0.5 });
+    // Players' identifiers are never stored anywhere.
+    const dump = JSON.stringify(db.$client.prepare("SELECT * FROM collector_cursors").all());
+    expect(dump).not.toContain("P-");
+    expect(riot.calls.some((c) => c.includes("P-INACTIVE"))).toBe(false);
+    expect(riot.calls.filter((c) => c.startsWith("ids:")).every((c) => c.endsWith(`:420:${config.meta.collector.matchesPerPlayer}:${(NOW - 30 * 86_400_000) / 1000}`))).toBe(true);
+  });
+
+  it("rotates through every tier and division page by page, and continues from the cursor next run", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot({ perPage: 1 });
+    // Each page: one player with 2 new games. 6 matches = 3 pages.
+    await collect(db, riot, options({ maxMatchesPerRun: 6 }));
+    await collect(db, riot, options({ maxMatchesPerRun: 2 }));
+    const tiers = config.bands.bands.find((b) => b.id === 2)!.tiers;
+    const divisions = config.meta.collector.divisions;
+    expect(riot.calls.filter((c) => c.startsWith("league:"))).toEqual([
+      `league:${tiers[0]}:${divisions[0]}:1`,
+      `league:${tiers[0]}:${divisions[1]}:1`,
+      `league:${tiers[0]}:${divisions[2]}:1`,
+      `league:${tiers[0]}:${divisions[3]}:1`,
+    ]);
+    expect(nextCursor({ tierIndex: tiers.length - 1, divisionIndex: divisions.length - 1, page: 4 }, tiers.length, divisions.length)).toEqual({
+      tierIndex: 0,
+      divisionIndex: 0,
+      page: 5,
+    });
+  });
+
+  it("stops at the deadline", async () => {
+    const db = openDb(":memory:");
+    let t = NOW;
+    const r = await collect(db, fakeRiot(), { ...options({}, () => (t += 20_000)), deadline: NOW + 50_000 });
+    expect(r.newMatches).toBeLessThanOrEqual(2);
+  });
+
+  it("starts over at page 1 when every list has ended", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot({ pages: 0 });
+    const r = await collect(db, riot, options());
+    expect(r.newMatches).toBe(0);
+    expect(db.select().from(schema.collectorCursors).get()).toMatchObject({ tierIndex: 0, divisionIndex: 0, page: 1 });
+  });
+
+  it("skips matches it already has, and tags a user's stored match with the band", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot({ perPage: 1 });
+    const id = "EUW1_P-GOLD-I-1-0-a";
+    db.insert(schema.matches)
+      .values({ matchId: id, queueId: 420, gameVersion: "16.19", endedAt: NOW, durationSec: 1800, summary: { matchId: id } as never, source: "user", storedAt: NOW })
+      .run();
+    await collect(db, riot, options({ maxMatchesPerRun: 1 }));
+    expect(riot.calls).not.toContain(`match:${id}`);
+    expect(db.select().from(schema.matches).where(eq(schema.matches.matchId, id)).get()?.band).toBe(2);
+  });
+
+  it("skips a player whose call fails, but stops on a rejected key", async () => {
+    const db = openDb(":memory:");
+    const ok = await collect(db, fakeRiot({ failFor: "P-GOLD-I-1-0" }), options({ maxMatchesPerRun: 2 }));
+    expect(ok.newMatches).toBe(2);
+    await expect(collect(openDb(":memory:"), fakeRiot({ keyError: true }), options())).rejects.toBeInstanceOf(RiotKeyError);
+  });
+
+  it("prunes old and surplus collected matches, never ones in a user's history", () => {
+    const db = openDb(":memory:");
+    const user = addUser(db, "t", 2);
+    const add = (id: string, endedAt: number) =>
+      db.insert(schema.matches).values({ matchId: id, queueId: 420, gameVersion: "16.19", endedAt, durationSec: 1800, summary: { matchId: id } as never, source: "collector", storedAt: NOW, band: 2 }).run();
+    add("old", NOW - 100 * 86_400_000);
+    add("a", NOW - 3);
+    add("b", NOW - 2);
+    add("c", NOW - 1);
+    add("mine", NOW - 10);
+    db.insert(schema.userMatches).values({ userId: user.id, matchId: "mine", participantIndex: 0, endedAt: NOW - 10 }).run();
+    const removed = pruneCollected(db, 2, { windowDays: 30, maxStoredMatches: 2, now: NOW });
+    expect(removed).toBe(2);
+    expect(collected(db).map((m) => m.matchId).sort()).toEqual(["b", "c", "mine"]);
+  });
+});
+
+describe("meta job", () => {
+  it("collects for the bands users play in, then publishes a gzipped snapshot per band", async () => {
+    const db = openDb(":memory:");
+    addUser(db, "a", 2);
+    addUser(db, "b", 2);
+    expect(activeBands(db, config.bands)).toEqual([2]);
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0 });
+    const r = await job.run();
+    expect(r.error).toBeNull();
+    expect(r.collected?.newMatches).toBeGreaterThan(0);
+    expect(r.snapshots).toEqual([expect.objectContaining({ band: 2, matches: r.collected!.newMatches, patch: "16.19" })]);
+    const row = db.select().from(schema.metaSnapshots).get()!;
+    const snap = JSON.parse(gunzipSync(row.body).toString()) as MetaSnapshot;
+    expect(snap.champions.length).toBe(10);
+    expect(job.lastRun()).toMatchObject({ newMatches: r.collected!.newMatches, error: null });
+  });
+
+  it("uses the default band when nobody is registered, and still publishes when the key is rejected", async () => {
+    const db = openDb(":memory:");
+    expect(activeBands(db, config.bands)).toEqual([config.bands.defaultBand]);
+    const r = await new MetaJob(db, { ...fakeRiot(), keyProblem: new Error("x") }, settings, { now: () => NOW, log: () => {} }).run();
+    expect(r.error).toMatch(/rejected/);
+    expect(r.snapshots).toHaveLength(1);
+  });
+
+  it("runs one wake-up at a time", async () => {
+    const db = openDb(":memory:");
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {} });
+    const [a, b] = [job.run(), job.run()];
+    expect(a).toBe(b);
+    await a;
+    expect(job.running).toBe(false);
+  });
+});
+
+describe("meta routes", () => {
+  const ADMIN = "x".repeat(40);
+
+  function setup() {
+    const db = openDb(":memory:");
+    addUser(db, "tok", 2);
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {} });
+    const app = createApp({
+      db,
+      version: "test",
+      riot: null,
+      adminToken: ADMIN,
+      meta: job,
+      publicConfig: { engine: config.engine },
+      now: () => NOW,
+    });
+    return { db, app, job };
+  }
+  const auth = (t: string) => ({ authorization: `Bearer ${t}` });
+
+  it("serves the band snapshot to registered users only, gzipped with an ETag", async () => {
+    const { db, app } = setup();
+    expect((await app.request("/meta/2")).status).toBe(401);
+    expect((await app.request("/meta/2", { headers: auth("tok") })).status).toBe(404);
+
+    db.insert(schema.matches)
+      .values({ matchId: "m", queueId: 420, gameVersion: "16.19.1", endedAt: NOW - MIN, durationSec: 1800, summary: (await import("@ldc/riot-api")).summarizeMatch(rawMatch("m", NOW - MIN)), source: "collector", storedAt: NOW, band: 2 })
+      .run();
+    publishSnapshot(db, 2, settings, NOW);
+
+    const res = await app.request("/meta/2", { headers: { ...auth("tok"), "accept-encoding": "gzip" } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-encoding")).toBe("gzip");
+    const etag = res.headers.get("etag")!;
+    const snap = JSON.parse(gunzipSync(Buffer.from(await res.arrayBuffer())).toString()) as MetaSnapshot;
+    expect(snap).toMatchObject({ band: 2, matches: 1, patch: "16.19" });
+
+    const plain = await app.request("/meta/2", { headers: auth("tok") });
+    expect(((await plain.json()) as MetaSnapshot).band).toBe(2);
+    expect((await app.request("/meta/2", { headers: { ...auth("tok"), "if-none-match": etag } })).status).toBe(304);
+
+    const health = (await (await app.request("/health")).json()) as { patch: string; newestMatchAt: number; collector: { snapshots: unknown[] } };
+    expect(health.patch).toBe("16.19");
+    expect(health.newestMatchAt).toBe(NOW - MIN);
+    expect(health.collector.snapshots).toHaveLength(1);
+  });
+
+  it("starts the collector only for the owner", async () => {
+    const { app, job } = setup();
+    expect((await app.request("/admin/collect", { method: "POST" })).status).toBe(404);
+    expect((await app.request("/admin/collect", { method: "POST", headers: auth("tok") })).status).toBe(404);
+    const res = await app.request("/admin/collect", { method: "POST", headers: auth(ADMIN) });
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ started: true, running: true });
+    await job.run();
+    expect(job.lastRun()?.finishedAt).toBe(NOW);
+  });
+
+  it("serves the scoring config with an ETag", async () => {
+    const { app } = setup();
+    const res = await app.request("/config");
+    expect(((await res.json()) as { engine: { topN: number } }).engine.topN).toBe(config.engine.topN);
+    expect((await app.request("/config", { headers: { "if-none-match": res.headers.get("etag")! } })).status).toBe(304);
+  });
+});

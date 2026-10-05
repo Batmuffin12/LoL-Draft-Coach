@@ -108,6 +108,8 @@ export const LeaguePlayersSchema = z.array(
     queueType: z.string(),
     tier: z.string(),
     rank: z.string().optional(),
+    /** Riot marks accounts that stopped playing; their games are mostly too old for the meta. */
+    inactive: z.boolean().optional(),
   }),
 );
 export type LeaguePlayer = z.infer<typeof LeaguePlayersSchema>[number];

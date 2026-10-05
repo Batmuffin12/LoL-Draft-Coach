@@ -1,4 +1,4 @@
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import type { MatchSummary } from "@ldc/shared";
 
 /**
@@ -43,6 +43,39 @@ export const matches = sqliteTable("matches", {
   /** "user" for a registered user's history, "collector" for meta collection. */
   source: text("source").notNull(),
   storedAt: integer("stored_at").notNull(),
+  /** Rank band the collector sampled this match for (null: only in a user's history). */
+  band: integer("band"),
+});
+
+/** Where the collector continues reading League-V4 player lists, per band. No player data. */
+export const collectorCursors = sqliteTable("collector_cursors", {
+  band: integer("band").primaryKey(),
+  tierIndex: integer("tier_index").notNull(),
+  divisionIndex: integer("division_index").notNull(),
+  page: integer("page").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+/** One hourly collector wake-up, for /health and the cost log. */
+export const collectorRuns = sqliteTable("collector_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  startedAt: integer("started_at").notNull(),
+  finishedAt: integer("finished_at"),
+  newMatches: integer("new_matches").notNull().default(0),
+  riotCalls: integer("riot_calls").notNull().default(0),
+  error: text("error"),
+});
+
+/** The latest published meta snapshot per band: gzipped JSON, served by GET /meta/:band. */
+export const metaSnapshots = sqliteTable("meta_snapshots", {
+  band: integer("band").primaryKey(),
+  createdAt: integer("created_at").notNull(),
+  etag: text("etag").notNull(),
+  matches: integer("matches").notNull(),
+  patch: text("patch"),
+  newestMatchAt: integer("newest_match_at"),
+  sizeBytes: integer("size_bytes").notNull(),
+  body: blob("body", { mode: "buffer" }).notNull(),
 });
 
 /** Which matches belong to a user's history, and which participant they were. */

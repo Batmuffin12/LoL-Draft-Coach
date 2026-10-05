@@ -67,6 +67,39 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: "live meta: collected matches, collector cursor and runs, snapshots",
+    sql: `
+      ALTER TABLE matches ADD COLUMN band INTEGER;
+      CREATE INDEX matches_band_time ON matches(band, ended_at);
+      CREATE TABLE collector_cursors (
+        band INTEGER PRIMARY KEY,
+        tier_index INTEGER NOT NULL,
+        division_index INTEGER NOT NULL,
+        page INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE collector_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at INTEGER NOT NULL,
+        finished_at INTEGER,
+        new_matches INTEGER NOT NULL DEFAULT 0,
+        riot_calls INTEGER NOT NULL DEFAULT 0,
+        error TEXT
+      );
+      CREATE TABLE meta_snapshots (
+        band INTEGER PRIMARY KEY,
+        created_at INTEGER NOT NULL,
+        etag TEXT NOT NULL,
+        matches INTEGER NOT NULL,
+        patch TEXT,
+        newest_match_at INTEGER,
+        size_bytes INTEGER NOT NULL,
+        body BLOB NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */
