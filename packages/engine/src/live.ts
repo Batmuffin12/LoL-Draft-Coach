@@ -338,6 +338,9 @@ export function suggestBans(input: LiveInput): BanSuggestion[] {
     } else if (index.champion(s.championId, eRole).n >= cfg.minGames.meta) {
       const st = index.champion(s.championId, eRole);
       reasons.push(reason("ban.meta", { winRate: st.wins / st.games, pickRate, role: eRole }));
+    } else {
+      // Too few games to quote a win rate: say what is known.
+      reasons.push(reason("ban.popular", { pickRate, role: eRole }));
     }
     out.push({ championId: s.championId, threat, reasons });
   }

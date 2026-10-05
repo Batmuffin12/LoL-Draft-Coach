@@ -256,5 +256,12 @@ describe("suggestBans", () => {
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
     expect(ids).toContain(302); // strong top laner
+    expect(bans.every((b) => b.reasons.length > 0)).toBe(true);
+  });
+
+  it("still says why when the band has too few games for a win rate", () => {
+    const bans = suggestBans(input(draft(), { index: index(snapshot({ gamesScale: 0.02 })) }));
+    expect(bans.length).toBeGreaterThan(0);
+    expect(text(bans[0]!.reasons)).toMatch(/Picked in \d+% of \w+ games in your rank \(not enough games yet/);
   });
 });
