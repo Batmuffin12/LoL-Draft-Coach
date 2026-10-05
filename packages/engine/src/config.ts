@@ -121,6 +121,12 @@ export const EngineConfigSchema = z.object({
       /** Comfort (0..1) to rating points: (comfort - neutralComfort) · comfortScale. */
       comfortScale: z.number().min(0),
       neutralComfort: unit,
+      /**
+       * Comfort stops adding above this level: every champion the player is comfortable on
+       * gets the same bonus, so the draft (meta, matchups, team) decides between them
+       * instead of always the single most-played one.
+       */
+      fullComfort: unit,
       /** Rating points for a champion the player has never played; also the floor for low comfort. */
       learningPenalty: z.number().min(0),
       /** Suggest champions the player hasn't played yet (they carry the learning penalty). */

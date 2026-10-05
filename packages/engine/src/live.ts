@@ -70,7 +70,7 @@ const bar = (points: number, cfg: RatingConfig) => clamp01(0.5 + deltaWin(points
 function personalRating(c: ComfortStats | undefined, cfg: RatingConfig): number {
   const p = cfg.personal;
   if (!c || (c.games === 0 && c.masteryPoints === 0)) return -p.learningPenalty;
-  return Math.max(-p.learningPenalty, p.comfortScale * (c.score - p.neutralComfort));
+  return Math.max(-p.learningPenalty, p.comfortScale * (Math.min(c.score, p.fullComfort) - p.neutralComfort));
 }
 
 /** Comfort reasons (the player's own record), as in engine v1. */
@@ -221,6 +221,19 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   };
 }
 
+/**
+ * Role fit with the band's data too: a champion is meta in a role when enough of its
+ * collected games (at least roles.minRoleSamples) are played there, even if Riot's
+ * recommended positions or the measured attributes don't say so.
+ */
+function liveRoleFit(id: ChampionId, comfort: ComfortStats, input: LiveInput, ctx: DraftContext): ReturnType<typeof roleFit> {
+  const fit = roleFit(id, comfort, ctx.role, input.intendedPositions, ctx.attributes, input.config.roles);
+  if (fit === "meta" || !ctx.role) return fit;
+  const { roles } = input.config;
+  const share = input.index.roleDistribution(id).get(ctx.role) ?? 0;
+  return input.index.champion(id, ctx.role).n >= roles.minRoleSamples && share >= roles.minRoleShare ? "meta" : fit;
+}
+
 /** Candidates: the player's pool that fits the role, plus (optionally) pickable champions that are meta there. */
 function candidates(input: LiveInput, ctx: DraftContext): { id: ChampionId; comfort: ComfortStats | undefined; offMeta: boolean }[] {
   const { comfort, config, index } = input;
@@ -228,7 +241,7 @@ function candidates(input: LiveInput, ctx: DraftContext): { id: ChampionId; comf
   const out = new Map<ChampionId, { id: ChampionId; comfort: ComfortStats | undefined; offMeta: boolean }>();
   for (const [id, c] of comfort) {
     if (ctx.unavailable.has(id) || (pickable.size && !pickable.has(id))) continue;
-    const fit = roleFit(id, c, ctx.role, input.intendedPositions, ctx.attributes, config.roles);
+    const fit = liveRoleFit(id, c, input, ctx);
     if (fit) out.set(id, { id, comfort: c, offMeta: fit === "offMeta" });
   }
   if (config.rating.personal.includeUnplayed && ctx.role && pickable.size) {
@@ -305,7 +318,7 @@ export function assessPick(input: LiveInput, championId: ChampionId): PickRecomm
   const own = { ...input, unavailable };
   const ctx = context(own);
   const comfort = input.comfort.get(championId);
-  const fit = comfort ? roleFit(championId, comfort, ctx.role, input.intendedPositions, ctx.attributes, input.config.roles) : "meta";
+  const fit = comfort ? liveRoleFit(championId, comfort, own, ctx) : "meta";
   return scoreCandidate(championId, comfort, fit === "offMeta", own, ctx).pick;
 }
 

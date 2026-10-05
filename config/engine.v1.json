@@ -207,9 +207,10 @@
     "offMetaPenalty": 20,
     "teamRatingScale": 10,
     "personal": {
-      "comfortScale": 80,
+      "comfortScale": 160,
       "neutralComfort": 0.5,
-      "learningPenalty": 25,
+      "fullComfort": 0.65,
+      "learningPenalty": 50,
       "includeUnplayed": true
     },
     "blind": {

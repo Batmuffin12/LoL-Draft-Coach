@@ -233,6 +233,24 @@ describe("adviseLivePicks", () => {
     expect(text(p.reasons)).toMatch(/Off-meta in top/);
   });
 
+  it("values comfort over meta: your main beats a stronger champion you've never played, but not a hard counter", () => {
+    // No enemy laner yet: 101 (the player's main, 60% over 40 games) vs 103 (55% in the band, never played).
+    const blind = adviseLivePicks(input(draft(), { pickable: [101, 103] })).picks.map((p) => p.championId);
+    expect(blind.indexOf(101)).toBeLessThan(blind.indexOf(103));
+    // Into 201, the 102 counter (+15% over 300 games) is still worth leaving the main for.
+    expect(adviseLivePicks(input(draft([201]))).picks[0]!.championId).toBe(102);
+  });
+
+  it("doesn't force the single most comfortable champion: comfortable picks are equal, the draft decides", () => {
+    // Both are comfortable (101 even more so); into 201 the draft favours 102.
+    const base = computeComfort(games, [], NOW, config.comfort, "middle");
+    const comfort = new Map([...base].map(([id, c]) => [id, { ...c, score: id === 101 ? 0.95 : 0.7 }]));
+    const advice = adviseLivePicks(input(draft([201]), { comfort, pickable: [101, 102] }));
+    const personal = (id: number) => advice.picks.find((p) => p.championId === id)!.terms!.find((t) => t.name === "personal")!.rating;
+    expect(personal(101)).toBeCloseTo(personal(102));
+    expect(advice.picks[0]!.championId).toBe(102);
+  });
+
   it("adds synergy with allies already picked", () => {
     const withJungle = draft();
     withJungle.myTeam[1]!.championId = 401;
