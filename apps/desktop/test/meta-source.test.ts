@@ -160,6 +160,16 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     await waitFor(() => coach!.state.meta?.state === "ready");
     expect(coach.state.meta).toMatchObject({ state: "ready", band: 2, patch: "16.19", matches: 1000 });
 
+    // Ban phase with the player hovering 245: the bans card adds a "For your 245" section.
+    const fixture = loadFixture("synthetic-draft-pick");
+    const banFrame = fixture.frames.find((f) => f.uri === "/lol-champ-select/v1/session" && f.t === 2000)!;
+    const session = structuredClone(banFrame.data) as { myTeam: { cellId: number; championPickIntent: number }[] };
+    session.myTeam.find((m) => m.cellId === 2)!.championPickIntent = 245;
+    lcu.push("/lol-champ-select/v1/session", session);
+    await waitFor(() => coach!.state.hoverBans?.champion.id === 245);
+    expect(coach.state.hoverBans?.champion.id).toBe(245);
+    expect(coach.state.hoverBans!.bans.every((b) => !coach!.state.bans.some((x) => x.champion.id === b.champion.id))).toBe(true);
+
     while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
     await waitFor(() => coach!.state.picks.length > 0);
     const picks = coach.state.picks;
