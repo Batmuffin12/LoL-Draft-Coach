@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
-## [0.5.0] — Unreleased — Milestone 5: Live meta
+## [0.5.0] — 2026-10-06 — Milestone 5: Live meta
 
 The coach now knows what is strong in your rank right now, and enemy picks change its advice.
 
