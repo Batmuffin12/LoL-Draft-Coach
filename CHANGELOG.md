@@ -2,6 +2,11 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.2.5] — 2026-10-05
+
+### Fixed
+- Champions were suggested (and listed in "Your roles") for roles they aren't played in, e.g. Naafiri bot from a single game or Vi support from a tiny sample. Off-meta picks now need `roles.offMetaMinGames` games in the role, data-derived role shares need `roles.minRoleSamples` observations, and role advice follows the same rules as picks.
+
 ## [0.2.4] — 2026-10-05
 
 ### Changed
