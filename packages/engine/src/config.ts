@@ -188,6 +188,8 @@ export const EngineConfigSchema = z.object({
     itemMinShare: unit,
     /** Rating points per unit of win added (log-odds scale ≈ 400 / ln 10 × 4 near 50%). */
     winAddedScale: z.number().min(0),
+    /** Rating points per unit of ln(share at the slot): what players commonly buy there is the prior that win added moves away from. */
+    shareScale: z.number().min(0),
     /** Rating points per unit of ln(lift), scaled by how far the enemy team is above the band in the trait. */
     liftScale: z.number().min(0),
     /** An item whose win added is below this (0..1, negative) is never the top pick at its slot. */

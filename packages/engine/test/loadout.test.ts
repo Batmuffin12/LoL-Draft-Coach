@@ -4,7 +4,8 @@ import type { ChampionAttributes, ChampionBuild } from "@ldc/shared";
 import { buildLoadout, parseEngineConfig, parseExplainConfig, rankItems, renderReason, type LoadoutInput } from "../src/index";
 
 const read = (name: string) => JSON.parse(readFileSync(new URL(`../../../config/${name}`, import.meta.url), "utf8"));
-const cfg = parseEngineConfig(read("engine.v1.json")).loadout;
+// Win added and lift alone (the popularity prior is tested separately).
+const cfg = { ...parseEngineConfig(read("engine.v1.json")).loadout, shareScale: 0 };
 const explain = parseExplainConfig(read("explain.v1.json"));
 
 const page = (keystone: number, games: number, wins: number) => ({ primaryStyle: 8000, subStyle: 8400, runes: [keystone, 2, 3, 4, 5, 6], statPerks: [5001, 5008, 5005], games, wins, n: games });
@@ -111,6 +112,11 @@ describe("rankItems", () => {
     const [slot1] = rankItems(input({ build: b, enemies: [11, 12] }));
     expect(slot1!.top.itemId).toBe(2);
     expect(slot1!.alternatives[0]).toMatchObject({ itemId: 1, reasons: expect.arrayContaining([expect.objectContaining({ id: "loadout.item.winAdded.negative" })]) });
+  });
+
+  it("with the popularity prior, a rarely bought item needs much more win added to lead", () => {
+    const [slot1] = rankItems(input({ config: { ...cfg, shareScale: 50 } }));
+    expect(slot1!.top.itemId).toBe(3071);
   });
 
   it("skips items you already own", () => {

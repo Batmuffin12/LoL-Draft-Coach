@@ -91,17 +91,22 @@ const withTimelines = buildRows.map((r) => JSON.parse(r.summary) as MatchSummary
 const cut = Math.floor(withTimelines.length * (1 - testShare));
 const ddragon = new DataDragon({ cacheDir: join(dirname(env.DATABASE_PATH), "ddragon") });
 await ddragon.load();
-const items = backtestItems({
-  train: withTimelines.slice(0, cut),
-  test: withTimelines.slice(cut),
-  now: Date.now(),
-  meta: config.meta,
-  loadout: config.engine.loadout,
-  completed: completedItems(ddragon.data.itemInfo, config.engine.loadout.items),
-});
+const completed = completedItems(ddragon.data.itemInfo, config.engine.loadout.items);
+const itemRun = (loadout = config.engine.loadout, meta = config.meta) =>
+  backtestItems({ train: withTimelines.slice(0, cut), test: withTimelines.slice(cut), now: Date.now(), meta, loadout, completed });
+const items = itemRun();
 const wa = (x: { n: number; winAdded: number }) => `${Number.isFinite(x.winAdded) ? (x.winAdded >= 0 ? "+" : "") + (x.winAdded * 100).toFixed(1) : "—"} pts (${x.n})`;
 console.log(`
 Items (bands ${bandsForBuilds.join("+")}): ${withTimelines.length} games with timelines → train ${cut}, test ${withTimelines.length - cut}; ${items.purchases} held-out purchases ranked.`);
 console.log(`  Ours:         top-1 ${pct(items.ranked.top1)}  top-3 ${pct(items.ranked.top3)}`);
 console.log(`  Most bought:  top-1 ${pct(items.popular.top1)}  top-3 ${pct(items.popular.top3)}`);
 console.log(`  Win added when the purchase was our #1: ${wa(items.agree)}; otherwise: ${wa(items.disagree)}`);
+
+console.log("\n  Sweep: shareScale (popularity prior) × winAddedPriorGames (shrinking win added):");
+for (const shareScale of [0, 20, 50, 100, 200]) {
+  for (const prior of [30, 100, 300]) {
+    const r = itemRun({ ...config.engine.loadout, shareScale }, { ...config.meta, builds: { ...config.meta.builds, winAddedPriorGames: prior } });
+    const cur = shareScale === config.engine.loadout.shareScale && prior === config.meta.builds.winAddedPriorGames ? " (current)" : "";
+    console.log(`    ${String(shareScale).padStart(3)} × ${String(prior).padStart(3)}  top-1 ${pct(r.ranked.top1)}  top-3 ${pct(r.ranked.top3)}  agree ${wa(r.agree)}  other ${wa(r.disagree)}${cur}`);
+  }
+}

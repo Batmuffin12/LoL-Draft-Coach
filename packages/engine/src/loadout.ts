@@ -129,7 +129,7 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
       const best = [...mine].sort((a, b) => Math.log(b.lift) * intensity[b.trait] - Math.log(a.lift) * intensity[a.trait])[0];
       if (best) reasons.push(liftReason("item", best, enemy));
       reasons.push(reason(s.winAdded >= 0 ? "loadout.item.winAdded" : "loadout.item.winAdded.negative", { id: s.itemId, slot, delta: s.winAdded, share: s.share, games: s.n }));
-      return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
+      return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
     })
     .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
 }

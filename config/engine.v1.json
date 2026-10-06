@@ -246,6 +246,7 @@
     "minMatchupGames": 25,
     "itemMinShare": 0.04,
     "winAddedScale": 695,
+    "shareScale": 50,
     "liftScale": 60,
     "negativeGuard": -0.02,
     "minLift": 1.3,

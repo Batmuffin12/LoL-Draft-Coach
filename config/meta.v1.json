@@ -32,7 +32,7 @@
     "maxOptions": 4,
     "minOptionGames": 3,
     "minItemGames": 5,
-    "winAddedPriorGames": 30,
+    "winAddedPriorGames": 300,
     "stateBins": {
       "minutes": [10, 15, 20, 25, 30],
       "goldDiff": [-5000, -2500, -1000, 1000, 2500, 5000],
