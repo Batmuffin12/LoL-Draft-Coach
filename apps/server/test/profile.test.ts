@@ -192,3 +192,12 @@ describe("POST /advice (advice log)", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("rank history", () => {
+  it("keeps your rank per day from each sync and returns it with your profile", async () => {
+    const { register, get } = setup();
+    const token = await register("Ofek#EUW");
+    const body = (await (await get("/me/profile", token)).json()) as { rankHistory: unknown[] };
+    expect(body.rankHistory).toEqual([{ day: new Date(NOW).toISOString().slice(0, 10), queueType: "RANKED_SOLO_5x5", tier: "GOLD", rank: null }]);
+  });
+});

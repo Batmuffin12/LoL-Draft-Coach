@@ -50,6 +50,8 @@ const ProfileSchema = z.looseObject({
   matchIds: z.array(z.string()),
   // The advice log (servers before 0.7 don't send it).
   advice: z.array(AdviceRecordSchema).default([]),
+  // Your rank per day (servers before 0.7 don't send it).
+  rankHistory: z.array(z.looseObject({ day: z.string(), queueType: z.string(), tier: z.string(), rank: z.string().nullable() })).default([]),
   sync: SyncStateSchema,
 });
 type Parsed = z.infer<typeof ProfileSchema>;
@@ -60,6 +62,7 @@ export interface ServerProfile {
   matches: UserMatch[];
   matchIds: string[];
   advice: AdviceRecord[];
+  rankHistory: { day: string; queueType: string; tier: string; rank: string | null }[];
   sync: ServerSyncState;
 }
 

@@ -3,7 +3,7 @@ import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc
 import { participantIndex, summarizeMatch, type RiotApi } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
-import { matches, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
+import { matches, rankHistory, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
 
 /** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
 export const MATCH_IDS_PAGE = 100;
@@ -120,6 +120,14 @@ export async function syncUser(
       .onConflictDoUpdate({ target: userMasteries.userId, set: { data: masteries, updatedAt: now } })
       .run();
     tx.update(users).set({ band, ranked, lastSyncAt: now }).where(eq(users.id, user.id)).run();
+    // The rank today (the last sync of the day wins), for the monthly report's rank trend.
+    const day = new Date(now).toISOString().slice(0, 10);
+    for (const r of ranked) {
+      tx.insert(rankHistory)
+        .values({ userId: user.id, day, queueType: r.queueType, tier: r.tier, rank: r.rank ?? null })
+        .onConflictDoUpdate({ target: [rankHistory.userId, rankHistory.day, rankHistory.queueType], set: { tier: r.tier, rank: r.rank ?? null } })
+        .run();
+    }
   });
   pruneUserHistory(db, user.id, history.matchCount);
 

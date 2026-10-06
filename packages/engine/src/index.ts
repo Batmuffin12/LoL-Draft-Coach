@@ -19,3 +19,4 @@ export * from "./loadout-sources";
 export * from "./postgame";
 export * from "./growth";
 export * from "./newchamps";
+export * from "./report";

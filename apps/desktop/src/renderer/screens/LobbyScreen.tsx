@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { FocusCard } from "../components/FocusCard";
+import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
+import { Button } from "../components/Button";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
 import { PostGameCard } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
@@ -20,13 +22,43 @@ const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
 export function LobbyScreen({ state }: { state: ViewState }) {
+  return <Lobby state={state} />;
+}
+
+/** The monthly report, opened from the Style tab; Back returns to the lobby. */
+function MonthScreen({ state, onBack }: { state: ViewState; onBack: () => void }) {
+  const m = state.month!;
+  return (
+    <Window
+      header={<Header state={state} />}
+      band={
+        <div className="you">
+          <div className="who">
+            <span className="label gold">{`Monthly report · ${m.period}`}</span>
+            <span className="nm">Your month</span>
+          </div>
+          <Button variant="ghost" small onClick={onBack}>
+            Back
+          </Button>
+        </div>
+      }
+      footer={<span className="micro one-line">{m.footer}</span>}
+    >
+      <MonthReport month={m} />
+    </Window>
+  );
+}
+
+function Lobby({ state }: { state: ViewState }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
+  const [showMonth, setShowMonth] = useState(false);
   // A newly logged game (it arrives after the panel opens): show it first.
   const latest = state.lastGame?.lockedAt ?? 0;
   useEffect(() => {
     if (recent) setTab("last");
   }, [latest]);
+  if (showMonth && state.month) return <MonthScreen state={state} onBack={() => setShowMonth(false)} />;
   return (
     <Window
       header={<Header state={state} />}
@@ -45,7 +77,7 @@ export function LobbyScreen({ state }: { state: ViewState }) {
       footer={<AccountFooter account={state.account} />}
     >
       <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
-      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} /> : tab === "pool" ? <Pool state={state} /> : <NewChamps state={state} />}
+      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} onMonth={() => setShowMonth(true)} /> : tab === "pool" ? <Pool state={state} /> : <NewChamps state={state} />}
     </Window>
   );
 }
@@ -143,7 +175,7 @@ function NewChamps({ state }: { state: ViewState }) {
   );
 }
 
-function Style({ state }: { state: ViewState }) {
+function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
   const roles = useOpenRoles(state.playstyle.length, state.playstyle.map((p) => `${p.role}:${p.games}`).join());
   if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
   return (
@@ -166,6 +198,13 @@ function Style({ state }: { state: ViewState }) {
           </Section>
         );
       })}
+      {state.month && (
+        <ClosedRole
+          title="This month"
+          summary={[`${state.month.games} games`, ...state.month.strip.slice(1, 3).map((t) => `${t.label} ${t.value}`)].join(" · ")}
+          onOpen={onMonth}
+        />
+      )}
     </>
   );
 }

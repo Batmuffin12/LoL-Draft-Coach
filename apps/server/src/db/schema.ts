@@ -128,6 +128,22 @@ export const adviceLog = sqliteTable("advice_log", {
   createdAt: integer("created_at").notNull(),
 });
 
+/** The user's own rank per day and queue (League-V4, at each sync), for the monthly report's rank trend. */
+export const rankHistory = sqliteTable(
+  "rank_history",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** UTC date, "YYYY-MM-DD". */
+    day: text("day").notNull(),
+    queueType: text("queue_type").notNull(),
+    tier: text("tier").notNull(),
+    rank: text("rank"),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day, t.queueType] })],
+);
+
 /** One-time invite codes created by the owner. */
 export const invites = sqliteTable("invites", {
   /** SHA-256 of the code; the code itself is shown once and never stored. */

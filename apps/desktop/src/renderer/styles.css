@@ -404,3 +404,33 @@ p { margin: 0; }
 .plan { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; background: var(--card); border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .plan .icons { gap: 3px; }
 .section:has(> .section-head.closed) { padding-block: 6px; }
+
+/* Monthly report */
+/* Stat strip: a row of fixed tiles, label on top, value under (monthly report) */
+.strip { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.strip .tile { background: var(--bg); padding: 4px 8px; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.strip .k { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.strip .v { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-number); line-height: var(--lh-number); white-space: nowrap; }
+.strip .s { font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.strip .pos .v { color: var(--positive); }
+.strip .neg .v { color: var(--negative); }
+.table.trends .thead, .table.trends .trow { grid-template-columns: minmax(0, 1fr) 44px 20px 44px 52px; }
+.table.trends .trow { min-height: 0; padding: 1px 6px; }
+.table.champform .thead, .table.champform .trow { grid-template-columns: minmax(0, 1fr) 50px 50px 64px; }
+.table.champform .trow { min-height: 0; padding: 2px 6px; }
+.table .arrow { text-align: center; font-weight: 700; }
+.table .arrow.pos::before { content: "\25B2"; font-size: 10px; }
+.table .arrow.neg::before { content: "\25BC"; font-size: 10px; }
+.table .arrow.flat::before { content: "\2013"; }
+.table .axis-nm { font-size: var(--fs-caption); color: var(--text); }
+.trends2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+.trends2 .tr { display: grid; grid-template-columns: minmax(0, 1fr) 17px 9px 17px 24px; column-gap: 2px; align-items: baseline; padding: 2px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.trends2 .num { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-body); }
+.trends2 .pos { color: var(--positive); }
+.trends2 .neg { color: var(--negative); }
+.trends2 .muted, .trends2 .flat { color: var(--muted); }
+.trends2 .arrow { text-align: center; font-size: 9px; }
+.table.champform .nm, .table.champform .c-num { font-size: var(--fs-body); }
+.table.champform .trow { height: 28px; padding: 0 6px; }
+.trends2 .axis-nm { font-size: var(--fs-micro); }
+.monthreport .section { padding-block: 6px; }

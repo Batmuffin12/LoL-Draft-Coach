@@ -90,6 +90,14 @@ export const EngineConfigSchema = z.object({
     /** A metric must separate wins from losses by at least this much win rate to be a focus. */
     minImportance: z.number().min(0),
   }),
+  /** Monthly report (DESIGN §7, F8). */
+  report: z.object({
+    /** The period, in days, compared with the same length of time before it. */
+    days: z.number().int().min(1),
+    maxChampions: z.number().int().min(1),
+    /** Games on a champion before the period needed to show its change. */
+    minPriorGames: z.number().int().min(1),
+  }),
   /** New-champion recommender (DESIGN §6). */
   newChamps: z.object({
     /** Champions you played fewer games of in the role (and with less mastery) count as new. */

@@ -300,7 +300,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       })),
     );
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
-    this.emit("profile", profile);
+    this.emit("profile", { ...profile, rankHistory: p.rankHistory });
     this.advice = p.advice;
     this.emit("advice", this.advice);
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });

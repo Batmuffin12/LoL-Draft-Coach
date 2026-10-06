@@ -117,6 +117,20 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX advice_log_by_time ON advice_log(user_id, locked_at);
     `,
   },
+  {
+    version: 5,
+    name: "rank history: the user's own rank per day, for the monthly report",
+    sql: `
+      CREATE TABLE rank_history (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        queue_type TEXT NOT NULL,
+        tier TEXT NOT NULL,
+        rank TEXT,
+        PRIMARY KEY (user_id, day, queue_type)
+      );
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

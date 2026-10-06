@@ -121,11 +121,13 @@ function scheduleScreenshot(): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
-    // LDC_SCREENSHOT_CLICK=Build: click the first button with that text first (e.g. to open a tab).
-    const click = process.env.LDC_SCREENSHOT_CLICK;
-    if (click) {
+    // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
+    // "Style>This month" clicks one after the other.
+    for (const click of (process.env.LDC_SCREENSHOT_CLICK ?? "").split(">").filter(Boolean)) {
       await win?.webContents
-        .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === ${JSON.stringify(click)}); b?.click(); return !!b; })()`)
+        .executeJavaScript(
+          `(() => { const t = ${JSON.stringify(click)}; const all = [...document.querySelectorAll("button")]; const b = all.find((x) => x.textContent.trim() === t) ?? all.find((x) => x.textContent.trim().startsWith(t)); b?.click(); return !!b; })()`,
+        )
         .then((found: boolean) => console.log(`LDC_SCREENSHOT: clicked "${click}": ${found}`))
         .catch(() => null);
       await new Promise((r) => setTimeout(r, 400));

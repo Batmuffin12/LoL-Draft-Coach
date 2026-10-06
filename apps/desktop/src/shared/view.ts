@@ -257,6 +257,23 @@ export interface PickAdviceView {
   minGames?: { meta: number; pair: number };
 }
 
+/** The monthly report: trends over your games in the last month, never a verdict on one game. */
+export interface MonthView {
+  /** "Sep 7 – Oct 6". */
+  period: string;
+  games: number;
+  /** "Trends over 64 games. One game moves these numbers very little." */
+  footer: string;
+  /** The summary tiles: games, win rate, rank, focus. */
+  strip: { label: string; value: string; sub?: string; tone?: "pos" | "neg" }[];
+  /** The role whose style trends are shown ("Mid"), or null. */
+  role: string | null;
+  axes: { label: string; from: number | null; to: number }[];
+  champions: { champion: ChampView; games: number; winRate: number; change: number | null }[];
+  /** Focus targets met, then the current focus. */
+  focus: { met: string[]; current: string | null };
+}
+
 /** A champion to learn next in a role. */
 export interface NewChampView {
   champion: ChampView;
@@ -358,6 +375,8 @@ export interface ViewState {
   focus: FocusView | null;
   /** New champions per role (needs the band's live meta), roles in the lobby's order. */
   newChamps: NewChampRoleView[];
+  /** The monthly report, or null without games in the last month. */
+  month: MonthView | null;
   notices: string[];
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
@@ -383,6 +402,7 @@ export function emptyViewState(): ViewState {
     lastGame: null,
     focus: null,
     newChamps: [],
+    month: null,
     notices: [],
     docked: true,
     roleLabels: {},

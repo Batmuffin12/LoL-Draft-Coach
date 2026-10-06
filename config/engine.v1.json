@@ -177,6 +177,7 @@
     }
   },
   "growth": { "window": 20, "checkGames": 10, "targetStep": 0.5, "minGames": 8, "minImportance": 0.02 },
+  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },
   "newChamps": {
     "maxGames": 3,
     "maxMastery": 30000,

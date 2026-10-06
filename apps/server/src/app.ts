@@ -202,7 +202,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
     if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs)) {
       deps.sync.request(user.id).catch(() => {});
     }
-    return c.json({ ...loadProfile(deps.db, user, since), sync: deps.sync?.state(user.id) ?? { state: "idle" } });
+    return c.json({ ...loadProfile(deps.db, user, since, now()), sync: deps.sync?.state(user.id) ?? { state: "idle" } });
   });
 
   app.post("/me/sync", (c) => {

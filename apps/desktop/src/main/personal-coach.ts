@@ -20,6 +20,7 @@ import {
   draftLoadout,
   pickFocus,
   recommendNewChampions,
+  monthlyReport,
   type GrowthFocus,
   completedItems,
   completedBoots,
@@ -38,6 +39,7 @@ import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
 import { focusInGame, focusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
+import { monthView } from "./month-view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -318,6 +320,34 @@ export class PersonalCoach extends Coach {
         })
       : null;
     this.update({ focus: view });
+    this.updateMonth();
+  }
+
+  /** The monthly report: your last month against the month before, from your own games. */
+  private updateMonth(): void {
+    if (!this.profile) return;
+    const { engine, explain } = this.config;
+    const report = monthlyReport(this.profile.matches, Date.now(), engine, {
+      bands: this.config.bands,
+      rankHistory: this.profile.rankHistory,
+      references: (role) => this.metaIndex?.snapshot.references[role],
+    });
+    const lookup = (id: number) => {
+      try {
+        return this.deps.ddragon.champion(id);
+      } catch {
+        return undefined;
+      }
+    };
+    const labels = roleLabels(explain.templates);
+    this.update({
+      month: monthView(report, {
+        explain,
+        champion: (id) => champView(id, lookup),
+        positionLabel: (r) => (labels[r] ?? r).replace(/^./, (c) => c.toUpperCase()),
+        growth: this.growth,
+      }),
+    });
   }
 
   /** The post-game card: your newest logged game, joined with your history for its result. */
