@@ -21,7 +21,7 @@ The app covers the whole game, from the ban phase to the post-game review.
 | Ban phase     | Ban suggestions        | Top 3 bans that threaten your pool and role                                                                |
 | Pick phase    | Pick coach             | Top 3 picks, ranked, with pro-style reasoning; updates as each enemy locks in                              |
 | Pick phase    | Pick-order awareness   | Safe blind picks when you pick early, counter-picks when you pick late                                     |
-| After lock-in | Full loadout           | Runes, summoner spells, skill order, starting items and core build; one-click import of runes and item set |
+| After lock-in | Full loadout           | Runes, summoner spells, skill order, starting items and core build; one-click import of runes, item set and summoner spells |
 | In game       | Live build adjustments | Next item plus 2 alternatives that adapt to the game, from Riot's Live Client Data API: both teams' items, who is fed, who keeps killing you, what your allies already cover, and your own gold and inventory (for example, armor when the enemy ADC is fed; skip anti-heal if an ally has it; buy the component you can afford now). Ranked by win added at the moment of purchase, never raw item win rate |
 | After game    | Learning loop          | Records whether you followed the advice and the result, so recommendations adapt to you                    |
 | Lobby / profile | Playstyle card       | Eight named axes (early pressure, fighting, farming, vision, risk control, objectives, roaming, playmaking) as "top X%" of your role and rank |
@@ -29,7 +29,7 @@ The app covers the whole game, from the ban phase to the post-game review.
 | Profile       | New champions          | Champions that play like the ones you're good at, fill a gap, are strong in your rank, with reasons        |
 | After game / profile | Growth focus    | One measurable focus at a time (for example, CS at 10 on your main) with a target and progress; monthly report |
 
-Rune page and item set import happen **only when the player clicks**; the app never picks, bans or locks (see Compliance).
+Rune page, item set and summoner spell import happen **only when the player clicks**; the app never picks, bans or locks (see Compliance).
 
 Supported queues at launch: Ranked Solo/Duo, Ranked Flex and Normal Draft. ARAM and Arena come later with their own logic; Arena augment and item win rates are never shown.
 
@@ -249,7 +249,7 @@ Matches older than about two patches are pruned to keep the database small.
 The app must stay within Riot's rules so users never risk their accounts. These are hard product rules, not preferences:
 
 - **No game memory access.** Riot blocks memory access for unknown third-party apps from October 6, 2026 ([Riot Support](https://support.riotgames.com/en-us/riot/performance/game-memory-access-removed-for-third-party-apps)). Use only the LCU, the Riot API, Riot's Live Client Data API and (optionally) Overwolf events.
-- **Suggest, never decide.** Riot does not approve apps that dictate player decisions ([Riot Developer Portal](https://developer.riotgames.com/docs/lol)). Show ranked options with reasoning; never auto-pick, auto-ban or auto-lock. The only League client writes allowed are **creating a rune page and writing an item set, each only on an explicit click by the player**; nothing ever acts on champ select picks, bans or locks.
+- **Suggest, never decide.** Riot does not approve apps that dictate player decisions ([Riot Developer Portal](https://developer.riotgames.com/docs/lol)). Show ranked options with reasoning; never auto-pick, auto-ban or auto-lock. The only League client writes allowed are **creating a rune page, writing an item set and setting the player's own two summoner spells, each only on an explicit click by the player**; nothing ever acts on champ select picks, bans or locks.
 - **In-game advice uses only what the client shows** (Live Client Data API). No enemy cooldown or ultimate tracking (banned by Riot since March 2025). Live game data passes through `sanitizeLiveGame()` (packages/live-client), which drops every Riot ID and summoner name, before it reaches the engine or the UI. Item advice always offers alternatives and never buys anything.
 - **Riot notice.** Show "LoL Draft Coach isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties" where players can see it.
 - **No player identities in ranked champ select.** Score champions and the draft only, never teammates' names, ranks or histories.

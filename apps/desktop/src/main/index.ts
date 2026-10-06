@@ -198,7 +198,7 @@ async function main(): Promise<void> {
     if (latest) e.sender.send(IPC.state, latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
-  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" ? coach.importLoadout(kind) : undefined));
+  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "spells" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
   startAutoUpdate((m) => coach.announce(m));

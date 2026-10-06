@@ -100,10 +100,10 @@ export class PersonalCoach extends Coach {
   }
 
   /**
-   * Writes the shown rune page or item set into the League client. Called only from the
-   * player's click on an import button (CLAUDE.md: the single approved LCU write exception).
+   * Writes the shown rune page, item set or summoner spells into the League client. Called only
+   * from the player's click on an import button (CLAUDE.md: the single approved LCU write exception).
    */
-  async importLoadout(kind: "runes" | "items"): Promise<void> {
+  async importLoadout(kind: "runes" | "items" | "spells"): Promise<void> {
     const shown = this.shownLoadout;
     const creds = this.p.connector.credentials;
     if (!shown || !creds || !this.config.app.import.enabled) return;
@@ -112,7 +112,12 @@ export class PersonalCoach extends Coach {
     const importer = new LcuImporter(creds);
     try {
       const l = shown.loadout;
-      if (kind === "runes") {
+      if (kind === "spells") {
+        const s = shown.loadout.spells?.value;
+        if (!s || s.length !== 2) return;
+        await importer.importSpells([s[0]!, s[1]!]);
+        this.importMessage = say("import.spells.done");
+      } else if (kind === "runes") {
         if (!l.page) return;
         const p = l.page.value;
         // Stored shards are in Riot's match order (defense, flex, offense); the client wants offense, flex, defense.
@@ -124,12 +129,21 @@ export class PersonalCoach extends Coach {
         });
         this.importMessage = say(`import.runes.${result}`);
       } else {
+        // A full build: start, boots, the core (items 1-3) and later items (4+), what to buy
+        // against this enemy team (one block per need), and the other options players take.
+        const path = l.core?.value ?? [];
+        const onPath = new Set([...path, ...(l.boots ? [l.boots.top.itemId] : [])]);
+        const others = [...new Set([...l.items.flatMap((s) => s.alternatives.map((a) => a.itemId)), ...(l.boots?.alternatives.map((a) => a.itemId) ?? [])])].filter((id) => !onPath.has(id));
+        const byTrait = new Map<string, number[]>();
+        for (const s of l.situational) byTrait.set(s.trait, [...(byTrait.get(s.trait) ?? []), s.itemId]);
         const blocks = [
-          ...(l.starting ? [{ type: say("import.block.starting"), items: l.starting.value }] : []),
-          ...(l.core ? [{ type: say("import.block.core"), items: l.core.value }] : []),
-          ...(l.boots ? [{ type: say("import.block.boots"), items: [l.boots.top.itemId, ...l.boots.alternatives.map((a) => a.itemId)] }] : []),
-          ...l.items.filter((s) => s.alternatives.length).map((s) => ({ type: say("import.block.alternatives", { slot: s.slot }), items: s.alternatives.map((a) => a.itemId) })),
-        ];
+          { type: say("import.block.starting"), items: l.starting?.value ?? [] },
+          { type: say("import.block.boots"), items: l.boots ? [l.boots.top.itemId] : [] },
+          { type: say("import.block.core"), items: path.slice(0, 3) },
+          { type: say("import.block.later"), items: path.slice(3) },
+          ...[...byTrait].map(([trait, items]) => ({ type: say(`import.block.situational.${trait}`), items })),
+          { type: say("import.block.alternatives"), items: others },
+        ].filter((b) => b.items.length > 0);
         await importer.importItemSet({ title: `${shown.champion} ${l.role}`, championId: l.championId, mapId: Number(this.config.engine.loadout.items.mapId), blocks });
         this.importMessage = say("import.items.done");
       }

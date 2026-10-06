@@ -18,6 +18,8 @@ async function start(overrides: Record<string, unknown> = {}) {
     "/lol-perks/v1/pages": [{ id: 1, name: "My own page", isEditable: true }],
     "/lol-summoner/v1/current-summoner": { summonerId: 42 },
     "/lol-item-sets/v1/item-sets/42/sets": { accountId: 42, itemSets: [{ uid: "mine", title: "My set" }], timestamp: 1 },
+    // In champ select: you are cell 2 with Flash (4) on F.
+    "/lol-champ-select/v1/session": { localPlayerCellId: 2, myTeam: [{ cellId: 2, spell1Id: 14, spell2Id: 4 }] },
     ...overrides,
   });
   importer = new LcuImporter(await server.start());
@@ -54,6 +56,12 @@ describe("LcuImporter (click-only rune page and item set import)", () => {
     ]);
   });
 
+  it("sets your own two spells, keeping Flash on the key it's on", async () => {
+    const s = await start();
+    await importer!.importSpells([4, 12]);
+    expect(s.writes.at(-1)).toEqual({ method: "PATCH", path: "/lol-champ-select/v1/session/my-selection", body: { spell1Id: 12, spell2Id: 4 } });
+  });
+
   it("refuses every other write, champ select above all", async () => {
     await start();
     for (const [method, path] of [
@@ -61,8 +69,13 @@ describe("LcuImporter (click-only rune page and item set import)", () => {
       ["PUT", "/lol-champ-select/v1/session/actions/1"],
       ["POST", "/lol-perks/v1/pages/1"],
       ["PUT", "/lol-perks/v1/currentpage"],
+      ["PATCH", "/lol-champ-select/v1/session/actions/1"],
     ] as const) {
       await expect(importer!.write(method, path, {})).rejects.toBeInstanceOf(LcuWriteError);
+    }
+    // The spells call carries nothing else: no champion, skin or anything that acts on the draft.
+    for (const body of [{ championId: 103 }, { spell1Id: 4, selectedSkinId: 1 }, {}, null]) {
+      await expect(importer!.write("PATCH", "/lol-champ-select/v1/session/my-selection", body)).rejects.toMatchObject({ reason: "notAllowed" });
     }
     expect(server!.writes).toEqual([]);
   });

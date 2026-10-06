@@ -165,8 +165,8 @@ function LoadoutRow({ label, children, reason }: { label: string; children: Reac
 }
 
 function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message: string | null }) {
-  const [busy, setBusy] = useState<"runes" | "items" | null>(null);
-  const run = (kind: "runes" | "items") => {
+  const [busy, setBusy] = useState<"runes" | "items" | "spells" | null>(null);
+  const run = (kind: "runes" | "items" | "spells") => {
     if (busy) return;
     setBusy(kind);
     void window.coach.importLoadout(kind).finally(() => setBusy(null));
@@ -177,6 +177,11 @@ function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message:
       {l.page && (
         <button className="btn" disabled={busy !== null} onClick={() => run("runes")} title="Creates (or updates) an 'LDC:' rune page in your client">
           {busy === "runes" ? "Importing…" : "Import runes"}
+        </button>
+      )}
+      {l.spells && l.spells.spells.length === 2 && (
+        <button className="btn" disabled={busy !== null} onClick={() => run("spells")} title="Sets your two summoner spells in champ select (keeps Flash on its key)">
+          {busy === "spells" ? "Importing…" : "Import spells"}
         </button>
       )}
       {(l.items.length > 0 || l.commonPath || l.starting) && (
@@ -275,6 +280,15 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
             ))}
           </ol>
         </div>
+      )}
+      {l.situational.length > 0 && (
+        <LoadoutRow label="Situational" reason={l.situational[0]!.reasons[0] ?? null}>
+          {l.situational.map((s) => (
+            <span key={s.id} className="lo-chip" title={tip(s)}>
+              <GameIcon icon={s} size={16} title={tip(s)} /> {s.name}
+            </span>
+          ))}
+        </LoadoutRow>
       )}
       {l.commonPath && (
         <LoadoutRow label="Build" reason={l.commonPath.reason}>
