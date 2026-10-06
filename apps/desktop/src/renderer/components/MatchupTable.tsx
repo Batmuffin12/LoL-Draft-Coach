@@ -6,6 +6,8 @@ import { ChampIcon } from "./ChampIcon";
 export function MatchupTable({ rows, title }: { rows: MatchupRowView[]; title: string }) {
   const picked = rows.filter((r) => r.champion);
   const open = rows.filter((r) => !r.champion);
+  // No games for any pair yet: the champions without a column of dashes, and one note.
+  const empty = picked.length > 0 && picked.every((r) => !r.games);
   return (
     <div className="table matchups" role="table">
       <div className="thead" role="row">
@@ -27,11 +29,22 @@ export function MatchupTable({ rows, title }: { rows: MatchupRowView[]; title: s
               <span className="why">{`${positionLabel(m.role)}${m.lane ? " · your lane" : ""}`}</span>
             </span>
           </span>
-          <span className={cx("c-num big", winTone(m.winRate))}>{rate(m.winRate, 1)}</span>
-          <span className={cx("c-num", tone(m.delta))}>{signedOrDash(m.delta)}</span>
-          <span className="c-num muted">{m.games ? games(m.games) : "—"}</span>
+          {empty ? (
+            <>
+              <span />
+              <span />
+              <span />
+            </>
+          ) : (
+            <>
+              <span className={cx("c-num big", winTone(m.winRate))}>{rate(m.winRate, 1)}</span>
+              <span className={cx("c-num", tone(m.delta))}>{signedOrDash(m.delta)}</span>
+              <span className="c-num muted">{m.games ? games(m.games) : "—"}</span>
+            </>
+          )}
         </div>
       ))}
+      {empty && <div className="open">No games yet for these pairs in your rank.</div>}
       {open.length > 0 && <div className="open">{`${open.map((m) => positionLabel(m.role)).join(", ")}: not picked yet`}</div>}
     </div>
   );

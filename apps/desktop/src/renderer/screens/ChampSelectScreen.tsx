@@ -91,7 +91,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
   const footer = showLoadout ? (
     <LoadoutSource pick={hover} />
   ) : (
-    <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion. Click a row for its reasons."}</span>
+    <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
   );
   const profile = state.status.profile;
   return (

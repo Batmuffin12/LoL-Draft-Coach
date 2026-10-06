@@ -44,7 +44,8 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
               <span className="nm">{o.item.name}</span>
               {numbers && (
                 <span className="nums">
-                  <b>{rate(o.share)}</b> <span className={tone(o.winAdded) === "neg" ? "neg" : o.winAdded === null ? "muted" : "pos"}>{signedOrDash(o.winAdded)}</span>
+                  <b>{rate(o.share)}</b>
+                  {o.winAdded !== null && <span className={tone(o.winAdded) === "neg" ? "neg" : "pos"}>{` ${signedOrDash(o.winAdded)}`}</span>}
                 </span>
               )}
             </span>

@@ -20,13 +20,15 @@ export function useImport(): { busy: "runes" | "items" | null; run: (kind: "rune
   return { busy, run };
 }
 
-/** "From 2,140 games in Gold to Platinum. Not much data yet: treat it as a rough guide." */
+/** "2,140 games · Gold to Platinum · rough guide" on one line; the full note on hover. */
 export function LoadoutSource({ pick }: { pick: MyPickView }) {
   const l = pick.loadout;
   if (!l) return <span className="micro">No build data for {pick.champion.name} in this role yet.</span>;
+  const full = `From ${count(l.games)} games in ${l.source}.${l.thinNote ? ` ${l.thinNote}.` : ""}`;
   return (
-    <span className="micro">
-      From {count(l.games)} games in {l.source}.{l.thinNote ? ` ${l.thinNote}.` : ""}
+    <span className="micro one-line" title={full}>
+      {count(l.games)} games · {l.source}
+      {l.thinNote ? " · rough guide" : ""}
     </span>
   );
 }

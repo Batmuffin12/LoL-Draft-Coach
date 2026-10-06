@@ -574,7 +574,9 @@ export class PersonalCoach extends Coach {
     };
     const banning = live !== null && banningNow(this.draft);
     const banSuggestions = banning ? suggestBans(live) : [];
-    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say), ...banNumbers(live!.index, b, role, engine.rating.bans.minPickRate) });
+    // The ban table shows the rates in columns: its reason lines use the short ".row" wording when there is one.
+    const row = (r: BanSuggestion["reasons"][number]) => say(templates[`${r.id}.row`] ? { ...r, id: `${r.id}.row` } : r);
+    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(row), ...banNumbers(live!.index, b, role, engine.rating.bans.minPickRate) });
     // Hovering a champion before or during bans: extra bans that protect it (1 if it's already the top suggestion).
     const hovered = this.draft.myTeam.find((s) => s.isLocalPlayer)?.pickIntentId ?? 0;
     const hoverBans =

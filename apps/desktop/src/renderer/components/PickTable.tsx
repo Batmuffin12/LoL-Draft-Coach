@@ -58,7 +58,7 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
       {cur && (
         <div className="detail">
           <ul className="reasons">
-            {pickReasons(cur.reasons, 3).map((r) => (
+            {pickReasons(cur.reasons, 5).map((r) => (
               <li key={r.text} className={r.negative ? "but" : undefined}>
                 {r.text}
               </li>

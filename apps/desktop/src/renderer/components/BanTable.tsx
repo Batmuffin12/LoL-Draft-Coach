@@ -1,5 +1,5 @@
 import type { BanView } from "../../shared/view";
-import { cx, rate, signed, tone } from "../format";
+import { rate, signed } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 export interface BanRow extends BanView {
@@ -9,6 +9,8 @@ export interface BanRow extends BanView {
 
 /** Suggested bans as a table: what each costs you and how common it is; one reason under each name. */
 export function BanTable({ bans }: { bans: BanRow[] }) {
+  // Hurts as a bar against the biggest threat in the list: the points are often too small to read at one decimal.
+  const worst = Math.max(...bans.map((b) => -b.threat), 1e-9);
   return (
     <div className="table bans" role="table">
       <div className="thead" role="row">
@@ -27,12 +29,14 @@ export function BanTable({ bans }: { bans: BanRow[] }) {
         </span>
       </div>
       {bans.map((b, i) => (
-        <div key={b.champion.id} className={cx("trow", i === 0 && "sel")} role="row" title={b.reasons.join("\n")}>
+        <div key={b.champion.id} className="trow" role="row" title={b.reasons.join("\n")}>
           <span className="c-champ">
             <ChampIcon champ={b.champion} size={34} framed={i === 0} title="" />
             <span className="nm">{b.champion.name}</span>
           </span>
-          <span className={cx("c-num", tone(b.threat))}>{signed(b.threat)}</span>
+          <span className="c-bar" title={`Costs you ${signed(b.threat)} points of win chance`}>
+            <span className="fill" style={{ width: `${Math.max(6, Math.round((-b.threat / worst) * 100))}%` }} />
+          </span>
           <span className="c-num">{rate(b.winRate, 1)}</span>
           <span className="c-num muted">{rate(b.pickRate)}</span>
           <span className="c-num muted">{rate(b.banRate)}</span>

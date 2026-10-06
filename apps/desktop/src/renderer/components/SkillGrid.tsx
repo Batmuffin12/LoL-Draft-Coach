@@ -6,11 +6,18 @@ import { ChampIcon } from "./ChampIcon";
 type Spells = NonNullable<LoadoutView["spells"]>;
 type Skills = NonNullable<LoadoutView["skills"]>;
 
-/** "53.2% · 1,980" with the win rate in green, or "— · 1,980" with thin data. */
+/** "53.2% · 1,980" with the win rate in green; with thin data (no win rate) just "1,980 games". */
 export function Stat({ winRate, n, title }: { winRate: number | null; n: number; title?: string }) {
+  if (winRate === null) {
+    return (
+      <span className="stat" title={title}>
+        {`${games(n)} ${n === 1 ? "game" : "games"}`}
+      </span>
+    );
+  }
   return (
     <span className="stat" title={title}>
-      <b className={winRate === null ? undefined : "pos"}>{rate(winRate, 1)}</b>
+      <b className="pos">{rate(winRate, 1)}</b>
       {` · ${games(n)}`}
     </span>
   );
