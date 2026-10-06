@@ -35,6 +35,7 @@ import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
+import { reasonView } from "./reason-view";
 import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
@@ -495,7 +496,7 @@ export class PersonalCoach extends Coach {
         champion: champView(championId, lookup)!,
         role,
         expectedWin: assessed?.expectedWin ?? null,
-        reasons: assessed ? assessed.reasons.map(say) : [],
+        reasons: assessed ? assessed.reasons.map((r) => reasonView(r, say)) : [],
         loadout: loadout
           ? toLoadoutView(loadout, {
               data,
@@ -524,7 +525,7 @@ export class PersonalCoach extends Coach {
       expectedWin: p.expectedWin ?? null,
       factors: p.factors,
       terms: p.terms ?? [],
-      reasons: p.reasons.map(say),
+      reasons: p.reasons.map((r) => reasonView(r, say)),
       offMeta: p.offMeta,
     }));
     const pickAdvice = {

@@ -127,7 +127,7 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
               </div>
               <ul className="reasons">
                 {p.reasons.map((r) => (
-                  <li key={r}>{r}</li>
+                  <li key={r.text} className={r.negative ? "warn" : undefined}>{r.text}</li>
                 ))}
               </ul>
             </div>
@@ -335,7 +335,7 @@ function YourPick({ pick }: { pick: MyPickView }) {
           {pick.reasons.length > 0 && (
             <ul className="reasons">
               {pick.reasons.map((r) => (
-                <li key={r}>{r}</li>
+                <li key={r.text} className={r.negative ? "warn" : undefined}>{r.text}</li>
               ))}
             </ul>
           )}

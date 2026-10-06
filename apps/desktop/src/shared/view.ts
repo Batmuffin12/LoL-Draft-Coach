@@ -41,6 +41,12 @@ export interface DraftView {
   localAction: string | null;
 }
 
+/** One reason as shown: caveats (the pick's weak point) are negative. */
+export interface ReasonView {
+  text: string;
+  negative: boolean;
+}
+
 export interface PickView {
   champion: ChampView;
   score: number;
@@ -49,7 +55,7 @@ export interface PickView {
   factors: FactorScores;
   /** Engine v2: the parts of the win chance, in points with their games (empty without live meta). */
   terms: Term[];
-  reasons: string[];
+  reasons: ReasonView[];
   offMeta: boolean;
 }
 
@@ -109,7 +115,7 @@ export interface MyPickView {
   role: string | null;
   /** Predicted win chance in this draft (live meta only). */
   expectedWin: number | null;
-  reasons: string[];
+  reasons: ReasonView[];
   loadout: LoadoutView | null;
   /** The result of the last import click (e.g. "Rune page created"), or null. */
   importMessage: string | null;
