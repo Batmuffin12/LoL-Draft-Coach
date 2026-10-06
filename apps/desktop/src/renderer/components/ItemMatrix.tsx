@@ -40,7 +40,7 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
           const tip = [o.item.name, o.share === null ? null : `${rate(o.share)} of builds · ${signedOrDash(o.winAdded)} win added`, ...(o.item.reasons ?? [])].filter(Boolean).join("\n");
           return (
             <span key={`${s.slot}-${r}`} className={cx("cell", r === 0 && "top")} title={tip}>
-              <ChampIcon champ={o.item} kind="game" size={r === 0 ? 36 : 24} lit={r === 0} title="" />
+              <ChampIcon champ={o.item} kind="game" size={r === 0 ? 32 : 22} lit={r === 0} title="" />
               <span className="nm">{o.item.name}</span>
               {numbers && (
                 <span className="nums">
