@@ -2,6 +2,22 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.6.0] — Unreleased — Milestone 6: Loadout
+
+After you lock in, the "Your pick" card shows a full loadout for your champion, role and this enemy team, with the numbers behind each choice, and can import it into the client on your click.
+
+### Added
+- **Timelines** (Riot adapter + collector): each collected game also gets its Match-V5 timeline, reduced to gold per minute, item events and skill order with no player identifiers (`collector.timelineShare`). The collector also samples the band above yours for builds (`buildBandShare`; Emerald–Diamond for Gold–Platinum), as the spec asks.
+- **Builds** (`@ldc/meta`, in each band's snapshot): per champion and role, from your band plus the one above: rune pages, summoner spells, skill order (first points and max order), starting items, the first completed items, rune pages into common lane opponents.
+- **Win added** per item and build slot: the buyer's result minus the expected win for the game state when the item was bought (minute × team gold difference), so items bought by players already ahead don't look strong. Never raw item win rate.
+- **Situational runes and items** by lift: taken more often against enemy teams high in magic or physical damage, frontline, crowd control or healing (healing is now measured per champion). Found from data, never from item lists.
+- **`rankItems()`** (engine, pure): ranks each slot by win added plus lift for this enemy team; items with clearly negative win added are never #1. The same function will rank live items in milestone 8.
+- **Your pick card**: runes (with "Consider" chips for situational runes), spells, skill order, starting items and the build (top item per slot, alternatives on hover), each with a reason ("+1.2% win added as item 1, where 66% buy it (200 games)"; "Bought 3.0× more vs magic-heavy teams; theirs deals 68% magic damage").
+- **One-click import** (on your click only): "Import runes" creates one "LDC:" rune page (and reuses it next time); "Import item set" saves an item set for the champion. A separate importer is the only code that writes to the client and refuses every other call; switch: `app.import.enabled`.
+- **Item backtest**: `pnpm --filter @ldc/server backtest` also replays held-out timelines and reports our top-1/top-3 hit rate vs "most bought" and the win added when players agreed with us.
+- **Lane gold at 15** (the other half of the power curve): picks say "Usually ahead in lane: +350 gold over its opponent at 15 minutes" when clear. Information only.
+- Data Dragon: item costs and build paths, rune and summoner spell names and icons; the server keeps a cached copy next to its database.
+
 ## [0.5.0] — 2026-10-06 — Milestone 5: Live meta
 
 The coach now knows what is strong in your rank right now, and enemy picks change its advice.
