@@ -31,6 +31,7 @@ export const ParticipantSchema = z.looseObject({
   goldEarned: z.number().default(0),
   visionScore: z.number().default(0),
   damageDealtToObjectives: z.number().default(0),
+  totalHeal: z.number().optional(),
   item0: z.number().int().default(0),
   item1: z.number().int().default(0),
   item2: z.number().int().default(0),
@@ -122,3 +123,34 @@ export const LeaguePlayersSchema = z.array(
   }),
 );
 export type LeaguePlayer = z.infer<typeof LeaguePlayersSchema>[number];
+
+/** Match-V5 TimelineDto: frames each minute with gold per participant, and the events in between. */
+export const TimelineSchema = z.looseObject({
+  metadata: z.looseObject({ matchId: z.string() }),
+  info: z.looseObject({
+    /** participantId (1–10) → PUUID, to line the timeline up with the match's participants. */
+    participants: z.array(z.looseObject({ participantId: z.number().int(), puuid: z.string() })).default([]),
+    frames: z.array(
+      z.looseObject({
+        timestamp: z.number(),
+        participantFrames: z.record(z.string(), z.looseObject({ participantId: z.number().int(), totalGold: z.number().default(0) })).default({}),
+        events: z
+          .array(
+            z.looseObject({
+              type: z.string(),
+              timestamp: z.number(),
+              participantId: z.number().int().optional(),
+              itemId: z.number().int().optional(),
+              /** ITEM_UNDO: the item the undo took back (beforeId) or gave back (afterId). */
+              beforeId: z.number().int().optional(),
+              afterId: z.number().int().optional(),
+              skillSlot: z.number().int().optional(),
+              levelUpType: z.string().optional(),
+            }),
+          )
+          .default([]),
+      }),
+    ),
+  }),
+});
+export type Timeline = z.infer<typeof TimelineSchema>;

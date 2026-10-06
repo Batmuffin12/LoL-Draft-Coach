@@ -55,6 +55,7 @@ export function summarizeMatch(match: Match): MatchSummary {
       selfMitigated: p.damageSelfMitigated,
       ccSeconds: p.timeCCingOthers,
       objectiveDamage: p.damageDealtToObjectives,
+      ...(p.totalHeal !== undefined ? { heal: p.totalHeal } : {}),
       items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
       spells: [p.summoner1Id, p.summoner2Id],
       perks: summarizePerks(p),

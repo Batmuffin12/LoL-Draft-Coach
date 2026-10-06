@@ -31,6 +31,7 @@ describe("RiotApi", () => {
     expect((await riot.masteriesByPuuid("P"))[0]?.championPoints).toBe(99);
     expect((await riot.leagueEntriesByPuuid("P"))[0]?.tier).toBe("GOLD");
     expect(await riot.match("EUW1_404")).toBeNull();
+    expect(await riot.timeline("EUW1_404")).toBeNull();
 
     expect(calls.map((c) => `${c.url.host}${c.url.pathname}`)).toEqual([
       "europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/Some%20Name/euw",
@@ -38,6 +39,7 @@ describe("RiotApi", () => {
       "euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/P",
       "euw1.api.riotgames.com/lol/league/v4/entries/by-puuid/P",
       "europe.api.riotgames.com/lol/match/v5/matches/EUW1_404",
+      "europe.api.riotgames.com/lol/match/v5/matches/EUW1_404/timeline",
     ]);
     expect(calls[1]!.url.searchParams.get("count")).toBe("20");
     expect(calls[1]!.url.searchParams.get("queue")).toBe("420");

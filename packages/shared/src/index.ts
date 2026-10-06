@@ -159,11 +159,13 @@ export interface ParticipantSummary {
   /** Seconds spent crowd-controlling others (Match-V5 timeCCingOthers). */
   ccSeconds: number;
   objectiveDamage: number;
+  /** Health restored (Match-V5 totalHeal: self and allies). Absent on games stored before it was kept. */
+  heal?: number;
   /** Item ids in slots 0–6 (0 = empty). */
   items: number[];
   /** Summoner spell ids. */
   spells: number[];
-  /** Rune page, when Riot sent one. */
+  /** Rune page, when Riot sent one. `statPerks` are in Riot's key order: defense, flex, offense. */
   perks: { primaryStyle: number; subStyle: number; runes: number[]; statPerks: number[] } | null;
   /** Numeric Match-V5 `challenges` metrics, as Riot names them; any may be missing. */
   challenges: Record<string, number>;
@@ -182,6 +184,27 @@ export interface MatchSummary {
    * (they don't count toward ban rates); an empty list means the game had no bans.
    */
   bans?: { teamId: number; championId: ChampionId }[];
+  /** What happened over time, when the collector fetched the match's timeline (only a share of games). */
+  timeline?: MatchTimeline;
+}
+
+/** Item event kinds in a MatchTimeline: bought, sold, destroyed (used up or built into another item). */
+export const ITEM_BOUGHT = 0;
+export const ITEM_SOLD = 1;
+export const ITEM_DESTROYED = 2;
+
+/**
+ * A Match-V5 timeline reduced to what builds and item ranking need, without any player
+ * identifier. Participant indexes are positions in `MatchSummary.participants`.
+ * Undone purchases and sales are already removed.
+ */
+export interface MatchTimeline {
+  /** totalGold per participant at each frame (frame i is minute i). */
+  gold: number[][];
+  /** Item events in time order: [participant, second, kind (ITEM_*), itemId]. */
+  items: [number, number, number, number][];
+  /** Skill slots (1 = Q … 4 = R) per participant, in level-up order (normal level-ups only). */
+  skills: number[][];
 }
 
 /** A match from a user's own history, with which participant they were. */
