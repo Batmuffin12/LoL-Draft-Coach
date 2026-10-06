@@ -7,7 +7,7 @@ function Bans({ bans, start }: { bans: BanView[]; start: number }) {
     <ol className="ban-list">
       {bans.map((b, i) => (
         <li key={b.champion.id} className="ban" title={b.reasons.join("\n")}>
-          <ChampIcon champ={b.champion} size={56} />
+          <ChampIcon champ={b.champion} size={40} />
           <div className="body">
             <span className="heading">
               <span className="rank">#{start + i}</span>
@@ -22,7 +22,7 @@ function Bans({ bans, start }: { bans: BanView[]; start: number }) {
 }
 
 /** Rows that fit 720px with the phase band: cut bans before shrinking type. */
-const MAX_BANS = 4;
+const MAX_BANS = 6;
 
 /** Suggested bans, then extra bans that protect the champion you're hovering. */
 export function BanList({ bans, hover }: { bans: BanView[]; hover: ViewState["hoverBans"] }) {

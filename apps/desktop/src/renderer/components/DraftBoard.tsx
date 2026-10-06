@@ -9,7 +9,7 @@ function Seat({ slot }: { slot: SlotView }) {
   const name = shown ? shown.name : slot.actingType === "ban" ? "Banning" : slot.actingType ? "Picking" : "—";
   return (
     <div className={cx("seat", slot.isLocalPlayer && "me")}>
-      <ChampIcon champ={shown} state={state} size={48} me={slot.isLocalPlayer} acting={!!slot.actingType && !slot.isLocalPlayer} />
+      <ChampIcon champ={shown} state={state} size={40} me={slot.isLocalPlayer} acting={!!slot.actingType && !slot.isLocalPlayer} />
       <span className={cx("nm", !slot.champion && "dim")}>{name}</span>
       <span className="seat-pos">{slot.isLocalPlayer ? "You" : positionLabel(slot.position)}</span>
     </div>

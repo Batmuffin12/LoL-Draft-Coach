@@ -48,7 +48,7 @@ export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }
 function YouStrip({ pick }: { pick: MyPickView }) {
   return (
     <div className="you" title={pick.reasons.map((r) => r.text).join("\n") || undefined}>
-      <ChampIcon champ={pick.champion} size={56} framed />
+      <ChampIcon champ={pick.champion} size={44} framed />
       <div className="who">
         <span className="label gold">{`${pick.hovering ? "Hovering" : "Locked in"}${pick.role ? ` · ${positionLabel(pick.role)}` : ""}`}</span>
         <span className="nm">{pick.champion.name}</span>

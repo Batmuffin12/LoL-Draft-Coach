@@ -51,16 +51,16 @@ function RunesTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutPro
       {l.page && keystone && (
         <Section title="Runes" aside={button}>
           <div className="lo-row center">
-            <ChampIcon champ={keystone} kind="game" round size={56} />
+            <ChampIcon champ={keystone} kind="game" round size={30} />
             <div className="lo-body">
               <span className="heading">{keystone.name}</span>
               <div className="lo-icons">
                 {l.page.runes.slice(1).map((r, i) => (
-                  <ChampIcon key={`${r.id}-${i}`} champ={r} kind="game" round size={30} />
+                  <ChampIcon key={`${r.id}-${i}`} champ={r} kind="game" round size={20} />
                 ))}
                 {l.page.shards.length > 0 && <span className="divider" aria-hidden="true" />}
                 {l.page.shards.map((s, i) => (
-                  <ChampIcon key={`s${s.id}-${i}`} champ={s} kind="game" round size={22} />
+                  <ChampIcon key={`s${s.id}-${i}`} champ={s} kind="game" round size={18} />
                 ))}
               </div>
             </div>
@@ -83,7 +83,7 @@ function RunesTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutPro
           <div className="two">
             {l.spells ? (
               <div className="lo-body">
-                <IconRow icons={l.spells.spells} size={40} />
+                <IconRow icons={l.spells.spells} size={30} />
                 <span className="heading">{l.spells.spells.map((s) => s.name).join(" + ")}</span>
               </div>
             ) : (
@@ -120,7 +120,7 @@ function BuildTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutPro
       <Section title="Start & boots" aside={button}>
         {l.starting ? (
           <div className="lo-row center" title={l.starting.reason ?? undefined}>
-            <IconRow icons={l.starting.items} size={40} />
+            <IconRow icons={l.starting.items} size={30} />
             <span className="caption one-line">{unique(l.starting.items)}</span>
           </div>
         ) : (
@@ -128,16 +128,16 @@ function BuildTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutPro
         )}
         {l.boots && (
           <div className="lo-row center">
-            <ChampIcon champ={l.boots.top} kind="game" size={40} title={tip(l.boots.top)} />
+            <ChampIcon champ={l.boots.top} kind="game" size={30} title={tip(l.boots.top)} />
             <div className="lo-body">
               <span className="heading one-line">{l.boots.top.name}</span>
-              {l.boots.top.reasons[0] && <span className="caption one-line" title={l.boots.top.reasons[0]}>{l.boots.top.reasons[0]}</span>}
+              {l.boots.top.reasons[0] && <span className="caption">{l.boots.top.reasons[0]}</span>}
             </div>
             {l.boots.alternatives.length > 0 && (
               <span className="alts">
                 <span className="micro">or</span>
                 {l.boots.alternatives.map((a) => (
-                  <ChampIcon key={a.id} champ={a} kind="game" size={28} title={tip(a)} />
+                  <ChampIcon key={a.id} champ={a} kind="game" size={20} title={tip(a)} />
                 ))}
               </span>
             )}
@@ -152,13 +152,13 @@ function BuildTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutPro
               {path.slice(0, 4).map((s, i) => (
                 <div key={`${s.item.id}-${i}`} className="step" role="listitem" title={[s.item.name, ...(s.item.reasons ?? [])].join("\n")}>
                   <span className="no">{i + 1}</span>
-                  <ChampIcon champ={s.item} kind="game" size={48} />
+                  <ChampIcon champ={s.item} kind="game" size={36} />
                   <span className="nm">{s.item.name}</span>
                   {s.alts.length > 0 && (
                     <span className="alt">
                       <span className="or">or</span>
                       {s.alts.map((a) => (
-                        <ChampIcon key={a.id} champ={a} kind="game" size={24} title={tip(a)} />
+                        <ChampIcon key={a.id} champ={a} kind="game" size={20} title={tip(a)} />
                       ))}
                     </span>
                   )}
@@ -166,21 +166,19 @@ function BuildTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutPro
               ))}
             </div>
           )}
-          {/* With later or situational rows there's no room for the item reason: it stays on hover. */}
-          {extras.length === 0 &&
-            (lead?.reasons[0] ? (
-              <span className="caption">
-                {lead.name}: {lower(lead.reasons[0])}
-              </span>
-            ) : (
-              l.commonPath?.reason && <span className="caption">{l.commonPath.reason}</span>
-            ))}
+          {lead?.reasons[0] ? (
+            <span className="caption">
+              {lead.name}: {lower(lead.reasons[0])}
+            </span>
+          ) : (
+            l.commonPath?.reason && <span className="caption">{l.commonPath.reason}</span>
+          )}
           {extras.length > 0 && (
             <div className="extras">
           {extras.map((x) => (
             <div key={x.label} className="lo-row center extra" title={x.note ?? undefined}>
               <span className="label k">{x.label}</span>
-              <IconRow icons={x.icons} size={28} />
+              <IconRow icons={x.icons} size={20} />
               {x.note && <span className="caption one-line">{x.note}</span>}
             </div>
           ))}

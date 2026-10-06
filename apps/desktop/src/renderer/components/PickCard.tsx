@@ -20,11 +20,11 @@ export function PickCard({ pick, rank, open, onOpen, minGames, whyNot }: PickCar
   const terms = topTerms(pick.terms, 3);
   if (open) {
     // Without terms (no live meta) the reasons get the room.
-    const reasons = pickReasons(pick.reasons, terms.length ? 2 : 3);
+    const reasons = pickReasons(pick.reasons, terms.length ? 3 : 4);
     return (
       <li className="pick open">
         <div className="pick-top">
-          <ChampIcon champ={pick.champion} size={72} framed />
+          <ChampIcon champ={pick.champion} size={52} framed />
           <div className="pick-name">
             <span className="rank">
               #{rank}
@@ -61,7 +61,7 @@ export function PickCard({ pick, rank, open, onOpen, minGames, whyNot }: PickCar
   return (
     <li className="pick">
       <button className="row-btn" onClick={onOpen} aria-expanded={false} title={pick.reasons.map((r) => r.text).join("\n")}>
-        <ChampIcon champ={pick.champion} size={56} />
+        <ChampIcon champ={pick.champion} size={40} />
         <div className="pick-name">
           <span className="nm">
             <span className="rank">#{rank}</span>
