@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
@@ -11,7 +11,7 @@ import { AccountFooter, Header, Notices } from "./common";
 
 type LobbyTab = "style" | "pool";
 
-/** Out of champ select: your playstyle per role, and your pool per role with its gaps. One role open at a time, so nothing scrolls. */
+/** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
 export function LobbyScreen({ state }: { state: ViewState }) {
   const [tab, setTab] = useState<LobbyTab>("style");
   return (
@@ -35,6 +35,23 @@ export function LobbyScreen({ state }: { state: ViewState }) {
   );
 }
 
+/**
+ * Which roles are open: the one you chose first, then as many of the others (in order) as fit
+ * without scrolling; the rest show as one-line heads. `dataKey` changes when the roles do.
+ */
+function useOpenRoles(count: number, dataKey: string): { isOpen: (i: number) => boolean; open: (i: number) => void } {
+  const [st, setSt] = useState({ first: 0, fit: count, key: dataKey });
+  if (st.key !== dataKey) setSt({ first: st.first < count ? st.first : 0, fit: count, key: dataKey });
+  // Before paint: close the last open role while the scrolling area overflows.
+  useLayoutEffect(() => {
+    const el = document.querySelector(".window .scroll");
+    if (el && el.scrollHeight > el.clientHeight && st.fit > 1) setSt((x) => ({ ...x, fit: x.fit - 1 }));
+  });
+  const order = [st.first, ...Array.from({ length: count }, (_, i) => i).filter((i) => i !== st.first)];
+  const openSet = new Set(order.slice(0, st.fit));
+  return { isOpen: (i) => openSet.has(i), open: (i) => setSt({ first: i, fit: count, key: dataKey }) };
+}
+
 /** A closed role: its head with a one-line summary; click to open it. */
 function ClosedRole({ title, summary, onOpen }: { title: string; summary: string; onOpen: () => void }) {
   return (
@@ -52,16 +69,16 @@ function ClosedRole({ title, summary, onOpen }: { title: string; summary: string
 }
 
 function Style({ state }: { state: ViewState }) {
-  const [open, setOpen] = useState(0);
+  const roles = useOpenRoles(state.playstyle.length, state.playstyle.map((p) => `${p.role}:${p.games}`).join());
   if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
   return (
     <>
       {state.playstyle.map((p, i) => {
-        if (i !== open) {
+        if (!roles.isOpen(i)) {
           const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
           const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
           const summary = [`${p.games} games`, high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
-          return <ClosedRole key={p.role} title={positionLabel(p.role)} summary={summary} onOpen={() => setOpen(i)} />;
+          return <ClosedRole key={p.role} title={positionLabel(p.role)} summary={summary} onOpen={() => roles.open(i)} />;
         }
         return (
           <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = typical</span>}>
@@ -79,18 +96,18 @@ function Style({ state }: { state: ViewState }) {
 }
 
 function Pool({ state }: { state: ViewState }) {
-  const [open, setOpen] = useState(0);
+  const roles = useOpenRoles(state.roles.length, state.roles.map((r) => `${r.role}:${r.games}`).join());
   if (!state.roles.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)}`;
   return (
     <>
       {state.roles.map((r, i) =>
-        i !== open ? (
+        !roles.isOpen(i) ? (
           <ClosedRole
             key={r.role}
             title={`${positionLabel(r.role)} pool`}
             summary={[stats(r), r.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ")}
-            onOpen={() => setOpen(i)}
+            onOpen={() => roles.open(i)}
           />
         ) : (
           <Section key={r.role} title={`${positionLabel(r.role)} pool`} gold={i === 0} aside={<span className="micro">{stats(r)}</span>}>

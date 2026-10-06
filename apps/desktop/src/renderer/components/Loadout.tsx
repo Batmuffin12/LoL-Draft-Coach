@@ -100,6 +100,9 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
     : (l.commonPath?.items.slice(0, MATRIX_SLOTS).map((item, i) => ({ slot: i + 1, minute: null, options: [{ item, share: null, winAdded: null }] })) ?? []);
   // The most telling reason: a top item bought for this draft (a reason before its numbers line), else the first item's.
   const telling = l.items.find((s) => s.top.reasons.length > 1)?.top ?? l.items[0]?.top;
+  // Each item once: what the matrix or the Later pool already show isn't repeated under "Vs this team".
+  const shown = new Set([...slots.flatMap((s) => s.options.map((o) => o.item.id)), ...l.laterPool.map((i) => i.id)]);
+  const vsTeam = l.situational.filter((i) => !shown.has(i.id));
   const caption = telling?.reasons[0] ? `${telling.name}: ${lower(telling.reasons[0])}` : (l.commonPath?.reason ?? null);
   return (
     <>
@@ -130,7 +133,7 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
             ))}
           </div>
         )}
-        {l.situational.length > 0 && <ItemRow label="Vs this team" items={l.situational} note={l.situational[0]?.reasons[0] ?? null} />}
+        {vsTeam.length > 0 && <ItemRow label="Vs this team" items={vsTeam} note={vsTeam[0]?.reasons[0] ?? null} />}
         {l.quest.length > 0 && <ItemRow label="Quest" items={l.quest} note={l.quest[0]?.reasons[0] ?? null} />}
       </Section>
     </>

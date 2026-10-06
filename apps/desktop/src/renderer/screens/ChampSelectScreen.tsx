@@ -79,7 +79,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
         onChange={setTab}
         options={[
           { value: "picks", label: "Picks" },
-          { value: "runes", label: `${hover.champion.name} runes` },
+          { value: "runes", label: "Runes" },
           { value: "build", label: "Build" },
         ]}
       />

@@ -36,7 +36,12 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
       {Array.from({ length: depth }, (_, r) => [
         ...slots.map((s) => {
           const o = s.options[r];
-          if (!o) return <span key={`${s.slot}-${r}`} className="cell empty" />;
+          if (!o)
+            return (
+              <span key={`${s.slot}-${r}`} className="cell empty">
+                {r === 1 ? "No other common pick" : ""}
+              </span>
+            );
           const tip = [o.item.name, o.share === null ? null : `${rate(o.share)} of builds · ${signedOrDash(o.winAdded)} win added`, ...(o.item.reasons ?? [])].filter(Boolean).join("\n");
           return (
             <span key={`${s.slot}-${r}`} className={cx("cell", r === 0 && "top")} title={tip}>

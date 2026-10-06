@@ -263,6 +263,7 @@ p { margin: 0; }
 .matrix .mh .m { font-size: var(--fs-micro); color: var(--muted); }
 .matrix .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: var(--radius-sm); text-align: center; min-width: 0; }
 .matrix .cell.top { background: var(--card); }
+.matrix .cell.empty { justify-content: center; border: 1px dashed var(--line); font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); opacity: 0.8; }
 .matrix .cell .nm { font-size: var(--fs-micro); line-height: 15px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .matrix .cell:not(.top) .nm { color: var(--muted); min-height: 0; -webkit-line-clamp: 1; }
 .matrix .cell .nums { margin-top: auto; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); white-space: nowrap; }
