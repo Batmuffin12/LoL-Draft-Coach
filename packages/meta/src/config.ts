@@ -62,6 +62,9 @@ export const MetaConfigSchema = z.object({
     minMatchupGames: z.number().int().min(1),
     /** Items need this many games before their role shares are published. */
     minItemRoleGames: z.number().int().min(1),
+    /** Role quest rewards: held at the end of at least rewardMinShare of a role's games, bought in at most rewardMaxBought of those (timeline games). */
+    rewardMinShare: z.number().min(0).max(1),
+    rewardMaxBought: z.number().min(0).max(1),
   }),
   collector: z.object({
     /** League-V4 queue to sample players from, and the Match-V5 queue id of its games. */

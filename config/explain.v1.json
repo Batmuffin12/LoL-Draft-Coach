@@ -75,6 +75,7 @@
     "loadout.boots.popular": "{share:pct}% of boots bought in this role ({games} games)",
     "loadout.boots.personal": "Your usual boots: {count} of your {games} {champion:champion} games",
     "import.block.boots": "Boots",
+    "loadout.quest": "Your {role} quest turns {from:item} into {item:item} ({share:pct}% of {role} games end with it)",
     "loadout.page.popular": "Most taken: {count} of {games} games",
     "loadout.page.personal": "Your usual page: {count} of your {games} {champion:champion} games",
     "loadout.spells.popular": "Most taken: {count} of {games} games",

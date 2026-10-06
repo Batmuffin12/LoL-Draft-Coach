@@ -40,7 +40,9 @@
     },
     "lift": { "priorGames": 20, "minGames": 10, "minLift": 1.3, "maxPerBuild": 12 },
     "minMatchupGames": 15,
-    "minItemRoleGames": 5
+    "minItemRoleGames": 5,
+    "rewardMinShare": 0.03,
+    "rewardMaxBought": 0.2
   },
   "collector": {
     "leagueQueue": "RANKED_SOLO_5x5",

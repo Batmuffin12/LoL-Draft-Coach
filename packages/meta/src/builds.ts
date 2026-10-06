@@ -170,6 +170,8 @@ export class BuildAggregator {
   private readonly goldBuckets: number;
   /** Per item, games it was bought or held in, per role. */
   private readonly itemRoleCounts = new Map<number, Map<string, number>>();
+  /** For role quest rewards (timeline games only): per role, games, and per item, games it ended in and games it was bought in. */
+  private readonly rewardCounts = new Map<string, { games: number; held: Map<number, number>; bought: Map<number, number> }>();
 
   constructor(private readonly opts: BuildAggregatorOptions) {
     const { minutes, goldDiff } = opts.config.stateBins;
@@ -271,6 +273,13 @@ export class BuildAggregator {
         if (!r) this.itemRoleCounts.set(id, (r = new Map()));
         r.set(p.position, (r.get(p.position) ?? 0) + 1);
       }
+      if (t) {
+        let rc = this.rewardCounts.get(p.position);
+        if (!rc) this.rewardCounts.set(p.position, (rc = { games: 0, held: new Map(), bought: new Map() }));
+        rc.games++;
+        for (const id of new Set(p.items.filter((x) => x > 0))) rc.held.set(id, (rc.held.get(id) ?? 0) + 1);
+        for (const [q, , kind, id] of t.items) if (q === i && kind === ITEM_BOUGHT) rc.bought.set(id, (rc.bought.get(id) ?? 0) + 1);
+      }
 
       if (!t) {
         // Without a timeline, the end-of-game inventory says which completed items were taken.
@@ -343,6 +352,20 @@ export class BuildAggregator {
       const total = [...roles.values()].reduce((a, b) => a + b, 0);
       if (total < this.opts.config.minItemRoleGames) continue;
       out[id] = Object.fromEntries([...roles].map(([r, n]) => [r, round(n / total)]));
+    }
+    return out;
+  }
+
+  /** Role quest rewards: items a role ends games with but almost never buys. */
+  roleRewards(): Record<string, { itemId: number; share: number }[]> {
+    const { rewardMinShare, rewardMaxBought } = this.opts.config;
+    const out: Record<string, { itemId: number; share: number }[]> = {};
+    for (const [role, rc] of this.rewardCounts) {
+      const list = [...rc.held]
+        .filter(([id, h]) => h / rc.games >= rewardMinShare && (rc.bought.get(id) ?? 0) <= rewardMaxBought * h)
+        .map(([itemId, h]) => ({ itemId, share: round(h / rc.games) }))
+        .sort((a, b) => b.share - a.share);
+      if (list.length) out[role] = list;
     }
     return out;
   }

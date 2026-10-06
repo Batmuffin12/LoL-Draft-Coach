@@ -435,6 +435,12 @@ export interface MetaSnapshot {
    * data, never listed. Absent in older snapshots.
    */
   itemRoles?: Record<string, Record<Position, number>>;
+  /**
+   * Role quest rewards per role, found from data: items players in the role hold at the end of
+   * games but almost never buy (e.g. upgraded boots from the mid quest). `share` = share of the
+   * role's games that ended with the item. Absent in older snapshots.
+   */
+  roleRewards?: Record<Position, { itemId: number; share: number }[]>;
   /** Band-average enemy-team trait values: above it, a trait counts as high. */
   traitCuts?: Record<EnemyTrait, number>;
   expectedWin?: ExpectedWinTable;

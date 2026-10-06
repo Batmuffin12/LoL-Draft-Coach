@@ -82,6 +82,8 @@ export interface LoadoutView {
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
   skills: { first: string[]; order: string[]; reason: string | null } | null;
   starting: { items: IconView[]; reason: string | null } | null;
+  /** What your role quest turns items of this loadout into (e.g. tier-3 boots in mid). */
+  quest: LoadoutItemView[];
   /** Boots on their own row, with other boots players take. */
   boots: { top: LoadoutItemView; alternatives: LoadoutItemView[] } | null;
   /** The ranked build path: per slot the top item and alternatives, each with reasons. */

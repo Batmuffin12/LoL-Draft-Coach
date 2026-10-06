@@ -355,6 +355,7 @@ export function draftLoadout(
   config: LoadoutConfig,
   personal: PersonalBuild | null = null,
   boots: ReadonlySet<number> = new Set(),
+  buildsFrom?: (itemId: number) => number[],
 ): Loadout | null {
   const cuts = input.index.snapshot.traitCuts;
   const all = input.index.buildsOf(championId);
@@ -370,6 +371,8 @@ export function draftLoadout(
     pooled: mergeBuilds([build, ...all.filter((b) => b !== build)].filter((b) => b.n > 0)),
     personal,
     boots,
+    ...(buildsFrom ? { buildsFrom } : {}),
+    ...(input.index.snapshot.roleRewards?.[role] ? { roleRewards: input.index.snapshot.roleRewards[role] } : {}),
     ...(input.index.snapshot.itemRoles ? { itemRoles: input.index.snapshot.itemRoles } : {}),
     enemies: ctx.enemies.map((e) => e.championId),
     laneOpponent: ctx.laneEnemy?.championId ?? null,

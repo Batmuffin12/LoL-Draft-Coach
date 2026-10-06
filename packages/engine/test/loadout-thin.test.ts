@@ -173,6 +173,16 @@ describe("boots on their own row", () => {
     expect(l.boots?.top.itemId).toBe(3047);
   });
 
+  it("says what your role quest turns the boots into, linked by Data Dragon's build path", () => {
+    // 3175 is held by 53% of mid games but never bought; it builds from 3020.
+    const from = (id: number) => (id === 3175 ? [3020] : id === 3020 ? [1001] : []);
+    const l = buildLoadout(input({ build: b, boots, buildsFrom: from, roleRewards: [{ itemId: 3175, share: 0.53 }, { itemId: 3172, share: 0.1 }] }));
+    expect(l.quest.map((q) => [q.itemId, q.from])).toEqual([[3175, 3020]]);
+    expect(say(l.quest[0]!.reasons[0]!)).toBe("Your middle quest turns #3020 into #3175 (53% of middle games end with it)");
+    // No quest reward linked to your items: nothing shown.
+    expect(buildLoadout(input({ build: b, boots, buildsFrom: from, roleRewards: [{ itemId: 3172, share: 0.1 }] })).quest).toEqual([]);
+  });
+
   it("uses your usual boots when the band has too few games", () => {
     const personal = { championId: 950, n: 25, pages: [], spells: [], items: [{ itemId: 6692, n: 22 }, { itemId: 3020, n: 20 }, { itemId: 3814, n: 15 }] };
     const l = buildLoadout(input({ boots, personal }));

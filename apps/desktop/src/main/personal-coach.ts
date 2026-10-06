@@ -463,7 +463,8 @@ export class PersonalCoach extends Coach {
         // Data Dragon not loaded yet.
       }
       const personal = personalBuild(this.profile.matches, locked, role, completed);
-      const loadout = live ? draftLoadout(live, locked, engine.loadout, personal, boots) : null;
+      const buildsFrom = (id: number) => this.deps.ddragon.data.itemInfo.get(id)?.from ?? [];
+      const loadout = live ? draftLoadout(live, locked, engine.loadout, personal, boots, buildsFrom) : null;
       if (this.shownLoadout?.loadout.championId !== locked) this.importMessage = null;
       this.shownLoadout = loadout ? { loadout, champion: nameOf(locked) } : null;
       let data = null;

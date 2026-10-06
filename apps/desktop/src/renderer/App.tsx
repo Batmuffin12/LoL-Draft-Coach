@@ -242,6 +242,13 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
           ))}
         </LoadoutRow>
       )}
+      {l.quest.length > 0 && (
+        <LoadoutRow label="Quest" reason={l.quest[0]!.reasons[0] ?? null}>
+          {l.quest.map((q) => (
+            <GameIcon key={q.id} icon={q} size={22} title={tip(q)} />
+          ))}
+        </LoadoutRow>
+      )}
       {l.items.length > 0 && (
         <div className="lo-row">
           <span className="lo-label">Build</span>

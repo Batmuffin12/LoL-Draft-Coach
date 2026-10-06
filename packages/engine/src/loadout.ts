@@ -26,6 +26,16 @@ export interface LoadoutInput {
   itemRoles?: Record<string, Record<string, number>>;
   /** Completed boots (from Data Dragon): chosen on their own row, left out of the item slots. */
   boots?: ReadonlySet<number>;
+  /** Your role's quest rewards (snapshot `roleRewards`), and Data Dragon's build paths to link them to your items. */
+  roleRewards?: { itemId: number; share: number }[];
+  buildsFrom?: (itemId: number) => number[];
+}
+
+/** Whether `item` is built (directly or further up the path) from `base`, per Data Dragon. */
+function builtFrom(item: number, base: number, from: (id: number) => number[], depth = 4): boolean {
+  if (depth <= 0) return false;
+  const parts = from(item);
+  return parts.includes(base) || parts.some((p) => builtFrom(p, base, from, depth - 1));
 }
 
 /** Enemy traits with your lane opponent counted `laneWeight` times. */
@@ -92,6 +102,8 @@ export interface Loadout {
   starting: LoadoutChoice<number[]> | null;
   /** Boots, chosen on their own (any build slot), with up to `alternatives` other boots. */
   boots: { top: RankedItem; alternatives: RankedItem[] } | null;
+  /** What your role quest turns items of this loadout into (boots, starting items), from data. */
+  quest: { itemId: number; from: number; reasons: Reason[] }[];
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
   core: LoadoutChoice<number[]> | null;
   items: ItemSlotAdvice[];
@@ -182,6 +194,20 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
       return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
     })
     .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
+}
+
+/** Your role's quest rewards that come from items in the loadout (most common first, one per item). */
+function questRewards(input: LoadoutInput, items: number[]): Loadout["quest"] {
+  const from = input.buildsFrom;
+  if (!from || !input.roleRewards?.length) return [];
+  const out: Loadout["quest"] = [];
+  for (const base of new Set(items)) {
+    const r = input.roleRewards.find((x) => x.itemId !== base && builtFrom(x.itemId, base, from));
+    if (r && !out.some((q) => q.itemId === r.itemId)) {
+      out.push({ itemId: r.itemId, from: base, reasons: [reason("loadout.quest", { item: r.itemId, from: base, role: input.build.role, share: r.share })] });
+    }
+  }
+  return out;
 }
 
 /**
@@ -340,6 +366,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     skills,
     starting,
     boots,
+    quest: questRewards(input, [...(boots ? [boots.top.itemId] : []), ...(starting?.value ?? [])]),
     core,
     items,
   };

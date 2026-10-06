@@ -175,6 +175,18 @@ describe("BuildAggregator", () => {
     expect(champ1(agg).matchupItems).toEqual([{ enemy: 11, games: 3, starting: { items: [1055], n: 3 }, first: [{ itemId: 3001, n: 3 }] }]);
   });
 
+  it("finds role quest rewards: items a role ends games with but never buys", () => {
+    const agg = make({ rewardMinShare: 0.5, rewardMaxBought: 0.2 });
+    for (let i = 0; i < 4; i++) {
+      const g = game(`q${i}`, { win: true, items: [3001] });
+      // Champion 1 (top) ends with 3009 without buying it (a quest reward).
+      g.participants[0]!.items = [3001, 3009];
+      agg.add(g);
+    }
+    // Both teams' top laners count: 4 of 8 top games.
+    expect(agg.roleRewards()).toEqual({ top: [{ itemId: 3009, share: 0.5 }] });
+  });
+
   it("skips games outside the window, remakes and unpositioned games", () => {
     const agg = make();
     expect(agg.add({ ...game("old", { win: true, items: [] }), endedAt: NOW - 40 * 86_400_000 })).toBe(false);
