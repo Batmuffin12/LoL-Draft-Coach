@@ -16,7 +16,7 @@ export function Stat({ winRate, n, title }: { winRate: number | null; n: number;
   );
 }
 
-/** The two spells, the max order as keycaps with its numbers, then a Q/W/E × level 1–18 grid (the ultimate at 6/11/16 is implied). */
+/** The two spells, the max order as keycaps with its numbers, then a Q/W/E/R × level 1–18 grid (the ultimate at 6, 11 and 16 on its own row). */
 export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: Skills | null }) {
   const path = skills ? skillPath(skills.first, skills.order, skills.ult) : [];
   const spellTip = spells && [`${spells.spells.map((s) => s.name).join(" + ")}: ${rate(spells.winRate, 1)} win, ${games(spells.games)} games`, spells.reason].filter(Boolean).join("\n");
@@ -45,11 +45,11 @@ export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: S
       </div>
       {skills && (
         <div className="grid" role="table" aria-label="Skill per level">
-          {skills.basic.map((k) => (
+          {[...skills.basic, skills.ult].map((k) => (
             <div key={k} className="g-row" role="row">
               <span className="g-key">{k}</span>
               {path.map((x, i) => (
-                <span key={i} className={cx("g-cell", x === k && "on")}>
+                <span key={i} className={cx("g-cell", x === k && "on", x === k && k === skills.ult && "ult")}>
                   {x === k ? i + 1 : ""}
                 </span>
               ))}

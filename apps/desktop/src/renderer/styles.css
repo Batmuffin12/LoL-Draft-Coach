@@ -247,6 +247,7 @@ p { margin: 0; }
 .skillgrid .g-key { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-label); color: var(--muted); display: grid; place-items: center; }
 .skillgrid .g-cell { height: 16px; border-radius: 2px; background: var(--card); font-family: var(--font-display); font-size: 10px; font-weight: 700; display: grid; place-items: center; color: var(--on-gold); }
 .skillgrid .g-cell.on { background: var(--gold); }
+.skillgrid .g-cell.ult { background: var(--gold-bright); }
 
 /* Start and boots */
 .path2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
