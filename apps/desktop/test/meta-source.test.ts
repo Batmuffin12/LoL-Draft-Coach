@@ -237,8 +237,9 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     // Import happens only when asked (the buttons), and writes only the rune page and the item set.
     expect(loadout.canImport).toBe(true);
     expect(lcu.writes).toEqual([]);
+    // One button for the rune page and the spells, one for the item set.
     await coach.importLoadout("runes");
-    await coach.importLoadout("spells");
+    expect(coach.state.myPick!.importMessage).toBe("Rune page created in your client · Summoner spells set");
     await coach.importLoadout("items");
     expect(lcu.writes.map((w) => `${w.method} ${w.path}`)).toEqual([
       "POST /lol-perks/v1/pages",

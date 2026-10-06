@@ -100,10 +100,11 @@ export class PersonalCoach extends Coach {
   }
 
   /**
-   * Writes the shown rune page, item set or summoner spells into the League client. Called only
-   * from the player's click on an import button (CLAUDE.md: the single approved LCU write exception).
+   * Writes the shown loadout into the League client: "runes" = the rune page and your two
+   * summoner spells (one button), "items" = the item set. Called only from the player's click on
+   * an import button (CLAUDE.md: the single approved LCU write exception).
    */
-  async importLoadout(kind: "runes" | "items" | "spells"): Promise<void> {
+  async importLoadout(kind: "runes" | "items"): Promise<void> {
     const shown = this.shownLoadout;
     const creds = this.p.connector.credentials;
     if (!shown || !creds || !this.config.app.import.enabled) return;
@@ -112,22 +113,21 @@ export class PersonalCoach extends Coach {
     const importer = new LcuImporter(creds);
     try {
       const l = shown.loadout;
-      if (kind === "spells") {
-        const s = shown.loadout.spells?.value;
-        if (!s || s.length !== 2) return;
-        await importer.importSpells([s[0]!, s[1]!]);
-        this.importMessage = say("import.spells.done");
-      } else if (kind === "runes") {
-        if (!l.page) return;
-        const p = l.page.value;
-        // Stored shards are in Riot's match order (defense, flex, offense); the client wants offense, flex, defense.
-        const result = await importer.importRunePage({
-          name: shown.champion,
-          primaryStyleId: p.primaryStyle,
-          subStyleId: p.subStyle,
-          selectedPerkIds: [...p.runes, ...[...p.statPerks].reverse()],
-        });
-        this.importMessage = say(`import.runes.${result}`);
+      if (kind === "runes") {
+        // The rune page and the spells are separate client calls: one failing doesn't stop the other.
+        const done: string[] = [];
+        const failed = (err: unknown) =>
+          done.push(err instanceof LcuWriteError && err.reason === "pagesFull" ? say("import.runes.full") : say("import.failed", { error: (err as Error).message }));
+        if (l.page) {
+          const p = l.page.value;
+          // Stored shards are in Riot's match order (defense, flex, offense); the client wants offense, flex, defense.
+          await importer
+            .importRunePage({ name: shown.champion, primaryStyleId: p.primaryStyle, subStyleId: p.subStyle, selectedPerkIds: [...p.runes, ...[...p.statPerks].reverse()] })
+            .then((result) => done.push(say(`import.runes.${result}`)), failed);
+        }
+        const s = l.spells?.value;
+        if (s?.length === 2) await importer.importSpells([s[0]!, s[1]!]).then(() => done.push(say("import.spells.done")), failed);
+        this.importMessage = done.join(" · ");
       } else {
         // A full build: start, boots, the core (items 1-3) and later items (4+), what to buy
         // against this enemy team (one block per need), and the other options players take.

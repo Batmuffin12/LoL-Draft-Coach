@@ -165,8 +165,8 @@ function LoadoutRow({ label, children, reason }: { label: string; children: Reac
 }
 
 function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message: string | null }) {
-  const [busy, setBusy] = useState<"runes" | "items" | "spells" | null>(null);
-  const run = (kind: "runes" | "items" | "spells") => {
+  const [busy, setBusy] = useState<"runes" | "items" | null>(null);
+  const run = (kind: "runes" | "items") => {
     if (busy) return;
     setBusy(kind);
     void window.coach.importLoadout(kind).finally(() => setBusy(null));
@@ -174,14 +174,14 @@ function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message:
   if (!l.canImport) return null;
   return (
     <div className="lo-import">
-      {l.page && (
-        <button className="btn" disabled={busy !== null} onClick={() => run("runes")} title="Creates (or updates) an 'LDC:' rune page in your client">
-          {busy === "runes" ? "Importing…" : "Import runes"}
-        </button>
-      )}
-      {l.spells && l.spells.spells.length === 2 && (
-        <button className="btn" disabled={busy !== null} onClick={() => run("spells")} title="Sets your two summoner spells in champ select (keeps Flash on its key)">
-          {busy === "spells" ? "Importing…" : "Import spells"}
+      {(l.page || l.spells) && (
+        <button
+          className="btn"
+          disabled={busy !== null}
+          onClick={() => run("runes")}
+          title="Creates (or updates) an 'LDC:' rune page and sets your two summoner spells in champ select (Flash keeps its key)"
+        >
+          {busy === "runes" ? "Importing…" : l.page && l.spells ? "Import runes & spells" : l.page ? "Import runes" : "Import spells"}
         </button>
       )}
       {(l.items.length > 0 || l.commonPath || l.starting) && (
