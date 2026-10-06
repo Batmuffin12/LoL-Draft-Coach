@@ -2,6 +2,19 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [Unreleased] — `ui-redesign`
+
+### Changed
+- **Panel redesign** to the LoL Draft Coach design system: a 440 × 720 window that zooms with the client, Barlow fonts, a phase band with the timer and your lane opponent, flat sections. Every screen fits without scrolling.
+- **Tables, like the build sites** (u.gg, op.gg, Mobalytics): picks are a table (Win, Lane, You, Team in points of win chance; click a row for its reasons, + green, − amber, the why-not line in gold); bans are a table (Hurts, Win, Pick, Ban, one reason per row; bans for your hover marked "Vs your hover", 5 rows).
+- **After lock-in: Runes · Build · Matchups.** Runes on their full trees with the taken ones lit and the stat shards, the page's win rate and games, one Swap line per situational rune; spells and a Q/W/E × 1–18 skill grid. Build: start and boots with their numbers, then items by slot (1st–4th) with the average minute, the top item over the next option, pick % and win added; with thin data the core plus the "Later: pick by situation" pool. Matchups: your champion against each enemy (your lane first) and with each ally: your win rate, edge over the expectation, games.
+- **Lobby**: your pool as a table (Tier, Games, Win); one role open at a time, the others as one-line summaries.
+- Numbers with thin data show "—" instead of a win rate (D31); every win rate travels with its games.
+
+### Added
+- View data for the tables: ban threat in points and win/pick/ban rates (no ban rate on older snapshots), whole rune paths from Data Dragon and stat shard rows from the client (read only), win rate and games per loadout choice, pick share and win added per item option, the average minute per item slot (engine), starting item counts, and matchups against and with each champion in the draft.
+- Dev aid: `LDC_SCREENSHOT_CLICK=Build` clicks a button (e.g. a tab) before the screenshot.
+
 ## [0.6.1] — 2026-10-06
 
 ### Added
