@@ -170,10 +170,39 @@ export const EngineConfigSchema = z.object({
       barScaleWin: z.number().positive(),
     }),
   }),
+  /** Loadout after lock-in: runes, spells, skill order and items (DESIGN.md "Loadout", "Item ranking"). */
+  loadout: z.object({
+    /** What counts as a completed item (derived from Data Dragon). */
+    items: z.object({ mapId: z.string().min(1), legendaryMinGold: z.number().min(0) }),
+    /** An option (page, spells, …) needs this share of the champion-role's games to be suggested… */
+    minShare: unit,
+    /** …and this many games. */
+    minGames: z.number().int().min(1),
+    /** Win rates of options are smoothed toward the champion-role's win rate with this many games. */
+    priorGames: z.number().min(0),
+    /** A rune page into the lane opponent is used when the matchup has this many games. */
+    minMatchupGames: z.number().int().min(1),
+    /** Item ranking (rankItems): candidates need this share of the slot's purchases. */
+    itemMinShare: unit,
+    /** Rating points per unit of win added (log-odds scale ≈ 400 / ln 10 × 4 near 50%). */
+    winAddedScale: z.number().min(0),
+    /** Rating points per unit of ln(lift), scaled by how far the enemy team is above the band in the trait. */
+    liftScale: z.number().min(0),
+    /** An item whose win added is below this (0..1, negative) is never the top pick at its slot. */
+    negativeGuard: z.number().max(0),
+    /** Situational runes/items need at least this lift to be shown, and at most this many are shown. */
+    minLift: z.number().min(1),
+    maxSituational: z.number().int().min(0),
+    /** Alternatives shown next to the top item per slot. */
+    alternatives: z.number().int().min(0),
+    /** Build slots (completed items) the loadout ranks. */
+    slots: z.number().int().min(1),
+  }),
   topN: z.number().int().positive(),
 });
 export type EngineConfig = z.infer<typeof EngineConfigSchema>;
 export type RatingConfig = EngineConfig["rating"];
+export type LoadoutConfig = EngineConfig["loadout"];
 
 export const RankBandConfigSchema = z.object({
   version: z.number().int().positive(),

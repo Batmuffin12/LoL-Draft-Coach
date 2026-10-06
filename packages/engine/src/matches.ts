@@ -16,6 +16,7 @@ export function attributeSamples(m: UserMatch): AttributeSample[] {
     championId: p.championId,
     position: p.position,
     physicalDamage: p.physicalDamage,
+    ...(p.heal !== undefined ? { heal: p.heal } : {}),
     magicDamage: p.magicDamage,
     trueDamage: p.trueDamage,
     damageTaken: p.damageTaken,
