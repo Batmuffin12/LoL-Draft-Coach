@@ -17,6 +17,8 @@ import {
   adviseLivePicks,
   assessPick,
   draftLoadout,
+  completedItems,
+  personalBuild,
   suggestBans,
   suggestHoverBans,
   MetaIndex,
@@ -449,7 +451,15 @@ export class PersonalCoach extends Coach {
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
       this.keptPick = null;
-      const loadout = live ? draftLoadout(live, locked, engine.loadout) : null;
+      // Your own games on the champion fill in when your rank has too few (completed items from Data Dragon).
+      let completed: Set<number> = new Set();
+      try {
+        completed = completedItems(this.deps.ddragon.data.itemInfo, engine.loadout.items);
+      } catch {
+        // Data Dragon not loaded yet.
+      }
+      const personal = personalBuild(this.profile.matches, locked, role, completed);
+      const loadout = live ? draftLoadout(live, locked, engine.loadout, personal) : null;
       if (this.shownLoadout?.loadout.championId !== locked) this.importMessage = null;
       this.shownLoadout = loadout ? { loadout, champion: nameOf(locked) } : null;
       let data = null;
@@ -470,7 +480,7 @@ export class PersonalCoach extends Coach {
           expectedWin: assessed?.expectedWin ?? null,
           reasons: assessed ? assessed.reasons.map(say) : [],
           loadout: loadout
-            ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport, thinGames: engine.loadout.thinGames })
+            ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport })
             : null,
           importMessage: this.importMessage,
         },

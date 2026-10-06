@@ -1,7 +1,9 @@
 import { buildLoadout, type Loadout } from "./loadout";
+import { mergeBuilds, type PersonalBuild } from "./loadout-sources";
 import type { LoadoutConfig } from "./config";
 import type {
   BanSuggestion,
+  ChampionBuild,
   ChampionAttributes,
   ChampionId,
   FactorScores,
@@ -347,13 +349,20 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
  * The loadout for the local player's champion in this draft, from the band's builds:
  * enemies and the lane opponent are placed the same way as for picks. Null without a build.
  */
-export function draftLoadout(input: LiveInput, championId: ChampionId, config: LoadoutConfig): Loadout | null {
-  const build = input.index.build(championId, input.role);
+export function draftLoadout(input: LiveInput, championId: ChampionId, config: LoadoutConfig, personal: PersonalBuild | null = null): Loadout | null {
   const cuts = input.index.snapshot.traitCuts;
-  if (!build || !cuts) return null;
+  const all = input.index.buildsOf(championId);
+  if (!cuts || (!all.length && !personal)) return null;
+  // Your role's build; when the band has none for this role yet, an empty one (the other roles and your own games fill in).
+  const role = input.role ?? all[0]?.role ?? "";
+  const build =
+    all.find((b) => b.role === role) ??
+    ({ championId, role, n: 0, timelineN: 0, games: 0, wins: 0, pages: [], spells: [], skills: [], starting: [], core: [], items: [], lifts: [], matchupPages: [] } as ChampionBuild);
   const ctx = context(input);
   return buildLoadout({
     build,
+    pooled: mergeBuilds([build, ...all.filter((b) => b !== build)].filter((b) => b.n > 0)),
+    personal,
     enemies: ctx.enemies.map((e) => e.championId),
     laneOpponent: ctx.laneEnemy?.championId ?? null,
     attributes: ctx.attributes,

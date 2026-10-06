@@ -24,14 +24,14 @@
     }
   },
   "builds": {
-    "minGames": 10,
+    "minGames": 3,
     "startingSeconds": 90,
     "minSkillPoints": 9,
     "coreItems": 3,
     "maxSlots": 5,
     "maxOptions": 4,
-    "minOptionGames": 3,
-    "minItemGames": 5,
+    "minOptionGames": 1,
+    "minItemGames": 2,
     "winAddedPriorGames": 300,
     "stateBins": {
       "minutes": [10, 15, 20, 25, 30],

@@ -59,6 +59,11 @@ export class MetaIndex {
       .map(([r]) => r);
   }
 
+  /** All of a champion's builds (one per role it's played in), most games first. */
+  buildsOf(id: ChampionId): ChampionBuild[] {
+    return (this.snapshot.builds ?? []).filter((b) => b.championId === id).sort((a, b) => b.n - a.n);
+  }
+
   /** The champion's build in a role; without one (or no role), its build in the role it's played most. */
   build(id: ChampionId, role: Position | null): ChampionBuild | null {
     const exact = role ? this.builds.get(key(id, role)) : undefined;

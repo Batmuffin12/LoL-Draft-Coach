@@ -252,7 +252,8 @@
     "minLift": 1.3,
     "maxSituational": 3,
     "alternatives": 2,
-    "thinGames": 300,
+    "solidGames": 100,
+    "personalMinGames": 5,
     "slots": 3
   },
   "topN": 3

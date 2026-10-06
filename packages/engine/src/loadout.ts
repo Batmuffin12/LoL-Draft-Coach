@@ -2,6 +2,7 @@ import type { ChampionAttributes, ChampionBuild, ChampionId, EnemyTrait, ItemSlo
 import type { LoadoutConfig } from "./config";
 import { reason } from "./explain";
 import { ENEMY_TRAITS, teamTraits } from "./items";
+import type { PersonalBuild } from "./loadout-sources";
 
 /** What the loadout is for: your champion and role, and what the draft shows of the enemy team. */
 export interface LoadoutInput {
@@ -15,6 +16,24 @@ export interface LoadoutInput {
   config: LoadoutConfig;
   /** Items you already own (M8, live); empty before the game. */
   owned?: number[];
+  /** The champion's builds in all roles added together, used when your role's build has too few games. */
+  pooled?: ChampionBuild | null;
+  /** What you yourself take on the champion (your own games), preferred when the band's data is thin. */
+  personal?: PersonalBuild | null;
+}
+
+/** Where the loadout's numbers come from, for the "rough guide" note. */
+export interface LoadoutSource {
+  /** Games behind the band data used (your role, or all roles when pooled). */
+  games: number;
+  /** Games in your role alone. */
+  roleGames: number;
+  /** True when your role had too few games and the champion's other roles filled in. */
+  pooled: boolean;
+  /** Your own games on the champion that were used (0 = none). */
+  personalGames: number;
+  /** Fewer than `solidGames`: choices are the most taken ones, and win rates aren't shown. */
+  thin: boolean;
 }
 
 export interface LoadoutChoice<T> {
@@ -49,6 +68,7 @@ export interface Loadout {
   role: string;
   /** Games behind the build (band plus the band above). */
   games: number;
+  source: LoadoutSource;
   page: LoadoutChoice<RunePageStat> | null;
   /** Runes worth a look against this enemy team (lift), with the reason. */
   situationalRunes: { runeId: number; reasons: Reason[] }[];
@@ -141,16 +161,35 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
  * (band plus the band above); every number in a reason comes from those builds.
  */
 export function buildLoadout(input: LoadoutInput): Loadout {
-  const { build, config: cfg } = input;
+  const { config: cfg } = input;
+  const roleBuild = input.build;
   const enemy = teamTraits(input.enemies, input.attributes);
+  // Small samples (partial pooling): too few games in your role, so the champion in all roles.
+  const pooled = roleBuild.n < cfg.solidGames && input.pooled && input.pooled.n > roleBuild.n ? input.pooled : null;
+  const build = pooled ?? roleBuild;
+  const thin = build.n < cfg.solidGames;
+  // With thin band data, your own games on the champion come first (comfort first).
+  const personal = thin && input.personal && input.personal.n >= cfg.personalMinGames ? input.personal : null;
+  let personalUsed = false;
+  const champion = roleBuild.championId;
+  /** Thin data: the most taken option (win rates from a handful of games are noise); else the best common one. */
+  const pick = <T extends OptionStat>(list: T[], b: ChampionBuild) => (thin ? (list[0] ?? null) : bestOption(list, b, cfg));
 
-  const matchup = input.laneOpponent !== null ? build.matchupPages.find((p) => p.enemy === input.laneOpponent && p.n >= cfg.minMatchupGames) : undefined;
-  const pageOpt = matchup ?? bestOption(build.pages, build, cfg);
-  const page = choice(
-    pageOpt,
-    (p) => ({ primaryStyle: p.primaryStyle, subStyle: p.subStyle, runes: p.runes, statPerks: p.statPerks, games: p.games, wins: p.wins, n: p.n }),
-    (p) => [matchup ? reason("loadout.page.matchup", { enemy: matchup.enemy, winRate: winRate(p), games: p.n }) : reason("loadout.page", { winRate: winRate(p), games: p.n, share: p.n / build.n })],
-  );
+  const matchup = !thin && input.laneOpponent !== null ? build.matchupPages.find((p) => p.enemy === input.laneOpponent && p.n >= cfg.minMatchupGames) : undefined;
+  const pageValue = (p: RunePageStat) => ({ primaryStyle: p.primaryStyle, subStyle: p.subStyle, runes: p.runes, statPerks: p.statPerks, games: p.games, wins: p.wins, n: p.n });
+  let page: LoadoutChoice<RunePageStat> | null;
+  if (personal?.pages[0]) {
+    personalUsed = true;
+    page = choice(personal.pages[0], pageValue, (p) => [reason("loadout.page.personal", { count: p.n, games: personal.n, champion })]);
+  } else {
+    page = choice(matchup ?? pick(build.pages, build), pageValue, (p) => [
+      matchup
+        ? reason("loadout.page.matchup", { enemy: matchup.enemy, winRate: winRate(p), games: p.n })
+        : thin
+          ? reason("loadout.page.popular", { count: p.n, games: build.n })
+          : reason("loadout.page", { winRate: winRate(p), games: p.n, share: p.n / build.n }),
+    ]);
+  }
 
   // Runes taken more often against teams like this one, and not already on the page.
   const onPage = new Set(page?.value.runes ?? []);
@@ -162,24 +201,42 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     .slice(0, cfg.maxSituational)
     .map((l) => ({ runeId: l.id, reasons: [liftReason("rune", l, enemy)] }));
 
-  const spells = choice(bestOption(build.spells, build, cfg), (o) => o.spells, (o) => [reason("loadout.spells", { winRate: winRate(o), games: o.n, share: o.n / build.n })]);
+  // Spells depend on the role (Smite in the jungle), so they never come from other roles.
+  let spells: LoadoutChoice<number[]> | null;
+  if (personal?.spells[0]) {
+    personalUsed = true;
+    spells = choice(personal.spells[0], (o) => o.spells, (o) => [reason("loadout.spells.personal", { count: o.n, games: personal.n, champion })]);
+  } else {
+    const roleThin = roleBuild.n < cfg.solidGames;
+    const o = roleThin ? (roleBuild.spells[0] ?? null) : bestOption(roleBuild.spells, roleBuild, cfg);
+    spells = choice(o, (x) => x.spells, (x) =>
+      roleThin ? [reason("loadout.spells.popular", { count: x.n, games: roleBuild.n })] : [reason("loadout.spells", { winRate: winRate(x), games: x.n, share: x.n / roleBuild.n })],
+    );
+  }
   // Skill order and starting items: the most common choice (taken by most players), not the best win rate.
-  const common = <T extends OptionStat>(list: T[]) => list.find((o) => o.n >= cfg.minGames) ?? null;
+  const common = <T extends OptionStat>(list: T[]) => list.find((o) => o.n >= (thin ? 1 : cfg.minGames)) ?? null;
   const timelineShare = (o: OptionStat) => o.n / Math.max(1, build.timelineN);
   const skills = choice(common(build.skills), (o) => ({ first: o.first, order: o.order }), (o) => [reason("loadout.skills", { share: timelineShare(o), games: o.n })]);
   const starting = choice(common(build.starting), (o) => o.items, (o) => [reason("loadout.starting", { share: timelineShare(o), games: o.n })]);
   // Items come from win added and lift (rankItems), never raw win rate. Without enough
   // purchases for that, the most common path is shown as what players build.
-  const items = rankItems(input);
+  const items = rankItems({ ...input, build });
   const commonPath = common(build.core.filter((c) => c.items.length >= 3)) ?? common(build.core);
-  const core: LoadoutChoice<number[]> | null = items.length
-    ? { value: items.map((s) => s.top.itemId), winRate: 0, n: Math.min(...items.map((s) => s.top.n)), reasons: [] }
-    : choice(commonPath, (o) => o.items, (o) => [reason("loadout.core.common", { share: timelineShare(o), games: o.n })]);
+  let core: LoadoutChoice<number[]> | null;
+  if (items.length) core = { value: items.map((s) => s.top.itemId), winRate: 0, n: Math.min(...items.map((s) => s.top.n)), reasons: [] };
+  else if (commonPath) core = choice(commonPath, (o) => o.items, (o) => [reason("loadout.core.common", { share: timelineShare(o), games: o.n })]);
+  else if (input.personal?.items.length) {
+    // No band purchases at all: the items you finish most often on the champion.
+    personalUsed = true;
+    const own = input.personal;
+    core = { value: own.items.slice(0, cfg.slots).map((i) => i.itemId), winRate: 0, n: own.n, reasons: [reason("loadout.core.personal", { games: own.n, champion })] };
+  } else core = null;
 
   return {
-    championId: build.championId,
-    role: build.role,
+    championId: roleBuild.championId,
+    role: roleBuild.role,
     games: build.n,
+    source: { games: build.n, roleGames: roleBuild.n, pooled: pooled !== null, personalGames: personalUsed ? (input.personal?.n ?? 0) : 0, thin },
     page,
     situationalRunes,
     spells,

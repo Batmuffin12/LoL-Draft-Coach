@@ -199,8 +199,12 @@ export const EngineConfigSchema = z.object({
     maxSituational: z.number().int().min(0),
     /** Alternatives shown next to the top item per slot. */
     alternatives: z.number().int().min(0),
-    /** Builds from fewer games than this are labelled "not much data yet". */
-    thinGames: z.number().int().min(0),
+    /**
+     * Below this many games a build is a rough guide: it pools the champion's other roles, prefers
+     * your own games on it (at least personalMinGames), picks the most taken options and hides win rates.
+     */
+    solidGames: z.number().int().min(1),
+    personalMinGames: z.number().int().min(1),
     /** Build slots (completed items) the loadout ranks. */
     slots: z.number().int().min(1),
   }),
