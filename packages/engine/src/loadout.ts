@@ -334,7 +334,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   // Boots: your role's purchases; with thin data and more of your own games, your usual boots.
   // Your final inventories hold quest-upgraded boots (e.g. tier 3 in mid): count them as the boots they came from.
   const ownBootCounts = new Map<number, number>();
-  for (const i of personal?.items ?? []) {
+  for (const i of personal?.held ?? personal?.items ?? []) {
     const base = input.boots?.has(i.itemId)
       ? i.itemId
       : input.roleRewards?.some((r) => r.itemId === i.itemId) && input.buildsFrom

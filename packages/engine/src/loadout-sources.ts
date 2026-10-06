@@ -70,6 +70,8 @@ export interface PersonalBuild {
   spells: (OptionStat & { spells: number[] })[];
   /** Completed items in your final inventories, most often first. */
   items: { itemId: number; n: number }[];
+  /** Every item in your final inventories (quest rewards and upgraded boots included), most often first. */
+  held?: { itemId: number; n: number }[];
 }
 
 /**
@@ -84,7 +86,9 @@ export function personalBuild(matches: UserMatch[], championId: ChampionId, role
   const pages = new Map<string, RunePageStat>();
   const spells = new Map<string, OptionStat & { spells: number[] }>();
   const items = new Map<number, number>();
+  const held = new Map<number, number>();
   for (const p of games) {
+    for (const id of new Set(p.items.filter((x) => x > 0))) held.set(id, (held.get(id) ?? 0) + 1);
     const w = p.win ? 1 : 0;
     if (p.perks?.runes.length) {
       const page: RunePageStat = { primaryStyle: p.perks.primaryStyle, subStyle: p.perks.subStyle, runes: p.perks.runes, statPerks: p.perks.statPerks, games: 0, wins: 0, n: 0 };
@@ -107,5 +111,6 @@ export function personalBuild(matches: UserMatch[], championId: ChampionId, role
     pages: byN(pages.values()),
     spells: byN(spells.values()),
     items: byN([...items].map(([itemId, n]) => ({ itemId, n }))),
+    held: byN([...held].map(([itemId, n]) => ({ itemId, n }))),
   };
 }

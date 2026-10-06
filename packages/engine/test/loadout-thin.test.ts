@@ -185,6 +185,9 @@ describe("boots on their own row", () => {
     expect(own.core?.value).toEqual([6692, 3814]);
     // …but your quest-upgraded boots count as the boots they came from.
     expect(buildLoadout(input({ boots: new Set([3020]), personal, roleRewards: [{ itemId: 3175, share: 0.53 }], buildsFrom: from })).boots?.top.itemId).toBe(3020);
+    // Upgraded boots aren't "completed" items, so they come from everything you held.
+    const heldOnly = { ...personal, items: [{ itemId: 6692, n: 22 }], held: [{ itemId: 3175, n: 20 }, { itemId: 6692, n: 22 }] };
+    expect(buildLoadout(input({ boots: new Set([3020]), personal: heldOnly, roleRewards: [{ itemId: 3175, share: 0.53 }], buildsFrom: from })).boots?.top.itemId).toBe(3020);
     expect(own.boots).toBeNull(); // without build paths it can't tell
     // No quest reward linked to your items: nothing shown.
     expect(buildLoadout(input({ build: b, boots, buildsFrom: from, roleRewards: [{ itemId: 3172, share: 0.1 }] })).quest).toEqual([]);
