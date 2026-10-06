@@ -58,6 +58,7 @@ pnpm test             # vitest across all packages
 pnpm desktop          # build + launch the Electron panel
 pnpm --filter @ldc/lcu record   # record a live champ select into an anonymised fixture
 pnpm --filter @ldc/lcu mock     # fake League client replaying a fixture; then set LDC_LCU_OVERRIDE as printed
+pnpm --filter @ldc/sim mock mid-counter   # fake client on a simulated draft (packages/sim/scenarios); prints LDC_LCU_OVERRIDE and LDC_META_FILE
 pnpm --filter @ldc/server dev   # run the server locally (reads .env); SERVER_URL=http://localhost:8787 puts the desktop in server mode
 pnpm --filter @ldc/server invite "note"   # create a one-time invite code
 pnpm --filter @ldc/server collect --seconds 120   # one collector wake-up against DATABASE_PATH (reads .env); production uses POST /admin/collect hourly
@@ -67,7 +68,7 @@ pnpm local:desktop                # the panel against it (server mode, own profi
 pnpm --filter @ldc/desktop dist:win      # Windows installer (LDC_SERVER_URL, LDC_UPDATE_URL: see docs/DEPLOY.md)
 ```
 
-Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_SCREENSHOT=path.png` (+ `LDC_SCREENSHOT_DELAY_MS`, `LDC_SCREENSHOT_CLICK=Build` to open a tab first) saves a screenshot of the panel and quits (it logs how far the scrolling area overflows).
+Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_META_FILE=snapshot.json` (development builds: coach from that meta snapshot instead of the server, e.g. a simulator scenario's), `LDC_SCREENSHOT=path.png` (+ `LDC_SCREENSHOT_DELAY_MS`, `LDC_SCREENSHOT_CLICK=Build` to open a tab first) saves a screenshot of the panel and quits (it logs how far the scrolling area overflows).
 
 Testing the desktop against live meta data locally (the dev app otherwise runs in direct mode, which has no meta):
 1. Collect real games into a local DB (gitignored): `pnpm --filter @ldc/server collect --seconds 600` (writes `apps/server/data/ldc.sqlite`; ~30 games/min on a dev key).
@@ -80,6 +81,7 @@ Testing the desktop against live meta data locally (the dev app otherwise runs i
 
 - `apps/desktop`: Electron (ow-electron-compatible) + React + Vite panel. Main process = adapters + engine; renderer = UI only.
 - `apps/server`: Hono + SQLite (better-sqlite3 + Drizzle). Users, invites, profiles, meta snapshots, config, advice log; jobs for user sync, collector and hourly aggregation, all in one process.
+- `packages/sim`: draft simulator for tests and dev: `draft().me("middle").hover(103).enemy(238).stopAt("my-pick").build()` gives any champ select as a fixture; `meta()` builds a synthetic snapshot with chosen games (thin or solid on purpose); ready-made scenarios in `packages/sim/scenarios`.
 - `packages/shared`: shared types. `packages/lcu`, `packages/riot-api`, `packages/ddragon`, `packages/jev` (frozen), later `packages/live-client`: adapters. `packages/engine`: scoring (v1 from your own data; v2 in rating points from a band's `MetaSnapshot`, used when one is loaded). `packages/meta`: pure aggregation of collected matches into snapshots (`BandAggregator`).
 - `config/`: `engine.v1.json` (factor weights per band, smoothing, playstyle axes, pool thresholds; `rating`: engine v2 term weights per band, priors, blind-pick, bans), `meta.v1.json` (aggregation window/half-life and the collector's per-wake budget), `explain.v1.json` (all wording of reasons, axis/metric labels and formats; text never contains numbers the engine didn't produce), `rank-bands.v1.json` (tier → band), `app.v1.json` (supported queues, history size), `jev.v1.json` (thresholds). Loaded at runtime; the server serves the scoring config from `GET /config` (ETag).
 - `.railway/railway.ts`: Railway infrastructure as code (service, volume, domain, sleep, limits, non-secret variables). `docs/CLOUD.md`: cost choices and cost log.

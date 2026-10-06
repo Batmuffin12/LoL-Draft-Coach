@@ -49,6 +49,11 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 3. **Unowned champions:** yes, new-champion suggestions may include champions the player doesn't own (say so in the row, e.g. "not owned").
 4. **Design:** update the design system first, for the whole app, and build new components from it (stage 0).
 
+## Progress
+
+- **Stage 0 done (2026-10-06):** the design system (version 9) matches v0.6.2 class for class (`bundle.css` is `styles.css`), and has the M7 components (`PostGameCard`, `FocusCard`, `NewChampTable`, `TrendTable`, `FormTable`, `ClosedSection`) and screens (Last game, New, Monthly report). **Proposed placement (decision 2, owner to confirm):** lobby tabs **Last game · Style · Pool · New**; Last game opens first after a game (post-game card, then Your focus); the monthly report opens from a closed "This month" head at the end of Style. Built this way unless the owner says otherwise.
+- **Stage 1 done (2026-10-06):** `packages/sim` (its own package, since it needs both the LCU fixture format and the meta types): `draft()` builder with phases, sides, timers and stop points (`planning` … `game-end`), `meta()` synthetic snapshots, scenarios, `pnpm --filter @ldc/sim mock <scenario>`, and the desktop's `LDC_META_FILE` dev aid.
+
 ## Rules that matter for M7
 
 - Everything in CLAUDE.md (compliance, Zod, adapters, pure engine/meta, config not code, Vitest, commit gates). Especially: other players never appear by name or rank; the advice log and growth data hold only the player's own data; `DELETE /me` removes them.
