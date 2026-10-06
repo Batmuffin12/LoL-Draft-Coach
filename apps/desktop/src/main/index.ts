@@ -178,6 +178,11 @@ async function main(): Promise<void> {
     serverProfiles.on("account", (a) => {
       if (a.state === "registered") void remoteConfig.refresh();
     });
+    // Each champ select re-checks the scoring config (an ETag request: nothing is downloaded when
+    // it's unchanged), so a server update reaches the panel without restarting the app.
+    connector.on("gameflowPhase", (phase) => {
+      if (phase === "ChampSelect") void remoteConfig.refresh();
+    });
   }
   if (profiles instanceof ServerProfileSource) {
     const server = profiles;
