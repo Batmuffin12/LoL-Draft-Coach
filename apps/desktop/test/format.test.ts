@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Term } from "@ldc/shared";
-import { count, games, initials, pct, pickColumns, pickReasons, positionLabel, rate, signed, signedOrDash, skillPath, tone, winTone } from "../src/renderer/format";
+import { count, games, initials, pct, pickColumns, pickReasons, positionLabel, rate, roleName, setRoleLabels, signed, signedOrDash, skillPath, tone, winTone } from "../src/renderer/format";
 
 const term = (name: Term["name"], deltaWin: number, games = 100): Term => ({ name, deltaWin, games, rating: 0 });
 
@@ -57,5 +57,15 @@ describe("pickReasons", () => {
     const r = (text: string, negative = false) => ({ text, negative });
     expect(pickReasons([r("a"), r("b"), r("c"), r("bad", true)], 2)).toEqual([r("a"), r("bad", true)]);
     expect(pickReasons([r("a"), r("b"), r("c")], 2)).toEqual([r("a"), r("b")]);
+  });
+});
+
+describe("position names", () => {
+  it("uses the client's names from the config, Riot's id otherwise", () => {
+    setRoleLabels({ utility: "support", middle: "mid" });
+    expect(positionLabel("utility")).toBe("Support");
+    expect(roleName("middle")).toBe("mid");
+    expect(positionLabel("jungle")).toBe("Jungle");
+    setRoleLabels({});
   });
 });

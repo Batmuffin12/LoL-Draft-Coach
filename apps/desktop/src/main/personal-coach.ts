@@ -53,6 +53,11 @@ export interface PersonalCoachDeps extends CoachDeps {
   meta?: MetaSource | null;
 }
 
+/** Position names from the explain templates ("role.utility": "support"). */
+export function roleLabels(templates: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("role.") ? [[k.slice(5), v]] : [])));
+}
+
 /** The champion the local player has locked in (their pick action is completed), or null. */
 export function lockedPick(draft: DraftState): ChampionId | null {
   const action = draft.actions.find((a) => a.type === "pick" && a.actorCellId === draft.localCellId && a.completed && a.championId > 0);
@@ -178,6 +183,7 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
+    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates) };
   }
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
@@ -185,6 +191,7 @@ export class PersonalCoach extends Coach {
     // Wording the server doesn't have yet (an older server) falls back to the bundled copy, never to raw ids.
     this.config = { ...config, explain: { ...config.explain, templates: { ...this.p.config.explain.templates, ...config.explain.templates } } };
     this.comfortByRole.clear();
+    this.update({ roleLabels: roleLabels(this.config.explain.templates) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
     this.updateRoleAdvice();

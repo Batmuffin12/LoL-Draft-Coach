@@ -178,7 +178,7 @@ describe("boots on their own row", () => {
     const from = (id: number) => (id === 3175 ? [3020] : id === 3020 ? [1001] : []);
     const l = buildLoadout(input({ build: b, boots, buildsFrom: from, roleRewards: [{ itemId: 3175, share: 0.53 }, { itemId: 3172, share: 0.1 }] }));
     expect(l.quest.map((q) => [q.itemId, q.from])).toEqual([[3175, 3020]]);
-    expect(say(l.quest[0]!.reasons[0]!)).toBe("Your middle quest turns #3020 into #3175 (53% of middle games end with it)");
+    expect(say(l.quest[0]!.reasons[0]!)).toBe("Your mid quest turns #3020 into #3175 (53% of mid games end with it)");
     // A quest reward is never suggested as a purchase, even from your own games.
     const personal = { championId: 950, n: 25, pages: [], spells: [], items: [{ itemId: 3175, n: 20 }, { itemId: 6692, n: 22 }, { itemId: 3814, n: 15 }] };
     const own = buildLoadout(input({ boots: new Set([3020, 3175]), personal, roleRewards: [{ itemId: 3175, share: 0.53 }] }));

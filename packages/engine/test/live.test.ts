@@ -217,7 +217,7 @@ describe("adviseLivePicks", () => {
     const fresh = advice.picks.find((p) => p.championId === 103);
     expect(fresh).toBeDefined();
     expect(fresh!.terms!.find((t) => t.name === "personal")!.rating).toBeLessThan(0);
-    expect(text(fresh!.reasons)).toMatch(/Strong in middle in your rank: 55\.0% win rate \(400 games\)/);
+    expect(text(fresh!.reasons)).toMatch(/Strong in mid in your rank: 55\.0% win rate \(400 games\)/);
     expect(text(fresh!.reasons)).toMatch(/New to you/);
     const notOwned = adviseLivePicks(input(draft(), { pickable: [101, 102] }));
     expect(notOwned.picks.map((p) => p.championId)).not.toContain(103);
@@ -251,7 +251,7 @@ describe("adviseLivePicks", () => {
     const ids = p.reasons.map((r) => r.id);
     expect(ids).toContain("comfort.role.weak");
     expect(ids).not.toContain("comfort.role");
-    expect(text(p.reasons)).toMatch(/Little recent form on it: \d+ middle games/);
+    expect(text(p.reasons)).toMatch(/Little recent form on it: \d+ mid games/);
     // Mastery isn't shown as a plus when your record on it lowers the pick.
     expect(ids).not.toContain("mastery");
     // Comfort that helps: the record is a plus, no caveat from it.
@@ -279,7 +279,7 @@ describe("adviseLivePicks", () => {
     const idx = index({ ...snapshot(), trending });
     const plain = adviseLivePicks(input(draft())).picks.find((p) => p.championId === 103)!;
     const withTrend = adviseLivePicks(input(draft(), { index: idx })).picks.find((p) => p.championId === 103)!;
-    expect(text(withTrend.reasons)).toMatch(/Trending in middle: picked in 9% of games lately, up from 4%/);
+    expect(text(withTrend.reasons)).toMatch(/Trending in mid: picked in 9% of games lately, up from 4%/);
     expect(withTrend.expectedWin).toBe(plain.expectedWin);
     const ban = suggestBans(input(draft([], 301), { index: idx })).find((b) => b.championId === 302)!;
     expect(text(ban.reasons)).toMatch(/Rising in top: picked in 50% of games \(was 30%\) and winning 56\.0% \(was 50\.0%\)/);
@@ -327,7 +327,7 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft([], 301)));
     const ids = bans.map((b) => b.championId);
     expect(ids[0]).toBe(202);
-    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: -\d+\.\d% \(200 games\); picked in 40% of middle games/);
+    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: -\d+\.\d% \(200 games\); picked in 40% of mid games/);
     expect(ids).not.toContain(301); // an ally is hovering it
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);

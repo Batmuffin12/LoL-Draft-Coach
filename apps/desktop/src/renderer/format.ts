@@ -48,9 +48,22 @@ export function count(n: number): string {
   return n.toLocaleString("en-US");
 }
 
-/** "middle" → "Middle" (positions as the client names them). */
+let roleNames: Record<string, string> = {};
+
+/** Sets the position names from the view state (the explain config's "role.<id>" templates). */
+export function setRoleLabels(labels: Record<string, string>): void {
+  roleNames = labels;
+}
+
+/** A position as players know it, lower case for sentences: "utility" → "support", "middle" → "mid". */
+export function roleName(position: string): string {
+  return roleNames[position] ?? position;
+}
+
+/** A position as a label: "utility" → "Support", "middle" → "Mid". */
 export function positionLabel(position: string): string {
-  return position ? position[0]!.toUpperCase() + position.slice(1) : "";
+  const name = roleName(position);
+  return name ? name[0]!.toUpperCase() + name.slice(1) : "";
 }
 
 /** Two letters for an icon without an image: "Lee Sin" → "LS", "Ahri" → "Ah". */

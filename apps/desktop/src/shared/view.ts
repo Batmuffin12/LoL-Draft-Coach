@@ -283,6 +283,8 @@ export interface ViewState {
   playstyle: PlaystyleView[];
   notices: string[];
   docked: boolean;
+  /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
+  roleLabels: Record<string, string>;
 }
 
 export function emptyViewState(): ViewState {
@@ -303,5 +305,6 @@ export function emptyViewState(): ViewState {
     playstyle: [],
     notices: [],
     docked: true,
+    roleLabels: {},
   };
 }

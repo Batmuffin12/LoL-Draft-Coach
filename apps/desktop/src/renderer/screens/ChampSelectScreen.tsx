@@ -8,7 +8,7 @@ import { PickTable } from "../components/PickTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { positionLabel } from "../format";
+import { positionLabel, roleName } from "../format";
 import { useNow } from "../hooks";
 import { Header, Notices } from "./common";
 import { LoadoutBody, LoadoutSource } from "./LockedInScreen";
@@ -34,7 +34,7 @@ function context(state: ViewState, banning: boolean): string | null {
   }
   const lane = state.laneOpponent;
   if (!lane) return role;
-  return `${positionLabel(lane.role)} · ${lane.champion ? `against ${lane.champion.name}` : `their ${lane.role} not shown yet`}`;
+  return `${positionLabel(lane.role)} · ${lane.champion ? `against ${lane.champion.name}` : `their ${roleName(lane.role)} not shown yet`}`;
 }
 
 type PickTab = "picks" | "runes" | "build";

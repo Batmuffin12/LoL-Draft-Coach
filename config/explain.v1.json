@@ -2,6 +2,11 @@
   "version": 1,
   "description": "English wording for the coach's reasons. Slots: {name} inserts a value, {name:pct} a 0..1 share as a whole percent, {name:pct1} with one decimal, {name:signedPct1} a change with its sign (+2.1), {name:champion} a champion name, {name|one|many} picks the singular or plural word by the number in that slot. Numbers always come from the engine. axes/metrics give display names and number formats (percent, decimal, integer) for the playstyle card.",
   "templates": {
+    "role.top": "top",
+    "role.jungle": "jungle",
+    "role.middle": "mid",
+    "role.bottom": "bot",
+    "role.utility": "support",
     "comfort.role": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate",
     "comfort.roleWithAll": "{games} recent {role} {games|game|games}, {winRate:pct}% win rate ({allGames} games in all roles)",
     "comfort.otherRoles": "{games} recent {games|game|games} in other roles, {winRate:pct}% win rate",

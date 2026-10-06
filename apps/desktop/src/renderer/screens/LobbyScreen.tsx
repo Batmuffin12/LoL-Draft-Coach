@@ -6,7 +6,7 @@ import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { pct, positionLabel } from "../format";
+import { pct, positionLabel, roleName } from "../format";
 import { AccountFooter, Header, Notices } from "./common";
 
 type LobbyTab = "style" | "pool";
@@ -69,7 +69,7 @@ function Style({ state }: { state: ViewState }) {
               <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
             ))}
             <span className="micro">
-              Your last {p.games} {p.role} games against the other {p.role} players in them.
+              Your last {p.games} {roleName(p.role)} games against the other {roleName(p.role)} players in them.
             </span>
           </Section>
         );

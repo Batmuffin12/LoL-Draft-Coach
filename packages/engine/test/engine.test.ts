@@ -281,7 +281,7 @@ describe("recommendPicks", () => {
     for (let i = 1; i < picks.length; i++) expect(picks[i - 1]!.score).toBeGreaterThanOrEqual(picks[i]!.score);
     expect(picks[0]!.factors.comfort).not.toBeNull();
     expect(picks[0]!.factors.laneMatchup).toBeNull();
-    expect(text(picks[0]!.reasons.slice(0, 1))).toMatch(/recent middle games, \d+% win rate/);
+    expect(text(picks[0]!.reasons.slice(0, 1))).toMatch(/recent mid games, \d+% win rate/);
   });
 
   it("only suggests champions from the player's pool that fit the role", () => {
@@ -423,7 +423,7 @@ describe("role-aware comfort and off-meta picks", () => {
     const fun = picks[1]!;
     expect(fun.offMeta).toBe(true);
     expect(picks[0]!.offMeta).toBe(false);
-    expect(text(fun.reasons)).toMatch(/Off-meta in jungle \(usually bottom\)/);
+    expect(text(fun.reasons)).toMatch(/Off-meta in jungle \(usually bot\)/);
     expect(text(fun.reasons.slice(0, 1))).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
     expect(text(picks[0]!.reasons)).toMatch(/grades S A\+/);
     const unpenalised = combineFactors(fun.factors, weightsForBand(2, engineCfg));
@@ -544,5 +544,12 @@ describe("role shares from small samples", () => {
     const fit = (s: AttributeSample[]) => roleFit(7, comfort, "utility", new Map(), deriveChampionAttributes(s, 3), engineCfg.roles);
     expect(fit(few)).toBeNull(); // 2 of 10 is noise
     expect(fit(many)).toBe("meta"); // 10 of 50 is a real pattern
+  });
+});
+
+describe("role names", () => {
+  it("shows positions as players know them, from the role.<id> templates", () => {
+    const t = { "role.utility": "support", "role.middle": "mid", r: "In {role} ({usual})" };
+    expect(renderReason({ id: "r", slots: { role: "utility", usual: "middle / jungle" } }, t, () => "")).toBe("In support (mid / jungle)");
   });
 });
