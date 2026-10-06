@@ -65,3 +65,6 @@ Thumbs.db
 
 # Test profile for pnpm local:desktop
 .local/
+
+# Panel screenshots (local checks)
+screenshots/
