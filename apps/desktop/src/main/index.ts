@@ -109,6 +109,15 @@ function scheduleScreenshot(): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
+    // LDC_SCREENSHOT_CLICK=Build: click the first button with that text first (e.g. to open a tab).
+    const click = process.env.LDC_SCREENSHOT_CLICK;
+    if (click) {
+      await win?.webContents
+        .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === ${JSON.stringify(click)}); b?.click(); return !!b; })()`)
+        .then((found: boolean) => console.log(`LDC_SCREENSHOT: clicked "${click}": ${found}`))
+        .catch(() => null);
+      await new Promise((r) => setTimeout(r, 400));
+    }
     // Champ-select screens must fit without scrolling: report how far the scrolling area overflows.
     const overflow = await win?.webContents
       .executeJavaScript(`(() => { const s = document.querySelector(".scroll"); return s ? s.scrollHeight - s.clientHeight : 0; })()`)
