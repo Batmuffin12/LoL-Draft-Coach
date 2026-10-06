@@ -109,6 +109,11 @@ function scheduleScreenshot(): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
+    // Champ-select screens must fit without scrolling: report how far the scrolling area overflows.
+    const overflow = await win?.webContents
+      .executeJavaScript(`(() => { const s = document.querySelector(".scroll"); return s ? s.scrollHeight - s.clientHeight : 0; })()`)
+      .catch(() => null);
+    console.log(`LDC_SCREENSHOT: scroll overflow ${overflow}px`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     app.quit();
