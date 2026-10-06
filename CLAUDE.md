@@ -15,7 +15,7 @@
 | Railway | Live: project `lol-draft-coach`, service `ldc-server` (europe-west4), https://ldc-server-production-c9e7.up.railway.app. Infrastructure is code in `.railway/railway.ts` (`pnpm infra:plan` / `pnpm infra:apply`); never change settings in the dashboard. Costs and the cost log: `docs/CLOUD.md`. The service sleeps when unused: no background timers that make outbound requests. |
 | Milestones | 1 (v0.1.0), 2 (v0.2.0), 3 (v0.3.0, server + friends), 4 (v0.4.0, the coach explains) and 5 (v0.5.0, live meta: hourly collector, engine v2, bans) done. Next: 6 loadout, 7 grow, 8 in game + polish. The suggestion engine needs an upgrade later, once production data builds up (owner, 2026-10-06): re-run `pnpm --filter @ldc/server backtest` first. Progress tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD |
 | Fixtures | Synthetic draft + one real Ranked Flex recording (`packages/lcu/fixtures/recorded/`). Record more with `pnpm --filter @ldc/lcu record`. |
-| Gotchas | Git Bash rewrites args like `/data` into Windows paths: use `MSYS_NO_PATHCONV=1` for railway CLI calls with absolute paths. Run Railway IaC through `pnpm infra:plan` (the SDK can't launch the npm `.cmd` shim of the CLI). better-sqlite3 13 ships prebuilt binaries: do NOT add it to `onlyBuiltDependencies` (that triggers a node-gyp build that fails without VS tools). Don't leave a shell `cd`-ed inside node_modules on Windows (file locks break pnpm). The LCU PUUID is NOT valid for the Riot API (per-key encrypted PUUIDs): resolve gameName#tagLine via Account-V1. `RIOT_ID` must be quoted in .env. A fresh dev key can take ~30s to activate. |
+| Gotchas | Git Bash rewrites args like `/data` into Windows paths: use `MSYS_NO_PATHCONV=1` for railway CLI calls with absolute paths. Run Railway IaC through `pnpm infra:plan` (the SDK can't launch the npm `.cmd` shim of the CLI). better-sqlite3 13 ships prebuilt binaries: do NOT add it to `onlyBuiltDependencies` (that triggers a node-gyp build that fails without VS tools). Don't leave a shell `cd`-ed inside node_modules on Windows (file locks break pnpm). The LCU PUUID is NOT valid for the Riot API (per-key encrypted PUUIDs): resolve gameName#tagLine via Account-V1. `RIOT_ID` must be quoted in .env. A fresh dev key can take ~30s to activate. Changing `.railway/**` (or anything in the server watchPatterns) redeploys `ldc-server` and cuts a running collector wake-up short (runs start at minute 7 each hour and last ~15 min); the next run recovers. Railway volume backups are Pro-plan only (this workspace is Hobby): there are none (docs/CLOUD.md). In Git Bash, don't put backticks inside `node -e "..."` or sed scripts (the shell runs them); edit files with the Edit tool instead. |
 
 Direct mode (dev only): in a development build with `RIOT_API_KEY` set and `SERVER_URL` empty, the desktop **main process** calls the Riot API itself (`DirectProfileSource`). Packaged builds always use the server (`ServerProfileSource`, `profileMode()`). The key never reaches the renderer.
 
@@ -66,6 +66,13 @@ pnpm --filter @ldc/desktop dist:win      # Windows installer (LDC_SERVER_URL, LD
 ```
 
 Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_SCREENSHOT=path.png` (+ `LDC_SCREENSHOT_DELAY_MS`) saves a screenshot of the panel and quits.
+
+Testing the desktop against live meta data locally (the dev app otherwise runs in direct mode, which has no meta):
+1. Collect real games into a local DB (gitignored): `pnpm --filter @ldc/server collect --seconds 600` (writes `apps/server/data/ldc.sqlite`; ~30 games/min on a dev key).
+2. Run the server on it, from `apps/server` (PowerShell): `$env:PORT="8788"; $env:SYNC_INTERVAL_MINUTES="0"; npx tsx --env-file=../../.env src/main.ts` (`.env`'s `ADMIN_TOKEN` and Riot key are used; `pnpm ... dev` doesn't read `.env`).
+3. Get an invite (`POST /admin/invites` with the token), set `SERVER_URL=http://localhost:8788` in `.env`, start `pnpm desktop` and register with the invite in the panel.
+4. Mock client: `pnpm --filter @ldc/lcu mock synthetic-draft-pick 1` (has a ban phase and a planning hover) or `recorded/real-ranked-flex-jungle`. A server process serves the config it loaded at startup: restart it after changing `config/`.
+5. Undo afterwards: remove `SERVER_URL` from `.env`, "Sign out" in the panel.
 
 ## Layout
 
