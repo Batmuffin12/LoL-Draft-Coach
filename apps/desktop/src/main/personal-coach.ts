@@ -23,6 +23,7 @@ import {
   personalBuild,
   suggestBans,
   suggestHoverBans,
+  placeDraft,
   MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
@@ -58,6 +59,16 @@ export function lockedPick(draft: DraftState): ChampionId | null {
   // After the pick phase (finalization), the seat's champion is final even if actions are trimmed.
   const me = draft.myTeam.find((s) => s.isLocalPlayer);
   return draft.timerPhase === "FINALIZATION" && me && me.championId > 0 ? me.championId : null;
+}
+
+/**
+ * The enemy most likely in your lane, or null before they pick. The client doesn't say enemy
+ * roles: with the band's meta, the engine assigns them (draft-roles); without it, only an enemy
+ * seat that shows your position counts.
+ */
+export function laneOpponent(draft: DraftState, role: Position, index: MetaIndex | null): ChampionId | null {
+  if (index) return placeDraft(draft, index, role).enemies.find((e) => e.role === role)?.championId ?? null;
+  return draft.theirTeam.find((s) => s.position === role && s.championId > 0)?.championId ?? null;
 }
 
 /** The local player is banning right now, or the draft is in the planning phase before bans. */
@@ -441,7 +452,7 @@ export class PersonalCoach extends Coach {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
       const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null });
       return;
     }
     const { engine } = this.config;
@@ -473,6 +484,8 @@ export class PersonalCoach extends Coach {
 
     // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
     const locked = lockedPick(this.draft);
+    // The one draft fact the advice hinges on: who you face in lane (the client doesn't say enemy roles).
+    const lane = role ? { role, champion: champView(laneOpponent(this.draft, role, this.metaIndex) ?? 0, lookup) } : null;
     /** The card for a champion: how it looks in this draft and its loadout (the import buttons use it). */
     const card = (championId: number, hovering: boolean): MyPickView => {
       const assessed = live ? assessPick(live, championId) : null;
@@ -514,7 +527,7 @@ export class PersonalCoach extends Coach {
     };
 
     if (locked !== null) {
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, myPick: card(locked, false) });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, myPick: card(locked, false) });
       this.keptPick = this.view.myPick;
       return;
     }
@@ -549,6 +562,6 @@ export class PersonalCoach extends Coach {
     const pending = me ? me.championId || me.pickIntentId : 0;
     const hoverCard = live && pending > 0 ? card(pending, true) : null;
     if (!hoverCard?.loadout) this.shownLoadout = null;
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role });
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane });
   }
 }

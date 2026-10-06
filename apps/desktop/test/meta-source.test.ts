@@ -210,6 +210,8 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
     await waitFor(() => coach!.state.picks.length > 0);
     const picks = coach.state.picks;
+    // The phase band's lane opponent: your role, with their champion once it's revealed.
+    expect(coach.state.laneOpponent?.role).toBe("middle");
     expect(picks.every((p) => p.expectedWin !== null && p.expectedWin > 0 && p.expectedWin < 1)).toBe(true);
     const strong = picks.find((p) => p.champion.id === 245);
     expect(strong?.reasons.map((r) => r.text).join(" ")).toMatch(/Strong in middle in your rank: 56\.0% win rate \(400 games\)/);
