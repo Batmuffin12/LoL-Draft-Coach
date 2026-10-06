@@ -232,6 +232,14 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(set.associatedChampions).toEqual([103]);
     expect(set.blocks.map((b) => b.items.map((i) => i.id))).toEqual([["1056", "2003"], ["6655", "3020"]]);
     expect(coach.state.myPick!.importMessage).toBe("Item set saved: open the shop in game to see it");
+
+    // Champ select often ends seconds after you lock in: the card and its loadout stay until the game is over.
+    lcu.push("/lol-champ-select/v1/session", null, "Delete");
+    lcu.push("/lol-gameflow/v1/gameflow-phase", "InProgress");
+    await waitFor(() => coach!.state.draft === null);
+    expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, loadout: { canImport: false } });
+    lcu.push("/lol-gameflow/v1/gameflow-phase", "EndOfGame");
+    await waitFor(() => coach!.state.myPick === null);
     expect(coach.state.picks).toEqual([]);
     expect(coach.state.pickAdvice.whyNot).toBeNull();
   });

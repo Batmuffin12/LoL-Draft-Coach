@@ -140,7 +140,7 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
   );
 }
 
-/** The champion you locked in, and how it looks in this draft. Runes and items will go here (milestone 6). */
+/** The champion you locked in, how it looks in this draft, and its loadout (kept until the game ends). */
 function GameIcon({ icon, size = 22, title }: { icon: IconView; size?: number; title?: string }) {
   const t = title ?? icon.name;
   return icon.iconUrl ? (
@@ -604,8 +604,9 @@ export function App() {
           </>
         ) : (
           <>
+          {state.myPick && <YourPick pick={state.myPick} />}
           <section className="card idle">
-            <p>No champ select in progress.</p>
+            <p>{state.myPick ? "Champ select is over: your loadout stays here until the game ends." : "No champ select in progress."}</p>
             <p className="muted small">Open a lobby (a custom draft lobby works) and the draft will show up here live.</p>
             {state.status.profile.state !== "idle" && state.status.profile.state !== "ready" && (
               <Picks picks={[]} role={state.pickRole} state={state} />

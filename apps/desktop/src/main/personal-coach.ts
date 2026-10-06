@@ -25,7 +25,7 @@ import {
   type Loadout,
 } from "@ldc/engine";
 import type { ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
-import type { BanView, PickView, PlaystyleView } from "../shared/view";
+import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
@@ -82,6 +82,11 @@ export class PersonalCoach extends Coach {
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
   private importMessage: string | null = null;
+  /**
+   * The last "Your pick" card, kept after champ select ends (champ select often closes
+   * seconds after you lock in, e.g. in custom games) until the game is over.
+   */
+  private keptPick: MyPickView | null = null;
 
   /** Import buttons show when the config enables import and the client is connected. */
   private get canImport(): boolean {
@@ -181,6 +186,11 @@ export class PersonalCoach extends Coach {
     this.p.connector.on("gameflowPhase", (phase) => {
       // New games are in the player's history once a game has ended.
       if (phase === "EndOfGame") void this.p.profiles?.refresh();
+      // The kept loadout is for the game being played: drop it once that game is over or left.
+      if (["EndOfGame", "Lobby", "None"].includes(phase) && this.keptPick) {
+        this.keptPick = null;
+        this.onDraft();
+      }
     });
     await super.start();
     // Without the League client, fall back to the Riot ID from .env.
@@ -395,11 +405,16 @@ export class PersonalCoach extends Coach {
 
   protected override onDraft(): void {
     super.onDraft();
-    if (this.draft && !this.hadDraft) void this.onChampSelectStart();
+    if (this.draft && !this.hadDraft) {
+      this.keptPick = null; // a new champ select: the last game's pick no longer applies
+      void this.onChampSelectStart();
+    }
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
       this.shownLoadout = null;
-      this.update({ picks: [], bans: [], hoverBans: null, myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
+      const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
+      this.update({ picks: [], bans: [], hoverBans: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.config;
@@ -433,6 +448,7 @@ export class PersonalCoach extends Coach {
     const locked = lockedPick(this.draft);
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
+      this.keptPick = null;
       const loadout = live ? draftLoadout(live, locked, engine.loadout) : null;
       if (this.shownLoadout?.loadout.championId !== locked) this.importMessage = null;
       this.shownLoadout = loadout ? { loadout, champion: nameOf(locked) } : null;
@@ -459,6 +475,7 @@ export class PersonalCoach extends Coach {
           importMessage: this.importMessage,
         },
       });
+      this.keptPick = this.view.myPick;
       return;
     }
     const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.config.explain.settings);
