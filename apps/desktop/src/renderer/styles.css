@@ -180,7 +180,7 @@ p { margin: 0; }
 .table .thead, .table .trow { display: grid; align-items: center; column-gap: 6px; }
 .table.picks .thead, .table.picks .trow { grid-template-columns: minmax(0, 1fr) 46px 58px 46px 46px; column-gap: 4px; }
 .table.picks .trow .c-num { font-size: var(--fs-body); }
-.table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 52px 54px 48px 46px; }
+.table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 46px 50px 44px 42px; column-gap: 5px; }
 .table.matchups .thead, .table.matchups .trow { grid-template-columns: minmax(0, 1fr) 60px 58px 50px; }
 .table.pool .thead, .table.pool .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 50px; }
 .table .thead { white-space: nowrap; padding: 0 6px 4px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
@@ -262,7 +262,7 @@ p { margin: 0; }
 
 /* Items by slot */
 .matrix { display: grid; row-gap: 4px; column-gap: 6px; }
-.matrix .mh { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px 2px; border-bottom: 1px solid var(--line); }
+.matrix .mh { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; padding: 0 2px 2px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .matrix .mh .m { font-size: var(--fs-micro); color: var(--muted); }
 .matrix .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 2px; border-radius: var(--radius-sm); text-align: center; min-width: 0; }
 .matrix .cell.top { background: var(--card); }

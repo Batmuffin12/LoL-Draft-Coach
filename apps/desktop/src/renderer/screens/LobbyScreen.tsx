@@ -193,7 +193,7 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
               <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
             ))}
             <span className="micro">
-              Your last {p.games} {roleName(p.role)} games against the other {roleName(p.role)} players in them.
+              From your last {p.games} {roleName(p.role)} games.
             </span>
           </Section>
         );

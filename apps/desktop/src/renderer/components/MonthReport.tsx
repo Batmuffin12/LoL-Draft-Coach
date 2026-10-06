@@ -1,5 +1,5 @@
 import type { MonthView } from "../../shared/view";
-import { cx, rate, signed, tone, winTone } from "../format";
+import { cx, rate, signedPct, tone, winTone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
 
@@ -52,7 +52,7 @@ export function FormTable({ rows }: { rows: MonthView["champions"] }) {
       <div className="thead" role="row">
         <span className="c-champ">Champion</span>
         <span className="c-num">Games</span>
-        <span className="c-num">Win</span>
+        <span className="c-num">Win %</span>
         <span className="c-num" title="Win rate this month against your games on it before">
           Change
         </span>
@@ -65,7 +65,7 @@ export function FormTable({ rows }: { rows: MonthView["champions"] }) {
           </span>
           <span className="c-num">{r.games}</span>
           <span className={cx("c-num", winTone(r.winRate))}>{rate(r.winRate)}</span>
-          <span className={cx("c-num", tone(r.change, 0.01))}>{r.change === null ? "new" : signed(r.change)}</span>
+          <span className={cx("c-num", tone(r.change, 0.01))}>{r.change === null ? "new" : signedPct(r.change)}</span>
         </div>
       ))}
     </div>

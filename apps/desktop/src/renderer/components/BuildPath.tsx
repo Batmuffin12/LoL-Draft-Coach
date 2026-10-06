@@ -20,7 +20,7 @@ export function BuildPath({ starting, boots }: { starting: Starting | null; boot
                 <ChampIcon key={it.id} champ={it} kind="game" size={30} count={starting.counts[i]} title="" />
               ))}
             </div>
-            <Stat winRate={starting.winRate} n={starting.games} />
+            <Stat short winRate={starting.winRate} n={starting.games} title={`${starting.games} games`} />
           </>
         ) : (
           <span className="caption">No common start yet.</span>

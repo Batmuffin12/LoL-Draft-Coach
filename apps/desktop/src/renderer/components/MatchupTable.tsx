@@ -45,7 +45,7 @@ export function MatchupTable({ rows, title }: { rows: MatchupRowView[]; title: s
               <ChampIcon key={m.champion!.id} champ={m.champion} size={20} />
             ))}
           </span>
-          <span className="one-line">{`No games together in your rank yet: ${noGames.map((m) => m.champion!.name).join(", ")}`}</span>
+          <span className="one-line" title={noGames.map((m) => m.champion!.name).join(", ")}>No games yet with these</span>
         </div>
       )}
       {open.length > 0 && <div className="open">{`${open.map((m) => positionLabel(m.role)).join(", ")}: not picked yet`}</div>}
