@@ -190,8 +190,8 @@ p { margin: 0; }
 .table .trow.sel { background: var(--card); }
 .table .c-champ { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .table .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); line-height: var(--lh-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.table .nm.col { display: flex; flex-direction: column; gap: 0; }
-.table .nm .why { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
+.table .nm.col { display: flex; flex-direction: column; gap: 0; line-height: 18px; }
+.table .nm .why { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: 14px; color: var(--muted); }
 .table .c-num, .table .c-win { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); white-space: nowrap; }
 .table .c-win { font-size: var(--fs-number); }
 .table .c-num.big { font-size: var(--fs-title); }
@@ -203,7 +203,7 @@ p { margin: 0; }
 .table .learning .tier { color: var(--ally); }
 .table .rusty .nm { color: var(--muted); }
 .table.bans .trow { min-height: 0; padding: 5px 6px; }
-.table.matchups .trow { min-height: 40px; padding: 3px 6px; }
+.table.matchups .trow { min-height: 36px; padding: 2px 6px; }
 .table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .table .trow .sub b { color: var(--text); font-weight: 600; }
 .table .detail { padding: 8px 6px 0; }

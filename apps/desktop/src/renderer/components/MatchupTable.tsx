@@ -21,7 +21,7 @@ export function MatchupTable({ rows, title }: { rows: MatchupRowView[]; title: s
       {picked.map((m) => (
         <div key={m.champion!.id} className={cx("trow", m.lane && "sel")} role="row">
           <span className="c-champ">
-            <ChampIcon champ={m.champion} size={34} framed={m.lane} />
+            <ChampIcon champ={m.champion} size={32} framed={m.lane} />
             <span className="nm col">
               <span className="one-line">{m.champion!.name}</span>
               <span className="why">{`${positionLabel(m.role)}${m.lane ? " · your lane" : ""}`}</span>
