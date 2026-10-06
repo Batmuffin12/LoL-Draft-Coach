@@ -21,6 +21,8 @@ export interface MetaSourceDeps {
   now?: () => number;
   /** Don't ask the server again within this time (each check can wake a sleeping server). */
   minIntervalMs?: number;
+  /** Dev aid (LDC_META_FILE): always use this snapshot, for any band, and never ask the server. */
+  fixed?: MetaSnapshot;
 }
 
 /**
@@ -80,6 +82,10 @@ export class MetaSource extends EventEmitter<{ snapshot: [MetaSnapshot]; status:
   }
 
   private async load(band: RankBandId, force: boolean): Promise<void> {
+    if (this.deps.fixed) {
+      if (this.current?.band !== band) this.use(band, null, { ...this.deps.fixed, band }, false);
+      return;
+    }
     if (this.current?.band !== band) {
       const cached = await this.readCache(band);
       if (cached) this.use(band, cached.etag, cached.snapshot, false);

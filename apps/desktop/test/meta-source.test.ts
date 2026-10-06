@@ -78,6 +78,18 @@ function fakeClient(responses: (() => Awaited<ReturnType<ServerClient["meta"]>>)
 }
 
 describe("MetaSource", () => {
+  it("uses a fixed snapshot (LDC_META_FILE) for any band without asking a server", async () => {
+    const { client, calls } = fakeClient([]);
+    const source = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-fixed-"), fixed: snapshot() });
+    const statuses: MetaStatus[] = [];
+    source.on("status", (st) => statuses.push(st));
+    await source.refresh(3, { force: true });
+    expect(source.snapshot?.band).toBe(3);
+    expect(source.snapshot?.champions).toHaveLength(4);
+    expect(calls).toEqual([]);
+    expect(statuses.at(-1)).toMatchObject({ state: "ready", band: 3, offline: false });
+  });
+
   it("downloads the band's snapshot, caches it, and revalidates with the ETag", async () => {
     const dir = tmp("ldc-meta-");
     const { client, calls } = fakeClient([() => ({ notModified: false, snapshot: snapshot(), etag: '"v1"' }), () => ({ notModified: true })]);

@@ -9,6 +9,7 @@ import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electr
 import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
+import type { MetaSnapshot } from "@ldc/shared";
 import { IPC, type ViewState } from "../shared/view";
 import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
@@ -16,6 +17,7 @@ import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
 import { ConfigSource } from "./config-source";
 import { MetaSource } from "./meta-source";
+import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
@@ -104,6 +106,15 @@ function overrideCredentials(): LcuCredentials | null {
   return m ? { port: Number(m[1]), password: m[2]!, protocol: "https" } : null;
 }
 
+/** Dev aid: LDC_META_FILE=snapshot.json (from `pnpm --filter @ldc/sim mock`) replaces the live meta. Development builds only. */
+function devMetaFile(): MetaSnapshot | null {
+  const file = process.env.LDC_META_FILE;
+  if (!file || app.isPackaged) return null;
+  const snapshot = MetaSnapshotSchema.parse(JSON.parse(readFileSync(file, "utf8"))) as MetaSnapshot;
+  console.log(`LDC_META_FILE: using the meta snapshot in ${file} (${snapshot.matches} matches)`);
+  return snapshot;
+}
+
 /** Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits. */
 function scheduleScreenshot(): void {
   const path = process.env.LDC_SCREENSHOT;
@@ -174,9 +185,11 @@ async function main(): Promise<void> {
   }
   // Live meta snapshots come from the coach server (none in dev-only direct mode).
   const serverProfiles = profiles instanceof ServerProfileSource ? profiles : null;
-  const meta = serverProfiles
-    ? new MetaSource({ client: () => serverProfiles.serverClient, cacheDir: join(app.getPath("userData"), "meta") })
-    : null;
+  const fixedMeta = devMetaFile();
+  const meta =
+    serverProfiles || fixedMeta
+      ? new MetaSource({ client: () => serverProfiles?.serverClient ?? null, cacheDir: join(app.getPath("userData"), "meta"), fixed: fixedMeta ?? undefined })
+      : null;
   const coach = new PersonalCoach({
     connector,
     ddragon,

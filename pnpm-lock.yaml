@@ -207,6 +207,22 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  packages/sim:
+    dependencies:
+      '@ldc/lcu':
+        specifier: workspace:*
+        version: link:../lcu
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@ldc/engine':
+        specifier: workspace:*
+        version: link:../engine
+      tsx:
+        specifier: ^4
+        version: 4.23.15
+
 packages:
 
   '@electron-internal/extract-zip@1.0.5':
