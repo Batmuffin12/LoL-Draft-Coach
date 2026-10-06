@@ -261,7 +261,7 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
       )}
       <ImportButtons loadout={l} message={importMessage} />
       <p className="muted small lo-source">
-        From {l.games.toLocaleString("en-US")} games in {l.source}. Hover an icon for details.
+        From {l.games.toLocaleString("en-US")} games in {l.source}.{l.thinNote ? ` ${l.thinNote}.` : ""} Hover an icon for details.
       </p>
     </div>
   );

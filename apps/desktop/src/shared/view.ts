@@ -68,6 +68,8 @@ export interface LoadoutView {
   games: number;
   /** Band names the build comes from, e.g. "Gold to Platinum + Emerald to Diamond". */
   source: string;
+  /** Shown when the build rests on few games, e.g. "Not much data yet: treat it as a rough guide". */
+  thinNote: string | null;
   page: {
     primary: IconView;
     secondary: IconView;

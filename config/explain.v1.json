@@ -68,6 +68,7 @@
     "import.block.alternatives": "Item {slot}: alternatives",
     "power.laneAhead": "Usually ahead in lane: +{gold} gold over its opponent at 15 minutes ({games} games)",
     "power.laneBehind": "Usually behind in lane: {gold} gold down on its opponent at 15 minutes ({games} games); plays for later",
+    "loadout.thin": "Not much data yet: treat it as a rough guide",
     "skill.key.1": "Q",
     "skill.key.2": "W",
     "skill.key.3": "E",

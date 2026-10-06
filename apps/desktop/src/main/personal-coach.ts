@@ -398,6 +398,7 @@ export class PersonalCoach extends Coach {
     if (this.draft && !this.hadDraft) void this.onChampSelectStart();
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
+      this.shownLoadout = null;
       this.update({ picks: [], bans: [], hoverBans: null, myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
@@ -453,7 +454,7 @@ export class PersonalCoach extends Coach {
           expectedWin: assessed?.expectedWin ?? null,
           reasons: assessed ? assessed.reasons.map(say) : [],
           loadout: loadout
-            ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport })
+            ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport, thinGames: engine.loadout.thinGames })
             : null,
           importMessage: this.importMessage,
         },

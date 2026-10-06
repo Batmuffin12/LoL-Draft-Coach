@@ -10,6 +10,7 @@ export interface LoadoutViewDeps {
   bands: RankBandConfig;
   band: RankBandId;
   canImport: boolean;
+  thinGames: number;
 }
 
 /** Builds what the "Your pick" card shows from an engine loadout: Data Dragon names and icons, reasons in words. */
@@ -34,6 +35,7 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   return {
     games: l.games,
     source,
+    thinNote: l.games < deps.thinGames ? renderReason({ id: "loadout.thin", slots: {} }, deps.templates, deps.championName) : null,
     page: l.page
       ? { primary: rune(l.page.value.primaryStyle), secondary: rune(l.page.value.subStyle), runes: l.page.value.runes.map(rune), reason: first(l.page.reasons) }
       : null,

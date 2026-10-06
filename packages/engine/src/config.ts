@@ -199,6 +199,8 @@ export const EngineConfigSchema = z.object({
     maxSituational: z.number().int().min(0),
     /** Alternatives shown next to the top item per slot. */
     alternatives: z.number().int().min(0),
+    /** Builds from fewer games than this are labelled "not much data yet". */
+    thinGames: z.number().int().min(0),
     /** Build slots (completed items) the loadout ranks. */
     slots: z.number().int().min(1),
   }),
