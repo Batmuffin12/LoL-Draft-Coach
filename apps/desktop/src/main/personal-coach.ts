@@ -140,7 +140,9 @@ export class PersonalCoach extends Coach {
           { type: say("import.block.starting"), items: l.starting?.value ?? [] },
           { type: say("import.block.boots"), items: l.boots ? [l.boots.top.itemId] : [] },
           { type: say("import.block.core"), items: path.slice(0, 3) },
-          { type: say("import.block.later"), items: path.slice(3) },
+          l.laterPool.length
+            ? { type: say("import.block.laterPool"), items: l.laterPool.map((x) => x.itemId) }
+            : { type: say("import.block.later"), items: path.slice(3) },
           ...[...byTrait].map(([trait, items]) => ({ type: say(`import.block.situational.${trait}`), items })),
           { type: say("import.block.alternatives"), items: others },
         ].filter((b) => b.items.length > 0);

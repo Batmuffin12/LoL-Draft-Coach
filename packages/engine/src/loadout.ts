@@ -108,6 +108,11 @@ export interface Loadout {
   boots: { top: RankedItem; alternatives: RankedItem[] } | null;
   /** What your role quest turns items of this loadout into (boots, starting items), from data. */
   quest: { itemId: number; from: number; reasons: Reason[] }[];
+  /**
+   * Thin data: after the core items, a pool of good later items to pick from by situation (your
+   * own other finished items, what your lane buys later), each with its reason. Empty with solid data.
+   */
+  laterPool: { itemId: number; reasons: Reason[] }[];
   /** Items players in your role buy more often against teams like this one (lift), with the trait they answer. */
   situational: { itemId: number; trait: EnemyTrait; reasons: Reason[] }[];
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
@@ -393,6 +398,31 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     core = { value: own.items.filter((i) => fits(input, i.itemId)).slice(0, cfg.slots).map((i) => i.itemId), winRate: 0, n: own.n, reasons: [reason("loadout.core.personal", { games: own.n, champion })] };
   } else core = null;
 
+  // Thin data: only the core items are a fixed path; later items are a pool to pick from by
+  // situation, since late items are bought in fewer games and depend on the game (owner, 2026-10-06).
+  let laterPool: Loadout["laterPool"] = [];
+  let shownItems = items;
+  if ((useOwnItems || roleBuild.n < cfg.solidGames) && core && core.value.length > cfg.coreSlots) {
+    const fixed = core.value.slice(0, cfg.coreSlots);
+    const seen = new Set([...fixed, ...(boots ? [boots.top.itemId] : [])]);
+    const pool: Loadout["laterPool"] = [];
+    const add = (itemId: number, reasons: Reason[]) => {
+      if (seen.has(itemId) || input.boots?.has(itemId) || !fits(input, itemId)) return;
+      seen.add(itemId);
+      pool.push({ itemId, reasons });
+    };
+    for (const s of items.slice(cfg.coreSlots)) add(s.top.itemId, s.top.reasons);
+    const own = personal ?? input.personal;
+    for (const i of own?.items ?? []) add(i.itemId, [reason("loadout.later.personal", { count: i.n, games: own!.n, champion })]);
+    for (const s of items.slice(cfg.coreSlots)) for (const a of s.alternatives) add(a.itemId, a.reasons);
+    for (const s of [...roleBuild.items].filter((x) => x.slot > cfg.coreSlots).sort((a, b) => b.n - a.n)) {
+      add(s.itemId, [reason("loadout.item.popular", { slot: s.slot, share: s.share, games: s.n })]);
+    }
+    laterPool = pool.slice(0, cfg.laterPoolSize);
+    core = { ...core, value: fixed };
+    shownItems = items.slice(0, cfg.coreSlots);
+  }
+
   return {
     championId: roleBuild.championId,
     role: roleBuild.role,
@@ -406,7 +436,8 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     boots,
     quest: questRewards(input, [...(boots ? [boots.top.itemId] : []), ...(starting?.value ?? [])]),
     situational: situationalItems({ ...input, build: roleBuild }, new Set(core?.value ?? [])),
+    laterPool,
     core,
-    items,
+    items: shownItems,
   };
 }

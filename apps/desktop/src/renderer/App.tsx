@@ -281,6 +281,13 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
           </ol>
         </div>
       )}
+      {l.laterPool.length > 0 && (
+        <LoadoutRow label="Later" reason={l.laterNote}>
+          {l.laterPool.map((s) => (
+            <GameIcon key={s.id} icon={s} size={22} title={tip(s)} />
+          ))}
+        </LoadoutRow>
+      )}
       {l.situational.length > 0 && (
         <LoadoutRow label="Situational" reason={l.situational[0]!.reasons[0] ?? null}>
           {l.situational.map((s) => (

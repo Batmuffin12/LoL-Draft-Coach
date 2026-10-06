@@ -203,9 +203,22 @@ describe("boots on their own row", () => {
 });
 
 describe("full build and situational items", () => {
-  it("builds five items from your own games when the band has too few", () => {
+  it("with thin data, keeps a 3-item core and offers later items as a pool to pick from", () => {
     const personal = { championId: 950, n: 25, pages: [], spells: [], items: [1, 2, 3, 4, 5, 6].map((id, i) => ({ itemId: 6690 + id, n: 25 - i })) };
-    expect(buildLoadout(input({ personal })).core?.value).toEqual([6691, 6692, 6693, 6694, 6695]);
+    const l = buildLoadout(input({ personal }));
+    expect(l.core?.value).toEqual([6691, 6692, 6693]);
+    expect(l.laterPool.map((x) => x.itemId)).toEqual([6694, 6695, 6696]);
+    expect(say(l.laterPool[0]!.reasons[0]!)).toBe("Built in 22 of your 25 Naafiri games");
+  });
+
+  it("with solid data, keeps a ranked five-item path and no pool", () => {
+    const solid: ChampionBuild = {
+      ...mid, n: 500, games: 500, wins: 250,
+      items: [1, 2, 3, 4, 5].map((slot) => ({ itemId: 6690 + slot, slot, n: 300, share: 0.6, winAdded: 0, minute: 10 * slot })),
+    };
+    const l = buildLoadout(input({ build: solid }));
+    expect(l.core?.value).toEqual([6691, 6692, 6693, 6694, 6695]);
+    expect(l.laterPool).toEqual([]);
   });
 
   it("suggests items that answer this enemy team, strongest need first, never boots or items on the path", () => {
