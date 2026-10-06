@@ -100,6 +100,23 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 4,
+    name: "advice log: what the coach showed when each user locked in",
+    sql: `
+      CREATE TABLE advice_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        game_id INTEGER NOT NULL,
+        locked_at INTEGER NOT NULL,
+        champion_id INTEGER NOT NULL,
+        advice TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        UNIQUE (user_id, game_id)
+      );
+      CREATE INDEX advice_log_by_time ON advice_log(user_id, locked_at);
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

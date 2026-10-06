@@ -149,3 +149,46 @@ describe("sync on demand (no background timer)", () => {
     expect(requests).toEqual([1, 1]);
   });
 });
+
+describe("POST /advice (advice log)", () => {
+  const advice = (gameId: number, pick = 103, lockedAt = NOW - HOUR) => ({
+    gameId,
+    queueId: 420,
+    role: "middle",
+    band: 2,
+    lockedAt,
+    pick: { championId: pick, expectedWin: 0.54, terms: [{ name: "lane", rating: 0.08, deltaWin: 0.021, games: 1240 }] },
+    shown: [{ championId: 103, expectedWin: 0.54, terms: [] }, { championId: 245, expectedWin: 0.52, terms: [] }],
+  });
+  const post = (app: ReturnType<typeof setup>["app"], token: string, body: unknown) =>
+    app.request("/advice", { method: "POST", body: JSON.stringify(body), headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
+
+  it("stores your advice per game (a repeat replaces it) and returns it with your profile, newest first", async () => {
+    const { app, register, get } = setup();
+    const token = await register("Ofek#EUW");
+    expect((await post(app, token, advice(3, 103, NOW - 2 * HOUR))).status).toBe(204);
+    expect((await post(app, token, advice(4, 99, NOW - HOUR))).status).toBe(204);
+    expect((await post(app, token, advice(3, 245, NOW - 2 * HOUR))).status).toBe(204);
+    const body = (await (await get("/me/profile", token)).json()) as { advice: { gameId: number; pick: { championId: number } }[] };
+    expect(body.advice.map((a) => [a.gameId, a.pick.championId])).toEqual([[4, 99], [3, 245]]);
+  });
+
+  it("keeps each player's advice to themselves and deletes it with DELETE /me", async () => {
+    const { app, register, get } = setup();
+    const ofek = await register("Ofek#EUW");
+    const friend = await register("Friend#EUW");
+    await post(app, ofek, advice(3));
+    expect(((await (await get("/me/profile", friend)).json()) as { advice: unknown[] }).advice).toEqual([]);
+    expect((await get("/me", ofek, "DELETE")).status).toBe(204);
+    expect((await post(app, ofek, advice(3))).status).toBe(401);
+  });
+
+  it("rejects bodies that aren't one advice record, and requests without a token", async () => {
+    const { app, register } = setup();
+    const token = await register("Ofek#EUW");
+    expect((await post(app, token, { gameId: 3 })).status).toBe(400);
+    expect((await post(app, token, { ...advice(3), shown: Array.from({ length: 11 }, () => advice(3).pick) })).status).toBe(400);
+    const res = await app.request("/advice", { method: "POST", body: JSON.stringify(advice(3)), headers: { "content-type": "application/json" } });
+    expect(res.status).toBe(401);
+  });
+});

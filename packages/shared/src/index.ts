@@ -171,6 +171,31 @@ export interface PickAdvice {
   confidence: PickConfidence | null;
 }
 
+/** A champion as the coach saw it in one draft: its predicted win chance and the parts of it. */
+export interface AdviceOption {
+  championId: ChampionId;
+  expectedWin: number | null;
+  terms: Term[];
+}
+
+/**
+ * What the coach showed when you locked in (the advice log). The player's own data only:
+ * your pick and the picks suggested to you, never another player.
+ */
+export interface AdviceRecord {
+  /** The League game id (from the client's gameflow session), to find the game in your Match-V5 history. */
+  gameId: number;
+  queueId: number | null;
+  role: Position | null;
+  band: RankBandId;
+  /** Epoch ms when you locked in. */
+  lockedAt: number;
+  /** The champion you locked in. */
+  pick: AdviceOption;
+  /** The picks suggested when you locked in, best first. */
+  shown: AdviceOption[];
+}
+
 /**
  * One participant of a stored match, reduced to what coaching needs. Never carries a
  * PUUID, name or any other identifier: who the user was is stored separately as an index.
