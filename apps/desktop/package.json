@@ -16,6 +16,8 @@
     "koffi": "^3.3.2"
   },
   "devDependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-semi-condensed": "^5.3.0",
     "@ldc/ddragon": "workspace:*",
     "@ldc/engine": "workspace:*",
     "@ldc/lcu": "workspace:*",
