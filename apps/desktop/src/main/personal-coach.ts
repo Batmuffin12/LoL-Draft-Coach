@@ -148,7 +148,8 @@ export class PersonalCoach extends Coach {
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
   setConfig(config: LoadedConfig): void {
-    this.config = config;
+    // Wording the server doesn't have yet (an older server) falls back to the bundled copy, never to raw ids.
+    this.config = { ...config, explain: { ...config.explain, templates: { ...this.p.config.explain.templates, ...config.explain.templates } } };
     this.comfortByRole.clear();
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);

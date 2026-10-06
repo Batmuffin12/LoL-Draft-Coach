@@ -201,8 +201,9 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const strong = picks.find((p) => p.champion.id === 245);
     expect(strong?.reasons.join(" ")).toMatch(/Strong in middle in your rank: 56\.0% win rate \(400 games\)/);
 
-    // A new scoring config from the server applies immediately.
-    coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 } });
+    // A new scoring config from the server applies immediately; wording an older server lacks falls back to the bundled copy.
+    const { ["loadout.page"]: _dropped, ...olderTemplates } = config.explain.templates;
+    coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: olderTemplates } });
     expect(coach.state.picks).toHaveLength(2);
 
     // Once the player locks in, suggestions stop and the panel shows their own pick.
