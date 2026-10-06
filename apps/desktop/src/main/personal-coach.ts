@@ -29,7 +29,7 @@ import {
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
-import type { ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
+import type { BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
 import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { Coach, type CoachDeps } from "./coach";
@@ -37,6 +37,7 @@ import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
 import { reasonView } from "./reason-view";
+import { banNumbers, draftMatchups } from "./stats-view";
 import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
@@ -105,6 +106,8 @@ export class PersonalCoach extends Coach {
   private keptPick: MyPickView | null = null;
   /** Rune and stat shard names from the client (Data Dragon has no shards), with mirror icons. */
   private perks = new Map<number, { name: string; iconUrl: string | null }>();
+  /** The stat shard rows (offense, flex, defense) from the client, for drawing the whole rune page. */
+  private shardRows: number[][] = [];
 
   /** Import buttons show when the config enables import and the client is connected. */
   private get canImport(): boolean {
@@ -248,6 +251,7 @@ export class PersonalCoach extends Coach {
       this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
       const perks = await this.p.connector.getPerks().catch(() => []);
       this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
+      this.shardRows = await this.p.connector.getStatShardRows().catch(() => []);
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
@@ -519,10 +523,12 @@ export class PersonalCoach extends Coach {
               band: this.band,
               canImport: this.canImport,
               perk: (id) => this.perks.get(id),
+              shardRows: this.shardRows,
             })
           : null,
         importMessage: this.importMessage,
         hovering,
+        matchups: this.metaIndex && this.draft ? draftMatchups(this.draft, this.metaIndex, championId, role, lookup) : null,
       };
     };
 
@@ -548,7 +554,7 @@ export class PersonalCoach extends Coach {
     };
     const banning = live !== null && banningNow(this.draft);
     const banSuggestions = banning ? suggestBans(live) : [];
-    const toView = (b: { championId: number; reasons: Parameters<typeof say>[0][] }): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say) });
+    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say), ...banNumbers(live!.index, b, role) });
     // Hovering a champion before or during bans: extra bans that protect it (1 if it's already the top suggestion).
     const hovered = this.draft.myTeam.find((s) => s.isLocalPlayer)?.pickIntentId ?? 0;
     const hoverBans =

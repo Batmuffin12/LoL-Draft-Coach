@@ -72,6 +72,25 @@ export interface LoadoutItemView extends IconView {
   reasons: string[];
 }
 
+/** An item option with its numbers: how often players take it, and the win it adds (null with thin data). */
+export interface ItemOptionView extends LoadoutItemView {
+  /** Share of the champion-role's games that take it (at this slot, or among boots). */
+  share: number;
+  winAdded: number | null;
+}
+
+/** A rune path drawn whole: its runes per row in Data Dragon slot order (keystones first on the primary path). */
+export interface RuneTreeView {
+  style: IconView;
+  rows: IconView[][];
+}
+
+/** Win rate and games of a loadout choice; winRate is null with thin data (no win rates quoted, D31). */
+export interface ChoiceNumbers {
+  winRate: number | null;
+  games: number;
+}
+
 /** Runes, spells, skill order and items for the locked-in champion (live meta only). */
 export interface LoadoutView {
   /** Games behind the build (your band plus the one above). */
@@ -88,12 +107,18 @@ export interface LoadoutView {
     /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
     shards: IconView[];
     reason: string | null;
-  } | null;
+    /** Both paths whole, so the page can be drawn on its trees (null without Data Dragon). */
+    primaryTree: RuneTreeView | null;
+    secondaryTree: RuneTreeView | null;
+    /** All stat shard rows (offense, flex, defense) and the chosen index in each (-1: unknown); null when the client doesn't list them. */
+    shardRows: { rows: IconView[][]; chosen: number[] } | null;
+  } & ChoiceNumbers | null;
   situationalRunes: LoadoutItemView[];
-  spells: { spells: IconView[]; reason: string | null } | null;
+  spells: ({ spells: IconView[]; reason: string | null } & ChoiceNumbers) | null;
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
-  skills: { first: string[]; order: string[]; reason: string | null } | null;
-  starting: { items: IconView[]; reason: string | null } | null;
+  skills: ({ first: string[]; order: string[]; reason: string | null } & ChoiceNumbers) | null;
+  /** Starting items without repeats; counts[i] is how many of items[i] (e.g. 2 potions). */
+  starting: ({ items: IconView[]; counts: number[]; reason: string | null } & ChoiceNumbers) | null;
   /** Thin data: later items to pick from by situation (after the core), each with its reason. */
   laterPool: LoadoutItemView[];
   laterNote: string | null;
@@ -102,13 +127,27 @@ export interface LoadoutView {
   /** What your role quest turns items of this loadout into (e.g. tier-3 boots in mid). */
   quest: LoadoutItemView[];
   /** Boots on their own row, with other boots players take. */
-  boots: { top: LoadoutItemView; alternatives: LoadoutItemView[] } | null;
-  /** The ranked build path: per slot the top item and alternatives, each with reasons. */
-  items: { slot: number; top: LoadoutItemView; alternatives: LoadoutItemView[] }[];
+  boots: { top: ItemOptionView; alternatives: ItemOptionView[] } | null;
+  /** The ranked build path: per slot its average minute, the top item and alternatives, each with reasons and numbers. */
+  items: { slot: number; minute: number | null; top: ItemOptionView; alternatives: ItemOptionView[] }[];
   /** The most common path, shown when there are too few purchases to rank items. */
   commonPath: { items: IconView[]; reason: string | null } | null;
   /** One-click import into the League client (only on your click), when enabled. */
   canImport: boolean;
+}
+
+/** Your champion against (or with) one champion of the draft; champion null: that seat hasn't picked. */
+export interface MatchupRowView {
+  champion: ChampView | null;
+  /** The role it (most likely) plays: the client hides enemy roles, so the engine guesses them. */
+  role: string;
+  /** Your lane opponent. */
+  lane: boolean;
+  /** Your win rate in games with this pair, or null without games. */
+  winRate: number | null;
+  /** Points of win chance over what the two champions' strength predicts, or null without games. */
+  delta: number | null;
+  games: number;
 }
 
 /** The champion the local player has locked in, and how it looks in this draft. */
@@ -123,12 +162,21 @@ export interface MyPickView {
   importMessage: string | null;
   /** True when the champion is only hovered (not locked in yet). */
   hovering?: boolean;
+  /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
+  matchups: { against: MatchupRowView[]; with: MatchupRowView[] } | null;
 }
 
 /** A suggested ban (ban phase, live meta only). */
 export interface BanView {
   champion: ChampView;
   reasons: string[];
+  /** Win chance it costs you, in points (negative), weighted by how often it's picked. */
+  threat: number;
+  /** Its win rate and pick rate in your band (in your role when it's played there), or null without games. */
+  winRate: number | null;
+  pickRate: number | null;
+  /** How often it's banned in your band; null when the snapshot has no ban counts (older snapshots). */
+  banRate: number | null;
 }
 
 /** The live meta the picks are based on. */
