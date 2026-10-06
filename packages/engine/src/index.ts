@@ -14,3 +14,4 @@ export * from "./meta-index";
 export * from "./draft-roles";
 export * from "./live";
 export * from "./items";
+export * from "./loadout";
