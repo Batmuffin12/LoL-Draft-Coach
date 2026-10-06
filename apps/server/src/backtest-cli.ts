@@ -4,15 +4,18 @@
  *   pnpm --filter @ldc/server backtest --band 2 --test 0.3
  * Builds a snapshot from the older games, predicts each held-out player's result from the
  * full draft (no personal data: collected players are anonymous), and reports accuracy,
- * calibration, which terms help, and which smoothing priors fit best.
+ * calibration, which terms help, and which smoothing priors fit best. Then the item ranking:
+ * builds from the band and the band above, replayed on held-out timelines.
  */
-import { MetaIndex } from "@ldc/engine";
-import { calibration, logLossGainInterval, onlyTerms, predict, prepareBacktest, score, type Prediction, type Scores } from "@ldc/meta";
+import { dirname, join } from "node:path";
+import { DataDragon } from "@ldc/ddragon";
+import { completedItems, MetaIndex } from "@ldc/engine";
+import { backtestItems, calibration, logLossGainInterval, onlyTerms, predict, prepareBacktest, score, type Prediction, type Scores } from "@ldc/meta";
 import type { MatchSummary, TermName } from "@ldc/shared";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
 import { readServerEnv } from "./env";
-import { playstyleMetrics } from "./meta-job";
+import { buildBandsFor, playstyleMetrics } from "./meta-job";
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: number) => {
@@ -26,6 +29,10 @@ const env = readServerEnv(process.env);
 const config = loadServerConfig(findConfigDir(process.cwd()));
 const db = openDb(env.DATABASE_PATH);
 const rows = db.$client.prepare("SELECT summary FROM matches WHERE band = ?").all(band) as { summary: string }[];
+const bandsForBuilds = [band, ...buildBandsFor([band], config.bands)];
+const buildRows = db.$client
+  .prepare(`SELECT summary FROM matches WHERE band IN (${bandsForBuilds.map(() => "?").join(",")}) AND json_extract(summary, '$.timeline') IS NOT NULL`)
+  .all(...bandsForBuilds) as { summary: string }[];
 db.$client.close();
 const matches = rows.map((r) => JSON.parse(r.summary) as MatchSummary);
 
@@ -78,3 +85,23 @@ for (const meta of [50, 150, 400, 1000]) {
 }
 const current = config.engine.rating.priorGames;
 console.log(`\nBest: ${best!.meta} / ${best!.pair} (current config: ${current.meta} / ${current.pair}).`);
+
+// Items: rank each held-out purchase's slot from builds learned on older games.
+const withTimelines = buildRows.map((r) => JSON.parse(r.summary) as MatchSummary).sort((a, b) => a.endedAt - b.endedAt);
+const cut = Math.floor(withTimelines.length * (1 - testShare));
+const ddragon = new DataDragon({ cacheDir: join(dirname(env.DATABASE_PATH), "ddragon") });
+await ddragon.load();
+const items = backtestItems({
+  train: withTimelines.slice(0, cut),
+  test: withTimelines.slice(cut),
+  now: Date.now(),
+  meta: config.meta,
+  loadout: config.engine.loadout,
+  completed: completedItems(ddragon.data.itemInfo, config.engine.loadout.items),
+});
+const wa = (x: { n: number; winAdded: number }) => `${Number.isFinite(x.winAdded) ? (x.winAdded >= 0 ? "+" : "") + (x.winAdded * 100).toFixed(1) : "—"} pts (${x.n})`;
+console.log(`
+Items (bands ${bandsForBuilds.join("+")}): ${withTimelines.length} games with timelines → train ${cut}, test ${withTimelines.length - cut}; ${items.purchases} held-out purchases ranked.`);
+console.log(`  Ours:         top-1 ${pct(items.ranked.top1)}  top-3 ${pct(items.ranked.top3)}`);
+console.log(`  Most bought:  top-1 ${pct(items.popular.top1)}  top-3 ${pct(items.popular.top3)}`);
+console.log(`  Win added when the purchase was our #1: ${wa(items.agree)}; otherwise: ${wa(items.disagree)}`);

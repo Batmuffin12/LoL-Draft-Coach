@@ -102,32 +102,36 @@ function liftReason(kind: "rune" | "item", l: SituationalLift, enemy: Partial<Re
  * left out of later slots.
  */
 export function rankItems(input: LoadoutInput): ItemSlotAdvice[] {
+  const taken = new Set(input.owned ?? []);
+  const out: ItemSlotAdvice[] = [];
+  for (let slot = 1; slot <= input.config.slots; slot++) {
+    const ranked = rankSlot(input, slot, taken);
+    const [top, ...rest] = ranked;
+    if (!top) continue;
+    taken.add(top.itemId);
+    out.push({ slot, top, alternatives: rest.slice(0, input.config.alternatives) });
+  }
+  return out;
+}
+
+/** All candidates for one build slot, best first (see rankItems); `exclude` holds items already owned or chosen. */
+export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet<number>): RankedItem[] {
   const { build, config: cfg } = input;
   const enemy = teamTraits(input.enemies, input.attributes);
   const intensity = Object.fromEntries(ENEMY_TRAITS.map((t) => [t, traitIntensity(enemy[t], input.traitCuts[t])])) as Record<EnemyTrait, number>;
   const lifts = build.lifts.filter((l) => l.kind === "item");
-  const taken = new Set(input.owned ?? []);
-  const out: ItemSlotAdvice[] = [];
-
-  for (let slot = 1; slot <= cfg.slots; slot++) {
-    const ranked = build.items
-      .filter((s) => s.slot === slot && s.share >= cfg.itemMinShare && !taken.has(s.itemId))
-      .map((s: ItemSlotStat): RankedItem => {
-        const mine = lifts.filter((l) => l.id === s.itemId && intensity[l.trait] > 0);
-        const situational = mine.reduce((sum, l) => sum + cfg.liftScale * Math.log(l.lift) * intensity[l.trait], 0);
-        const reasons: Reason[] = [];
-        const best = [...mine].sort((a, b) => Math.log(b.lift) * intensity[b.trait] - Math.log(a.lift) * intensity[a.trait])[0];
-        if (best) reasons.push(liftReason("item", best, enemy));
-        reasons.push(reason(s.winAdded >= 0 ? "loadout.item.winAdded" : "loadout.item.winAdded.negative", { id: s.itemId, slot, delta: s.winAdded, share: s.share, games: s.n }));
-        return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
-      })
-      .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
-    const [top, ...rest] = ranked;
-    if (!top) continue;
-    taken.add(top.itemId);
-    out.push({ slot, top, alternatives: rest.slice(0, cfg.alternatives) });
-  }
-  return out;
+  return build.items
+    .filter((s) => s.slot === slot && s.share >= cfg.itemMinShare && !exclude.has(s.itemId))
+    .map((s: ItemSlotStat): RankedItem => {
+      const mine = lifts.filter((l) => l.id === s.itemId && intensity[l.trait] > 0);
+      const situational = mine.reduce((sum, l) => sum + cfg.liftScale * Math.log(l.lift) * intensity[l.trait], 0);
+      const reasons: Reason[] = [];
+      const best = [...mine].sort((a, b) => Math.log(b.lift) * intensity[b.trait] - Math.log(a.lift) * intensity[a.trait])[0];
+      if (best) reasons.push(liftReason("item", best, enemy));
+      reasons.push(reason(s.winAdded >= 0 ? "loadout.item.winAdded" : "loadout.item.winAdded.negative", { id: s.itemId, slot, delta: s.winAdded, share: s.share, games: s.n }));
+      return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
+    })
+    .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
 }
 
 /**
