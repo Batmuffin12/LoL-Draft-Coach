@@ -125,3 +125,42 @@ describe("DataDragon", () => {
     await expect(new DataDragon({ cacheDir, fetch: broken }).load()).rejects.toThrow(/champion\.json changed shape/);
   });
 });
+
+describe("stat shards (CommunityDragon)", () => {
+  const styles = { schemaVersion: 2, styles: [{ id: 8000, slots: [{ type: "kKeyStone", perks: [8005] }, { type: "kStatMod", perks: [5008, 5005, 5007] }, { type: "kStatMod", perks: [5011, 5013, 5001] }] }] };
+  const perks = [
+    { id: 5008, name: "Adaptive Force", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceIcon.png" },
+    { id: 5011, name: "Health", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthScalingIcon.png" },
+    { id: 8005, name: "Press the Attack", iconPath: "" },
+  ];
+  const withShards = (cdn: ReturnType<typeof fakeCdn>) =>
+    (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("v1/perkstyles.json")) return cdn.state.online ? Response.json(styles) : Promise.reject(new TypeError("fetch failed"));
+      if (url.endsWith("v1/perks.json")) return cdn.state.online ? Response.json(perks) : Promise.reject(new TypeError("fetch failed"));
+      return cdn.fetchFn(input);
+    }) as typeof fetch;
+
+  it("reads the shard rows and names, and keeps them for offline use", async () => {
+    const cdn = fakeCdn();
+    const dd = new DataDragon({ cacheDir, fetch: withShards(cdn) });
+    expect(await dd.statShards()).toBeNull(); // not loaded yet
+    await dd.load();
+    const s = (await dd.statShards())!;
+    expect(s.rows).toEqual([[5008, 5005, 5007], [5011, 5013, 5001]]);
+    expect(s.perks.get(5008)?.name).toBe("Adaptive Force");
+    expect(s.perks.get(5008)?.iconUrl).toContain("perk-images/statmods/");
+    expect(s.perks.has(8005)).toBe(false);
+
+    cdn.state.online = false;
+    const offline = new DataDragon({ cacheDir, fetch: withShards(cdn) });
+    await offline.load();
+    expect((await offline.statShards())?.rows).toHaveLength(2);
+  });
+
+  it("is null when CommunityDragon is unreachable and nothing is cached", async () => {
+    const dd = new DataDragon({ cacheDir, fetch: fakeCdn().fetchFn });
+    await dd.load();
+    expect(await dd.statShards()).toBeNull();
+  });
+});

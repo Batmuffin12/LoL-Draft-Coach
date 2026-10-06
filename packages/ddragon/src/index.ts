@@ -22,6 +22,18 @@ export function communityDragonAsset(clientPath: string, base = COMMUNITY_DRAGON
 
 const VersionsSchema = z.array(z.string().min(1)).min(1);
 
+/** CommunityDragon's rune paths (slots with perk ids) and perks (names, client icon paths): only the fields we use. */
+const PerkStylesFileSchema = z.looseObject({
+  styles: z.array(z.looseObject({ id: z.number(), slots: z.array(z.looseObject({ type: z.string().default(""), perks: z.array(z.number()).default([]) })).default([]) })),
+});
+const PerksFileSchema = z.array(z.looseObject({ id: z.number(), name: z.string(), iconPath: z.string().default("") }));
+
+/** The stat shard rows (offense, flex, defense) and each shard's name and icon. */
+export interface StatShards {
+  rows: number[][];
+  perks: Map<number, { name: string; iconUrl: string | null }>;
+}
+
 const ChampionFileSchema = z.looseObject({
   version: z.string(),
   data: z.record(
@@ -169,6 +181,42 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
     const changed = this.current?.version !== data.version;
     this.current = data;
     if (changed) this.emit("patch", data);
+  }
+
+  private shards: { version: string; value: StatShards } | null = null;
+
+  /**
+   * The stat shard rows and names from CommunityDragon's game data (Data Dragon has none), for
+   * when the League client doesn't list them. Cached in memory and on disk per patch; null when
+   * unreachable without a cached copy, or before Data Dragon is loaded.
+   */
+  async statShards(): Promise<StatShards | null> {
+    const version = this.current?.version;
+    if (!version) return null;
+    if (this.shards?.version === version) return this.shards.value;
+    const file = join(this.versionDir(version), "statShards.json");
+    let raw: { styles: unknown; perks: unknown };
+    try {
+      raw = JSON.parse(await readFile(file, "utf8"));
+    } catch {
+      try {
+        raw = { styles: await this.getJson(`${COMMUNITY_DRAGON_GAME_DATA}v1/perkstyles.json`), perks: await this.getJson(`${COMMUNITY_DRAGON_GAME_DATA}v1/perks.json`) };
+      } catch {
+        return null;
+      }
+      await mkdir(this.versionDir(version), { recursive: true }).then(() => writeFile(file, JSON.stringify(raw), "utf8")).catch(() => undefined);
+    }
+    const styles = PerkStylesFileSchema.safeParse(raw.styles);
+    const perks = PerksFileSchema.safeParse(raw.perks);
+    if (!styles.success || !perks.success) return null;
+    const rows = styles.data.styles.map((s) => s.slots.filter((x) => x.type === "kStatMod").map((x) => x.perks)).find((r) => r.length > 0) ?? [];
+    const ids = new Set(rows.flat());
+    const value: StatShards = {
+      rows,
+      perks: new Map(perks.data.filter((p) => ids.has(p.id)).map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }])),
+    };
+    this.shards = { version, value };
+    return value;
   }
 
   champion(id: ChampionId): ChampionInfo | undefined {

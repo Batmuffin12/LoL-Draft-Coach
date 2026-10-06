@@ -192,6 +192,14 @@ export class PersonalCoach extends Coach {
     this.onDraft();
   }
 
+  /** Stat shards from CommunityDragon when the client doesn't list them (an older client, the mock client). */
+  private async loadShardsFallback(): Promise<void> {
+    const s = await this.deps.ddragon.statShards().catch(() => null);
+    if (!s) return;
+    this.shardRows = s.rows;
+    for (const [id, p] of s.perks) if (!this.perks.has(id)) this.perks.set(id, p);
+  }
+
   /** The Riot ID of the player logged into the client, once known. */
   get currentIdentity(): Identity | null {
     return this.identity;
@@ -219,6 +227,10 @@ export class PersonalCoach extends Coach {
       });
     }
     this.p.ddragon.on("patch", () => this.updateRoleAdvice()); // champion names/icons for the lobby
+    // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
+    this.p.ddragon.on("patch", () => {
+      if (this.p.connector.status === "connected" && !this.shardRows.length) void this.loadShardsFallback().then(() => this.onDraft());
+    });
     this.p.connector.on("status", (s) => {
       if (s === "connected") void this.onClientConnected();
     });
@@ -252,6 +264,7 @@ export class PersonalCoach extends Coach {
       const perks = await this.p.connector.getPerks().catch(() => []);
       this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
       this.shardRows = await this.p.connector.getStatShardRows().catch(() => []);
+      if (!this.shardRows.length) await this.loadShardsFallback();
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
