@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DataDragon, DataDragonError } from "../src/index";
+import { communityDragonAsset, DataDragon, DataDragonError } from "../src/index";
 
 /** A fake Data Dragon CDN whose newest version can be changed by the test. */
 function fakeCdn() {
@@ -41,6 +41,15 @@ function fakeCdn() {
 let cacheDir: string;
 beforeEach(() => {
   cacheDir = mkdtempSync(join(tmpdir(), "ldc-dd-"));
+});
+
+describe("communityDragonAsset", () => {
+  it("maps a client game-data icon path to the public mirror, lower-cased", () => {
+    expect(communityDragonAsset("/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceIcon.png")).toBe(
+      "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png",
+    );
+    expect(communityDragonAsset("/other/thing.png")).toBeNull();
+  });
 });
 
 describe("DataDragon", () => {

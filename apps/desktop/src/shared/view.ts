@@ -75,6 +75,8 @@ export interface LoadoutView {
     secondary: IconView;
     /** Keystone first, then the other primary runes, then the secondary runes. */
     runes: IconView[];
+    /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
+    shards: IconView[];
     reason: string | null;
   } | null;
   situationalRunes: LoadoutItemView[];
@@ -104,6 +106,8 @@ export interface MyPickView {
   loadout: LoadoutView | null;
   /** The result of the last import click (e.g. "Rune page created"), or null. */
   importMessage: string | null;
+  /** True when the champion is only hovered (not locked in yet). */
+  hovering?: boolean;
 }
 
 /** A suggested ban (ban phase, live meta only). */
@@ -199,6 +203,8 @@ export interface ViewState {
   hoverBans: { champion: ChampView; bans: BanView[] } | null;
   /** Set once the local player has locked in a champion (suggestions stop then). */
   myPick: MyPickView | null;
+  /** The loadout for the champion the player hovers before locking in (shown under the suggestions). */
+  hoverPick: MyPickView | null;
   /** Null until a snapshot is loaded (or in dev-only direct mode, which has no meta). */
   meta: MetaView | null;
   /** Role the picks are for, if known. */
@@ -221,6 +227,7 @@ export function emptyViewState(): ViewState {
     bans: [],
     hoverBans: null,
     myPick: null,
+    hoverPick: null,
     meta: null,
     pickRole: null,
     roles: [],

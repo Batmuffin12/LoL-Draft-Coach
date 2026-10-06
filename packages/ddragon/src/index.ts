@@ -6,6 +6,20 @@ import type { ChampionId, ChampionInfo, ItemInfo, RuneInfo, SpellInfo } from "@l
 
 export const DEFAULT_BASE_URL = "https://ddragon.leagueoflegends.com";
 
+/** CommunityDragon's public mirror of the client's game-data files (the spec's "LCU game data / CommunityDragon"). */
+export const COMMUNITY_DRAGON_GAME_DATA = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/";
+
+/**
+ * The public CommunityDragon URL for an icon path the League client reports (e.g. a stat
+ * shard's "/lol-game-data/assets/v1/perk-images/StatMods/…png"). The client serves its own
+ * copy only with its local password, so the panel loads the mirror. Null for other paths.
+ */
+export function communityDragonAsset(clientPath: string, base = COMMUNITY_DRAGON_GAME_DATA): string | null {
+  const prefix = "/lol-game-data/assets/";
+  if (!clientPath.toLowerCase().startsWith(prefix)) return null;
+  return base + clientPath.slice(prefix.length).toLowerCase();
+}
+
 const VersionsSchema = z.array(z.string().min(1)).min(1);
 
 const ChampionFileSchema = z.looseObject({

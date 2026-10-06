@@ -165,6 +165,11 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     lcu = new MockLcuServer(loadFixture("synthetic-draft-pick"), {
       "/lol-summoner/v1/current-summoner": { puuid: "client-only", gameName: "Me", tagLine: "EUW", summonerId: 7 },
       "/lol-perks/v1/pages": [],
+      "/lol-perks/v1/perks": [
+        { id: 5005, name: "Attack Speed", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAttackSpeedIcon.png" },
+        { id: 5008, name: "Adaptive Force", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceIcon.png" },
+        { id: 5001, name: "Health", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthPlusIcon.png" },
+      ],
       "/lol-item-sets/v1/item-sets/7/sets": { itemSets: [] },
       "/lol-ranked/v1/current-ranked-stats": { queues: [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD", division: "I" }] },
     });
@@ -193,6 +198,14 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     await waitFor(() => coach!.state.hoverBans?.champion.id === 245);
     expect(coach.state.hoverBans?.champion.id).toBe(245);
     expect(coach.state.hoverBans!.bans.every((b) => !coach!.state.bans.some((x) => x.champion.id === b.champion.id))).toBe(true);
+    // Hovering shows the loadout before lock-in (245 has none in the band, so it comes from your own games), and follows the hover.
+    expect(coach.state.hoverPick?.champion.id).toBe(245);
+    session.myTeam.find((m) => m.cellId === 2)!.championPickIntent = 103;
+    lcu.push("/lol-champ-select/v1/session", session);
+    await waitFor(() => coach!.state.hoverPick?.champion.id === 103);
+    expect(coach.state.hoverPick).toMatchObject({ hovering: true, loadout: { canImport: true } });
+    // Stat shards with the client's names, shown in the client's order (offense, flex, defense).
+    expect(coach.state.hoverPick!.loadout!.page!.shards.map((s) => s.name)).toEqual(["Attack Speed", "Adaptive Force", "Health"]);
 
     while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
     await waitFor(() => coach!.state.picks.length > 0);

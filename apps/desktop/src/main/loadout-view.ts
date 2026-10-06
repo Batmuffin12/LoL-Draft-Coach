@@ -10,6 +10,8 @@ export interface LoadoutViewDeps {
   bands: RankBandConfig;
   band: RankBandId;
   canImport: boolean;
+  /** Stat shard names and icons (from the client's perks list), when known. */
+  perk?: (id: number) => { name: string; iconUrl: string | null } | undefined;
 }
 
 /** Builds what the "Your pick" card shows from an engine loadout: Data Dragon names and icons, reasons in words. */
@@ -41,7 +43,17 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
         ].join(". ")
       : null,
     page: l.page
-      ? { primary: rune(l.page.value.primaryStyle), secondary: rune(l.page.value.subStyle), runes: l.page.value.runes.map(rune), reason: first(l.page.reasons) }
+      ? {
+          primary: rune(l.page.value.primaryStyle),
+          secondary: rune(l.page.value.subStyle),
+          runes: l.page.value.runes.map(rune),
+          // Stored in Riot's match order (defense, flex, offense); shown like the client (offense, flex, defense).
+          shards: [...l.page.value.statPerks].reverse().flatMap((id) => {
+            const p = deps.perk?.(id);
+            return p ? [{ id, name: p.name, iconUrl: p.iconUrl }] : [];
+          }),
+          reason: first(l.page.reasons),
+        }
       : null,
     situationalRunes: l.situationalRunes.map((r) => withReasons(rune(r.runeId), r.reasons)),
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons) } : null,

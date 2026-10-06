@@ -1,3 +1,4 @@
+import { communityDragonAsset } from "@ldc/ddragon";
 import { LcuImporter, LcuWriteError, unavailableChampions } from "@ldc/lcu";
 import {
   adviseRoles,
@@ -90,6 +91,8 @@ export class PersonalCoach extends Coach {
    * seconds after you lock in, e.g. in custom games) until the game is over.
    */
   private keptPick: MyPickView | null = null;
+  /** Rune and stat shard names from the client (Data Dragon has no shards), with mirror icons. */
+  private perks = new Map<number, { name: string; iconUrl: string | null }>();
 
   /** Import buttons show when the config enables import and the client is connected. */
   private get canImport(): boolean {
@@ -215,6 +218,8 @@ export class PersonalCoach extends Coach {
       const me = await this.p.connector.getCurrentSummoner();
       const ranked = await this.p.connector.getRankedStats().catch(() => null);
       this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
+      const perks = await this.p.connector.getPerks().catch(() => []);
+      this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
@@ -419,7 +424,7 @@ export class PersonalCoach extends Coach {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
       const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
-      this.update({ picks: [], bans: [], hoverBans: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.config;
@@ -451,46 +456,48 @@ export class PersonalCoach extends Coach {
 
     // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
     const locked = lockedPick(this.draft);
-    if (locked !== null) {
-      const assessed = live ? assessPick(live, locked) : null;
-      this.keptPick = null;
+    /** The card for a champion: how it looks in this draft and its loadout (the import buttons use it). */
+    const card = (championId: number, hovering: boolean): MyPickView => {
+      const assessed = live ? assessPick(live, championId) : null;
       // Your own games on the champion fill in when your rank has too few (completed items from Data Dragon).
       let completed: Set<number> = new Set();
       let boots: Set<number> = new Set();
-      try {
-        completed = completedItems(this.deps.ddragon.data.itemInfo, engine.loadout.items);
-        boots = completedBoots(this.deps.ddragon.data.itemInfo, engine.loadout.items);
-      } catch {
-        // Data Dragon not loaded yet.
-      }
-      const personal = personalBuild(this.profile.matches, locked, role, completed);
-      const buildsFrom = (id: number) => this.deps.ddragon.data.itemInfo.get(id)?.from ?? [];
-      const loadout = live ? draftLoadout(live, locked, engine.loadout, personal, boots, buildsFrom) : null;
-      if (this.shownLoadout?.loadout.championId !== locked) this.importMessage = null;
-      this.shownLoadout = loadout ? { loadout, champion: nameOf(locked) } : null;
       let data = null;
       try {
         data = this.deps.ddragon.data;
+        completed = completedItems(data.itemInfo, engine.loadout.items);
+        boots = completedBoots(data.itemInfo, engine.loadout.items);
       } catch {
         // Data Dragon not loaded yet: names fall back to ids.
       }
-      this.update({
-        picks: [],
-        bans: [],
-        hoverBans: null,
-        pickAdvice: { whyNot: null, confidence: null },
-        pickRole: role,
-        myPick: {
-          champion: champView(locked, lookup)!,
-          role,
-          expectedWin: assessed?.expectedWin ?? null,
-          reasons: assessed ? assessed.reasons.map(say) : [],
-          loadout: loadout
-            ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport })
-            : null,
-          importMessage: this.importMessage,
-        },
-      });
+      const personal = personalBuild(this.profile!.matches, championId, role, completed);
+      const buildsFrom = (id: number) => this.deps.ddragon.data.itemInfo.get(id)?.from ?? [];
+      const loadout = live ? draftLoadout(live, championId, engine.loadout, personal, boots, buildsFrom) : null;
+      if (this.shownLoadout?.loadout.championId !== championId) this.importMessage = null;
+      this.shownLoadout = loadout ? { loadout, champion: nameOf(championId) } : null;
+      return {
+        champion: champView(championId, lookup)!,
+        role,
+        expectedWin: assessed?.expectedWin ?? null,
+        reasons: assessed ? assessed.reasons.map(say) : [],
+        loadout: loadout
+          ? toLoadoutView(loadout, {
+              data,
+              templates,
+              championName: nameOf,
+              bands: this.config.bands,
+              band: this.band,
+              canImport: this.canImport,
+              perk: (id) => this.perks.get(id),
+            })
+          : null,
+        importMessage: this.importMessage,
+        hovering,
+      };
+    };
+
+    if (locked !== null) {
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, myPick: card(locked, false) });
       this.keptPick = this.view.myPick;
       return;
     }
@@ -519,6 +526,11 @@ export class PersonalCoach extends Coach {
             bans: suggestHoverBans(live, hovered, banSuggestions.map((b) => b.championId)).map(toView),
           }
         : null;
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, pickRole: role });
+    // Hovering (or selected, not locked yet): its loadout already, so there's time to read and import it.
+    const me = this.draft.myTeam.find((s) => s.isLocalPlayer);
+    const pending = me ? me.championId || me.pickIntentId : 0;
+    const hoverCard = live && pending > 0 ? card(pending, true) : null;
+    if (!hoverCard?.loadout) this.shownLoadout = null;
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role });
   }
 }

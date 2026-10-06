@@ -202,6 +202,13 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
           <GameIcon icon={l.page.secondary} size={16} title={`Secondary: ${l.page.secondary.name}`} />
         </LoadoutRow>
       )}
+      {l.page && l.page.shards.length > 0 && (
+        <LoadoutRow label="Shards" reason={l.page.shards.map((s) => s.name).join(" · ")}>
+          {l.page.shards.map((s, i) => (
+            <GameIcon key={`${s.id}-${i}`} icon={s} size={18} />
+          ))}
+        </LoadoutRow>
+      )}
       {l.situationalRunes.length > 0 && (
         <LoadoutRow label="Consider" reason={l.situationalRunes[0]!.reasons[0] ?? null}>
           {l.situationalRunes.map((r) => (
@@ -289,7 +296,8 @@ function YourPick({ pick }: { pick: MyPickView }) {
     <section className="card picks your-pick">
       <h2 className="picks-head">
         <span>
-          Your pick{pick.role ? <span className="muted"> · {pick.role}</span> : null}
+          {pick.hovering ? "Your hover" : "Your pick"}
+          {pick.role ? <span className="muted"> · {pick.role}</span> : null}
         </span>
       </h2>
       <div className="pick">
@@ -605,6 +613,7 @@ export function App() {
 
             <BanSuggestions bans={state.bans} hover={state.hoverBans} />
             {state.myPick ? <YourPick pick={state.myPick} /> : <Picks picks={state.picks} role={state.pickRole} state={state} />}
+            {!state.myPick && state.hoverPick && <YourPick pick={state.hoverPick} />}
 
             <section className="card teams">
               <div>
