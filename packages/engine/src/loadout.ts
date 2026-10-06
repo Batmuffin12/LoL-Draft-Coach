@@ -44,8 +44,12 @@ function enemyTraits(input: LoadoutInput) {
   return teamTraits(input.enemies, input.attributes, (id) => (id === lane ? input.config.laneWeight : 1));
 }
 
-/** Items players in your role actually buy (role-locked items of other roles are left out). */
-const fits = (input: LoadoutInput, itemId: number) => itemFitsRole(itemId, input.build.role, input.itemRoles, input.config.minItemRoleShare);
+/**
+ * Items players in your role actually buy: role-locked items of other roles are left out, and
+ * so are your role's quest rewards (you get those, you don't buy them).
+ */
+const fits = (input: LoadoutInput, itemId: number) =>
+  itemFitsRole(itemId, input.build.role, input.itemRoles, input.config.minItemRoleShare) && !input.roleRewards?.some((r) => r.itemId === itemId);
 
 /** Where the loadout's numbers come from, for the "rough guide" note. */
 export interface LoadoutSource {
