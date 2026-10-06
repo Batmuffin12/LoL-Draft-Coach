@@ -10,7 +10,7 @@ export function champView(id: ChampionId, lookup: ChampionLookup): ChampView | n
 }
 
 /** Builds what the panel shows from a sanitised draft. */
-export function toDraftView(draft: DraftState, lookup: ChampionLookup, now: number = Date.now()): DraftView {
+export function toDraftView(draft: DraftState, lookup: ChampionLookup, now: number = Date.now(), phaseMs: number = draft.timeLeftMs): DraftView {
   const acting = new Map(draft.actions.filter((a) => a.inProgress && !a.completed).map((a) => [a.actorCellId, a.type]));
   const slot = (s: DraftSlot): SlotView => ({
     cellId: s.cellId,
@@ -27,6 +27,7 @@ export function toDraftView(draft: DraftState, lookup: ChampionLookup, now: numb
   return {
     timerPhase: draft.timerPhase,
     timeLeftMs: draft.timeLeftMs,
+    totalSeconds: Math.round(Math.max(phaseMs, draft.timeLeftMs) / 1000),
     receivedAt: now,
     myTeam: draft.myTeam.map(slot),
     theirTeam: draft.theirTeam.map(slot),
@@ -34,4 +35,29 @@ export function toDraftView(draft: DraftState, lookup: ChampionLookup, now: numb
     theirBans: bans(draft.theirBans),
     localAction,
   };
+}
+
+/**
+ * Remembers how long the current phase is: the first timeLeftMs seen in it. A phase is the
+ * timer phase plus the actions in progress (each pick or ban turn has its own timer); a timer
+ * that goes up (the client reset it) starts a new length too.
+ */
+export class PhaseLength {
+  private key: string | null = null;
+  private totalMs = 0;
+
+  observe(draft: DraftState): number {
+    const inProgress = draft.actions.filter((a) => a.inProgress && !a.completed).map((a) => a.id);
+    const key = `${draft.timerPhase}:${inProgress.join(",")}`;
+    if (key !== this.key || draft.timeLeftMs > this.totalMs) {
+      this.key = key;
+      this.totalMs = draft.timeLeftMs;
+    }
+    return this.totalMs;
+  }
+
+  reset(): void {
+    this.key = null;
+    this.totalMs = 0;
+  }
 }

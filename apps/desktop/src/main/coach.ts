@@ -3,7 +3,7 @@ import type { DataDragon } from "@ldc/ddragon";
 import { sanitizeChampSelect, type LcuConnector } from "@ldc/lcu";
 import type { DraftState } from "@ldc/shared";
 import { emptyViewState, type ViewState } from "../shared/view";
-import { toDraftView } from "./draft-view";
+import { PhaseLength, toDraftView } from "./draft-view";
 
 export interface CoachDeps {
   connector: LcuConnector;
@@ -19,6 +19,7 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
   protected view: ViewState = emptyViewState();
   protected draft: DraftState | null = null;
   private readonly now: () => number;
+  private readonly phase = new PhaseLength();
 
   constructor(protected readonly deps: CoachDeps) {
     super();
@@ -68,7 +69,8 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
         return undefined;
       }
     };
-    this.update({ draft: this.draft ? toDraftView(this.draft, lookup, this.now()) : null });
+    if (!this.draft) this.phase.reset();
+    this.update({ draft: this.draft ? toDraftView(this.draft, lookup, this.now(), this.phase.observe(this.draft)) : null });
   }
 
   /** Shows a short message in the panel (e.g. an update is ready). */

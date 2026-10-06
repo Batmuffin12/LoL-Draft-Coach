@@ -31,6 +31,8 @@ export interface SlotView {
 export interface DraftView {
   timerPhase: string;
   timeLeftMs: number;
+  /** Full length of the current phase (the first timeLeftMs seen in it), for the draining line. */
+  totalSeconds: number;
   /** Epoch ms when this snapshot was produced, for a local countdown. */
   receivedAt: number;
   myTeam: SlotView[];
