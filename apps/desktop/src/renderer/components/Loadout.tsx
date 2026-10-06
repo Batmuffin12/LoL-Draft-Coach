@@ -53,7 +53,7 @@ function ItemRow({ label, items, note }: { label: string; items: LoadoutItemView
 
 /** Runes on their full trees with the page's numbers and import; then spells and the skill grid. */
 export function RunesTab({ loadout: l, onImport, busy, importMessage }: LoadoutProps) {
-  const label = l.page && l.spells ? "Import runes & spells" : l.page ? "Import runes" : "Import spells";
+  const label = "Import";
   const button = l.canImport && (l.page || l.spells) ? <ImportButton kind="runes" label={label} busy={busy} onImport={onImport} /> : null;
   const message = importMessage && <span className="caption text">{importMessage}</span>;
   const p = l.page;
@@ -82,7 +82,7 @@ export function RunesTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
         </Section>
       )}
       {(l.spells || l.skills) && (
-        <Section title="Spells & skills" aside={p ? null : button}>
+        <Section title="Summoner spells & skill order" aside={p ? null : button}>
           <SkillGrid spells={l.spells} skills={l.skills} />
           {!p && message}
         </Section>
@@ -103,14 +103,16 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
   // Each item once: what the matrix or the Later pool already show isn't repeated under "Vs this team".
   const shown = new Set([...slots.flatMap((s) => s.options.map((o) => o.item.id)), ...l.laterPool.map((i) => i.id)]);
   const vsTeam = l.situational.filter((i) => !shown.has(i.id));
-  const caption = telling?.reasons[0] ? `${telling.name}: ${lower(telling.reasons[0])}` : (l.commonPath?.reason ?? null);
+  // With thin data the caption would only repeat the pick rate already in the cells.
+  const thin = !l.items.some((s) => s.top.winAdded !== null);
+  const caption = thin && l.laterPool.length ? null : telling?.reasons[0] ? `${telling.name}: ${lower(telling.reasons[0])}` : (l.commonPath?.reason ?? null);
   return (
     <>
-      <Section title="Start & boots" aside={button}>
+      <Section title="Starter items & boots" aside={button}>
         <BuildPath starting={l.starting} boots={l.boots} />
         {importMessage && <span className="caption text">{importMessage}</span>}
       </Section>
-      <Section title="Items by slot" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">{l.items.some((s) => s.top.winAdded !== null) ? "pick % · win added" : "pick %"}</span> : null}>
+      <Section title="Core build" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">{l.items.some((s) => s.top.winAdded !== null) ? "pick rate · win added" : "pick rate"}</span> : null}>
         {slots.length > 0 ? <ItemMatrix slots={slots} /> : <span className="caption">Not enough purchases to rank items yet.</span>}
         {caption && (
           <span className="caption clamp2" title={caption}>
@@ -122,7 +124,7 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
             <span className="label" title={l.laterNote ?? undefined}>
               Later: pick by situation
             </span>
-            {l.laterPool.map((i) => (
+            {l.laterPool.slice(0, 3).map((i) => (
               <div key={i.id} className="later-row" title={tip(i)}>
                 <ChampIcon champ={i} kind="game" size={22} title="" />
                 <span className="caption one-line">

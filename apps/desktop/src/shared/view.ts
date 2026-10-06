@@ -303,6 +303,10 @@ export interface NewChampRoleView {
 export interface FocusView {
   /** The metric as players say it, capitalised ("CS per minute"). */
   label: string;
+  /** The goal as a sentence: "More CS per minute", "Fewer deaths to champions". */
+  title: string;
+  /** "6.8 or more", "7.7 or fewer". */
+  goalText: string;
   /** "Ahri · Mid", or the role alone without a main champion. */
   on: string;
   you: number;

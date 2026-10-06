@@ -21,7 +21,7 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
   const strip: MonthView["strip"] = [
     { label: "Games", value: String(r.games), ...(r.role ? { sub: say("month.games.sub", { role: r.role }) } : {}) },
     {
-      label: "Win",
+      label: "Win rate",
       value: `${Math.round((r.winRate ?? 0) * 100)}%`,
       sub: winChange === null ? say("month.win.none", {}) : say("month.win.vs", { change: winChange }),
       ...(winChange !== null && Math.abs(winChange) >= 0.01 ? { tone: winChange > 0 ? ("pos" as const) : ("neg" as const) } : {}),
@@ -32,7 +32,7 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
       ...(r.rank.start && r.rank.now && rankText(r.rank.start) !== rankText(r.rank.now) ? { sub: say("month.rank.from", { rank: rankText(r.rank.start) }) } : {}),
       ...(r.rank.direction === "up" ? { tone: "pos" as const } : r.rank.direction === "down" ? { tone: "neg" as const } : {}),
     },
-    { label: "Focus", value: String(deps.growth?.met.length ?? 0), sub: say("month.focus.sub", {}) },
+    { label: "Goals met", value: String(deps.growth?.met.length ?? 0) },
   ];
   const f = deps.growth?.focus;
   return {

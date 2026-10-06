@@ -27,9 +27,9 @@ describe("month view", () => {
     const v = monthView(report, deps)!;
     expect(v.strip).toEqual([
       { label: "Games", value: "20", sub: "mostly mid" },
-      { label: "Win", value: "55%", sub: "+10.0 vs before", tone: "pos" },
+      { label: "Win rate", value: "55%", sub: "+10.0 vs before", tone: "pos" },
       { label: "Rank", value: "Gold IV", sub: "from Silver I", tone: "pos" },
-      { label: "Focus", value: "0", sub: "met" },
+      { label: "Goals met", value: "0" },
     ]);
     expect(v.axes).toEqual([{ label: "Farming", from: 40, to: 47 }]);
     expect(v.role).toBe("Mid");

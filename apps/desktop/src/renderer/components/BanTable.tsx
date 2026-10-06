@@ -1,5 +1,5 @@
 import type { BanView } from "../../shared/view";
-import { rate, signed } from "../format";
+import { rate, signedPct } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 export interface BanRow extends BanView {
@@ -15,17 +15,17 @@ export function BanTable({ bans }: { bans: BanRow[] }) {
     <div className="table bans" role="table">
       <div className="thead" role="row">
         <span className="c-champ">Champion</span>
-        <span className="c-num" title="Win chance it costs you, weighted by how often it's picked">
-          Hurts
+        <span className="c-num" title="How much win chance it costs you, weighted by how often it's picked">
+          Threat
         </span>
         <span className="c-num" title="Its win rate in your rank">
-          Win
+          Win %
         </span>
         <span className="c-num" title="How often it's picked in your rank">
-          Pick
+          Pick %
         </span>
         <span className="c-num" title="How often it's banned in your rank">
-          Ban
+          Ban %
         </span>
       </div>
       {bans.map((b, i) => (
@@ -34,7 +34,7 @@ export function BanTable({ bans }: { bans: BanRow[] }) {
             <ChampIcon champ={b.champion} size={34} framed={i === 0} title="" />
             <span className="nm">{b.champion.name}</span>
           </span>
-          <span className="c-bar" title={`Costs you ${signed(b.threat)} points of win chance`}>
+          <span className="c-bar" title={`Costs you ${signedPct(b.threat)} win chance`}>
             <span className="fill" style={{ width: `${Math.max(6, Math.round((-b.threat / worst) * 100))}%` }} />
           </span>
           <span className="c-num">{rate(b.winRate, 1)}</span>

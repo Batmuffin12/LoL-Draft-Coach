@@ -49,7 +49,7 @@ describe("recommendNewChampions", () => {
     expect(r.picks.find((p) => p.championId === 5)?.parts.overlap ?? 1).toBeGreaterThan(0); // a clone is penalised
     const top = r.picks[0]!;
     expect(top).toMatchObject({ like: 1, ease: 1, owned: false });
-    expect(top.reasons.map(say)).toEqual(["Plays like your Mage", "Strong in your rank: 53.6% (1500 games)", "Easy to pick up", "You don't own it yet"]);
+    expect(top.reasons.map(say)).toEqual(["Plays like your Mage", "Strong in your rank: 53.6% win rate (1500 games)", "Easy to pick up", "You don't own it yet"]);
   });
 
   it("adds champions that fill a pool gap", () => {

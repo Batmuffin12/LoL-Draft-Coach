@@ -178,9 +178,10 @@ p { margin: 0; }
 /* Tables: fixed columns, numbers right-aligned, the same shape everywhere */
 .table { display: flex; flex-direction: column; }
 .table .thead, .table .trow { display: grid; align-items: center; column-gap: 6px; }
-.table.picks .thead, .table.picks .trow { grid-template-columns: minmax(0, 1fr) 52px repeat(3, 44px); }
-.table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 48px 54px 40px 40px; }
-.table.matchups .thead, .table.matchups .trow { grid-template-columns: minmax(0, 1fr) 60px 50px 50px; }
+.table.picks .thead, .table.picks .trow { grid-template-columns: minmax(0, 1fr) 46px 58px 46px 46px; column-gap: 4px; }
+.table.picks .trow .c-num { font-size: var(--fs-body); }
+.table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 52px 54px 48px 46px; }
+.table.matchups .thead, .table.matchups .trow { grid-template-columns: minmax(0, 1fr) 60px 58px 50px; }
 .table.pool .thead, .table.pool .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 50px; }
 .table .thead { white-space: nowrap; padding: 0 6px 4px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
 .table .thead .c-num, .table .thead .c-win { text-align: right; font-size: var(--fs-label); color: var(--muted); }
@@ -205,10 +206,11 @@ p { margin: 0; }
 .table.bans .trow { min-height: 0; padding: 5px 6px; }
 .table .c-bar { height: 8px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
 .table .c-bar .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
-.table.matchups .trow { min-height: 36px; padding: 2px 6px; }
+.table.matchups .trow { min-height: 30px; padding: 1px 6px; }
 .table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .table .trow .sub b { color: var(--text); font-weight: 600; }
-.table .detail { padding: 8px 6px 0; }
+.table .detail { padding: 6px 6px 0; }
+.table .legend { padding: 4px 6px 0; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
 .table .open { padding: 8px 6px 0; font-size: var(--fs-caption); color: var(--muted); }
 
 /* Reasons: + green, − amber, › gold for why-not */
@@ -233,6 +235,7 @@ p { margin: 0; }
 .tree-head { display: flex; align-items: center; gap: 6px; }
 .tree-row { display: flex; justify-content: space-around; align-items: center; }
 .tree-row.keys { padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.runes .trees > .tree { justify-content: space-between; }
 .tree.shards { gap: 4px; }
 .swap { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--warn-tint); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .swap b { color: var(--warn); font-weight: 600; }
@@ -394,7 +397,7 @@ p { margin: 0; }
 .focus.done .f-name { color: var(--positive); }
 
 /* New champions: one table per role */
-.table.newchamps .thead, .table.newchamps .trow { grid-template-columns: minmax(0, 1fr) 74px 50px 44px; }
+.table.newchamps .thead, .table.newchamps .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 70px; }
 .table.newchamps .trow { min-height: 0; padding: 3px 6px; }
 .table.newchamps .like { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: var(--fs-micro); color: var(--muted); }
 .table .c-num.ease { font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
@@ -434,3 +437,12 @@ p { margin: 0; }
 .table.champform .trow { height: 28px; padding: 0 6px; }
 .trends2 .axis-nm { font-size: var(--fs-micro); }
 .monthreport .section { padding-block: 6px; }
+/* Focus, said plainly: now → goal, the rank average beside it */
+.focus .f-goal { display: flex; align-items: baseline; gap: 10px; padding: 6px 10px; background: var(--card); border-radius: var(--radius-sm); }
+.focus .f-goal > span { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.focus .f-goal b { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }
+.focus .f-goal .f-target b { color: var(--gold-bright); }
+.focus .f-arrow { color: var(--muted); }
+.focus .f-avg { margin-left: auto; font-size: var(--fs-micro); color: var(--muted); }
+.table .open.no-games { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
+.tree.shards { gap: 3px; }

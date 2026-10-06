@@ -6,8 +6,8 @@ import { ChampIcon } from "./ChampIcon";
 type Spells = NonNullable<LoadoutView["spells"]>;
 type Skills = NonNullable<LoadoutView["skills"]>;
 
-/** "53.2% · 1,980" with the win rate in green; with thin data (no win rate) just "1,980 games". */
-export function Stat({ winRate, n, title }: { winRate: number | null; n: number; title?: string }) {
+/** "53.2% WR · 1,980 games" with the win rate in green; with thin data (no win rate) just "1,980 games". */
+export function Stat({ winRate, n, title, short }: { winRate: number | null; n: number; title?: string; short?: boolean }) {
   if (winRate === null) {
     return (
       <span className="stat" title={title}>
@@ -18,7 +18,7 @@ export function Stat({ winRate, n, title }: { winRate: number | null; n: number;
   return (
     <span className="stat" title={title}>
       <b className="pos">{rate(winRate, 1)}</b>
-      {` · ${games(n)}`}
+      {short ? " WR" : ` WR · ${games(n)} games`}
     </span>
   );
 }
@@ -39,14 +39,14 @@ export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: S
         )}
         {skills && (
           <>
-            <span className="label">Max</span>
+            <span className="label">Priority</span>
             {skills.order.map((k, i) => (
               <Fragment key={i}>
                 {i > 0 && <span className="sep">›</span>}
                 <span className="key max">{k}</span>
               </Fragment>
             ))}
-            <Stat winRate={skills.winRate} n={skills.games} title={skills.reason ?? undefined} />
+            <Stat short winRate={skills.winRate} n={skills.games} title={[`${games(skills.games)} games`, skills.reason].filter(Boolean).join(" · ")} />
           </>
         )}
       </div>

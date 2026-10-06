@@ -11,13 +11,13 @@ export function NewChampTable({ rows }: { rows: NewChampView[] }) {
       <div className="thead" role="row">
         <span className="c-champ">Champion</span>
         <span className="c-num" title="The champion you play that it's most like">
-          Like
+          Plays like
         </span>
         <span className="c-num" title="Its win rate in your rank and role">
-          Win
+          Win %
         </span>
         <span className="c-num" title="Riot's difficulty rating">
-          Ease
+          Difficulty
         </span>
       </div>
       {rows.map((c, i) => (

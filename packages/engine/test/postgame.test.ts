@@ -34,7 +34,7 @@ describe("adviceOutcome", () => {
     const o = adviceOutcome(record(103), [match("EUW1_1", 103, false), match("EUW1_7123456789", 103, true)], 0.003);
     expect(o.game).toEqual({ matchId: "EUW1_7123456789", win: true, minutes: 31, endedAt: 5000 });
     expect(o.rank).toBe(1);
-    expect(o.lines.map(say)).toEqual(["Your lane matchup was the biggest edge: +2.1", "Predicted 54% for Ahri when you locked in"]);
+    expect(o.lines.map(say)).toEqual(["Biggest plus: your lane matchup (+2.1%)", "Win chance when you locked in: 54%"]);
   });
 
   it("says where your pick was, or that it was your own; costs are caveats", () => {
@@ -42,7 +42,7 @@ describe("adviceOutcome", () => {
     expect(own.game).toBeNull();
     expect(own.rank).toBe(0);
     expect(own.lines[0]!.id).toBe("postgame.team.bad");
-    expect(own.lines.map(say)).toEqual(["What your team needed was the biggest cost: -1.1", "Predicted 49% for #157; the top suggestion, Ahri, was 54%"]);
+    expect(own.lines.map(say)).toEqual(["Biggest minus: what your team needed (-1.1%)", "Win chance when you locked in: 49% (the #1 suggestion, Ahri, had 54%)"]);
     expect(adviceOutcome(record(99), [], 0.003).rank).toBe(3);
   });
 

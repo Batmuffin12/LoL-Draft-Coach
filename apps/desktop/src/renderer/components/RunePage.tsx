@@ -42,7 +42,7 @@ export function RunePage({ primary, secondary, runes, shards, swaps }: RunePageP
         <div className="right">
           <Tree tree={secondary} chosen={chosen} keystones={false} />
           {shards && (
-            <div className="tree shards" aria-label="Stat shards">
+            <div className="tree shards" aria-label="Stat mods" title="Stat mods">
               {shards.rows.map((row, ri) => (
                 <div key={ri} className="tree-row">
                   {row.map((s, si) => {

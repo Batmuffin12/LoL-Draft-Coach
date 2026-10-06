@@ -128,7 +128,7 @@ function LastGame({ state }: { state: ViewState }) {
         )}
       </Section>
       {state.focus && (
-        <Section title="Your focus" aside={<span className="micro">{`${state.focus.checkGames}-game average`}</span>}>
+        <Section title="Your goal">
           <FocusCard focus={state.focus} />
         </Section>
       )}
@@ -154,7 +154,7 @@ function NewChamps({ state }: { state: ViewState }) {
         const summary = r.learning ?? r.picks.map((p) => p.champion.name).join(", ");
         if (!roles.isOpen(i)) return <ClosedRole key={r.role} title={title} summary={summary} onOpen={() => roles.open(i)} />;
         return (
-          <Section key={r.role} title={title} gold={i === 0} aside={<span className="micro">meta in your rank</span>}>
+          <Section key={r.role} title={title} gold={i === 0} aside={<span className="micro">strong in your rank</span>}>
             {r.learning ? (
               <p className="caption">{r.learning}</p>
             ) : (
@@ -188,7 +188,7 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
           return <ClosedRole key={p.role} title={positionLabel(p.role)} summary={summary} onOpen={() => roles.open(i)} />;
         }
         return (
-          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = typical</span>}>
+          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = rank average</span>}>
             {p.axes.map((a) => (
               <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
             ))}

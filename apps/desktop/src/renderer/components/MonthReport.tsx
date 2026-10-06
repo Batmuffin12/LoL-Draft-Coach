@@ -54,7 +54,7 @@ export function FormTable({ rows }: { rows: MonthView["champions"] }) {
         <span className="c-num">Games</span>
         <span className="c-num">Win</span>
         <span className="c-num" title="Win rate this month against your games on it before">
-          Vs before
+          Change
         </span>
       </div>
       {rows.map((r) => (
@@ -80,7 +80,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <StatStrip items={m.strip} />
       </Section>
       {m.axes.length > 0 && (
-        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()}` : ""}`} aside={<span className="micro">then → now · 50 = typical</span>}>
+        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()}` : ""}`} aside={<span className="micro">month start → now · 50 = rank average</span>}>
           <TrendTable rows={m.axes} />
         </Section>
       )}
@@ -90,7 +90,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         </Section>
       )}
       {(m.focus.met.length > 0 || m.focus.current) && (
-        <Section title="Focus targets" gold={false}>
+        <Section title="Goals" gold={false}>
           <ul className="reasons">
             {m.focus.met.slice(0, 1).map((t) => (
               <li key={t}>{t}</li>

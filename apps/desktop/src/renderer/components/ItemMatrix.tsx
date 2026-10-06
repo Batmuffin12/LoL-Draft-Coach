@@ -1,5 +1,5 @@
 import type { IconView } from "../../shared/view";
-import { cx, rate, signedOrDash, tone } from "../format";
+import { cx, rate, signedPctOrDash, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 export interface MatrixOption {
@@ -16,7 +16,6 @@ export interface MatrixSlot {
   options: MatrixOption[];
 }
 
-const NTH = ["1st", "2nd", "3rd", "4th", "5th", "6th"];
 
 /** Items by slot as columns: the recommended one on top (gold ring), the next option under it, each with pick % and win added. */
 export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: number }) {
@@ -26,8 +25,8 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
     <div className="matrix" style={{ gridTemplateColumns: `repeat(${Math.max(slots.length, 3)}, minmax(0, 1fr))` }}>
       {slots.map((s) => (
         <span key={`h${s.slot}`} className="mh">
-          <span className="label">{NTH[s.slot - 1] ?? `${s.slot}th`}</span>
-          {s.minute !== null && <span className="m">{Math.round(s.minute)}m</span>}
+          <span className="label">{`Item ${s.slot}`}</span>
+          {s.minute !== null && <span className="m">{Math.round(s.minute)} min</span>}
         </span>
       ))}
       {Array.from({ length: Math.max(0, slots.length < 3 ? 3 - slots.length : 0) }, (_, i) => (
@@ -42,7 +41,7 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
                 {r === 1 ? "No other common pick" : ""}
               </span>
             );
-          const tip = [o.item.name, o.share === null ? null : `${rate(o.share)} of builds · ${signedOrDash(o.winAdded)} win added`, ...(o.item.reasons ?? [])].filter(Boolean).join("\n");
+          const tip = [o.item.name, o.share === null ? null : `Bought by ${rate(o.share)} of players · ${signedPctOrDash(o.winAdded)} win added`, ...(o.item.reasons ?? [])].filter(Boolean).join("\n");
           return (
             <span key={`${s.slot}-${r}`} className={cx("cell", r === 0 && "top")} title={tip}>
               <ChampIcon champ={o.item} kind="game" size={r === 0 ? 32 : 22} lit={r === 0} title="" />
@@ -50,7 +49,7 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
               {numbers && (
                 <span className="nums">
                   <b>{rate(o.share)}</b>
-                  {o.winAdded !== null && <span className={tone(o.winAdded) === "neg" ? "neg" : "pos"}>{` ${signedOrDash(o.winAdded)}`}</span>}
+                  {o.winAdded !== null && <span className={tone(o.winAdded) === "neg" ? "neg" : "pos"}>{` ${signedPctOrDash(o.winAdded)}`}</span>}
                 </span>
               )}
             </span>

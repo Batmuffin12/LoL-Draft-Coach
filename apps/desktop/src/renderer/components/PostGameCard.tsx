@@ -27,12 +27,12 @@ export function PostGameCard({ game: g, now }: { game: PostGameView; now: number
           <span className="nm">{g.champion.name}</span>
         </div>
         <span className={cx("result", g.result ?? "pending")} title={g.result ? undefined : "The result arrives once the server has synced your game"}>
-          {g.result === "win" ? "Win" : g.result === "loss" ? "Loss" : "Result soon"}
+          {g.result === "win" ? "Victory" : g.result === "loss" ? "Defeat" : "Result soon"}
         </span>
       </div>
       {g.shown.length > 0 && (
         <div className="shown" title="What the coach suggested when you locked in">
-          <span className="label">Shown</span>
+          <span className="label">Coach suggested</span>
           <span className="opts">
             {g.shown.map((s, i) => (
               <span key={s.champion.id} className={cx("opt", s.took && "took")}>
@@ -55,11 +55,11 @@ export function PostGameCard({ game: g, now }: { game: PostGameView; now: number
       )}
       {g.prediction && <span className="caption">{g.prediction}</span>}
       {g.focus && (
-        <div className="item-row" title="Your focus metric in this game against its target">
-          <span className="label k">Focus</span>
+        <div className="item-row" title="Your goal in this game">
+          <span className="label k">Goal</span>
           <span className="caption one-line">
             <b className={g.focus.met ? "pos" : "text"}>{`${g.focus.label}: ${g.focus.value}`}</b>
-            {` this game · target ${g.focus.target}`}
+            {` this game · goal ${g.focus.target}`}
           </span>
         </div>
       )}

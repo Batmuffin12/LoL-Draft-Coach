@@ -16,6 +16,16 @@ export function rate(x: number | null | undefined, digits = 0): string {
   return x == null ? "—" : `${(x * 100).toFixed(digits)}%`;
 }
 
+/** A change in win chance as players read it: 0.021 → "+2.1%", −0.004 → "−0.4%". */
+export function signedPct(x: number): string {
+  return `${signed(x)}%`;
+}
+
+/** signedPct, or "—" when there is no number. */
+export function signedPctOrDash(x: number | null | undefined): string {
+  return x == null ? "—" : signedPct(x);
+}
+
 /** Signed points, or "—" when there is no number. */
 export function signedOrDash(x: number | null | undefined): string {
   return x == null ? "—" : signed(x);

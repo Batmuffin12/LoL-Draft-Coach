@@ -101,7 +101,7 @@ describe("advice log on a simulated game", () => {
     await waitFor(() => coach!.state.lastGame?.result === "win");
     expect(coach.state.lastGame!.minutes).toBe(31);
     expect(coach.state.lastGame!.lines.length).toBeGreaterThan(0);
-    expect(coach.state.lastGame!.prediction).toMatch(/^Predicted [0-9]+% for Ahri/);
+    expect(coach.state.lastGame!.prediction).toMatch(/^Win chance when you locked in: [0-9]+%/);
   });
 });
 
