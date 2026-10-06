@@ -48,7 +48,7 @@ const draft = (allies: DraftSlot[], enemies: DraftSlot[]): DraftState => ({
 
 describe("banNumbers", () => {
   it("gives the threat in points (negative) and the champion's rates in your role", () => {
-    const n = banNumbers(index(), { championId: 238, threat: 0.2, reasons: [] }, "middle");
+    const n = banNumbers(index(), { championId: 238, threat: 0.2, reasons: [] }, "middle", 0.02);
     expect(n.threat).toBeCloseTo(-deltaWin(0.2));
     expect(n.threat).toBeLessThan(0);
     expect(n.winRate).toBeCloseTo(0.55);
@@ -57,14 +57,20 @@ describe("banNumbers", () => {
   });
 
   it("judges a champion not played in your role in its main role", () => {
-    const n = banNumbers(index(), { championId: 64, threat: 0.1, reasons: [] }, "middle");
+    const n = banNumbers(index(), { championId: 64, threat: 0.1, reasons: [] }, "middle", 0.02);
     expect(n.pickRate).toBeCloseTo(600 / 1000);
     expect(n.winRate).toBeCloseTo(0.5);
     expect(n.banRate).toBe(0); // ban data, never banned
   });
 
+  it("judges a champion that's rarely picked in your role in its main role", () => {
+    // Garen: 10 mid games (1% of mid) against 500 top games.
+    expect(banNumbers(index(), { championId: 86, threat: 0.1, reasons: [] }, "middle", 0.02).pickRate).toBeCloseTo(0.5);
+    expect(banNumbers(index(), { championId: 86, threat: 0.1, reasons: [] }, "middle", 0.005).winRate).toBeCloseTo(0.4);
+  });
+
   it("has no ban rate when the snapshot has no ban counts (older snapshots)", () => {
-    expect(banNumbers(index(false), { championId: 238, threat: 0.2, reasons: [] }, "middle").banRate).toBeNull();
+    expect(banNumbers(index(false), { championId: 238, threat: 0.2, reasons: [] }, "middle", 0.02).banRate).toBeNull();
   });
 });
 

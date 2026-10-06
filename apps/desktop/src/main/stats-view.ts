@@ -7,12 +7,12 @@ const rate = (s: Stat) => (s.games > 0 ? s.wins / s.games : null);
 
 /**
  * A ban suggestion's numbers for the ban table: the win chance it costs you (points, negative)
- * and its win, pick and ban rates in the band, judged in your role when it's played there,
- * else in its main role.
+ * and its win, pick and ban rates in the band, judged in your role when it's picked there
+ * at least `minPickRate` (the ban engine's threshold), else in its main role.
  */
-export function banNumbers(index: MetaIndex, ban: BanSuggestion, role: Position | null): Pick<BanView, "threat" | "winRate" | "pickRate" | "banRate"> {
+export function banNumbers(index: MetaIndex, ban: BanSuggestion, role: Position | null, minPickRate: number): Pick<BanView, "threat" | "winRate" | "pickRate" | "banRate"> {
   const id = ban.championId;
-  const r = role && index.champion(id, role).games > 0 ? role : index.mainRole(id);
+  const r = role && index.pickRate(id, role) >= minPickRate ? role : index.mainRole(id);
   return {
     threat: -deltaWin(ban.threat),
     winRate: r ? rate(index.champion(id, r)) : null,

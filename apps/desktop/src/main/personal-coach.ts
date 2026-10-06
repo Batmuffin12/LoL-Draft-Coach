@@ -554,7 +554,7 @@ export class PersonalCoach extends Coach {
     };
     const banning = live !== null && banningNow(this.draft);
     const banSuggestions = banning ? suggestBans(live) : [];
-    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say), ...banNumbers(live!.index, b, role) });
+    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say), ...banNumbers(live!.index, b, role, engine.rating.bans.minPickRate) });
     // Hovering a champion before or during bans: extra bans that protect it (1 if it's already the top suggestion).
     const hovered = this.draft.myTeam.find((s) => s.isLocalPlayer)?.pickIntentId ?? 0;
     const hoverBans =
