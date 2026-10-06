@@ -4,6 +4,8 @@
  *   pnpm --filter @ldc/server collect --seconds 120   (shorter time budget)
  * In production the hourly Railway cron calls POST /admin/collect instead.
  */
+import { dirname, join } from "node:path";
+import { DataDragon } from "@ldc/ddragon";
 import { RiotApi } from "@ldc/riot-api";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
@@ -31,7 +33,12 @@ const collector = {
 };
 const db = openDb(env.DATABASE_PATH);
 const riot = new RiotApi({ apiKey: env.RIOT_API_KEY, keyType: env.RIOT_KEY_TYPE, platform: env.RIOT_PLATFORM, region: env.RIOT_REGION });
-const job = new MetaJob(db, riot, { meta: { ...config.meta, collector }, bands: config.bands, engine: config.engine });
+const ddragon = new DataDragon({ cacheDir: join(dirname(env.DATABASE_PATH), "ddragon") });
+const items = async () => {
+  await ddragon.load();
+  return ddragon.data.itemInfo;
+};
+const job = new MetaJob(db, riot, { meta: { ...config.meta, collector }, bands: config.bands, engine: config.engine }, { items });
 const r = await job.run();
 db.$client.close();
 console.log(JSON.stringify({ ...r, seconds: Math.round((r.finishedAt - r.startedAt) / 1000) }, null, 2));

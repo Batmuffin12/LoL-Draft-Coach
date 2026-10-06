@@ -237,7 +237,9 @@ describe("meta job", () => {
     addUser(db, "a", 2);
     addUser(db, "b", 2);
     expect(activeBands(db, config.bands)).toEqual([2]);
-    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0 });
+    // Item 1055 counts as a completed item in this catalog.
+    const items = async () => new Map([[1055, { id: 1055, name: "X", iconUrl: "", gold: 3000, into: [], from: [], tags: [], maps: ["11"], purchasable: true, requiredChampion: null, stats: {} }]]);
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0, items });
     const r = await job.run();
     expect(r.error).toBeNull();
     expect(r.collected?.newMatches).toBeGreaterThan(0);
@@ -247,6 +249,12 @@ describe("meta job", () => {
     const row = db.select().from(schema.metaSnapshots).get()!;
     const snap = JSON.parse(gunzipSync(row.body).toString()) as MetaSnapshot;
     expect(snap.champions.length).toBe(10);
+    // Builds come from band 2 and the band above; champion 100 bought item 1055 first in every game.
+    const build = snap.builds!.find((b) => b.championId === 100)!;
+    expect(build.n).toBe(r.collected!.newMatches);
+    expect(build.items[0]).toMatchObject({ itemId: 1055, slot: 1, share: 1 });
+    expect(snap.traitCuts).toBeDefined();
+    expect(snap.expectedWin?.winRate.length).toBeGreaterThan(0);
     expect(job.lastRun()).toMatchObject({ newMatches: r.collected!.newMatches, error: null });
   });
 

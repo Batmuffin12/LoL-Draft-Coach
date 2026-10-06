@@ -170,6 +170,7 @@ export class BandAggregator {
         damageTaken: p.damageTaken,
         selfMitigated: p.selfMitigated,
         ccSeconds: p.ccSeconds,
+        ...(p.heal !== undefined ? { heal: p.heal } : {}),
         durationSec: m.durationSec,
       });
 
@@ -258,6 +259,7 @@ export class BandAggregator {
         trueShare: round(a.trueShare),
         frontline: round(a.frontline),
         engage: round(a.engage),
+        ...(a.heal !== undefined ? { heal: round(a.heal) } : {}),
         roleShares: Object.fromEntries(Object.entries(a.roleShares).map(([k, v]) => [k, round(v)])),
         ...this.powerCurveOf(a.championId),
       }))

@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { desc, eq, isNotNull } from "drizzle-orm";
-import type { EngineConfig, RankBandConfig } from "@ldc/engine";
-import { BandAggregator, type MetaConfig } from "@ldc/meta";
+import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
+import { BandAggregator, BuildAggregator, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
-import type { MatchSummary, RankBandId } from "@ldc/shared";
+import type { ItemInfo, MatchSummary, RankBandId } from "@ldc/shared";
 import { collect, pruneCollected, type CollectorRiot, type CollectResult } from "./collector";
 import type { Db } from "./db";
 import { collectorRuns, metaSnapshots, users } from "./db/schema";
@@ -56,14 +56,43 @@ export interface PublishedSnapshot {
   etag: string;
 }
 
-/** Aggregates a band's stored matches (streamed newest first) and stores the gzipped snapshot. */
-export function publishSnapshot(db: Db, band: RankBandId, settings: MetaSettings, now: number): PublishedSnapshot {
-  const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine) });
-  const rows = db.$client
-    .prepare("SELECT summary FROM matches WHERE band = ? AND ended_at > ? ORDER BY ended_at DESC")
-    .iterate(band, now - settings.meta.aggregation.windowDays * DAY_MS) as Iterable<{ summary: string }>;
-  for (const row of rows) agg.add(JSON.parse(row.summary) as MatchSummary);
-  const snapshot = agg.finish();
+/**
+ * Aggregates a band's stored matches (streamed newest first) and stores the gzipped snapshot.
+ * A second pass over the band and the band above (`buildBands`) adds builds, with enemy
+ * traits from the first pass's attributes. Without an item catalog (Data Dragon unreachable),
+ * builds have runes, spells and skills but no items.
+ */
+export function publishSnapshot(
+  db: Db,
+  band: RankBandId,
+  settings: MetaSettings,
+  now: number,
+  extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null } = {},
+): PublishedSnapshot {
+  const { aggregation, builds } = settings.meta;
+  const agg = new BandAggregator({ band, now, config: aggregation, metrics: playstyleMetrics(settings.engine) });
+  const since = now - aggregation.windowDays * DAY_MS;
+  const rows = (bands: RankBandId[]) =>
+    db.$client
+      .prepare(`SELECT summary FROM matches WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? ORDER BY ended_at DESC`)
+      .iterate(...bands, since) as Iterable<{ summary: string }>;
+  for (const row of rows([band])) agg.add(JSON.parse(row.summary) as MatchSummary);
+  const base = agg.finish();
+
+  const attributes = new Map(base.attributes.map((a) => [a.championId, a]));
+  const traitCuts = traitCutsFrom(base.champions, attributes);
+  const buildAgg = new BuildAggregator({
+    now,
+    halfLifeDays: aggregation.halfLifeDays,
+    windowDays: aggregation.windowDays,
+    minDurationSec: aggregation.minDurationSec,
+    config: builds,
+    completed: extra.items ? completedItems(extra.items, settings.engine.loadout.items) : new Set(),
+    attributes,
+    traitCuts,
+  });
+  for (const row of rows([band, ...(extra.buildBands ?? [])])) buildAgg.add(JSON.parse(row.summary) as MatchSummary);
+  const snapshot = { ...base, builds: buildAgg.finish(), traitCuts, expectedWin: buildAgg.expectedWinTable() };
   const json = JSON.stringify(snapshot);
   const body = gzipSync(json);
   const etag = `"${createHash("sha256").update(json).digest("hex").slice(0, 32)}"`;
@@ -92,6 +121,8 @@ export interface MetaRunResult {
 }
 
 export interface MetaJobOptions {
+  /** Data Dragon items for the current patch (to tell completed items); null when unavailable. */
+  items?: () => Promise<ReadonlyMap<number, ItemInfo> | null>;
   now?: () => number;
   log?: (msg: string) => void;
   random?: () => number;
@@ -172,7 +203,14 @@ export class MetaJob {
       });
     }
     // Snapshots only for bands someone plays in; build-only bands feed the builds of the band below.
-    for (const band of bands) snapshots.push(publishSnapshot(this.db, band, this.settings, this.now()));
+    const items = await (this.opts.items?.() ?? Promise.resolve(null)).catch((err: unknown) => {
+      this.log(`meta: no item data, builds without items (${(err as Error).message})`);
+      return null;
+    });
+    for (const band of bands) {
+      const above = buildBandsFor([band], bandConfig);
+      snapshots.push(publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items }));
+    }
 
     const finishedAt = this.now();
     this.db

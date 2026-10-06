@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",
+    "@ldc/ddragon": "workspace:*",
     "@ldc/engine": "workspace:*",
     "@ldc/meta": "workspace:*",
     "@ldc/riot-api": "workspace:*",

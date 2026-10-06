@@ -35,6 +35,32 @@ export const MetaConfigSchema = z.object({
       minZ: z.number().min(0),
     }),
   }),
+  /** Builds per champion-role (band plus the band above), from end-of-game data and timelines. */
+  builds: z.object({
+    /** Champion-roles need this many games for a build. */
+    minGames: z.number().int().min(1),
+    /** Items bought up to this second count as the starting items. */
+    startingSeconds: z.number().min(0),
+    /** Skill points a game needs before its skill order counts. */
+    minSkillPoints: z.number().int().min(1),
+    /** Completed items in a core path. */
+    coreItems: z.number().int().min(2),
+    /** Completed-item slots tracked for win added. */
+    maxSlots: z.number().int().min(1),
+    /** Options kept per list (pages, spells, …), most taken first, each with at least minOptionGames. */
+    maxOptions: z.number().int().min(1),
+    minOptionGames: z.number().int().min(1),
+    /** Item slots need this many purchases to be published. */
+    minItemGames: z.number().int().min(1),
+    /** Win added is shrunk toward 0 with this many games. */
+    winAddedPriorGames: z.number().min(0),
+    /** Expected win per state bin: bucket edges (minutes, team gold difference) and smoothing toward 50%. */
+    stateBins: z.object({ minutes: z.array(z.number()).min(1), goldDiff: z.array(z.number()).min(1), priorGames: z.number().min(0) }),
+    /** Situational lift: smoothing, and what is published (games on each side, minimum lift, most per champion-role). */
+    lift: z.object({ priorGames: z.number().min(0), minGames: z.number().int().min(1), minLift: z.number().min(1), maxPerBuild: z.number().int().min(0) }),
+    /** Rune pages into a lane opponent are kept when the matchup has this many games. */
+    minMatchupGames: z.number().int().min(1),
+  }),
   collector: z.object({
     /** League-V4 queue to sample players from, and the Match-V5 queue id of its games. */
     leagueQueue: z.string().min(1),
