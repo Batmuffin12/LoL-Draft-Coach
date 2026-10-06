@@ -14,6 +14,7 @@ import { LoadoutBody, LoadoutSource } from "./LockedInScreen";
 
 /** The call when it isn't your turn: who is acting, from the seats (no names). */
 function waitingText(draft: DraftView): string {
+  if (draft.timerPhase === "PLANNING") return "Bans next";
   const acting = (slots: DraftView["myTeam"]) => slots.find((s) => s.actingType)?.actingType ?? null;
   const ally = acting(draft.myTeam);
   const enemy = acting(draft.theirTeam);
