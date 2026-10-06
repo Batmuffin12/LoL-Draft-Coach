@@ -332,7 +332,17 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   // Thin band data and more of your own games on the champion than the band's timelines: your own finished items.
   const ownItems = personal ? personal.items.filter((i) => fits(input, i.itemId) && !input.boots?.has(i.itemId)) : [];
   // Boots: your role's purchases; with thin data and more of your own games, your usual boots.
-  const ownBoots = personal ? personal.items.filter((i) => input.boots?.has(i.itemId) && fits(input, i.itemId)) : [];
+  // Your final inventories hold quest-upgraded boots (e.g. tier 3 in mid): count them as the boots they came from.
+  const ownBootCounts = new Map<number, number>();
+  for (const i of personal?.items ?? []) {
+    const base = input.boots?.has(i.itemId)
+      ? i.itemId
+      : input.roleRewards?.some((r) => r.itemId === i.itemId) && input.buildsFrom
+        ? [...(input.boots ?? [])].find((b) => builtFrom(i.itemId, b, input.buildsFrom!))
+        : undefined;
+    if (base !== undefined && fits(input, base)) ownBootCounts.set(base, (ownBootCounts.get(base) ?? 0) + i.n);
+  }
+  const ownBoots = [...ownBootCounts].map(([itemId, n]) => ({ itemId, n })).sort((a, b) => b.n - a.n);
   let boots = rankBoots({ ...input, build: roleBuild });
   if (personal && ownBoots[0] && (!boots || personal.n > boots.top.n)) {
     personalUsed = true;
