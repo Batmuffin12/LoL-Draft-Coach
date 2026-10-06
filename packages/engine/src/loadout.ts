@@ -20,6 +20,8 @@ export interface LoadoutInput {
   pooled?: ChampionBuild | null;
   /** What you yourself take on the champion (your own games), preferred when the band's data is thin. */
   personal?: PersonalBuild | null;
+  /** Thin data: item reasons quote how often players buy the item, not its (noisy) win added. */
+  thin?: boolean;
 }
 
 /** Where the loadout's numbers come from, for the "rough guide" note. */
@@ -148,7 +150,11 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
       const reasons: Reason[] = [];
       const best = [...mine].sort((a, b) => Math.log(b.lift) * intensity[b.trait] - Math.log(a.lift) * intensity[a.trait])[0];
       if (best) reasons.push(liftReason("item", best, enemy));
-      reasons.push(reason(s.winAdded >= 0 ? "loadout.item.winAdded" : "loadout.item.winAdded.negative", { id: s.itemId, slot, delta: s.winAdded, share: s.share, games: s.n }));
+      reasons.push(
+        input.thin
+          ? reason("loadout.item.popular", { id: s.itemId, slot, share: s.share, games: s.n })
+          : reason(s.winAdded >= 0 ? "loadout.item.winAdded" : "loadout.item.winAdded.negative", { id: s.itemId, slot, delta: s.winAdded, share: s.share, games: s.n }),
+      );
       return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
     })
     .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
@@ -220,7 +226,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   const starting = choice(common(build.starting), (o) => o.items, (o) => [reason("loadout.starting", { share: timelineShare(o), games: o.n })]);
   // Items come from win added and lift (rankItems), never raw win rate. Without enough
   // purchases for that, the most common path is shown as what players build.
-  const items = rankItems({ ...input, build });
+  const items = rankItems({ ...input, build, thin });
   const commonPath = common(build.core.filter((c) => c.items.length >= 3)) ?? common(build.core);
   let core: LoadoutChoice<number[]> | null;
   if (items.length) core = { value: items.map((s) => s.top.itemId), winRate: 0, n: Math.min(...items.map((s) => s.top.n)), reasons: [] };

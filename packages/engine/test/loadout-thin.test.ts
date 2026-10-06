@@ -50,6 +50,7 @@ describe("loadouts from few games (partial pooling, your own games, no win rates
     expect(say(l.spells!.reasons[0]!)).toBe("Most taken: 4 of 5 games");
     expect(l.skills?.value.order).toEqual([1, 3, 2]);
     expect(l.items[0]?.top.itemId).toBe(6692);
+    expect(say(l.items[0]!.top.reasons[0]!)).toBe("Bought as item 1 in 63% of games (7 games)");
   });
 
   it("prefers your own page and spells on the champion when the band's data is thin", () => {

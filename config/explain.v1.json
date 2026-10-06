@@ -68,6 +68,7 @@
     "import.block.alternatives": "Item {slot}: alternatives",
     "power.laneAhead": "Usually ahead in lane: +{gold} gold over its opponent at 15 minutes ({games} games)",
     "power.laneBehind": "Usually behind in lane: {gold} gold down on its opponent at 15 minutes ({games} games); plays for later",
+    "loadout.item.popular": "Bought as item {slot} in {share:pct}% of games ({games} games)",
     "loadout.page.popular": "Most taken: {count} of {games} games",
     "loadout.page.personal": "Your usual page: {count} of your {games} {champion:champion} games",
     "loadout.spells.popular": "Most taken: {count} of {games} games",
