@@ -1,4 +1,4 @@
-import { unavailableChampions } from "@ldc/lcu";
+import { LcuImporter, LcuWriteError, unavailableChampions } from "@ldc/lcu";
 import {
   adviseRoles,
   bandFromRankedEntries,
@@ -22,6 +22,7 @@ import {
   MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
+  type Loadout,
 } from "@ldc/engine";
 import type { ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
 import type { BanView, PickView, PlaystyleView } from "../shared/view";
@@ -78,8 +79,55 @@ export class PersonalCoach extends Coach {
   private queueSupported = true;
   /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
   private metaIndex: MetaIndex | null = null;
-  /** Whether the "Import" buttons are shown (set by the LCU writer, which only writes on a click). */
-  protected canImport = false;
+  /** The loadout shown in the Your pick card, for the import buttons. */
+  private shownLoadout: { loadout: Loadout; champion: string } | null = null;
+  private importMessage: string | null = null;
+
+  /** Import buttons show when the config enables import and the client is connected. */
+  private get canImport(): boolean {
+    return this.config.app.import.enabled && this.p.connector.credentials !== null;
+  }
+
+  /**
+   * Writes the shown rune page or item set into the League client. Called only from the
+   * player's click on an import button (CLAUDE.md: the single approved LCU write exception).
+   */
+  async importLoadout(kind: "runes" | "items"): Promise<void> {
+    const shown = this.shownLoadout;
+    const creds = this.p.connector.credentials;
+    if (!shown || !creds || !this.config.app.import.enabled) return;
+    const { templates } = this.config.explain;
+    const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, String);
+    const importer = new LcuImporter(creds);
+    try {
+      const l = shown.loadout;
+      if (kind === "runes") {
+        if (!l.page) return;
+        const p = l.page.value;
+        // Stored shards are in Riot's match order (defense, flex, offense); the client wants offense, flex, defense.
+        const result = await importer.importRunePage({
+          name: shown.champion,
+          primaryStyleId: p.primaryStyle,
+          subStyleId: p.subStyle,
+          selectedPerkIds: [...p.runes, ...[...p.statPerks].reverse()],
+        });
+        this.importMessage = say(`import.runes.${result}`);
+      } else {
+        const blocks = [
+          ...(l.starting ? [{ type: say("import.block.starting"), items: l.starting.value }] : []),
+          ...(l.core ? [{ type: say("import.block.core"), items: l.core.value }] : []),
+          ...l.items.filter((s) => s.alternatives.length).map((s) => ({ type: say("import.block.alternatives", { slot: s.slot }), items: s.alternatives.map((a) => a.itemId) })),
+        ];
+        await importer.importItemSet({ title: `${shown.champion} ${l.role}`, championId: l.championId, mapId: Number(this.config.engine.loadout.items.mapId), blocks });
+        this.importMessage = say("import.items.done");
+      }
+    } catch (err) {
+      this.importMessage = err instanceof LcuWriteError && err.reason === "pagesFull" ? say("import.runes.full") : say("import.failed", { error: (err as Error).message });
+    } finally {
+      importer.close();
+    }
+    this.onDraft();
+  }
   /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */
   private config: LoadedConfig;
 
@@ -385,6 +433,8 @@ export class PersonalCoach extends Coach {
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
       const loadout = live ? draftLoadout(live, locked, engine.loadout) : null;
+      if (this.shownLoadout?.loadout.championId !== locked) this.importMessage = null;
+      this.shownLoadout = loadout ? { loadout, champion: nameOf(locked) } : null;
       let data = null;
       try {
         data = this.deps.ddragon.data;
@@ -405,6 +455,7 @@ export class PersonalCoach extends Coach {
           loadout: loadout
             ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport })
             : null,
+          importMessage: this.importMessage,
         },
       });
       return;

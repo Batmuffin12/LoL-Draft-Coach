@@ -264,6 +264,8 @@ export const AppConfigSchema = z.object({
     queues: z.array(z.number().int()).min(1),
   }),
   supportedQueues: z.array(z.number().int()),
+  /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */
+  import: z.object({ enabled: z.boolean() }).default({ enabled: false }),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 

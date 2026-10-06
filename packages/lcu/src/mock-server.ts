@@ -19,6 +19,10 @@ export class MockLcuServer {
   private readonly state = new Map<string, unknown>();
   private readonly subscriptions = new Map<WebSocket, Set<string>>();
   private cursor = 0;
+  /** POST/PUT requests received (only the importer's rune page and item set calls are accepted). */
+  readonly writes: { method: string; path: string; body: unknown }[] = [];
+  /** Rune page slots: a POST beyond this answers 400, like the real client. */
+  maxPages = 20;
 
   constructor(
     private readonly fixture: Fixture,
@@ -48,6 +52,32 @@ export class MockLcuServer {
         return;
       }
       const path = (req.url ?? "/").split("?")[0] ?? "/";
+      if (req.method === "POST" || req.method === "PUT") {
+        const chunks: Buffer[] = [];
+        req.on("data", (c: Buffer) => chunks.push(c));
+        req.on("end", () => {
+          const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "null") as Record<string, unknown>;
+          this.writes.push({ method: req.method!, path, body });
+          const pages = (this.state.get("/lol-perks/v1/pages") as { id: number }[] | undefined) ?? [];
+          if (req.method === "POST" && path === "/lol-perks/v1/pages") {
+            if (pages.length >= this.maxPages) return void res.writeHead(400).end('{"message":"Max pages reached"}');
+            const page = { ...body, id: 1000 + pages.length, isEditable: true };
+            this.state.set(path, [...pages, page]);
+            return void res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(page));
+          }
+          const pageId = /^\/lol-perks\/v1\/pages\/(\d+)$/.exec(path)?.[1];
+          if (req.method === "PUT" && pageId) {
+            this.state.set("/lol-perks/v1/pages", pages.map((p) => (p.id === Number(pageId) ? { ...body, id: p.id } : p)));
+            return void res.writeHead(200).end("{}");
+          }
+          if (req.method === "PUT" && /^\/lol-item-sets\/v1\/item-sets\/\d+\/sets$/.test(path)) {
+            this.state.set(path, body);
+            return void res.writeHead(201).end();
+          }
+          res.writeHead(405).end();
+        });
+        return;
+      }
       if (req.method !== "GET") {
         res.writeHead(405).end();
         return;

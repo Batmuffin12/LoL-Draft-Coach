@@ -164,7 +164,32 @@ function LoadoutRow({ label, children, reason }: { label: string; children: Reac
   );
 }
 
-function Loadout({ loadout: l }: { loadout: LoadoutView }) {
+function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message: string | null }) {
+  const [busy, setBusy] = useState<"runes" | "items" | null>(null);
+  const run = (kind: "runes" | "items") => {
+    if (busy) return;
+    setBusy(kind);
+    void window.coach.importLoadout(kind).finally(() => setBusy(null));
+  };
+  if (!l.canImport) return null;
+  return (
+    <div className="lo-import">
+      {l.page && (
+        <button className="btn" disabled={busy !== null} onClick={() => run("runes")} title="Creates (or updates) an 'LDC:' rune page in your client">
+          {busy === "runes" ? "Importing…" : "Import runes"}
+        </button>
+      )}
+      {(l.items.length > 0 || l.commonPath || l.starting) && (
+        <button className="btn" disabled={busy !== null} onClick={() => run("items")} title="Saves an item set for this champion; it shows in the shop in game">
+          {busy === "items" ? "Importing…" : "Import item set"}
+        </button>
+      )}
+      {message && <span className="muted small">{message}</span>}
+    </div>
+  );
+}
+
+function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMessage: string | null }) {
   return (
     <div className="loadout">
       {l.page && (
@@ -234,6 +259,7 @@ function Loadout({ loadout: l }: { loadout: LoadoutView }) {
           ))}
         </LoadoutRow>
       )}
+      <ImportButtons loadout={l} message={importMessage} />
       <p className="muted small lo-source">
         From {l.games.toLocaleString("en-US")} games in {l.source}. Hover an icon for details.
       </p>
@@ -270,7 +296,7 @@ function YourPick({ pick }: { pick: MyPickView }) {
         </div>
       </div>
       {pick.loadout ? (
-        <Loadout loadout={pick.loadout} />
+        <Loadout loadout={pick.loadout} importMessage={pick.importMessage} />
       ) : (
         <p className="muted small">Locked in. No build data for {pick.champion.name} in this role yet.</p>
       )}

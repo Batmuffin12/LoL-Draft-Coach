@@ -55,6 +55,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   private socket: LcuSocket | null = null;
   private running = false;
   private state: ConnectionState = "disconnected";
+  private creds: LcuCredentials | null = null;
 
   constructor(private readonly opts: ConnectorOptions) {
     super();
@@ -62,6 +63,11 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
 
   get status(): ConnectionState {
     return this.state;
+  }
+
+  /** The connected client's credentials, for the click-only importer (null when not connected). */
+  get credentials(): LcuCredentials | null {
+    return this.state === "connected" ? this.creds : null;
   }
 
   start(): void {
@@ -117,6 +123,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     await socket.connect();
     this.http = http;
     this.socket = socket;
+    this.creds = creds;
 
     socket.on("event", (e) => this.onEvent(e));
     socket.subscribe(LCU_PATHS.champSelectSession);

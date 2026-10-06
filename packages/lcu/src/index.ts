@@ -4,5 +4,6 @@ export * from "./sanitize";
 export * from "./http";
 export * from "./socket";
 export * from "./connector";
+export * from "./writer";
 export * from "./fixture";
 export * from "./recorder";

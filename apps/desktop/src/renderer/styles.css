@@ -144,3 +144,4 @@ main { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: 
 .lo-build { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .lo-source { margin-top: 2px !important; }
 .icon.game { border-radius: 3px; }
+.lo-import { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }

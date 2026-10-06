@@ -8,6 +8,7 @@ export const IPC = {
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
+  importLoadout: "coach:import-loadout",
 } as const;
 
 export interface ChampView {
@@ -95,6 +96,8 @@ export interface MyPickView {
   expectedWin: number | null;
   reasons: string[];
   loadout: LoadoutView | null;
+  /** The result of the last import click (e.g. "Rune page created"), or null. */
+  importMessage: string | null;
 }
 
 /** A suggested ban (ban phase, live meta only). */

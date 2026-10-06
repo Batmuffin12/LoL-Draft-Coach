@@ -163,7 +163,9 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const meta = new MetaSource({ client: () => profiles.serverClient, cacheDir: tmp("ldc-meta-") });
 
     lcu = new MockLcuServer(loadFixture("synthetic-draft-pick"), {
-      "/lol-summoner/v1/current-summoner": { puuid: "client-only", gameName: "Me", tagLine: "EUW" },
+      "/lol-summoner/v1/current-summoner": { puuid: "client-only", gameName: "Me", tagLine: "EUW", summonerId: 7 },
+      "/lol-perks/v1/pages": [],
+      "/lol-item-sets/v1/item-sets/7/sets": { itemSets: [] },
       "/lol-ranked/v1/current-ranked-stats": { queues: [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD", division: "I" }] },
     });
     const creds = await lcu.start();
@@ -216,6 +218,19 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
     expect(loadout.items[0]!.top.reasons[0]).toBe("+1.2% win added as item 1, where 66% buy it (200 games)");
     expect(loadout.source).toBe("Gold to Platinum + Emerald to Diamond");
+
+    // Import happens only when asked (the buttons), and writes only the rune page and the item set.
+    expect(loadout.canImport).toBe(true);
+    expect(lcu.writes).toEqual([]);
+    await coach.importLoadout("runes");
+    await coach.importLoadout("items");
+    expect(lcu.writes.map((w) => `${w.method} ${w.path}`)).toEqual(["POST /lol-perks/v1/pages", "PUT /lol-item-sets/v1/item-sets/7/sets"]);
+    // Shards go to the client as offense, flex, defense.
+    expect((lcu.writes[0]!.body as { selectedPerkIds: number[] }).selectedPerkIds).toEqual([8112, 8139, 8138, 8135, 8226, 8210, 5005, 5008, 5001]);
+    const set = (lcu.writes[1]!.body as { itemSets: { associatedChampions: number[]; blocks: { items: { id: string }[] }[] }[] }).itemSets[0]!;
+    expect(set.associatedChampions).toEqual([103]);
+    expect(set.blocks.map((b) => b.items.map((i) => i.id))).toEqual([["1056", "2003"], ["6655", "3020"]]);
+    expect(coach.state.myPick!.importMessage).toBe("Item set saved: open the shop in game to see it");
     expect(coach.state.picks).toEqual([]);
     expect(coach.state.pickAdvice.whyNot).toBeNull();
   });
