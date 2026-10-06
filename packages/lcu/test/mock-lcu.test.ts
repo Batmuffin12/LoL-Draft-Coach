@@ -151,6 +151,21 @@ describe("recommended positions", () => {
     expect(positions.get(202)).toEqual(["bottom"]);
   });
 
+  it("reads the stat shard rows from the rune paths (static game data)", async () => {
+    const styles = [
+      { id: 8000, slots: [{ type: "kKeyStone", perks: [8005, 8008] }, { type: "kStatMod", perks: [5008, 5005, 5007] }, { type: "kStatMod", perks: [5008, 5010, 5001] }] },
+      { id: 8100, slots: [{ type: "kKeyStone", perks: [8112] }] },
+    ];
+    const creds = await startMock("synthetic-draft-pick", { "/lol-perks/v1/styles": styles });
+    connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });
+    connector.start();
+    await waitFor(() => connector!.status === "connected");
+    expect(await connector.getStatShardRows()).toEqual([
+      [5008, 5005, 5007],
+      [5008, 5010, 5001],
+    ]);
+  });
+
   it("returns an empty map when the client doesn't serve them", async () => {
     const creds = await startMock("synthetic-draft-pick", { "/lol-perks/v1/recommended-champion-positions": null });
     connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });

@@ -95,6 +95,11 @@ export const RecommendedPositionsSchema = z.record(
 export const PerksSchema = z.array(z.looseObject({ id: z.number().int(), name: z.string(), iconPath: z.string().default("") }));
 export type Perk = z.infer<typeof PerksSchema>[number];
 
+/** Rune paths with their slots (perk ids per row); the stat shard rows are the slots of type "kStatMod". */
+export const PerkStylesSchema = z.array(
+  z.looseObject({ id: z.number().int(), slots: z.array(z.looseObject({ type: z.string().default(""), perks: z.array(z.number().int()).default([]) })).default([]) }),
+);
+
 export class LcuSchemaError extends Error {
   constructor(
     readonly endpoint: string,

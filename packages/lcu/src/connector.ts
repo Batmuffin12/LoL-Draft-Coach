@@ -10,6 +10,7 @@ import {
   GameflowSessionSchema,
   PickableChampionIdsSchema,
   PerksSchema,
+  PerkStylesSchema,
   type Perk,
   RankedStatsSchema,
   RecommendedPositionsSchema,
@@ -29,6 +30,7 @@ export const LCU_PATHS = {
   currentSummoner: "/lol-summoner/v1/current-summoner",
   recommendedPositions: "/lol-perks/v1/recommended-champion-positions",
   perks: "/lol-perks/v1/perks",
+  perkStyles: "/lol-perks/v1/styles",
 } as const;
 
 export interface ConnectorEvents {
@@ -199,6 +201,18 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   async getPerks(): Promise<Perk[]> {
     const data = await this.requireHttp().get(LCU_PATHS.perks);
     return data == null ? [] : parseLcu(PerksSchema, LCU_PATHS.perks, data);
+  }
+
+  /**
+   * The stat shard rows as the client lists them (offense, flex, defense), each a row of
+   * perk ids; empty when the client doesn't serve them (static game data; read only).
+   */
+  async getStatShardRows(): Promise<number[][]> {
+    const data = await this.requireHttp().get(LCU_PATHS.perkStyles);
+    if (data == null) return [];
+    const styles = parseLcu(PerkStylesSchema, LCU_PATHS.perkStyles, data);
+    const rows = (s: (typeof styles)[number]) => s.slots.filter((x) => x.type === "kStatMod").map((x) => x.perks);
+    return styles.map(rows).find((r) => r.length > 0) ?? [];
   }
 
   /** The local player's own summoner (used only to load their own history). */
