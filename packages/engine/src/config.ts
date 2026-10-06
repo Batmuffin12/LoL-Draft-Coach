@@ -166,6 +166,8 @@ export const EngineConfigSchema = z.object({
       clearGapWin: unit,
       /** A champion's power curve is mentioned when long- and short-game win rates differ by this much (0..1). */
       powerCurveGap: unit,
+      /** Mentioned when the champion is this much gold ahead of (or behind) its lane opponent at 15 minutes on average. */
+      laneGoldGap: z.number().min(0),
       /** Factor bars: this change in win chance fills a bar from the middle to the end. */
       barScaleWin: z.number().positive(),
     }),

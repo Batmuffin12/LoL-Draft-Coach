@@ -93,6 +93,8 @@ export class BandAggregator {
   private readonly trendCounts = new Map<string, { championId: ChampionId; role: Position; rN: number; rW: number; bN: number; bW: number }>();
   private recentMatches = 0;
   private readonly powerCurves = new Map<ChampionId, { early: { n: number; w: number }; late: { n: number; w: number } }>();
+  /** Gold lead over the lane opponent at minute 15, per champion (timelines only). */
+  private readonly gold15 = new Map<ChampionId, { n: number; sum: number }>();
   private beforeMatches = 0;
   private newest: number | null = null;
 
@@ -145,8 +147,18 @@ export class BandAggregator {
       }
     }
     const ps = m.participants;
+    const gold = m.timeline?.gold;
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i]!;
+      const opp = gold ? ps.findIndex((q) => q.teamId !== p.teamId && q.position === p.position) : -1;
+      const g15 = gold?.[i]?.[15];
+      const o15 = opp >= 0 ? gold?.[opp]?.[15] : undefined;
+      if (g15 !== undefined && o15 !== undefined) {
+        const s = this.gold15.get(p.championId) ?? { n: 0, sum: 0 };
+        s.n++;
+        s.sum += g15 - o15;
+        this.gold15.set(p.championId, s);
+      }
       const key = `${p.championId}|${p.position}`;
       let c = this.champions.get(key);
       if (!c) this.champions.set(key, (c = { championId: p.championId, role: p.position, games: 0, wins: 0, n: 0 }));
@@ -234,9 +246,17 @@ export class BandAggregator {
 
   private powerCurveOf(id: ChampionId): Pick<ChampionAttributes, "powerCurve"> {
     const pc = this.powerCurves.get(id);
-    if (!pc) return {};
+    const g = this.gold15.get(id);
+    if (!pc && !g) return {};
     const side = (s: { n: number; w: number }) => ({ games: s.n, winRate: s.n ? round(s.w / s.n) : 0 });
-    return { powerCurve: { early: side(pc.early), late: side(pc.late) } };
+    const none = { n: 0, w: 0 };
+    return {
+      powerCurve: {
+        early: side(pc?.early ?? none),
+        late: side(pc?.late ?? none),
+        ...(g ? { goldAt15: { games: g.n, diff: Math.round(g.sum / g.n) } } : {}),
+      },
+    };
   }
 
   finish(): MetaSnapshot {

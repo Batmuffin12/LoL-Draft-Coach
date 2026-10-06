@@ -141,6 +141,11 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
       notes.push({ r: reason(gap > 0 ? "power.late" : "power.early", slots), weight: cfg.explain.minDeltaWin, positive: true });
     }
   }
+  // Lane gold at 15 (information only, like the power curve).
+  const lane15 = curve?.goldAt15;
+  if (lane15 && lane15.games >= cfg.minGames.meta && Math.abs(lane15.diff) >= cfg.explain.laneGoldGap) {
+    notes.push({ r: reason(lane15.diff > 0 ? "power.laneAhead" : "power.laneBehind", { gold: Math.abs(lane15.diff), games: lane15.games }), weight: cfg.explain.minDeltaWin, positive: true });
+  }
   // Rising in the band lately: information only (no evidence yet that trends add to the win chance).
   const rising = trendReason(index, id, role);
   if (rising) notes.push({ r: rising, weight: cfg.explain.minDeltaWin, positive: true });

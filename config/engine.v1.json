@@ -234,6 +234,7 @@
       "maxReasons": 4,
       "clearGapWin": 0.015,
       "powerCurveGap": 0.05,
+      "laneGoldGap": 300,
       "barScaleWin": 0.08
     }
   },

@@ -268,7 +268,12 @@ export interface ChampionAttributes {
   /** Number of other players' samples behind roleShares. */
   roleSamples: number;
   /** Win rate in short and long games (measured; band snapshots only). */
-  powerCurve?: { early: { games: number; winRate: number }; late: { games: number; winRate: number } };
+  powerCurve?: {
+    early: { games: number; winRate: number };
+    late: { games: number; winRate: number };
+    /** Average gold lead over the lane opponent at minute 15 (from timelines), when measured. */
+    goldAt15?: { games: number; diff: number };
+  };
 }
 
 /** A champion in a role, in one rank band. Games and wins are recency-weighted sums. */
