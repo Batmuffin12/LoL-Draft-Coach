@@ -41,6 +41,13 @@ export function activeBands(db: Db, cfg: RankBandConfig): RankBandId[] {
   return bands.length ? bands : [cfg.defaultBand];
 }
 
+/** The band above each active band, collected for builds only (spec: builds from your band plus the one above). */
+export function buildBandsFor(active: RankBandId[], cfg: RankBandConfig): RankBandId[] {
+  const ids = cfg.bands.map((b) => b.id).sort((a, b) => a - b);
+  const above = active.map((b) => ids[ids.indexOf(b) + 1]).filter((b): b is RankBandId => b !== undefined && !active.includes(b));
+  return [...new Set(above)];
+}
+
 export interface PublishedSnapshot {
   band: RankBandId;
   matches: number;
@@ -131,6 +138,7 @@ export class MetaJob {
     const startedAt = this.now();
     const runId = this.db.insert(collectorRuns).values({ startedAt }).returning({ id: collectorRuns.id }).get().id;
     const bands = activeBands(this.db, bandConfig);
+    const buildBands = buildBandsFor(bands, bandConfig);
     let collected: CollectResult | null = null;
     let error: string | null = null;
 
@@ -140,6 +148,7 @@ export class MetaJob {
       try {
         collected = await collect(this.db, this.riot, {
           bands,
+          buildBands,
           bandConfig,
           collector: meta.collector,
           keepChallenges: challengeFields(engine),
@@ -155,14 +164,15 @@ export class MetaJob {
 
     let pruned = 0;
     const snapshots: PublishedSnapshot[] = [];
-    for (const band of bands) {
+    for (const band of [...bands, ...buildBands]) {
       pruned += pruneCollected(this.db, band, {
         windowDays: meta.aggregation.windowDays,
         maxStoredMatches: meta.collector.maxStoredMatches,
         now: this.now(),
       });
-      snapshots.push(publishSnapshot(this.db, band, this.settings, this.now()));
     }
+    // Snapshots only for bands someone plays in; build-only bands feed the builds of the band below.
+    for (const band of bands) snapshots.push(publishSnapshot(this.db, band, this.settings, this.now()));
 
     const finishedAt = this.now();
     this.db
@@ -171,7 +181,7 @@ export class MetaJob {
       .where(eq(collectorRuns.id, runId))
       .run();
     this.log(
-      `meta: +${collected?.newMatches ?? 0} matches, ${collected?.riotCalls ?? 0} Riot calls, pruned ${pruned}, ` +
+      `meta: +${collected?.newMatches ?? 0} matches (${collected?.timelines ?? 0} with timelines), ${collected?.riotCalls ?? 0} Riot calls, pruned ${pruned}, ` +
         snapshots.map((s) => `band ${s.band}: ${s.matches} matches ${Math.round(s.sizeBytes / 1024)} KB`).join("; ") +
         (error ? ` (${error})` : ""),
     );

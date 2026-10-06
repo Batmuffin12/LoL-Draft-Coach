@@ -46,6 +46,10 @@ export const MetaConfigSchema = z.object({
     /** Upper bounds for one wake-up: wall time, and new matches fetched. */
     budgetSeconds: z.number().positive(),
     maxMatchesPerRun: z.number().int().min(1),
+    /** Share of new matches that also get their timeline (one more call each: fewer games per hour, but builds and item purchases). */
+    timelineShare: z.number().min(0).max(1),
+    /** Share of the match budget for the band above each active band (builds only). */
+    buildBandShare: z.number().min(0).max(1),
     /** Collected matches kept per band (newest first); older ones are pruned to bound disk and memory. */
     maxStoredMatches: z.number().int().min(1),
     /** /health calls the collector stale after this many hours without a new game. */

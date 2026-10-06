@@ -35,6 +35,8 @@
     "matchesPerPlayer": 5,
     "budgetSeconds": 900,
     "maxMatchesPerRun": 450,
+    "timelineShare": 1,
+    "buildBandShare": 0.3,
     "maxStoredMatches": 50000,
     "staleAfterHours": 6
   }
