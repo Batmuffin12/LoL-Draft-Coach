@@ -17,3 +17,4 @@ export * from "./items";
 export * from "./loadout";
 export * from "./loadout-sources";
 export * from "./postgame";
+export * from "./growth";

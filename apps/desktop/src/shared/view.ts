@@ -257,6 +257,29 @@ export interface PickAdviceView {
   minGames?: { meta: number; pair: number };
 }
 
+/** One measurable focus on your main champion and role, with a target and your last games against it. */
+export interface FocusView {
+  /** The metric as players say it, capitalised ("CS per minute"). */
+  label: string;
+  /** "Ahri · Mid", or the role alone without a main champion. */
+  on: string;
+  you: number;
+  target: number;
+  typical: number;
+  /** The same three, formatted for the metric ("6.2", "54%"). */
+  youText: string;
+  targetText: string;
+  typicalText: string;
+  lowerIsBetter: boolean;
+  checkGames: number;
+  /** Your last games, oldest first: whether each reached the target. */
+  recent: boolean[];
+  /** Why this metric (how much it separates wins from losses where you play). */
+  why: string;
+  /** Targets you already reached ("Deaths per minute: 0.5 → 0.4, target met"). */
+  met: string[];
+}
+
 /** The last game against the advice the coach gave (the post-game card). The player's own data only. */
 export interface PostGameView {
   champion: ChampView;
@@ -276,6 +299,8 @@ export interface PostGameView {
   lines: ReasonView[];
   /** "Predicted 54% for Ahri when you locked in", or null without live meta. */
   prediction: string | null;
+  /** Your focus metric in this game against its target (null without a focus, or before the game is in your history). */
+  focus: { label: string; value: string; target: string; met: boolean } | null;
 }
 
 export interface ViewState {
@@ -304,6 +329,8 @@ export interface ViewState {
   playstyle: PlaystyleView[];
   /** Your most recent game with logged advice, or null. */
   lastGame: PostGameView | null;
+  /** Your growth focus, or null without enough games. */
+  focus: FocusView | null;
   notices: string[];
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
@@ -327,6 +354,7 @@ export function emptyViewState(): ViewState {
     roles: [],
     playstyle: [],
     lastGame: null,
+    focus: null,
     notices: [],
     docked: true,
     roleLabels: {},

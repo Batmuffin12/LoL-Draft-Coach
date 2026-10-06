@@ -151,7 +151,10 @@
     "postgame.predicted.vs": "Predicted {win:pct}% for {champion:champion}; the top suggestion, {top:champion}, was {topWin:pct}%",
     "postgame.verdict.top": "Took the #1 pick",
     "postgame.verdict.listed": "Took suggestion #{rank}",
-    "postgame.verdict.own": "Your own pick"
+    "postgame.verdict.own": "Your own pick",
+    "growth.why.band": "In {band}, {role} players who do better than typical in {metric} have a win rate {gap:pct} points higher. Your target is {step:pct}% of the way to typical.",
+    "growth.why.games": "In your games, {role} players who did better than typical in {metric} had a win rate {gap:pct} points higher. Your target is {step:pct}% of the way to typical.",
+    "growth.met": "{metric}: {from} → {to}, target met"
   },
   "settings": {
     "clearGap": 0.05,

@@ -55,7 +55,14 @@ export class AdviceRecorder {
 export function postGameView(
   record: AdviceRecord,
   matches: UserMatch[],
-  opts: { templates: Record<string, string>; minDeltaWin: number; champion: (id: number) => ChampView | null; championName: (id: number) => string },
+  opts: {
+    templates: Record<string, string>;
+    minDeltaWin: number;
+    champion: (id: number) => ChampView | null;
+    championName: (id: number) => string;
+    /** Your focus metric in the game (by match id), when you have a focus. */
+    focus?: (matchId: string) => PostGameView["focus"];
+  },
 ): PostGameView | null {
   const champion = opts.champion(record.pick.championId);
   if (!champion) return null;
@@ -77,5 +84,6 @@ export function postGameView(
     followed: o.rank > 0,
     lines: o.lines.filter((r) => !r.id.startsWith("postgame.predicted")).map((r) => reasonView(r, say)),
     prediction: o.lines.filter((r) => r.id.startsWith("postgame.predicted")).map(say)[0] ?? null,
+    focus: o.game && opts.focus ? opts.focus(o.game.matchId) : null,
   };
 }

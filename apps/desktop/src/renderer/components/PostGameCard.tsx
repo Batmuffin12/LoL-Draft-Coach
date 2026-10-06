@@ -54,6 +54,15 @@ export function PostGameCard({ game: g, now }: { game: PostGameView; now: number
         </ul>
       )}
       {g.prediction && <span className="caption">{g.prediction}</span>}
+      {g.focus && (
+        <div className="item-row" title="Your focus metric in this game against its target">
+          <span className="label k">Focus</span>
+          <span className="caption one-line">
+            <b className={g.focus.met ? "pos" : "text"}>{`${g.focus.label}: ${g.focus.value}`}</b>
+            {` this game · target ${g.focus.target}`}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

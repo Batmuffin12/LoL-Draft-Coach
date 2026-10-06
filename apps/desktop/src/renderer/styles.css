@@ -369,3 +369,26 @@ p { margin: 0; }
 .postgame .verdict { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .postgame .verdict.followed { color: var(--gold); }
 .postgame .verdict.own { color: var(--muted); }
+
+/* Focus: one measurable thing to improve, with a target and the last games against it */
+.focus { display: flex; flex-direction: column; gap: 6px; }
+.focus .f-head { display: flex; align-items: baseline; gap: 8px; }
+.focus .f-name { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); flex: 1; min-width: 0; }
+.focus .f-nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.focus .f-nums > span { background: var(--card); padding: 3px 8px; display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.focus .f-nums .v { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }
+.focus .f-nums .target .v { color: var(--gold-bright); }
+.focus .scale { position: relative; height: 14px; margin: 0 6px; }
+.focus .scale .bar { position: absolute; left: 0; right: 0; top: 5px; height: 4px; border-radius: 2px; background: var(--track); }
+.focus .scale .gain { position: absolute; top: 5px; height: 4px; border-radius: 2px; background: var(--gold-tint); box-shadow: inset 0 0 0 1px var(--frame); }
+.focus .scale .pin { position: absolute; top: 0; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px; }
+.focus .scale .pin.mine { background: var(--text); }
+.focus .scale .pin.target { background: var(--gold); width: 3px; }
+.focus .scale .pin.typical { background: var(--line-strong); }
+.focus .games { display: flex; align-items: center; gap: 4px; }
+.focus .games .label { margin-right: 4px; white-space: nowrap; }
+.focus .games .g { width: 14px; height: 14px; border-radius: 3px; background: var(--track); border: 1px solid var(--line-strong); }
+.focus .games .g.met { background: var(--gold); border-color: var(--gold); }
+.focus .games .g.miss { background: transparent; }
+.focus .games .stat { margin-left: auto; }
+.focus.done .f-name { color: var(--positive); }

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
+import { FocusCard } from "../components/FocusCard";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
 import { PostGameCard } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
@@ -41,7 +42,7 @@ export function LobbyScreen({ state }: { state: ViewState }) {
       }
       footer={<AccountFooter account={state.account} />}
     >
-      <Notices state={state} extra="No champ select in progress. Open a lobby (a custom draft lobby works) and the draft shows up here live." />
+      <Notices state={state} extra={tab === "last" ? null : "No champ select in progress. Open a lobby (a custom draft lobby works) and the draft shows up here live."} />
       {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} /> : <Pool state={state} />}
     </Window>
   );
@@ -83,17 +84,21 @@ function ClosedRole({ title, summary, onOpen }: { title: string; summary: string
 /** Your last game against the advice the coach gave (the advice log). */
 function LastGame({ state }: { state: ViewState }) {
   const now = useNow(60_000);
-  if (!state.lastGame) {
-    return (
-      <Section title="Last game">
-        <p className="caption">After your next game, how it went against the advice you were shown appears here: your pick, the suggestions, the result and what mattered most in the draft.</p>
-      </Section>
-    );
-  }
   return (
-    <Section title="Last game">
-      <PostGameCard game={state.lastGame} now={now} />
-    </Section>
+    <>
+      <Section title="Last game">
+        {state.lastGame ? (
+          <PostGameCard game={state.lastGame} now={now} />
+        ) : (
+          <p className="caption">After your next game, how it went against the advice you were shown appears here: your pick, the suggestions, the result and what mattered most in the draft.</p>
+        )}
+      </Section>
+      {state.focus && (
+        <Section title="Your focus" aside={<span className="micro">{`${state.focus.checkGames}-game average`}</span>}>
+          <FocusCard focus={state.focus} />
+        </Section>
+      )}
+    </>
   );
 }
 

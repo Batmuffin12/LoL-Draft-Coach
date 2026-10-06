@@ -77,6 +77,19 @@ export const EngineConfigSchema = z.object({
     minReferenceSamples: z.number().int().min(1),
     axes: z.record(z.string(), z.object({ metrics: z.array(z.string().regex(/^-?[\w.]+$/)).min(1) })),
   }),
+  /** Growth focus (DESIGN §7): one measurable thing at a time, with a target and progress. */
+  growth: z.object({
+    /** Your most recent games in the role that count. */
+    window: z.number().int().min(2),
+    /** The last games that measure progress; the target is set from the games before them. */
+    checkGames: z.number().int().min(1),
+    /** The target is this share of the way from your baseline to typical. */
+    targetStep: z.number().positive().max(1),
+    /** Games needed in the role (and on a champion to focus on it alone). */
+    minGames: z.number().int().min(1),
+    /** A metric must separate wins from losses by at least this much win rate to be a focus. */
+    minImportance: z.number().min(0),
+  }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */
   pool: z.object({
     /** Main: at least coreGames in the role and comfort >= coreMin. */

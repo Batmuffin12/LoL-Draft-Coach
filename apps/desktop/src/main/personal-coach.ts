@@ -18,6 +18,8 @@ import {
   adviseLivePicks,
   assessPick,
   draftLoadout,
+  pickFocus,
+  type GrowthFocus,
   completedItems,
   completedBoots,
   personalBuild,
@@ -33,6 +35,7 @@ import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot,
 import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
+import { focusInGame, focusView } from "./focus-view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -118,6 +121,8 @@ export class PersonalCoach extends Coach {
   private readonly recorder = new AdviceRecorder();
   /** The advice log: your recent games with what the coach showed, newest first. */
   private advice: AdviceRecord[] = [];
+  /** Your growth focus (main role and champion), recomputed when your games or the meta change. */
+  private growth: GrowthFocus | null = null;
   /** The queue of the current champ select (from the gameflow session). */
   private queueId: number | null = null;
 
@@ -247,6 +252,7 @@ export class PersonalCoach extends Coach {
     this.p.ddragon.on("patch", () => {
       // Champion names and icons for the lobby and the post-game card.
       this.updateRoleAdvice();
+      this.updateFocus();
       this.updateLastGame();
     });
     // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
@@ -283,6 +289,33 @@ export class PersonalCoach extends Coach {
     await this.p.profiles?.refresh();
   }
 
+  /** Your growth focus: on your main role (and champion), from your games and the band's references. */
+  private updateFocus(): void {
+    if (!this.profile) return;
+    const { engine, explain } = this.config;
+    const role = mainRole(this.profile.games);
+    this.growth = role ? pickFocus(this.profile.matches, role, engine, this.metaIndex?.snapshot.references[role]) : null;
+    const lookup = (id: number) => {
+      try {
+        return this.deps.ddragon.champion(id)?.name ?? `#${id}`;
+      } catch {
+        return `#${id}`;
+      }
+    };
+    const labels = roleLabels(explain.templates);
+    const view = this.growth
+      ? focusView(this.growth, {
+          explain,
+          targetStep: engine.growth.targetStep,
+          checkGames: engine.growth.checkGames,
+          bandName: this.metaIndex ? (this.config.bands.bands.find((b) => b.id === this.band)?.name ?? null) : null,
+          championName: lookup,
+          positionLabel: (r) => (labels[r] ?? r).replace(/^./, (c) => c.toUpperCase()),
+        })
+      : null;
+    this.update({ focus: view });
+  }
+
   /** The post-game card: your newest logged game, joined with your history for its result. */
   private updateLastGame(): void {
     const latest = this.advice[0];
@@ -299,6 +332,7 @@ export class PersonalCoach extends Coach {
       minDeltaWin: this.config.engine.rating.explain.minDeltaWin,
       champion: (id) => champView(id, lookup),
       championName: (id) => lookup(id)?.name ?? `#${id}`,
+      focus: (matchId) => focusInGame(this.growth, matchId, this.profile?.matches ?? [], this.config.explain),
     });
     this.update({ lastGame: view });
   }
@@ -365,6 +399,8 @@ export class PersonalCoach extends Coach {
     this.metaIndex = snapshot ? new MetaIndex(snapshot, this.config.engine.rating) : null;
     this.updateRoleAdvice();
     this.updatePlaystyle();
+    this.updateFocus();
+    this.updateLastGame();
     this.onDraft();
   }
 
@@ -381,6 +417,7 @@ export class PersonalCoach extends Coach {
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateRoleAdvice();
     this.updatePlaystyle();
+    this.updateFocus();
     this.updateLastGame();
     if (first) this.refreshMeta(false);
     this.onDraft();

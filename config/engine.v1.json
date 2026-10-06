@@ -176,6 +176,7 @@
       }
     }
   },
+  "growth": { "window": 20, "checkGames": 10, "targetStep": 0.5, "minGames": 8, "minImportance": 0.02 },
   "pool": {
     "coreMin": 0.55,
     "coreGames": 8,

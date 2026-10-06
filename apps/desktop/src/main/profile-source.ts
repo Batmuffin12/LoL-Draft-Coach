@@ -104,6 +104,7 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
     try {
       if (bandFromApi) this.emit("band", bandFromRankedEntries(await riot.leagueEntriesByPuuid(puuid), this.deps.bands));
       this.emit("status", { state: "loading", done: 0, total: this.deps.history.matchCount });
+      if (this.deps.advice) this.emit("advice", await this.deps.advice.list());
       const profile = await loadProfile({
         riot,
         puuid,
@@ -116,7 +117,6 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
       });
       this.puuid = puuid;
       this.emit("profile", profile);
-      if (this.deps.advice) this.emit("advice", await this.deps.advice.list());
       this.emit("status", readyStatus(profile.games));
     } catch (err) {
       this.onRiotError(err);

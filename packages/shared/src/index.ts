@@ -471,9 +471,10 @@ export interface MetaSnapshot {
   expectedWin?: ExpectedWinTable;
   /**
    * Playstyle references: per role and metric, evenly spaced quantiles (min … max) of
-   * the metric over all collected players in that role.
+   * the metric over all collected players in that role, and its importance: the win-rate gap
+   * between the top and bottom halves (growth focus; absent in older snapshots).
    */
-  references: Record<Position, Record<string, { n: number; quantiles: number[] }>>;
+  references: Record<Position, Record<string, { n: number; quantiles: number[]; importance?: number }>>;
 }
 
 /** Status shown in the panel. */
