@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildLoadout, MetaIndex, parseEngineConfig } from "@ldc/engine";
+import { buildLoadout, draftLoadout, MetaIndex, parseEngineConfig } from "@ldc/engine";
 import { meta } from "../src/index";
 import { ahriBuild, C, world } from "../scenarios/_world";
 
@@ -21,6 +21,14 @@ describe("synthetic meta snapshot", () => {
     expect(idx.metaRating(C.ahri, "middle")).toBeGreaterThan(idx.metaRating(C.yasuo, "middle"));
     expect(idx.banRate(C.zed)?.rate).toBeCloseTo(0.21);
     expect(idx.build(C.ahri, "middle")?.n).toBe(600);
+  });
+
+  it("carries what the app needs to build a loadout in a draft (trait cuts)", () => {
+    const index = new MetaIndex(world(), config.rating);
+    expect(index.snapshot.traitCuts).toBeTruthy();
+    const draft = { timerPhase: "BAN_PICK", timeLeftMs: 0, isCustomGame: false, localCellId: 2, myTeam: [], theirTeam: [], myBans: [], theirBans: [], actions: [] };
+    const live = { draft, pickable: [C.ahri], unavailable: new Set<number>(), comfort: new Map(), attributes: new Map(), intendedPositions: new Map(), role: "middle", weights: {} as never, config, index, band: 2 as const };
+    expect(draftLoadout(live as never, C.ahri, config.loadout)?.page?.value.runes[0]).toBe(8112);
   });
 
   it("makes thin and solid builds on purpose (loadout.solidGames)", () => {

@@ -1,4 +1,4 @@
-import type { ChampionAttributes, ChampionBuild, ChampionRoleStat, MetaSnapshot, PairStat, Position, RankBandId } from "@ldc/shared";
+import type { ChampionAttributes, ChampionBuild, ChampionRoleStat, EnemyTrait, MetaSnapshot, PairStat, Position, RankBandId } from "@ldc/shared";
 
 /**
  * Synthetic meta snapshot for tests and dev runs: you choose each champion's games and win
@@ -43,6 +43,8 @@ export class MetaSim {
   private attributes: ChampionAttributes[] = [];
   private builds: ChampionBuild[] = [];
   private references: MetaSnapshot["references"] = {};
+  /** Band-average enemy-team traits (the app needs them to build a loadout); neutral unless set. */
+  private cuts: Record<EnemyTrait, number> = { magic: 0.4, physical: 0.6, frontline: 0.5, engage: 0.5, heal: 0.5 };
 
   constructor(private readonly opts: { band?: RankBandId; patch?: string; createdAt?: number; matches?: number } = {}) {}
 
@@ -124,6 +126,12 @@ export class MetaSim {
     return this;
   }
 
+  /** Overrides the band-average enemy-team traits above which a trait counts as high. */
+  traitCuts(cuts: Partial<Record<EnemyTrait, number>>): this {
+    this.cuts = { ...this.cuts, ...cuts };
+    return this;
+  }
+
   done(): MetaSnapshot {
     const matches = this.matchCount();
     const roleGames = Object.fromEntries(ROLES.map((r) => [r, Math.max(matches, ...this.champions.filter((c) => c.role === r).map((c) => c.games))]));
@@ -145,6 +153,7 @@ export class MetaSim {
       attributes: this.attributes,
       builds: this.builds,
       references: this.references,
+      traitCuts: this.cuts,
     };
   }
 
