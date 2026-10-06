@@ -108,6 +108,8 @@ export interface Loadout {
   boots: { top: RankedItem; alternatives: RankedItem[] } | null;
   /** What your role quest turns items of this loadout into (boots, starting items), from data. */
   quest: { itemId: number; from: number; reasons: Reason[] }[];
+  /** Items players in your role buy more often against teams like this one (lift), with the trait they answer. */
+  situational: { itemId: number; trait: EnemyTrait; reasons: Reason[] }[];
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
   core: LoadoutChoice<number[]> | null;
   items: ItemSlotAdvice[];
@@ -198,6 +200,28 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
       return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
     })
     .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
+}
+
+/**
+ * Situational items against this enemy team: items your role buys more often when the enemy
+ * team is high in a trait (lift), for traits this team is above the band in (your lane
+ * opponent counts more). Not boots, not items already on the build path; strongest need first.
+ */
+export function situationalItems(input: LoadoutInput, exclude: ReadonlySet<number>): Loadout["situational"] {
+  const { build, config: cfg } = input;
+  const enemy = enemyTraits(input);
+  const intensity = Object.fromEntries(ENEMY_TRAITS.map((t) => [t, traitIntensity(enemy[t], input.traitCuts[t])])) as Record<EnemyTrait, number>;
+  const best = new Map<number, SituationalLift & { score: number }>();
+  for (const l of build.lifts) {
+    if (l.kind !== "item" || l.lift < cfg.minLift || intensity[l.trait] <= 0) continue;
+    if (exclude.has(l.id) || input.boots?.has(l.id) || !fits(input, l.id)) continue;
+    const score = Math.log(l.lift) * intensity[l.trait];
+    if (score > (best.get(l.id)?.score ?? 0)) best.set(l.id, { ...l, score });
+  }
+  return [...best.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, cfg.maxSituational)
+    .map((l) => ({ itemId: l.id, trait: l.trait, reasons: [liftReason("item", l, enemy)] }));
 }
 
 /** Your role's quest rewards that come from items in the loadout (most common first, one per item). */
@@ -381,6 +405,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     starting,
     boots,
     quest: questRewards(input, [...(boots ? [boots.top.itemId] : []), ...(starting?.value ?? [])]),
+    situational: situationalItems({ ...input, build: roleBuild }, new Set(core?.value ?? [])),
     core,
     items,
   };
