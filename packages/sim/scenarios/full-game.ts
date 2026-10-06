@@ -3,7 +3,7 @@ import { C, world } from "./_world";
 
 export default {
   description: "A whole game: champ select (Ahri mid into Zed), the game, and its end (gameflow EndOfGame).",
-  draft: draft({ queueId: 420 })
+  draft: draft({ queueId: 420, gameId: 7123456789 })
     .me("middle")
     .hover(C.ahri)
     .ally("top", C.garen)

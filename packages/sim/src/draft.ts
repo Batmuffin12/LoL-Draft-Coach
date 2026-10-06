@@ -35,6 +35,8 @@ export interface DraftOptions {
   queueId?: number;
   /** Blue side picks first. */
   side?: "blue" | "red";
+  /** The game's id in the gameflow session once the game starts (stop point game-end); real ones match Match-V5 ids. */
+  gameId?: number;
   custom?: boolean;
   description?: string;
 }
@@ -348,11 +350,13 @@ function buildDraft(s: DraftSpec): Fixture {
   if (reached("game-start")) return done();
 
   t += 5000;
+  const gameData = { queue, ...(s.gameId ? { gameId: s.gameId } : {}) };
+  // The session first, so a reader reacting to the phase change finds the game id.
+  frame(GAMEFLOW, { phase: "InProgress", gameData });
   frame(PHASE, "InProgress");
-  frame(GAMEFLOW, { phase: "InProgress", gameData: { queue } });
   t += 5000;
+  frame(GAMEFLOW, { phase: "EndOfGame", gameData });
   frame(PHASE, "EndOfGame");
-  frame(GAMEFLOW, { phase: "EndOfGame", gameData: { queue } });
   return done();
 }
 

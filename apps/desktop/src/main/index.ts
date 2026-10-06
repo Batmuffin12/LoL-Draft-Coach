@@ -15,6 +15,7 @@ import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
+import { AdviceStore } from "./advice-store";
 import { ConfigSource } from "./config-source";
 import { MetaSource } from "./meta-source";
 import { MetaSnapshotSchema } from "./server-client";
@@ -169,6 +170,7 @@ async function main(): Promise<void> {
       history: config.app.history,
       bands: config.bands,
       storeFor: (puuid) => new MatchStore(matchesDir, puuid),
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
     });
   } else {
     const box = {

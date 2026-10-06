@@ -257,6 +257,27 @@ export interface PickAdviceView {
   minGames?: { meta: number; pair: number };
 }
 
+/** The last game against the advice the coach gave (the post-game card). The player's own data only. */
+export interface PostGameView {
+  champion: ChampView;
+  role: string | null;
+  /** When you locked in, and when the game ended (null until it's in your history). */
+  lockedAt: number;
+  endedAt: number | null;
+  minutes: number | null;
+  /** Null until the game is in your history (the server syncs it after the game). */
+  result: "win" | "loss" | null;
+  /** The picks suggested when you locked in, best first; `took` marks yours. */
+  shown: { champion: ChampView; expectedWin: number | null; took: boolean }[];
+  /** "Took the #1 pick", "Took suggestion #2" or "Your own pick". */
+  verdict: string;
+  followed: boolean;
+  /** The term that mattered most (an edge, or a cost): describes the draft, never grades the game. */
+  lines: ReasonView[];
+  /** "Predicted 54% for Ahri when you locked in", or null without live meta. */
+  prediction: string | null;
+}
+
 export interface ViewState {
   account: AccountView | null;
   status: CoachStatus;
@@ -281,6 +302,8 @@ export interface ViewState {
   roles: RoleView[];
   /** Your playstyle per role with enough games (most played first). */
   playstyle: PlaystyleView[];
+  /** Your most recent game with logged advice, or null. */
+  lastGame: PostGameView | null;
   notices: string[];
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
@@ -303,6 +326,7 @@ export function emptyViewState(): ViewState {
     laneOpponent: null,
     roles: [],
     playstyle: [],
+    lastGame: null,
     notices: [],
     docked: true,
     roleLabels: {},

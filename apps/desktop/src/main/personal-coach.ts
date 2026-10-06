@@ -29,9 +29,10 @@ import {
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
-import type { BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
+import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
 import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
+import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -113,6 +114,12 @@ export class PersonalCoach extends Coach {
   private perks = new Map<number, { name: string; iconUrl: string | null }>();
   /** The stat shard rows (offense, flex, defense) from the client, for drawing the whole rune page. */
   private shardRows: number[][] = [];
+  /** What the coach showed when you locked in, until the game is over (the advice log). */
+  private readonly recorder = new AdviceRecorder();
+  /** The advice log: your recent games with what the coach showed, newest first. */
+  private advice: AdviceRecord[] = [];
+  /** The queue of the current champ select (from the gameflow session). */
+  private queueId: number | null = null;
 
   /** Import buttons show when the config enables import and the client is connected. */
   private get canImport(): boolean {
@@ -222,6 +229,10 @@ export class PersonalCoach extends Coach {
       profiles.on("status", (profile) => this.update({ status: { ...this.view.status, profile } }));
       profiles.on("band", (band) => this.setBand(band));
       profiles.on("account", (account) => this.update({ account }));
+      profiles.on("advice", (advice) => {
+        this.advice = advice;
+        this.updateLastGame();
+      });
       if (profiles.account) this.update({ account: profiles.account });
     }
     const { meta } = this.p;
@@ -233,7 +244,11 @@ export class PersonalCoach extends Coach {
         if (a.state === "registered") this.refreshMeta(true);
       });
     }
-    this.p.ddragon.on("patch", () => this.updateRoleAdvice()); // champion names/icons for the lobby
+    this.p.ddragon.on("patch", () => {
+      // Champion names and icons for the lobby and the post-game card.
+      this.updateRoleAdvice();
+      this.updateLastGame();
+    });
     // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
     this.p.ddragon.on("patch", () => {
       if (this.p.connector.status === "connected" && !this.shardRows.length) void this.loadShardsFallback().then(() => this.onDraft());
@@ -242,8 +257,9 @@ export class PersonalCoach extends Coach {
       if (s === "connected") void this.onClientConnected();
     });
     this.p.connector.on("gameflowPhase", (phase) => {
-      // New games are in the player's history once a game has ended.
-      if (phase === "EndOfGame") void this.p.profiles?.refresh();
+      if (phase === "InProgress") void this.onGameStarted();
+      // New games are in the player's history once a game has ended (the advice for it is sent first).
+      if (phase === "EndOfGame") void this.onGameEnded();
       // The kept loadout is for the game being played: drop it once that game is over or left.
       if (["EndOfGame", "Lobby", "None"].includes(phase) && this.keptPick) {
         this.keptPick = null;
@@ -253,6 +269,38 @@ export class PersonalCoach extends Coach {
     await super.start();
     // Without the League client, fall back to the Riot ID from .env.
     if (this.p.connector.status !== "connected") void this.loadFromRiotId();
+  }
+
+  /** The game started: its id ties the advice shown in champ select to the game in your history. */
+  private async onGameStarted(): Promise<void> {
+    const session = await this.p.connector.getGameflowSession().catch(() => null);
+    this.recorder.gameStarted(session?.gameData?.gameId ?? null, session?.gameData?.queue?.id ?? null);
+  }
+
+  private async onGameEnded(): Promise<void> {
+    const record = this.recorder.gameEnded();
+    if (record) await this.p.profiles?.recordAdvice(record).catch(() => {});
+    await this.p.profiles?.refresh();
+  }
+
+  /** The post-game card: your newest logged game, joined with your history for its result. */
+  private updateLastGame(): void {
+    const latest = this.advice[0];
+    if (!latest) return this.update({ lastGame: null });
+    const lookup = (id: number) => {
+      try {
+        return this.deps.ddragon.champion(id);
+      } catch {
+        return undefined;
+      }
+    };
+    const view = postGameView(latest, this.profile?.matches ?? [], {
+      templates: this.config.explain.templates,
+      minDeltaWin: this.config.engine.rating.explain.minDeltaWin,
+      champion: (id) => champView(id, lookup),
+      championName: (id) => lookup(id)?.name ?? `#${id}`,
+    });
+    this.update({ lastGame: view });
   }
 
   private setProfileError(message: string): void {
@@ -333,6 +381,7 @@ export class PersonalCoach extends Coach {
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateRoleAdvice();
     this.updatePlaystyle();
+    this.updateLastGame();
     if (first) this.refreshMeta(false);
     this.onDraft();
   }
@@ -458,6 +507,7 @@ export class PersonalCoach extends Coach {
     this.pickable = await connector.getPickableChampionIds().catch(() => []);
     const session = await connector.getGameflowSession().catch(() => null);
     const queueId = session?.gameData?.queue?.id;
+    this.queueId = queueId ?? null;
     this.queueSupported = this.draft?.isCustomGame === true || queueId === undefined || config.app.supportedQueues.includes(queueId);
     if (!this.queueSupported) this.notice("This queue isn't supported yet — suggestions are for Ranked and Normal Draft.");
     this.onDraft();
@@ -469,6 +519,7 @@ export class PersonalCoach extends Coach {
     super.onDraft();
     if (this.draft && !this.hadDraft) {
       this.keptPick = null; // a new champ select: the last game's pick no longer applies
+      this.recorder.newChampSelect();
       void this.onChampSelectStart();
     }
     this.hadDraft = this.draft !== null;
@@ -553,11 +604,14 @@ export class PersonalCoach extends Coach {
     };
 
     if (locked !== null) {
+      const assessed = live ? assessPick(live, locked) : null;
+      this.recorder.locked(adviceOption(assessed ?? { championId: locked }), { role, band: this.band, queueId: this.queueId, now: Date.now() });
       this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, myPick: card(locked, false) });
       this.keptPick = this.view.myPick;
       return;
     }
     const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.config.explain.settings);
+    this.recorder.shown(advice.picks.map(adviceOption));
     const views: PickView[] = advice.picks.map((p) => ({
       champion: champView(p.championId, lookup)!,
       score: p.score,

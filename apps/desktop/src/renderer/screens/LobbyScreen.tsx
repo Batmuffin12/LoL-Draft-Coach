@@ -1,19 +1,30 @@
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
+import { PostGameCard } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { pct, positionLabel, roleName } from "../format";
+import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices } from "./common";
 
-type LobbyTab = "style" | "pool";
+type LobbyTab = "last" | "style" | "pool";
+
+/** After a game the Last game tab opens first, for this long. */
+const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
 export function LobbyScreen({ state }: { state: ViewState }) {
-  const [tab, setTab] = useState<LobbyTab>("style");
+  const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
+  const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
+  // A newly logged game (it arrives after the panel opens): show it first.
+  const latest = state.lastGame?.lockedAt ?? 0;
+  useEffect(() => {
+    if (recent) setTab("last");
+  }, [latest]);
   return (
     <Window
       header={<Header state={state} />}
@@ -22,6 +33,7 @@ export function LobbyScreen({ state }: { state: ViewState }) {
           value={tab}
           onChange={setTab}
           options={[
+            { value: "last", label: "Last game" },
             { value: "style", label: "Your style" },
             { value: "pool", label: "Your pool" },
           ]}
@@ -30,7 +42,7 @@ export function LobbyScreen({ state }: { state: ViewState }) {
       footer={<AccountFooter account={state.account} />}
     >
       <Notices state={state} extra="No champ select in progress. Open a lobby (a custom draft lobby works) and the draft shows up here live." />
-      {tab === "style" ? <Style state={state} /> : <Pool state={state} />}
+      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} /> : <Pool state={state} />}
     </Window>
   );
 }
@@ -65,6 +77,23 @@ function ClosedRole({ title, summary, onOpen }: { title: string; summary: string
         </span>
       </button>
     </section>
+  );
+}
+
+/** Your last game against the advice the coach gave (the advice log). */
+function LastGame({ state }: { state: ViewState }) {
+  const now = useNow(60_000);
+  if (!state.lastGame) {
+    return (
+      <Section title="Last game">
+        <p className="caption">After your next game, how it went against the advice you were shown appears here: your pick, the suggestions, the result and what mattered most in the draft.</p>
+      </Section>
+    );
+  }
+  return (
+    <Section title="Last game">
+      <PostGameCard game={state.lastGame} now={now} />
+    </Section>
   );
 }
 

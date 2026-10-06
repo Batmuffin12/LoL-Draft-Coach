@@ -89,7 +89,8 @@ describe("scenarios", () => {
     for (const n of names) {
       const s = await loadScenario(n);
       expect(FixtureSchema.parse(s.draft)).toBeTruthy();
-      expect(findIdentifiers(s.draft)).toEqual([]);
+      // A simulated game id (stop point game-end) is test data, not a player identifier.
+      expect(findIdentifiers(s.draft).filter((p) => !p.endsWith(".gameData.gameId"))).toEqual([]);
       for (const x of sessions(s.draft)) expect(() => sanitizeChampSelect(x)).not.toThrow();
     }
   });

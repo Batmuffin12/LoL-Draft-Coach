@@ -50,6 +50,8 @@ export const GameflowSessionSchema = z.looseObject({
   gameData: z
     .looseObject({
       queue: z.looseObject({ id: z.number().int() }).optional(),
+      /** The game's id (once it starts): the local player's own game, to find it in their Match-V5 history. */
+      gameId: z.number().int().optional(),
     })
     .optional(),
 });

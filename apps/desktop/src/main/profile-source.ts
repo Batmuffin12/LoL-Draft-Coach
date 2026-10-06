@@ -1,7 +1,8 @@
 import { EventEmitter } from "node:events";
 import { bandFromRankedEntries, mainRole, type AppConfig, type PlayerGame, type RankBandConfig } from "@ldc/engine";
 import { RiotKeyError, type RiotApi } from "@ldc/riot-api";
-import type { CoachStatus, RankBandId, UserMatch } from "@ldc/shared";
+import type { AdviceRecord, CoachStatus, RankBandId, UserMatch } from "@ldc/shared";
+import { mergeAdvice, type AdviceStore } from "./advice-store";
 import type { AccountView } from "../shared/view";
 import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
@@ -24,6 +25,8 @@ export interface ProfileSourceEvents {
   band: [RankBandId];
   /** Server mode only: registration state for the panel. */
   account: [AccountView];
+  /** The advice log: what the coach showed in your recent games, newest first. */
+  advice: [AdviceRecord[]];
 }
 
 /** Where the player's own history comes from: our server (default) or the Riot API directly (dev only). */
@@ -32,6 +35,8 @@ export interface ProfileSource extends EventEmitter<ProfileSourceEvents> {
   load(identity: Identity, opts: { bandFromApi: boolean }): Promise<void>;
   /** A game just ended: fetch the new games. */
   refresh(): Promise<void>;
+  /** Keeps what the coach showed for a game that has ended (the advice log). */
+  recordAdvice(record: AdviceRecord): Promise<void>;
   /** Server mode: the current registration state. */
   readonly account?: AccountView;
 }
@@ -56,9 +61,15 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
       history: AppConfig["history"];
       bands: RankBandConfig;
       storeFor: (puuid: string) => MatchStore;
+      /** The local advice log (none: advice isn't kept). */
+      advice?: AdviceStore;
     },
   ) {
     super();
+  }
+
+  async recordAdvice(record: AdviceRecord): Promise<void> {
+    if (this.deps.advice) this.emit("advice", await this.deps.advice.add(record));
   }
 
   async load(identity: Identity, opts: { bandFromApi: boolean }): Promise<void> {
@@ -105,6 +116,7 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
       });
       this.puuid = puuid;
       this.emit("profile", profile);
+      if (this.deps.advice) this.emit("advice", await this.deps.advice.list());
       this.emit("status", readyStatus(profile.games));
     } catch (err) {
       this.onRiotError(err);
@@ -136,6 +148,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private client: ServerClient | null = null;
   private registeredAs: string | null = null;
   private matches = new Map<string, UserMatch>();
+  private advice: AdviceRecord[] = [];
   private polling = false;
   private stopped = false;
   private view: AccountView;
@@ -200,6 +213,18 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     }
   }
 
+  async recordAdvice(record: AdviceRecord): Promise<void> {
+    if (!this.client || this.view.state !== "registered") return;
+    // Shown at once; the server's copy comes back with the next profile.
+    this.advice = mergeAdvice(this.advice, record);
+    this.emit("advice", this.advice);
+    try {
+      await this.client.postAdvice(record);
+    } catch (err) {
+      this.onServerError(err);
+    }
+  }
+
   /** Registers the player logged into the client, using an invite code. */
   async register(serverUrlInput: string, inviteCode: string): Promise<void> {
     if (!this.identity) {
@@ -230,8 +255,10 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.client = null;
     this.registeredAs = null;
     this.matches.clear();
+    this.advice = [];
     this.setAccount({ state: "unregistered", riotId: null, serverUrl: null, message: null });
     this.emit("profile", profileFromMatches([], []));
+    this.emit("advice", []);
     this.emit("status", { state: "idle" });
   }
 
@@ -274,6 +301,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     );
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
     this.emit("profile", profile);
+    this.advice = p.advice;
+    this.emit("advice", this.advice);
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
     else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });
     else this.emit("status", readyStatus(profile.games));

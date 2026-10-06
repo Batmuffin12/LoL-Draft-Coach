@@ -352,3 +352,20 @@ p { margin: 0; }
 .section-head.closed .rule { flex: 0 0 16px; }
 .section-head.closed .micro { flex: 1; }
 .section-head .chev { color: var(--muted); font-size: var(--fs-heading); }
+
+/* Post-game card: the last game against the advice the coach gave */
+.postgame { display: flex; flex-direction: column; gap: 8px; }
+.postgame .pg-top { display: flex; align-items: center; gap: 10px; }
+.postgame .pg-top .who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.postgame .pg-top .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }
+.postgame .result { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: 0.06em; text-transform: uppercase; }
+.postgame .result.win { color: var(--positive); }
+.postgame .result.loss { color: var(--negative); }
+.postgame .result.pending { color: var(--muted); font-size: var(--fs-heading); }
+.postgame .shown { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--card); border-radius: var(--radius-sm); }
+.postgame .shown .opts { display: flex; gap: 10px; flex: 1; min-width: 0; }
+.postgame .shown .opt { display: flex; align-items: center; gap: 4px; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); white-space: nowrap; }
+.postgame .shown .opt.took { color: var(--gold-bright); font-weight: 600; }
+.postgame .verdict { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.postgame .verdict.followed { color: var(--gold); }
+.postgame .verdict.own { color: var(--muted); }
