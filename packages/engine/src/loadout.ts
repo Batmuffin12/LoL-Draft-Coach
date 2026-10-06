@@ -257,11 +257,17 @@ export function buildLoadout(input: LoadoutInput): Loadout {
       );
   // Items come from win added and lift (rankItems), never raw win rate. Without enough
   // purchases for that, the most common path is shown as what players build.
-  const items = rankItems({ ...input, build: roleBuild, thin: roleBuild.n < cfg.solidGames });
+  // Thin band data and more of your own games on the champion than the band's timelines: your own finished items.
+  const ownItems = personal ? personal.items.filter((i) => fits(input, i.itemId)) : [];
+  const useOwnItems = personal !== null && ownItems.length >= 2 && personal.n > roleBuild.timelineN;
+  const items = useOwnItems ? [] : rankItems({ ...input, build: roleBuild, thin: roleBuild.n < cfg.solidGames });
   const roleCommon = <T extends OptionStat & { items: number[] }>(list: T[]) => list.find((o) => o.n >= (thin ? 1 : cfg.minGames) && o.items.every((id) => fits(input, id))) ?? null;
   const commonPath = roleCommon(roleBuild.core.filter((c) => c.items.length >= 3)) ?? roleCommon(roleBuild.core);
   let core: LoadoutChoice<number[]> | null;
-  if (items.length) core = { value: items.map((s) => s.top.itemId), winRate: 0, n: Math.min(...items.map((s) => s.top.n)), reasons: [] };
+  if (useOwnItems) {
+    personalUsed = true;
+    core = { value: ownItems.slice(0, cfg.slots).map((i) => i.itemId), winRate: 0, n: personal!.n, reasons: [reason("loadout.core.personal", { games: personal!.n, champion })] };
+  } else if (items.length) core = { value: items.map((s) => s.top.itemId), winRate: 0, n: Math.min(...items.map((s) => s.top.n)), reasons: [] };
   else if (commonPath) core = choice(commonPath, (o) => o.items, (o) => [reason("loadout.core.common", { share: roleTimeline(o), games: o.n })]);
   else if (input.personal?.items.length) {
     // No band purchases at all: the items you finish most often on the champion.

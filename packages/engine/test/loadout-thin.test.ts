@@ -55,12 +55,15 @@ describe("loadouts from few games (partial pooling, your own games, no win rates
   });
 
   it("prefers your own page and spells on the champion when the band's data is thin", () => {
-    const personal = { championId: 950, n: 25, pages: [page(8112, 18, 11)], spells: [{ spells: [4, 12], games: 20, wins: 11, n: 20 }], items: [{ itemId: 6692, n: 22 }] };
+    const personal = { championId: 950, n: 25, pages: [page(8112, 18, 11)], spells: [{ spells: [4, 12], games: 20, wins: 11, n: 20 }], items: [{ itemId: 6692, n: 22 }, { itemId: 3814, n: 15 }] };
     const l = buildLoadout(input({ personal }));
     expect(l.page?.value.runes[0]).toBe(8112);
     expect(say(l.page!.reasons[0]!)).toBe("Your usual page: 18 of your 25 Naafiri games");
     expect(l.spells?.value).toEqual([4, 12]);
     expect(l.source.personalGames).toBe(25);
+    // 25 of your own games beat 5 band games for the build too.
+    expect(l.core?.value).toEqual([6692, 3814]);
+    expect(l.items).toEqual([]);
     // With plenty of band data, the band's page wins again.
     const solid = { ...mid, n: 500, games: 500, wins: 250, pages: [page(8128, 300, 160)], spells: [{ spells: [4, 14], games: 400, wins: 200, n: 400 }] };
     expect(buildLoadout(input({ build: solid, personal })).page?.value.runes[0]).toBe(8128);
