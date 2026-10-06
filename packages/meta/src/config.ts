@@ -60,6 +60,12 @@ export const MetaConfigSchema = z.object({
     lift: z.object({ priorGames: z.number().min(0), minGames: z.number().int().min(1), minLift: z.number().min(1), maxPerBuild: z.number().int().min(0) }),
     /** Rune pages and items into a lane opponent are kept when the matchup has this many games. */
     minMatchupGames: z.number().int().min(1),
+    /** Items published per build slot (the most bought). */
+    maxItemsPerSlot: z.number().int().min(1),
+    /** Lane opponents per champion-role with their own page or items in the snapshot (the most common ones). */
+    maxMatchups: z.number().int().min(0),
+    /** Distinct options (pages, starts, paths…) counted per champion-role; rarer ones are dropped (bounded memory). */
+    counterCapacity: z.number().int().min(4),
     /** Items need this many games before their role shares are published. */
     minItemRoleGames: z.number().int().min(1),
     /** Role quest rewards: held at the end of at least rewardMinShare of a role's games, bought in at most rewardMaxBought of those (timeline games). */

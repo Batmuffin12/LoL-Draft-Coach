@@ -162,7 +162,7 @@ describe("BuildAggregator", () => {
   it("keeps a rune page into a lane opponent once the matchup is common enough", () => {
     const agg = make({ minMatchupGames: 3 });
     for (let i = 0; i < 3; i++) agg.add(game(`x${i}`, { win: true, items: [], magicEnemies: true, mageRune: true }));
-    agg.add(game("y", { win: true, items: [] }));
+    for (let i = 0; i < 5; i++) agg.add(game(`y${i}`, { win: true, items: [] }));
     expect(champ1(agg).matchupPages).toEqual([expect.objectContaining({ enemy: 21, primaryStyle: 8400, n: 3 })]);
   });
 
@@ -172,7 +172,8 @@ describe("BuildAggregator", () => {
     // Champion 1 is top: its items (held and bought) are top items.
     expect(agg.itemRoles()["3001"]).toEqual({ top: 1 });
     expect(agg.itemRoles()["1055"]).toEqual({ top: 1 });
-    expect(champ1(agg).matchupItems).toEqual([{ enemy: 11, games: 3, starting: { items: [1055], n: 3 }, first: [{ itemId: 3001, n: 3 }] }]);
+    // The start into 11 is the usual start, so it isn't repeated.
+    expect(champ1(agg).matchupItems).toEqual([{ enemy: 11, games: 3, starting: null, first: [{ itemId: 3001, n: 3 }] }]);
   });
 
   it("finds role quest rewards: items a role ends games with but never buys", () => {

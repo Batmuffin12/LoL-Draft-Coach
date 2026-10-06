@@ -27,12 +27,28 @@ interface Opt<T> extends OptionStat {
   value: T;
 }
 
+/**
+ * Counts options (rune pages, starts, paths…) in bounded memory with the space-saving
+ * algorithm: at most `capacity` entries; a new option replaces the least taken one and
+ * inherits its counts, so the common options (the only ones published) stay exact or close.
+ */
 class OptionCounter<T> {
   private readonly map = new Map<string, Opt<T>>();
 
+  constructor(private readonly capacity = Infinity) {}
+
   add(key: string, value: T, w: number, won: boolean): void {
     let o = this.map.get(key);
-    if (!o) this.map.set(key, (o = { value, games: 0, wins: 0, n: 0 }));
+    if (!o) {
+      if (this.map.size >= this.capacity) {
+        let minKey = "";
+        let min: Opt<T> | null = null;
+        for (const [k, x] of this.map) if (!min || x.n < min.n) [minKey, min] = [k, x];
+        this.map.delete(minKey);
+        o = { value, games: min!.games, wins: min!.wins, n: min!.n };
+      } else o = { value, games: 0, wins: 0, n: 0 };
+      this.map.set(key, o);
+    }
     o.games += w;
     if (won) o.wins += w;
     o.n++;
@@ -50,38 +66,142 @@ interface SlotAcc {
   n: number;
   wins: number;
   minutes: number;
-  /** Purchases per state bin, to subtract the expected win of the state they were made in. */
-  bins: Map<number, number>;
+  /** Sum of the expected win of the states the purchases were made in (with a fitted table)… */
+  expected: number;
+  /** …or, without one, purchases per state bin (resolved against this pass's own table at the end). */
+  bins: Map<number, number> | null;
 }
 
-/** Per trait: [games with the trait low, games with it high]. */
-type TraitCounts = Record<EnemyTrait, [number, number]>;
-const emptyTraits = (): TraitCounts => Object.fromEntries(ENEMY_TRAITS.map((t) => [t, [0, 0]])) as unknown as TraitCounts;
+/** Per trait: [games with the trait low, games with it high], packed as 2 numbers per trait. */
+type TraitCounts = Int32Array;
+const emptyTraits = (): TraitCounts => new Int32Array(ENEMY_TRAITS.length * 2);
+const TRAIT_INDEX = new Map(ENEMY_TRAITS.map((t, i) => [t, i]));
+const side = (c: TraitCounts, t: EnemyTrait, s: 0 | 1) => c[TRAIT_INDEX.get(t)! * 2 + s]!;
+
+/**
+ * Expected win for a team by minute and team gold difference, fitted over every team-minute of
+ * the timelines it's fed (smoothed toward 50%). Used for win added at purchase time.
+ */
+export class ExpectedWinFitter {
+  private readonly n: number[];
+  private readonly w: number[];
+  private readonly goldBuckets: number;
+
+  constructor(private readonly bins: { minutes: number[]; goldDiff: number[]; priorGames: number }) {
+    this.goldBuckets = bins.goldDiff.length + 1;
+    this.n = new Array((bins.minutes.length + 1) * this.goldBuckets).fill(0);
+    this.w = new Array((bins.minutes.length + 1) * this.goldBuckets).fill(0);
+  }
+
+  bin(minute: number, goldDiff: number): number {
+    return bucket(this.bins.minutes, minute) * this.goldBuckets + bucket(this.bins.goldDiff, goldDiff);
+  }
+
+  add(m: MatchSummary): void {
+    const t = m.timeline;
+    if (!t) return;
+    const teamGold = new Map<number, number[]>();
+    m.participants.forEach((p, i) => {
+      const g = teamGold.get(p.teamId) ?? [];
+      (t.gold[i] ?? []).forEach((v, f) => (g[f] = (g[f] ?? 0) + v));
+      teamGold.set(p.teamId, g);
+    });
+    const teams = [...teamGold.keys()];
+    if (teams.length !== 2) return;
+    for (const team of teams) {
+      const mine = teamGold.get(team)!;
+      const theirs = teamGold.get(teams.find((x) => x !== team)!)!;
+      const won = m.participants.find((p) => p.teamId === team)!.win;
+      for (let f = 1; f < Math.min(mine.length, theirs.length); f++) {
+        const b = this.bin(f, mine[f]! - theirs[f]!);
+        this.n[b]!++;
+        if (won) this.w[b]!++;
+      }
+    }
+  }
+
+  /** Smoothed expected win per bin (flat). */
+  values(): number[] {
+    const k = this.bins.priorGames;
+    return this.n.map((n, b) => (this.w[b]! + 0.5 * k) / (n + k));
+  }
+
+  table(): ExpectedWinTable {
+    const e = this.values();
+    const rows: number[][] = [];
+    for (let i = 0; i < e.length; i += this.goldBuckets) rows.push(e.slice(i, i + this.goldBuckets).map((x) => round(x)));
+    return { minutes: this.bins.minutes, goldDiff: this.bins.goldDiff, winRate: rows, n: this.n.reduce((a, b) => a + b, 0) };
+  }
+}
+
+/** Expected win for a state from a fitted table. */
+export function expectedWinAt(table: ExpectedWinTable, minute: number, goldDiff: number): number {
+  return table.winRate[bucket(table.minutes, minute)]?.[bucket(table.goldDiff, goldDiff)] ?? 0.5;
+}
 
 class BuildAcc {
   n = 0;
   timelineN = 0;
   games = 0;
   wins = 0;
-  readonly pages = new OptionCounter<Omit<RunePageStat, keyof OptionStat>>();
-  readonly spells = new OptionCounter<number[]>();
-  readonly skills = new OptionCounter<{ first: number[]; order: number[] }>();
-  readonly starting = new OptionCounter<number[]>();
-  readonly core = new OptionCounter<number[]>();
-  readonly slots = new Map<string, SlotAcc>();
+  readonly pages: OptionCounter<Omit<RunePageStat, keyof OptionStat>>;
+  readonly spells: OptionCounter<number[]>;
+  readonly skills: OptionCounter<{ first: number[]; order: number[] }>;
+  readonly starting: OptionCounter<number[]>;
+  readonly core: OptionCounter<number[]>;
+  readonly slots = new Map<number, SlotAcc>() // key: itemId * 16 + slot;
   /** Games that reached each completed-item slot. */
   readonly slotGames: number[] = [];
   readonly traitGames = emptyTraits();
   /** "rune:id" / "item:id" → games taken per trait side. */
-  readonly takes = new Map<string, TraitCounts>();
-  readonly matchups = new Map<ChampionId, OptionCounter<Omit<RunePageStat, keyof OptionStat>>>();
-  /** Into each lane opponent (timeline games): starting items and the first completed item. */
-  readonly matchupItems = new Map<ChampionId, { games: number; starting: OptionCounter<number[]>; first: Map<number, number> }>();
+  readonly takes = new Map<number, TraitCounts>() // key: rune id, or -item id;
+  /**
+   * Into each lane opponent: games, rune pages, and (timeline games) starting items and the first
+   * completed item. Only the most frequent opponents are tracked (bounded, space-saving style).
+   */
+  readonly opponents = new Map<ChampionId, OpponentAcc>();
+  private readonly matchupCapacity: number;
+  private readonly opponentCapacity: number;
+
+  /** The opponent's record; a new opponent replaces the least seen one when the map is full. */
+  opponent(id: ChampionId): OpponentAcc {
+    let o = this.opponents.get(id);
+    if (o) return o;
+    let games = 0;
+    if (this.opponents.size >= this.opponentCapacity) {
+      let minId = 0;
+      let min: OpponentAcc | null = null;
+      for (const [k, x] of this.opponents) if (!min || x.games < min.games) [minId, min] = [k, x];
+      this.opponents.delete(minId);
+      games = min!.games;
+    }
+    o = { games, tgames: 0, pages: new OptionCounter(this.matchupCapacity), starting: new OptionCounter(this.matchupCapacity), first: new Map() };
+    this.opponents.set(id, o);
+    return o;
+  }
 
   constructor(
     readonly championId: ChampionId,
     readonly role: Position,
-  ) {}
+    capacity: number,
+    opponents: number,
+  ) {
+    this.pages = new OptionCounter(capacity);
+    this.spells = new OptionCounter(capacity);
+    this.skills = new OptionCounter(capacity);
+    this.starting = new OptionCounter(capacity);
+    this.core = new OptionCounter(capacity);
+    this.matchupCapacity = 2;
+    this.opponentCapacity = Math.max(1, opponents);
+  }
+}
+
+interface OpponentAcc {
+  games: number;
+  tgames: number;
+  pages: OptionCounter<Omit<RunePageStat, keyof OptionStat>>;
+  starting: OptionCounter<number[]>;
+  first: Map<number, number>;
 }
 
 export interface BuildAggregatorOptions {
@@ -97,6 +217,12 @@ export interface BuildAggregatorOptions {
   attributes: ReadonlyMap<ChampionId, ChampionAttributes>;
   /** Band-average trait values: above, a trait counts as high. */
   traitCuts: Record<EnemyTrait, number>;
+  /**
+   * Expected win per state, fitted beforehand (the server fits it in the first pass), so win
+   * added is summed per purchase instead of keeping a histogram per item and slot (memory).
+   * Without it, this pass fits its own.
+   */
+  expected?: ExpectedWinTable;
 }
 
 const pageKey = (p: NonNullable<ParticipantSummary["perks"]>) => `${p.primaryStyle}|${p.subStyle}|${p.runes.join(",")}|${p.statPerks.join(",")}`;
@@ -164,31 +290,21 @@ export function startingItems(t: MatchTimeline, participant: number, seconds: nu
  */
 export class BuildAggregator {
   private readonly builds = new Map<string, BuildAcc>();
-  /** Expected-win state bins over every team-minute of every timeline: [games, wins]. */
-  private readonly stateN: number[];
-  private readonly stateW: number[];
-  private readonly goldBuckets: number;
+  /** This pass's own expected-win fit (used when no table was given, and published). */
+  private readonly fitter: ExpectedWinFitter;
   /** Per item, games it was bought or held in, per role. */
   private readonly itemRoleCounts = new Map<number, Map<string, number>>();
   /** For role quest rewards (timeline games only): per role, games, and per item, games it ended in and games it was bought in. */
   private readonly rewardCounts = new Map<string, { games: number; held: Map<number, number>; bought: Map<number, number> }>();
 
   constructor(private readonly opts: BuildAggregatorOptions) {
-    const { minutes, goldDiff } = opts.config.stateBins;
-    this.goldBuckets = goldDiff.length + 1;
-    this.stateN = new Array((minutes.length + 1) * this.goldBuckets).fill(0);
-    this.stateW = new Array((minutes.length + 1) * this.goldBuckets).fill(0);
-  }
-
-  private bin(minute: number, goldDiff: number): number {
-    const { minutes, goldDiff: g } = this.opts.config.stateBins;
-    return bucket(minutes, minute) * this.goldBuckets + bucket(g, goldDiff);
+    this.fitter = new ExpectedWinFitter(opts.config.stateBins);
   }
 
   private acc(p: ParticipantSummary): BuildAcc {
     const key = `${p.championId}|${p.position}`;
     let b = this.builds.get(key);
-    if (!b) this.builds.set(key, (b = new BuildAcc(p.championId, p.position)));
+    if (!b) this.builds.set(key, (b = new BuildAcc(p.championId, p.position, this.opts.config.counterCapacity, this.opts.config.maxMatchups + 10)));
     return b;
   }
 
@@ -200,7 +316,7 @@ export class BuildAggregator {
     const cfg = o.config;
     const ps = m.participants;
 
-    // Team gold per frame, for the state bins.
+    // Team gold per frame, for the state at each purchase.
     const teamGold = new Map<number, number[]>();
     if (t) {
       ps.forEach((p, i) => {
@@ -208,19 +324,7 @@ export class BuildAggregator {
         (t.gold[i] ?? []).forEach((v, f) => (g[f] = (g[f] ?? 0) + v));
         teamGold.set(p.teamId, g);
       });
-      const teams = [...teamGold.keys()];
-      if (teams.length === 2) {
-        for (const team of teams) {
-          const mine = teamGold.get(team)!;
-          const theirs = teamGold.get(teams.find((x) => x !== team)!)!;
-          const won = ps.find((p) => p.teamId === team)!.win;
-          for (let f = 1; f < Math.min(mine.length, theirs.length); f++) {
-            const b = this.bin(f, mine[f]! - theirs[f]!);
-            this.stateN[b]!++;
-            if (won) this.stateW[b]!++;
-          }
-        }
-      }
+      this.fitter.add(m);
     }
     const goldDiffAt = (teamId: number, sec: number) => {
       const mine = teamGold.get(teamId);
@@ -243,24 +347,22 @@ export class BuildAggregator {
         if (v === undefined) continue;
         const side = v > o.traitCuts[tr] ? 1 : 0;
         sides.set(tr, side);
-        b.traitGames[tr][side]++;
+        b.traitGames[TRAIT_INDEX.get(tr)! * 2 + side]!++;
       }
-      const take = (key: string) => {
+      const laneOpp = enemies.find((q) => q.position === p.position);
+      const vs = laneOpp ? b.opponent(laneOpp.championId) : null;
+      if (vs) vs.games++;
+      const take = (key: number) => {
         let c = b.takes.get(key);
         if (!c) b.takes.set(key, (c = emptyTraits()));
-        for (const [tr, side] of sides) c[tr][side]++;
+        for (const [tr, s] of sides) c[TRAIT_INDEX.get(tr)! * 2 + s]!++;
       };
 
       if (p.perks && p.perks.runes.length) {
         const page = { primaryStyle: p.perks.primaryStyle, subStyle: p.perks.subStyle, runes: p.perks.runes, statPerks: p.perks.statPerks };
         b.pages.add(pageKey(p.perks), page, w, p.win);
-        for (const r of new Set(p.perks.runes)) take(`rune:${r}`);
-        const opp = enemies.find((q) => q.position === p.position);
-        if (opp) {
-          let mc = b.matchups.get(opp.championId);
-          if (!mc) b.matchups.set(opp.championId, (mc = new OptionCounter()));
-          mc.add(pageKey(p.perks), page, w, p.win);
-        }
+        for (const r of new Set(p.perks.runes)) take(r);
+        vs?.pages.add(pageKey(p.perks), page, w, p.win);
       }
       const spells = p.spells.filter((s) => s > 0).sort((x, y) => x - y);
       if (spells.length === 2) b.spells.add(spells.join(","), spells, w, p.win);
@@ -283,7 +385,7 @@ export class BuildAggregator {
 
       if (!t) {
         // Without a timeline, the end-of-game inventory says which completed items were taken.
-        for (const id of new Set(p.items.filter((x) => o.completed.has(x)))) take(`item:${id}`);
+        for (const id of new Set(p.items.filter((x) => o.completed.has(x)))) take(-id);
         return;
       }
       b.timelineN++;
@@ -297,15 +399,12 @@ export class BuildAggregator {
       if (start.length) b.starting.add(start.join(","), start, w, p.win);
 
       const bought = completedPurchases(t, i, o.completed);
-      for (const it of new Set(bought.map((x) => x.itemId))) take(`item:${it}`);
-      const laneOpp = enemies.find((q) => q.position === p.position);
-      if (laneOpp) {
-        let mi = b.matchupItems.get(laneOpp.championId);
-        if (!mi) b.matchupItems.set(laneOpp.championId, (mi = { games: 0, starting: new OptionCounter(), first: new Map() }));
-        mi.games++;
-        if (start.length) mi.starting.add(start.join(","), start, w, p.win);
+      for (const it of new Set(bought.map((x) => x.itemId))) take(-it);
+      if (vs) {
+        vs.tgames++;
+        if (start.length) vs.starting.add(start.join(","), start, w, p.win);
         const first = bought[0]?.itemId;
-        if (first !== undefined) mi.first.set(first, (mi.first.get(first) ?? 0) + 1);
+        if (first !== undefined) vs.first.set(first, (vs.first.get(first) ?? 0) + 1);
       }
       if (bought.length >= 2) {
         const path = bought.slice(0, cfg.coreItems).map((x) => x.itemId);
@@ -314,35 +413,27 @@ export class BuildAggregator {
       }
       bought.slice(0, cfg.maxSlots).forEach((x, k) => {
         b.slotGames[k] = (b.slotGames[k] ?? 0) + 1;
-        const key = `${x.itemId}|${k + 1}`;
+        const key = x.itemId * 16 + k + 1;
         let s = b.slots.get(key);
-        if (!s) b.slots.set(key, (s = { n: 0, wins: 0, minutes: 0, bins: new Map() }));
+        if (!s) b.slots.set(key, (s = { n: 0, wins: 0, minutes: 0, expected: 0, bins: o.expected ? null : new Map() }));
         s.n++;
         if (p.win) s.wins++;
         s.minutes += x.sec / 60;
-        const bin = this.bin(Math.floor(x.sec / 60), goldDiffAt(p.teamId, x.sec));
-        s.bins.set(bin, (s.bins.get(bin) ?? 0) + 1);
+        const minute = Math.floor(x.sec / 60);
+        const diff = goldDiffAt(p.teamId, x.sec);
+        if (o.expected) s.expected += expectedWinAt(o.expected, minute, diff);
+        else {
+          const bin = this.fitter.bin(minute, diff);
+          s.bins!.set(bin, (s.bins!.get(bin) ?? 0) + 1);
+        }
       });
     });
     return true;
   }
 
-  /** Smoothed expected win per state bin. */
-  private expected(): number[] {
-    const k = this.opts.config.stateBins.priorGames;
-    return this.stateN.map((n, b) => (this.stateW[b]! + 0.5 * k) / (n + k));
-  }
-
+  /** The expected-win table used for win added (the given one, or this pass's own fit). */
   expectedWinTable(): ExpectedWinTable {
-    const e = this.expected();
-    const rows: number[][] = [];
-    for (let i = 0; i < e.length; i += this.goldBuckets) rows.push(e.slice(i, i + this.goldBuckets).map((x) => round(x)));
-    return {
-      minutes: this.opts.config.stateBins.minutes,
-      goldDiff: this.opts.config.stateBins.goldDiff,
-      winRate: rows,
-      n: this.stateN.reduce((a, b) => a + b, 0),
-    };
+    return this.opts.expected ?? this.fitter.table();
   }
 
   /** Share of each item's games per role, for items seen in at least `minItemRoleGames` games. */
@@ -372,19 +463,19 @@ export class BuildAggregator {
 
   finish(): ChampionBuild[] {
     const cfg = this.opts.config;
-    const e = this.expected();
+    const e = this.fitter.values();
     const out: ChampionBuild[] = [];
     for (const b of this.builds.values()) {
       if (b.n < cfg.minGames) continue;
       const opt = <T, R>(list: Opt<T>[], f: (v: T) => R) =>
         list.map((x) => ({ ...f(x.value), games: round(x.games), wins: round(x.wins), n: x.n }));
 
-      const items: ItemSlotStat[] = [];
+      let items: ItemSlotStat[] = [];
       for (const [key, s] of b.slots) {
         if (s.n < cfg.minItemGames) continue;
-        const [itemId, slot] = key.split("|").map(Number) as [number, number];
-        let expectedWins = 0;
-        for (const [bin, c] of s.bins) expectedWins += c * e[bin]!;
+        const [itemId, slot] = [Math.floor(key / 16), key % 16];
+        let expectedWins = s.expected;
+        if (s.bins) for (const [bin, c] of s.bins) expectedWins += c * e[bin]!;
         items.push({
           itemId,
           slot,
@@ -395,14 +486,21 @@ export class BuildAggregator {
         });
       }
       items.sort((x, y) => x.slot - y.slot || y.n - x.n);
+      // The most bought items per slot only (the snapshot stays small; rarer ones aren't suggested anyway).
+      const perSlot = new Map<number, number>();
+      items = items.filter((x) => {
+        const c = (perSlot.get(x.slot) ?? 0) + 1;
+        perSlot.set(x.slot, c);
+        return c <= cfg.maxItemsPerSlot;
+      });
 
       const lifts: SituationalLift[] = [];
       const { priorGames: k, minGames, minLift, maxPerBuild } = cfg.lift;
       for (const [key, c] of b.takes) {
-        const [kind, id] = key.split(":") as ["rune" | "item", string];
+        const [kind, id] = key < 0 ? (["item", -key] as const) : (["rune", key] as const);
         for (const tr of ENEMY_TRAITS) {
-          const [nLow, nHigh] = b.traitGames[tr];
-          const [cLow, cHigh] = c[tr];
+          const [nLow, nHigh] = [side(b.traitGames, tr, 0), side(b.traitGames, tr, 1)];
+          const [cLow, cHigh] = [side(c, tr, 0), side(c, tr, 1)];
           if (nLow < minGames || nHigh < minGames || cLow + cHigh < minGames) continue;
           const base = (cLow + cHigh) / (nLow + nHigh);
           const high = (cHigh + k * base) / (nHigh + k);
@@ -413,20 +511,28 @@ export class BuildAggregator {
       }
       lifts.sort((x, y) => y.lift - x.lift);
 
+      // Into a lane opponent: only pages that differ from the usual one (the most common opponents first).
+      const pages = opt(b.pages.top(cfg.maxOptions, cfg.minOptionGames), (v) => v);
+      const usualPage = pages[0] ? pageKey(pages[0]) : null;
       const matchupPages: ChampionBuild["matchupPages"] = [];
-      for (const [enemy, counter] of b.matchups) {
-        const [best] = counter.top(1, cfg.minMatchupGames);
-        if (best) matchupPages.push({ enemy, ...best.value, games: round(best.games), wins: round(best.wins), n: best.n });
+      for (const [enemy, vs] of b.opponents) {
+        const [best] = vs.pages.top(1, cfg.minMatchupGames);
+        if (best && pageKey(best.value as NonNullable<ParticipantSummary["perks"]>) !== usualPage) {
+          matchupPages.push({ enemy, ...best.value, games: round(best.games), wins: round(best.wins), n: best.n });
+        }
       }
+      matchupPages.sort((x, y) => y.n - x.n).splice(cfg.maxMatchups);
       matchupPages.sort((x, y) => x.enemy - y.enemy);
       const matchupItems: NonNullable<ChampionBuild["matchupItems"]> = [];
-      for (const [enemy, mi] of b.matchupItems) {
-        if (mi.games < cfg.minMatchupGames) continue;
+      const usualStart = b.starting.top(1, 1)[0]?.value.join(",");
+      for (const [enemy, mi] of [...b.opponents].sort((x, y) => y[1].tgames - x[1].tgames).slice(0, cfg.maxMatchups)) {
+        if (mi.tgames < cfg.minMatchupGames) continue;
         const [start] = mi.starting.top(1, 1);
         matchupItems.push({
           enemy,
-          games: mi.games,
-          starting: start ? { items: start.value, n: start.n } : null,
+          games: mi.tgames,
+          // Only a start that differs from the usual one is worth sending.
+          starting: start && start.value.join(",") !== usualStart ? { items: start.value, n: start.n } : null,
           first: [...mi.first].map(([itemId, n]) => ({ itemId, n })).sort((x, y) => y.n - x.n).slice(0, cfg.maxOptions),
         });
       }
@@ -439,7 +545,7 @@ export class BuildAggregator {
         timelineN: b.timelineN,
         games: round(b.games),
         wins: round(b.wins),
-        pages: opt(b.pages.top(cfg.maxOptions, cfg.minOptionGames), (v) => v),
+        pages,
         spells: opt(b.spells.top(cfg.maxOptions, cfg.minOptionGames), (v) => ({ spells: v })),
         skills: opt(b.skills.top(cfg.maxOptions, cfg.minOptionGames), (v) => v),
         starting: opt(b.starting.top(cfg.maxOptions, cfg.minOptionGames), (v) => ({ items: v })),
