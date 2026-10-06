@@ -62,3 +62,6 @@ Thumbs.db
 
 # Local one-off check scripts
 *.tmp.ts
+
+# Test profile for pnpm local:desktop
+.local/
