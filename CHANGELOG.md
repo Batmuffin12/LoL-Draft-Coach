@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
-## [0.6.1] — Unreleased
+## [0.6.1] — 2026-10-06
 
 ### Added
 - **Import runes & spells** (one button): on your click, creates the rune page and sets your own two summoner spells in champ select; a spell already on a key keeps it (Flash stays on D or F). Within Riot's policy (D34): your choice, on a click, never automatic; nothing else in champ select is touched.

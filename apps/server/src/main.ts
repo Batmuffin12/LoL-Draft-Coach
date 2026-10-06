@@ -13,7 +13,7 @@ import { readServerEnv } from "./env";
 import { MetaJob } from "./meta-job";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);

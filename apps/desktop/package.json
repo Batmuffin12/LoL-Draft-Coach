@@ -1,6 +1,6 @@
 {
   "name": "@ldc/desktop",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "LoL Draft Coach champ select panel (Electron, ow-electron-compatible)",
   "type": "module",
