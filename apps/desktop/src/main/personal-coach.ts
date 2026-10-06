@@ -523,6 +523,7 @@ export class PersonalCoach extends Coach {
       score: p.score,
       expectedWin: p.expectedWin ?? null,
       factors: p.factors,
+      terms: p.terms ?? [],
       reasons: p.reasons.map(say),
       offMeta: p.offMeta,
     }));

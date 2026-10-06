@@ -1,4 +1,4 @@
-import type { CoachStatus, FactorScores } from "@ldc/shared";
+import type { CoachStatus, FactorScores, Term } from "@ldc/shared";
 
 /** IPC channel names between main and renderer. */
 export const IPC = {
@@ -47,6 +47,8 @@ export interface PickView {
   /** Predicted win chance in this draft (live meta), or null without a meta snapshot. */
   expectedWin: number | null;
   factors: FactorScores;
+  /** Engine v2: the parts of the win chance, in points with their games (empty without live meta). */
+  terms: Term[];
   reasons: string[];
   offMeta: boolean;
 }

@@ -213,6 +213,10 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(picks.every((p) => p.expectedWin !== null && p.expectedWin > 0 && p.expectedWin < 1)).toBe(true);
     const strong = picks.find((p) => p.champion.id === 245);
     expect(strong?.reasons.join(" ")).toMatch(/Strong in middle in your rank: 56\.0% win rate \(400 games\)/);
+    // The win chance's parts travel with each pick, in points of win chance with their sample size.
+    expect(strong!.terms.map((t) => t.name)).toEqual(["meta", "lane", "counter", "synergy", "team", "personal"]);
+    expect(strong!.terms.find((t) => t.name === "meta")).toMatchObject({ games: 400 });
+    expect(strong!.terms.every((t) => Number.isFinite(t.deltaWin))).toBe(true);
 
     // A new scoring config from the server applies immediately; wording an older server lacks falls back to the bundled copy.
     const { ["loadout.page"]: _dropped, ...olderTemplates } = config.explain.templates;
