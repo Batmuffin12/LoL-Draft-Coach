@@ -2,7 +2,7 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
-## [0.6.0] — Unreleased — Milestone 6: Loadout
+## [0.6.0] — 2026-10-06 — Milestone 6: Loadout
 
 After you lock in, the "Your pick" card shows a full loadout for your champion, role and this enemy team, with the numbers behind each choice, and can import it into the client on your click.
 
