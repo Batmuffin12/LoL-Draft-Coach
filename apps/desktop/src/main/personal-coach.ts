@@ -18,6 +18,7 @@ import {
   assessPick,
   draftLoadout,
   completedItems,
+  completedBoots,
   personalBuild,
   suggestBans,
   suggestHoverBans,
@@ -123,6 +124,7 @@ export class PersonalCoach extends Coach {
         const blocks = [
           ...(l.starting ? [{ type: say("import.block.starting"), items: l.starting.value }] : []),
           ...(l.core ? [{ type: say("import.block.core"), items: l.core.value }] : []),
+          ...(l.boots ? [{ type: say("import.block.boots"), items: [l.boots.top.itemId, ...l.boots.alternatives.map((a) => a.itemId)] }] : []),
           ...l.items.filter((s) => s.alternatives.length).map((s) => ({ type: say("import.block.alternatives", { slot: s.slot }), items: s.alternatives.map((a) => a.itemId) })),
         ];
         await importer.importItemSet({ title: `${shown.champion} ${l.role}`, championId: l.championId, mapId: Number(this.config.engine.loadout.items.mapId), blocks });
@@ -453,13 +455,15 @@ export class PersonalCoach extends Coach {
       this.keptPick = null;
       // Your own games on the champion fill in when your rank has too few (completed items from Data Dragon).
       let completed: Set<number> = new Set();
+      let boots: Set<number> = new Set();
       try {
         completed = completedItems(this.deps.ddragon.data.itemInfo, engine.loadout.items);
+        boots = completedBoots(this.deps.ddragon.data.itemInfo, engine.loadout.items);
       } catch {
         // Data Dragon not loaded yet.
       }
       const personal = personalBuild(this.profile.matches, locked, role, completed);
-      const loadout = live ? draftLoadout(live, locked, engine.loadout, personal) : null;
+      const loadout = live ? draftLoadout(live, locked, engine.loadout, personal, boots) : null;
       if (this.shownLoadout?.loadout.championId !== locked) this.importMessage = null;
       this.shownLoadout = loadout ? { loadout, champion: nameOf(locked) } : null;
       let data = null;

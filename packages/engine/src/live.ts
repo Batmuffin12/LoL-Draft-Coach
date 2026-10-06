@@ -349,7 +349,13 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
  * The loadout for the local player's champion in this draft, from the band's builds:
  * enemies and the lane opponent are placed the same way as for picks. Null without a build.
  */
-export function draftLoadout(input: LiveInput, championId: ChampionId, config: LoadoutConfig, personal: PersonalBuild | null = null): Loadout | null {
+export function draftLoadout(
+  input: LiveInput,
+  championId: ChampionId,
+  config: LoadoutConfig,
+  personal: PersonalBuild | null = null,
+  boots: ReadonlySet<number> = new Set(),
+): Loadout | null {
   const cuts = input.index.snapshot.traitCuts;
   const all = input.index.buildsOf(championId);
   if (!cuts || (!all.length && !personal)) return null;
@@ -363,6 +369,7 @@ export function draftLoadout(input: LiveInput, championId: ChampionId, config: L
     build,
     pooled: mergeBuilds([build, ...all.filter((b) => b !== build)].filter((b) => b.n > 0)),
     personal,
+    boots,
     ...(input.index.snapshot.itemRoles ? { itemRoles: input.index.snapshot.itemRoles } : {}),
     enemies: ctx.enemies.map((e) => e.championId),
     laneOpponent: ctx.laneEnemy?.championId ?? null,

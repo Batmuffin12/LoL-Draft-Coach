@@ -47,6 +47,7 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons) } : null,
     skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), reason: first(l.skills.reasons) } : null,
     starting: l.starting ? { items: l.starting.value.map(item), reason: first(l.starting.reasons) } : null,
+    boots: l.boots ? { top: withReasons(item(l.boots.top.itemId), l.boots.top.reasons), alternatives: l.boots.alternatives.map((a) => withReasons(item(a.itemId), a.reasons)) } : null,
     items: l.items.map((s) => ({ slot: s.slot, top: withReasons(item(s.top.itemId), s.top.reasons), alternatives: s.alternatives.map((a) => withReasons(item(a.itemId), a.reasons)) })),
     commonPath: !l.items.length && l.core ? { items: l.core.value.map(item), reason: first(l.core.reasons) } : null,
     canImport: deps.canImport,

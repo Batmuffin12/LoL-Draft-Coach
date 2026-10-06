@@ -141,6 +141,47 @@ describe("items follow your lane and its matchup", () => {
   });
 });
 
+describe("boots on their own row", () => {
+  // 3020 Sorcerer's Shoes, 3047 Plated Steelcaps (boots per Data Dragon's tag); 6692 a legendary.
+  const boots = new Set([3020, 3047]);
+  const b: ChampionBuild = {
+    ...mid,
+    n: 400,
+    games: 400,
+    wins: 200,
+    items: [
+      { itemId: 3020, slot: 1, n: 150, share: 0.4, winAdded: 0, minute: 10 },
+      { itemId: 6692, slot: 1, n: 200, share: 0.5, winAdded: 0, minute: 12 },
+      { itemId: 3020, slot: 2, n: 100, share: 0.3, winAdded: 0, minute: 16 },
+      { itemId: 3047, slot: 2, n: 60, share: 0.2, winAdded: 0, minute: 16 },
+      { itemId: 3814, slot: 2, n: 150, share: 0.45, winAdded: 0, minute: 18 },
+    ],
+    lifts: [{ kind: "item", id: 3047, trait: "physical", lift: 5, high: 0.5, low: 0.1, n: 400 }],
+  };
+
+  it("picks boots from every build slot and keeps them out of the item slots", () => {
+    const l = buildLoadout(input({ build: b, boots }));
+    expect(l.boots?.top.itemId).toBe(3020);
+    expect(l.boots?.alternatives.map((x) => x.itemId)).toEqual([3047]);
+    expect(say(l.boots!.top.reasons[0]!)).toBe("0.0% win added; 81% of boots bought (250 games)");
+    expect(l.items.map((s) => s.top.itemId)).toEqual([6692, 3814]);
+  });
+
+  it("switches to armor boots against a physical lane opponent", () => {
+    const attrs = new Map([[238, { championId: 238, samples: 50, physicalShare: 0.95, magicShare: 0.05, trueShare: 0, frontline: 0.5, engage: 0.5, roleShares: {}, roleSamples: 50 }]]);
+    const l = buildLoadout(input({ build: b, boots, enemies: [238], laneOpponent: 238, attributes: attrs, traitCuts: { magic: 0.4, physical: 0.5, frontline: 0.5, engage: 0.5, heal: 0.5 } }));
+    expect(l.boots?.top.itemId).toBe(3047);
+  });
+
+  it("uses your usual boots when the band has too few games", () => {
+    const personal = { championId: 950, n: 25, pages: [], spells: [], items: [{ itemId: 6692, n: 22 }, { itemId: 3020, n: 20 }, { itemId: 3814, n: 15 }] };
+    const l = buildLoadout(input({ boots, personal }));
+    expect(l.boots?.top.itemId).toBe(3020);
+    expect(say(l.boots!.top.reasons[0]!)).toBe("Your usual boots: 20 of your 25 Naafiri games");
+    expect(l.core?.value).toEqual([6692, 3814]);
+  });
+});
+
 describe("personalBuild", () => {
   const me = (championId: number, position: string, win: boolean, runes: number[], items: number[]): ParticipantSummary => ({
     championId, teamId: 100, position, win, kills: 0, deaths: 0, assists: 0, cs: 0, gold: 0, visionScore: 0, physicalDamage: 0, magicDamage: 0, trueDamage: 0, damageTaken: 0,

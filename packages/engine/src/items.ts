@@ -29,6 +29,11 @@ export function isCompletedItem(item: ItemInfo, catalog: ReadonlyMap<number, Ite
   return upgrades.length === 0 && item.gold >= rules.legendaryMinGold;
 }
 
+/** Completed boots: upgraded boots from Data Dragon (its "Boots" tag); they get their own row in the loadout. */
+export function completedBoots(catalog: ReadonlyMap<number, ItemInfo>, rules: ItemRules): Set<number> {
+  return new Set([...completedItems(catalog, rules)].filter((id) => isBoots(catalog.get(id)!)));
+}
+
 export function completedItems(catalog: ReadonlyMap<number, ItemInfo>, rules: ItemRules): Set<number> {
   return new Set([...catalog.values()].filter((i) => isCompletedItem(i, catalog, rules)).map((i) => i.id));
 }

@@ -24,6 +24,8 @@ export interface LoadoutInput {
   thin?: boolean;
   /** Which roles buy each item (snapshot `itemRoles`), to keep role-locked items in their role. */
   itemRoles?: Record<string, Record<string, number>>;
+  /** Completed boots (from Data Dragon): chosen on their own row, left out of the item slots. */
+  boots?: ReadonlySet<number>;
 }
 
 /** Enemy traits with your lane opponent counted `laneWeight` times. */
@@ -88,6 +90,8 @@ export interface Loadout {
   spells: LoadoutChoice<number[]> | null;
   skills: LoadoutChoice<{ first: number[]; order: number[] }> | null;
   starting: LoadoutChoice<number[]> | null;
+  /** Boots, chosen on their own (any build slot), with up to `alternatives` other boots. */
+  boots: { top: RankedItem; alternatives: RankedItem[] } | null;
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
   core: LoadoutChoice<number[]> | null;
   items: ItemSlotAdvice[];
@@ -156,7 +160,7 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
   const intensity = Object.fromEntries(ENEMY_TRAITS.map((t) => [t, traitIntensity(enemy[t], input.traitCuts[t])])) as Record<EnemyTrait, number>;
   const lifts = build.lifts.filter((l) => l.kind === "item");
   return build.items
-    .filter((s) => s.slot === slot && s.share >= cfg.itemMinShare && !exclude.has(s.itemId) && fits(input, s.itemId))
+    .filter((s) => s.slot === slot && s.share >= cfg.itemMinShare && !exclude.has(s.itemId) && !input.boots?.has(s.itemId) && fits(input, s.itemId))
     .map((s: ItemSlotStat): RankedItem => {
       const mine = lifts.filter((l) => l.id === s.itemId && intensity[l.trait] > 0);
       let situational = mine.reduce((sum, l) => sum + cfg.liftScale * Math.log(l.lift) * intensity[l.trait], 0);
@@ -178,6 +182,44 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
       return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
     })
     .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
+}
+
+/**
+ * Boots on their own row: every completed boots item bought by your role in any build slot,
+ * scored like a slot (popularity prior, win added, lift against this enemy team with your
+ * lane opponent counted more). Thin data: reasons quote how often players buy them.
+ */
+export function rankBoots(input: LoadoutInput): { top: RankedItem; alternatives: RankedItem[] } | null {
+  const { build, config: cfg } = input;
+  const boots = input.boots;
+  if (!boots?.size) return null;
+  const thin = build.n < cfg.solidGames;
+  const enemy = enemyTraits(input);
+  const intensity = Object.fromEntries(ENEMY_TRAITS.map((t) => [t, traitIntensity(enemy[t], input.traitCuts[t])])) as Record<EnemyTrait, number>;
+  const byItem = new Map<number, { n: number; wa: number }>();
+  for (const s of build.items) {
+    if (!boots.has(s.itemId) || !fits(input, s.itemId)) continue;
+    const cur = byItem.get(s.itemId) ?? { n: 0, wa: 0 };
+    cur.n += s.n;
+    cur.wa += s.winAdded * s.n;
+    byItem.set(s.itemId, cur);
+  }
+  const total = [...byItem.values()].reduce((a, b) => a + b.n, 0);
+  if (!total) return null;
+  const ranked = [...byItem].map(([itemId, x]): RankedItem => {
+    const share = x.n / total;
+    const winAdded = x.wa / x.n;
+    const mine = build.lifts.filter((l) => l.kind === "item" && l.id === itemId && intensity[l.trait] > 0);
+    const situational = mine.reduce((sum, l) => sum + cfg.liftScale * Math.log(l.lift) * intensity[l.trait], 0);
+    const best = [...mine].sort((a, b) => Math.log(b.lift) * intensity[b.trait] - Math.log(a.lift) * intensity[a.trait])[0];
+    const reasons: Reason[] = [];
+    if (best) reasons.push(liftReason("item", best, enemy));
+    reasons.push(reason(thin ? "loadout.boots.popular" : "loadout.boots", { share, games: x.n, delta: winAdded }));
+    return { itemId, slot: 0, score: cfg.shareScale * Math.log(share) + (thin ? 0 : cfg.winAddedScale * winAdded) + situational, winAdded, situational, n: x.n, share, reasons };
+  });
+  ranked.sort((a, b) => b.score - a.score);
+  const [top, ...rest] = ranked;
+  return top ? { top, alternatives: rest.slice(0, cfg.alternatives) } : null;
 }
 
 /**
@@ -258,7 +300,18 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   // Items come from win added and lift (rankItems), never raw win rate. Without enough
   // purchases for that, the most common path is shown as what players build.
   // Thin band data and more of your own games on the champion than the band's timelines: your own finished items.
-  const ownItems = personal ? personal.items.filter((i) => fits(input, i.itemId)) : [];
+  const ownItems = personal ? personal.items.filter((i) => fits(input, i.itemId) && !input.boots?.has(i.itemId)) : [];
+  // Boots: your role's purchases; with thin data and more of your own games, your usual boots.
+  const ownBoots = personal ? personal.items.filter((i) => input.boots?.has(i.itemId) && fits(input, i.itemId)) : [];
+  let boots = rankBoots({ ...input, build: roleBuild });
+  if (personal && ownBoots[0] && (!boots || personal.n > boots.top.n)) {
+    personalUsed = true;
+    const b = ownBoots[0];
+    boots = {
+      top: { itemId: b.itemId, slot: 0, score: 0, winAdded: 0, situational: 0, n: b.n, share: b.n / personal.n, reasons: [reason("loadout.boots.personal", { count: b.n, games: personal.n, champion })] },
+      alternatives: [],
+    };
+  }
   const useOwnItems = personal !== null && ownItems.length >= 2 && personal.n > roleBuild.timelineN;
   const items = useOwnItems ? [] : rankItems({ ...input, build: roleBuild, thin: roleBuild.n < cfg.solidGames });
   const roleCommon = <T extends OptionStat & { items: number[] }>(list: T[]) => list.find((o) => o.n >= (thin ? 1 : cfg.minGames) && o.items.every((id) => fits(input, id))) ?? null;
@@ -286,6 +339,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     spells,
     skills,
     starting,
+    boots,
     core,
     items,
   };

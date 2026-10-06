@@ -82,6 +82,8 @@ export interface LoadoutView {
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
   skills: { first: string[]; order: string[]; reason: string | null } | null;
   starting: { items: IconView[]; reason: string | null } | null;
+  /** Boots on their own row, with other boots players take. */
+  boots: { top: LoadoutItemView; alternatives: LoadoutItemView[] } | null;
   /** The ranked build path: per slot the top item and alternatives, each with reasons. */
   items: { slot: number; top: LoadoutItemView; alternatives: LoadoutItemView[] }[];
   /** The most common path, shown when there are too few purchases to rank items. */

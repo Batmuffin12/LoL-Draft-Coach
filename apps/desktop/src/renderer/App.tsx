@@ -232,6 +232,16 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
           ))}
         </LoadoutRow>
       )}
+      {l.boots && (
+        <LoadoutRow label="Boots" reason={l.boots.top.reasons[0] ?? null}>
+          <GameIcon icon={l.boots.top} size={24} title={tip(l.boots.top)} />
+          <strong className="lo-name">{l.boots.top.name}</strong>
+          {l.boots.alternatives.length > 0 && <span className="muted small">or</span>}
+          {l.boots.alternatives.map((a) => (
+            <GameIcon key={a.id} icon={a} size={18} title={tip(a)} />
+          ))}
+        </LoadoutRow>
+      )}
       {l.items.length > 0 && (
         <div className="lo-row">
           <span className="lo-label">Build</span>
