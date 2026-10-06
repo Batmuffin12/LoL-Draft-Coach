@@ -83,11 +83,15 @@ export interface RankedItem {
   situational: number;
   n: number;
   share: number;
+  /** Average minute it's completed (0 when unknown, e.g. from your own games). */
+  minute: number;
   reasons: Reason[];
 }
 
 export interface ItemSlotAdvice {
   slot: number;
+  /** Average minute the slot's item is completed, over all its purchases. */
+  minute: number;
   top: RankedItem;
   alternatives: RankedItem[];
 }
@@ -169,7 +173,10 @@ export function rankItems(input: LoadoutInput): ItemSlotAdvice[] {
     const [top, ...rest] = ranked;
     if (!top) continue;
     taken.add(top.itemId);
-    out.push({ slot, top, alternatives: rest.slice(0, input.config.alternatives) });
+    const bought = input.build.items.filter((s) => s.slot === slot);
+    const n = bought.reduce((sum, s) => sum + s.n, 0);
+    const minute = n > 0 ? bought.reduce((sum, s) => sum + s.minute * s.n, 0) / n : top.minute;
+    out.push({ slot, minute, top, alternatives: rest.slice(0, input.config.alternatives) });
   }
   return out;
 }
@@ -202,7 +209,7 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
           ? reason("loadout.item.popular", { id: s.itemId, slot, share: s.share, games: s.n })
           : reason(s.winAdded >= 0 ? "loadout.item.winAdded" : "loadout.item.winAdded.negative", { id: s.itemId, slot, delta: s.winAdded, share: s.share, games: s.n }),
       );
-      return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, reasons };
+      return { itemId: s.itemId, slot, score: cfg.winAddedScale * s.winAdded + cfg.shareScale * Math.log(s.share) + situational, winAdded: s.winAdded, situational, n: s.n, share: s.share, minute: s.minute, reasons };
     })
     .sort((a, b) => Number(b.winAdded >= cfg.negativeGuard) - Number(a.winAdded >= cfg.negativeGuard) || b.score - a.score);
 }
@@ -255,12 +262,13 @@ export function rankBoots(input: LoadoutInput): { top: RankedItem; alternatives:
   const thin = build.n < cfg.solidGames;
   const enemy = enemyTraits(input);
   const intensity = Object.fromEntries(ENEMY_TRAITS.map((t) => [t, traitIntensity(enemy[t], input.traitCuts[t])])) as Record<EnemyTrait, number>;
-  const byItem = new Map<number, { n: number; wa: number }>();
+  const byItem = new Map<number, { n: number; wa: number; min: number }>();
   for (const s of build.items) {
     if (!boots.has(s.itemId) || !fits(input, s.itemId)) continue;
-    const cur = byItem.get(s.itemId) ?? { n: 0, wa: 0 };
+    const cur = byItem.get(s.itemId) ?? { n: 0, wa: 0, min: 0 };
     cur.n += s.n;
     cur.wa += s.winAdded * s.n;
+    cur.min += s.minute * s.n;
     byItem.set(s.itemId, cur);
   }
   const total = [...byItem.values()].reduce((a, b) => a + b.n, 0);
@@ -274,7 +282,7 @@ export function rankBoots(input: LoadoutInput): { top: RankedItem; alternatives:
     const reasons: Reason[] = [];
     if (best) reasons.push(liftReason("item", best, enemy));
     reasons.push(reason(thin ? "loadout.boots.popular" : "loadout.boots", { share, games: x.n, delta: winAdded }));
-    return { itemId, slot: 0, score: cfg.shareScale * Math.log(share) + (thin ? 0 : cfg.winAddedScale * winAdded) + situational, winAdded, situational, n: x.n, share, reasons };
+    return { itemId, slot: 0, score: cfg.shareScale * Math.log(share) + (thin ? 0 : cfg.winAddedScale * winAdded) + situational, winAdded, situational, n: x.n, share, minute: x.min / x.n, reasons };
   });
   ranked.sort((a, b) => b.score - a.score);
   const [top, ...rest] = ranked;
@@ -377,7 +385,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     personalUsed = true;
     const b = ownBoots[0];
     boots = {
-      top: { itemId: b.itemId, slot: 0, score: 0, winAdded: 0, situational: 0, n: b.n, share: b.n / personal.n, reasons: [reason("loadout.boots.personal", { count: b.n, games: personal.n, champion })] },
+      top: { itemId: b.itemId, slot: 0, score: 0, winAdded: 0, situational: 0, n: b.n, share: b.n / personal.n, minute: 0, reasons: [reason("loadout.boots.personal", { count: b.n, games: personal.n, champion })] },
       alternatives: [],
     };
   }
