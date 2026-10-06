@@ -60,6 +60,8 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
     if (fmt === "champion" && typeof v === "number") return championName(v);
     if (fmt === "item" && typeof v === "number") return names.item?.(v) ?? `#${v}`;
     if (fmt === "rune" && typeof v === "number") return names.rune?.(v) ?? `#${v}`;
+    // Positions as players know them: Riot's "utility" is "support" (templates "role.<id>"; "a / b" lists too).
+    if (typeof v === "string") return v.split(" / ").map((x) => templates[`role.${x}`] ?? x).join(" / ");
     return String(v);
   });
 }

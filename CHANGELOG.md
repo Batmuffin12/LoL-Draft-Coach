@@ -2,6 +2,27 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.6.2] — 2026-10-06 — Panel redesign
+
+### Changed
+- **Panel redesign** to the LoL Draft Coach design system: a 440 × 720 window that zooms with the client, Barlow fonts, a phase band with the timer and your lane opponent, flat sections. Every screen fits without scrolling.
+- **Tables, like the build sites** (u.gg, op.gg, Mobalytics): picks are a table (Win, Lane, You, Team in points of win chance; click a row for its reasons, + green, − amber, the why-not line in gold); bans are a table (Hurts, Win, Pick, Ban, one reason per row; bans for your hover marked "Vs your hover", 5 rows).
+- **After lock-in: Runes · Build · Matchups.** Runes on their full trees with the taken ones lit and the stat shards, the page's win rate and games, one Swap line per situational rune; spells and a Q/W/E/R × 1–18 skill grid (the ultimate at 6, 11, 16). Build: start and boots with their numbers, then items by slot (1st–4th) with the average minute, the top item over the next option, pick % and win added; with thin data the core plus the "Later: pick by situation" pool. Matchups: your champion against each enemy (your lane first) and with each ally: your win rate, edge over the expectation, games.
+- **Lobby**: your pool as a table (Tier, Games, Win); as many roles open as fit, the others as one-line summaries you can open.
+- **Thin data** (D31): no win rates quoted; numbers show games instead ("20 games"), item cells show pick %, and matchups without pair games say so in one line. The data note is one line, the full text on hover.
+- **Bans**: "Hurts" is a bar against the biggest threat in the list (exact points on hover); reason lines say what the columns don't ("Strong in bot in your rank").
+- **Positions as players know them**: Support, Mid and Bot instead of Riot's utility, middle and bottom, in labels and in reasons (`role.<id>` in `config/explain.v1.json`).
+- Each build item is shown once (not again under "Vs this team"); a slot with no second common item says so.
+
+### Fixed
+- **Your record vs the "You" column**: when your recent games on a champion lower the pick, the engine now says why as a caveat ("No recent mid games on it", "Little recent form on it: …") instead of listing your mastery as a plus.
+- **Stat shards** come from CommunityDragon's game data when the client doesn't list them (they were missing with the mock client).
+- A ban's win and pick rates are judged in your role only when it's picked there often enough (the ban engine's threshold), else in its main role.
+
+### Added
+- View data for the tables: ban threat in points and win/pick/ban rates (no ban rate on older snapshots), whole rune paths from Data Dragon and stat shard rows from the client (read only, `/lol-perks/v1/styles`), win rate and games per loadout choice, pick share and win added per item option, the average minute per item slot (engine), starting item counts, and matchups against and with each champion in the draft.
+- Dev aid: `LDC_SCREENSHOT_CLICK=Build` clicks a button (e.g. a tab) before the screenshot.
+
 ## [0.6.1] — 2026-10-06
 
 ### Added

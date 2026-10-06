@@ -23,18 +23,21 @@ import {
   personalBuild,
   suggestBans,
   suggestHoverBans,
+  placeDraft,
   MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
-import type { ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
+import type { BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
 import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
+import { reasonView } from "./reason-view";
+import { banNumbers, draftMatchups } from "./stats-view";
 import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
@@ -50,6 +53,11 @@ export interface PersonalCoachDeps extends CoachDeps {
   meta?: MetaSource | null;
 }
 
+/** Position names from the explain templates ("role.utility": "support"). */
+export function roleLabels(templates: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("role.") ? [[k.slice(5), v]] : [])));
+}
+
 /** The champion the local player has locked in (their pick action is completed), or null. */
 export function lockedPick(draft: DraftState): ChampionId | null {
   const action = draft.actions.find((a) => a.type === "pick" && a.actorCellId === draft.localCellId && a.completed && a.championId > 0);
@@ -57,6 +65,16 @@ export function lockedPick(draft: DraftState): ChampionId | null {
   // After the pick phase (finalization), the seat's champion is final even if actions are trimmed.
   const me = draft.myTeam.find((s) => s.isLocalPlayer);
   return draft.timerPhase === "FINALIZATION" && me && me.championId > 0 ? me.championId : null;
+}
+
+/**
+ * The enemy most likely in your lane, or null before they pick. The client doesn't say enemy
+ * roles: with the band's meta, the engine assigns them (draft-roles); without it, only an enemy
+ * seat that shows your position counts.
+ */
+export function laneOpponent(draft: DraftState, role: Position, index: MetaIndex | null): ChampionId | null {
+  if (index) return placeDraft(draft, index, role).enemies.find((e) => e.role === role)?.championId ?? null;
+  return draft.theirTeam.find((s) => s.position === role && s.championId > 0)?.championId ?? null;
 }
 
 /** The local player is banning right now, or the draft is in the planning phase before bans. */
@@ -93,6 +111,8 @@ export class PersonalCoach extends Coach {
   private keptPick: MyPickView | null = null;
   /** Rune and stat shard names from the client (Data Dragon has no shards), with mirror icons. */
   private perks = new Map<number, { name: string; iconUrl: string | null }>();
+  /** The stat shard rows (offense, flex, defense) from the client, for drawing the whole rune page. */
+  private shardRows: number[][] = [];
 
   /** Import buttons show when the config enables import and the client is connected. */
   private get canImport(): boolean {
@@ -163,6 +183,7 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
+    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates) };
   }
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
@@ -170,11 +191,20 @@ export class PersonalCoach extends Coach {
     // Wording the server doesn't have yet (an older server) falls back to the bundled copy, never to raw ids.
     this.config = { ...config, explain: { ...config.explain, templates: { ...this.p.config.explain.templates, ...config.explain.templates } } };
     this.comfortByRole.clear();
+    this.update({ roleLabels: roleLabels(this.config.explain.templates) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
     this.updateRoleAdvice();
     this.updatePlaystyle();
     this.onDraft();
+  }
+
+  /** Stat shards from CommunityDragon when the client doesn't list them (an older client, the mock client). */
+  private async loadShardsFallback(): Promise<void> {
+    const s = await this.deps.ddragon.statShards().catch(() => null);
+    if (!s) return;
+    this.shardRows = s.rows;
+    for (const [id, p] of s.perks) if (!this.perks.has(id)) this.perks.set(id, p);
   }
 
   /** The Riot ID of the player logged into the client, once known. */
@@ -204,6 +234,10 @@ export class PersonalCoach extends Coach {
       });
     }
     this.p.ddragon.on("patch", () => this.updateRoleAdvice()); // champion names/icons for the lobby
+    // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
+    this.p.ddragon.on("patch", () => {
+      if (this.p.connector.status === "connected" && !this.shardRows.length) void this.loadShardsFallback().then(() => this.onDraft());
+    });
     this.p.connector.on("status", (s) => {
       if (s === "connected") void this.onClientConnected();
     });
@@ -236,6 +270,8 @@ export class PersonalCoach extends Coach {
       this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
       const perks = await this.p.connector.getPerks().catch(() => []);
       this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
+      this.shardRows = await this.p.connector.getStatShardRows().catch(() => []);
+      if (!this.shardRows.length) await this.loadShardsFallback();
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
@@ -440,7 +476,7 @@ export class PersonalCoach extends Coach {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
       const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null });
       return;
     }
     const { engine } = this.config;
@@ -472,6 +508,8 @@ export class PersonalCoach extends Coach {
 
     // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
     const locked = lockedPick(this.draft);
+    // The one draft fact the advice hinges on: who you face in lane (the client doesn't say enemy roles).
+    const lane = role ? { role, champion: champView(laneOpponent(this.draft, role, this.metaIndex) ?? 0, lookup) } : null;
     /** The card for a champion: how it looks in this draft and its loadout (the import buttons use it). */
     const card = (championId: number, hovering: boolean): MyPickView => {
       const assessed = live ? assessPick(live, championId) : null;
@@ -495,7 +533,7 @@ export class PersonalCoach extends Coach {
         champion: champView(championId, lookup)!,
         role,
         expectedWin: assessed?.expectedWin ?? null,
-        reasons: assessed ? assessed.reasons.map(say) : [],
+        reasons: assessed ? assessed.reasons.map((r) => reasonView(r, say)) : [],
         loadout: loadout
           ? toLoadoutView(loadout, {
               data,
@@ -505,15 +543,17 @@ export class PersonalCoach extends Coach {
               band: this.band,
               canImport: this.canImport,
               perk: (id) => this.perks.get(id),
+              shardRows: this.shardRows,
             })
           : null,
         importMessage: this.importMessage,
         hovering,
+        matchups: this.metaIndex && this.draft ? draftMatchups(this.draft, this.metaIndex, championId, role, lookup) : null,
       };
     };
 
     if (locked !== null) {
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, myPick: card(locked, false) });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, myPick: card(locked, false) });
       this.keptPick = this.view.myPick;
       return;
     }
@@ -523,16 +563,20 @@ export class PersonalCoach extends Coach {
       score: p.score,
       expectedWin: p.expectedWin ?? null,
       factors: p.factors,
-      reasons: p.reasons.map(say),
+      terms: p.terms ?? [],
+      reasons: p.reasons.map((r) => reasonView(r, say)),
       offMeta: p.offMeta,
     }));
     const pickAdvice = {
       whyNot: advice.whyNot ? say(advice.whyNot) : null,
       confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
+      minGames: this.config.engine.rating.minGames,
     };
     const banning = live !== null && banningNow(this.draft);
     const banSuggestions = banning ? suggestBans(live) : [];
-    const toView = (b: { championId: number; reasons: Parameters<typeof say>[0][] }): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(say) });
+    // The ban table shows the rates in columns: its reason lines use the short ".row" wording when there is one.
+    const row = (r: BanSuggestion["reasons"][number]) => say(templates[`${r.id}.row`] ? { ...r, id: `${r.id}.row` } : r);
+    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(row), ...banNumbers(live!.index, b, role, engine.rating.bans.minPickRate) });
     // Hovering a champion before or during bans: extra bans that protect it (1 if it's already the top suggestion).
     const hovered = this.draft.myTeam.find((s) => s.isLocalPlayer)?.pickIntentId ?? 0;
     const hoverBans =
@@ -547,6 +591,6 @@ export class PersonalCoach extends Coach {
     const pending = me ? me.championId || me.pickIntentId : 0;
     const hoverCard = live && pending > 0 ? card(pending, true) : null;
     if (!hoverCard?.loadout) this.shownLoadout = null;
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role });
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane });
   }
 }

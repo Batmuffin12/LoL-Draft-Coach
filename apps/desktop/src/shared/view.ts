@@ -1,4 +1,4 @@
-import type { CoachStatus, FactorScores } from "@ldc/shared";
+import type { CoachStatus, FactorScores, Term } from "@ldc/shared";
 
 /** IPC channel names between main and renderer. */
 export const IPC = {
@@ -31,6 +31,8 @@ export interface SlotView {
 export interface DraftView {
   timerPhase: string;
   timeLeftMs: number;
+  /** Full length of the current phase (the first timeLeftMs seen in it), for the draining line. */
+  totalSeconds: number;
   /** Epoch ms when this snapshot was produced, for a local countdown. */
   receivedAt: number;
   myTeam: SlotView[];
@@ -41,13 +43,21 @@ export interface DraftView {
   localAction: string | null;
 }
 
+/** One reason as shown: caveats (the pick's weak point) are negative. */
+export interface ReasonView {
+  text: string;
+  negative: boolean;
+}
+
 export interface PickView {
   champion: ChampView;
   score: number;
   /** Predicted win chance in this draft (live meta), or null without a meta snapshot. */
   expectedWin: number | null;
   factors: FactorScores;
-  reasons: string[];
+  /** Engine v2: the parts of the win chance, in points with their games (empty without live meta). */
+  terms: Term[];
+  reasons: ReasonView[];
   offMeta: boolean;
 }
 
@@ -60,6 +70,25 @@ export interface IconView {
 
 export interface LoadoutItemView extends IconView {
   reasons: string[];
+}
+
+/** An item option with its numbers: how often players take it, and the win it adds (null with thin data). */
+export interface ItemOptionView extends LoadoutItemView {
+  /** Share of the champion-role's games that take it (at this slot, or among boots). */
+  share: number;
+  winAdded: number | null;
+}
+
+/** A rune path drawn whole: its runes per row in Data Dragon slot order (keystones first on the primary path). */
+export interface RuneTreeView {
+  style: IconView;
+  rows: IconView[][];
+}
+
+/** Win rate and games of a loadout choice; winRate is null with thin data (no win rates quoted, D31). */
+export interface ChoiceNumbers {
+  winRate: number | null;
+  games: number;
 }
 
 /** Runes, spells, skill order and items for the locked-in champion (live meta only). */
@@ -78,12 +107,19 @@ export interface LoadoutView {
     /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
     shards: IconView[];
     reason: string | null;
-  } | null;
+    /** Both paths whole, so the page can be drawn on its trees (null without Data Dragon). */
+    primaryTree: RuneTreeView | null;
+    secondaryTree: RuneTreeView | null;
+    /** All stat shard rows (offense, flex, defense) and the chosen index in each (-1: unknown); null when the client doesn't list them. */
+    shardRows: { rows: IconView[][]; chosen: number[] } | null;
+  } & ChoiceNumbers | null;
   situationalRunes: LoadoutItemView[];
-  spells: { spells: IconView[]; reason: string | null } | null;
+  spells: ({ spells: IconView[]; reason: string | null } & ChoiceNumbers) | null;
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
-  skills: { first: string[]; order: string[]; reason: string | null } | null;
-  starting: { items: IconView[]; reason: string | null } | null;
+  /** `basic`: the three basic ability keys (grid rows), `ult`: the ultimate's key (levels 6, 11, 16). */
+  skills: ({ first: string[]; order: string[]; basic: string[]; ult: string; reason: string | null } & ChoiceNumbers) | null;
+  /** Starting items without repeats; counts[i] is how many of items[i] (e.g. 2 potions). */
+  starting: ({ items: IconView[]; counts: number[]; reason: string | null } & ChoiceNumbers) | null;
   /** Thin data: later items to pick from by situation (after the core), each with its reason. */
   laterPool: LoadoutItemView[];
   laterNote: string | null;
@@ -92,13 +128,27 @@ export interface LoadoutView {
   /** What your role quest turns items of this loadout into (e.g. tier-3 boots in mid). */
   quest: LoadoutItemView[];
   /** Boots on their own row, with other boots players take. */
-  boots: { top: LoadoutItemView; alternatives: LoadoutItemView[] } | null;
-  /** The ranked build path: per slot the top item and alternatives, each with reasons. */
-  items: { slot: number; top: LoadoutItemView; alternatives: LoadoutItemView[] }[];
+  boots: { top: ItemOptionView; alternatives: ItemOptionView[] } | null;
+  /** The ranked build path: per slot its average minute, the top item and alternatives, each with reasons and numbers. */
+  items: { slot: number; minute: number | null; top: ItemOptionView; alternatives: ItemOptionView[] }[];
   /** The most common path, shown when there are too few purchases to rank items. */
   commonPath: { items: IconView[]; reason: string | null } | null;
   /** One-click import into the League client (only on your click), when enabled. */
   canImport: boolean;
+}
+
+/** Your champion against (or with) one champion of the draft; champion null: that seat hasn't picked. */
+export interface MatchupRowView {
+  champion: ChampView | null;
+  /** The role it (most likely) plays: the client hides enemy roles, so the engine guesses them. */
+  role: string;
+  /** Your lane opponent. */
+  lane: boolean;
+  /** Your win rate in games with this pair, or null without games. */
+  winRate: number | null;
+  /** Points of win chance over what the two champions' strength predicts, or null without games. */
+  delta: number | null;
+  games: number;
 }
 
 /** The champion the local player has locked in, and how it looks in this draft. */
@@ -107,18 +157,27 @@ export interface MyPickView {
   role: string | null;
   /** Predicted win chance in this draft (live meta only). */
   expectedWin: number | null;
-  reasons: string[];
+  reasons: ReasonView[];
   loadout: LoadoutView | null;
   /** The result of the last import click (e.g. "Rune page created"), or null. */
   importMessage: string | null;
   /** True when the champion is only hovered (not locked in yet). */
   hovering?: boolean;
+  /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
+  matchups: { against: MatchupRowView[]; with: MatchupRowView[] } | null;
 }
 
 /** A suggested ban (ban phase, live meta only). */
 export interface BanView {
   champion: ChampView;
   reasons: string[];
+  /** Win chance it costs you, in points (negative), weighted by how often it's picked. */
+  threat: number;
+  /** Its win rate and pick rate in your band (in your role when it's played there), or null without games. */
+  winRate: number | null;
+  pickRate: number | null;
+  /** How often it's banned in your band; null when the snapshot has no ban counts (older snapshots). */
+  banRate: number | null;
 }
 
 /** The live meta the picks are based on. */
@@ -194,6 +253,8 @@ export interface PickAdviceView {
   /** "Picked over your usual X because …", or null. */
   whyNot: string | null;
   confidence: { level: "clear" | "close" | "thin"; label: string } | null;
+  /** Fewest games for a term to count (engine v2 config): meta for the champion, pair for matchups and duos. Below it, bars draw faint. */
+  minGames?: { meta: number; pair: number };
 }
 
 export interface ViewState {
@@ -214,12 +275,16 @@ export interface ViewState {
   meta: MetaView | null;
   /** Role the picks are for, if known. */
   pickRole: string | null;
+  /** Your lane opponent in champ select (champion null: not picked yet), or null without a role. */
+  laneOpponent: { role: string; champion: ChampView | null } | null;
   /** Your roles ranked by recent results, for the lobby. */
   roles: RoleView[];
   /** Your playstyle per role with enough games (most played first). */
   playstyle: PlaystyleView[];
   notices: string[];
   docked: boolean;
+  /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
+  roleLabels: Record<string, string>;
 }
 
 export function emptyViewState(): ViewState {
@@ -235,9 +300,11 @@ export function emptyViewState(): ViewState {
     hoverPick: null,
     meta: null,
     pickRole: null,
+    laneOpponent: null,
     roles: [],
     playstyle: [],
     notices: [],
     docked: true,
+    roleLabels: {},
   };
 }

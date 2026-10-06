@@ -46,6 +46,16 @@ const attributes = new Map([attr(11, 0.9), attr(12, 0.9), attr(13, 0.1), attr(99
 const cuts = { magic: 0.4, physical: 0.6, frontline: 0.5, engage: 0.5, heal: 0.5 };
 const input = (over: Partial<LoadoutInput> = {}): LoadoutInput => ({ build, enemies: [13], laneOpponent: null, attributes, traitCuts: cuts, config: cfg, ...over });
 
+describe("item minutes", () => {
+  it("gives each slot its average minute over all purchases, and each item its own", () => {
+    const [s1, s2] = rankItems(input());
+    // Slot 1: (400×12 + 300×13 + 50×14 + 20×14) / 770.
+    expect(s1!.minute).toBeCloseTo((400 * 12 + 300 * 13 + 50 * 14 + 20 * 14) / 770);
+    expect(s1!.top.minute).toBe(s1!.top.itemId === 3071 ? 12 : s1!.top.itemId === 3078 ? 13 : 14);
+    expect(s2!.minute).toBeCloseTo((200 * 20 + 150 * 21 + 100 * 21) / 450);
+  });
+});
+
 describe("buildLoadout", () => {
   it("picks the most successful common rune page, smoothed, and spells, skills and starting items", () => {
     const l = buildLoadout(input());

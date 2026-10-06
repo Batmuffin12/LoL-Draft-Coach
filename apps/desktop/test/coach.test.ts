@@ -38,6 +38,8 @@ describe("Coach (mock League client end to end)", () => {
     // Play until the local player's pick turn.
     while (coach.state.draft?.localAction !== "pick" && server.step()) await new Promise((r) => setTimeout(r, 15));
     expect(coach.state.draft?.localAction).toBe("pick");
+    // The phase length comes with the draft, for the draining line.
+    expect(coach.state.draft!.totalSeconds).toBeGreaterThanOrEqual(Math.round(coach.state.draft!.timeLeftMs / 1000));
 
     await server.playAll();
     await waitFor(() => coach!.state.draft === null && coach!.state.status.gameflowPhase === "GameStart");

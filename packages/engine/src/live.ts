@@ -97,6 +97,19 @@ function comfortReasons(c: ComfortStats | undefined, role: Position | null): Rea
   return out;
 }
 
+/**
+ * Why comfort lowers a pick (the personal term is negative): your recent record on it, as a
+ * caveat (template ids end in .weak, so the panel shows them in amber).
+ */
+function comfortCaveat(c: ComfortStats, role: Position | null): Reason {
+  if (role) {
+    return c.gamesInRole && c.winRateInRole !== null
+      ? reason("comfort.role.weak", { games: c.gamesInRole, role, winRate: c.winRateInRole })
+      : reason("comfort.none.weak", { role });
+  }
+  return c.games > 0 && c.winRate !== null ? reason("comfort.any.weak", { games: c.games, winRate: c.winRate }) : reason("comfort.none.any.weak", {});
+}
+
 /** "Trending in jungle: picked in 9% of games, up from 4%" when the band flags the champion-role. */
 function trendReason(index: MetaIndex, id: ChampionId, role: Position): Reason | null {
   const t = index.trend(id, role);
@@ -114,6 +127,8 @@ interface Weighted {
   r: Reason;
   weight: number;
   positive: boolean;
+  /** Your own record lowers the pick: always shown, beside the biggest other caveat. */
+  own?: boolean;
 }
 
 function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMeta: boolean, input: LiveInput, ctx: DraftContext): Scored {
@@ -214,7 +229,9 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   const personal = w.personal * personalRating(comfort, cfg);
   const unplayed = !comfort || (comfort.games === 0 && comfort.masteryPoints === 0);
   if (unplayed) note(reason("personal.new", {}), personal);
-  else for (const r of comfortReasons(comfort, input.role)) notes.push({ r, weight: Math.abs(deltaWin(personal)), positive: personal >= 0 });
+  else if (personal >= 0) for (const r of comfortReasons(comfort, input.role)) notes.push({ r, weight: Math.abs(deltaWin(personal)), positive: true });
+  // Comfort lowers the pick: say why, so the reasons agree with the sign of the term.
+  else notes.push({ r: comfortCaveat(comfort!, input.role), weight: Math.abs(deltaWin(personal)), positive: false, own: true });
   if (offMeta && input.role) {
     const listed = input.intendedPositions.get(id);
     notes.push({ r: listed?.length ? reason("offMeta.usual", { role: input.role, usual: listed.join(" / ") }) : reason("offMeta", { role: input.role }), weight: 0, positive: false });
@@ -241,11 +258,12 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
     metaStrength: metaStat.n > 0 ? bar(meta, cfg) : null,
   };
 
-  // Strongest supporting reasons first, then the single biggest caveat.
+  // Strongest supporting reasons first, then the single biggest caveat (plus your own record when it lowers the pick).
   const positives = notes.filter((n) => n.positive).sort((a, b) => b.weight - a.weight);
-  const caveat = notes.filter((n) => !n.positive).sort((a, b) => b.weight - a.weight)[0];
+  const biggest = notes.filter((n) => !n.positive && !n.own).sort((a, b) => b.weight - a.weight)[0];
+  const caveats = [biggest, notes.find((n) => n.own)].filter((n): n is Weighted => n !== undefined).sort((a, b) => b.weight - a.weight);
   const max = cfg.explain.maxReasons;
-  const reasons = [...positives.slice(0, caveat ? max - 1 : max), ...(caveat ? [caveat] : [])].map((n) => n.r);
+  const reasons = [...positives.slice(0, Math.max(0, max - caveats.length)), ...caveats].map((n) => n.r);
 
   return {
     pick: { championId: id, score: expectedWin, expectedWin, terms, factors, reasons, offMeta },

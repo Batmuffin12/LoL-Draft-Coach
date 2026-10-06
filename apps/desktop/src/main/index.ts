@@ -19,10 +19,9 @@ import { MetaSource } from "./meta-source";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
-import { computeDockBounds, createWin32Finder, sameRect, type Rect } from "./dock";
+import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 
-const PANEL_WIDTH = 340;
 const DOCK_POLL_MS = 500;
 
 // Dev aid: LDC_USER_DATA_DIR keeps a test run (another account, a clean first run) out of your real profile.
@@ -44,7 +43,7 @@ function createWindow(): BrowserWindow {
   const w = new BrowserWindow({
     width: PANEL_WIDTH,
     height: 720,
-    minWidth: 280,
+    minWidth: 400,
     frame: false,
     alwaysOnTop: true,
     backgroundColor: "#0b0f17",
@@ -78,7 +77,10 @@ async function startDocking(coach: Coach): Promise<void> {
     // GetWindowRect returns physical pixels; Electron positions windows in DIPs.
     const client = process.platform === "win32" ? screen.screenToDipRect(null, physical) : physical;
     const display = screen.getDisplayMatching(client);
-    const target = computeDockBounds(client, PANEL_WIDTH, display.workArea);
+    // Scale the whole panel with the client (as the client scales itself): 440 × 720 beside a 720p client.
+    const zoom = dockZoom(client.height);
+    if (zoom !== win.webContents.getZoomFactor()) win.webContents.setZoomFactor(zoom);
+    const target = computeDockBounds(client, dockWidth(zoom), display.workArea);
     if (!sameRect(target, last)) {
       win.setBounds(target);
       last = target;
@@ -107,6 +109,20 @@ function scheduleScreenshot(): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
+    // LDC_SCREENSHOT_CLICK=Build: click the first button with that text first (e.g. to open a tab).
+    const click = process.env.LDC_SCREENSHOT_CLICK;
+    if (click) {
+      await win?.webContents
+        .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === ${JSON.stringify(click)}); b?.click(); return !!b; })()`)
+        .then((found: boolean) => console.log(`LDC_SCREENSHOT: clicked "${click}": ${found}`))
+        .catch(() => null);
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    // Champ-select screens must fit without scrolling: report how far the scrolling area overflows.
+    const overflow = await win?.webContents
+      .executeJavaScript(`(() => { const s = document.querySelector(".scroll"); return s ? s.scrollHeight - s.clientHeight : 0; })()`)
+      .catch(() => null);
+    console.log(`LDC_SCREENSHOT: scroll overflow ${overflow}px`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     app.quit();

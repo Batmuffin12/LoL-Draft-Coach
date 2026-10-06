@@ -131,10 +131,12 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     expect(ids.every((id) => [103, 245, 84].includes(id))).toBe(true);
     expect(coach!.state.pickRole).toBe("middle");
     expect(picks[0]!.champion.name).toBe("Ahri");
-    expect(picks[0]!.reasons.join(" ")).toMatch(/win rate/);
+    expect(picks[0]!.reasons.map((r) => r.text).join(" ")).toMatch(/win rate/);
+    // Engine v1 (no live meta) has no rating terms.
+    expect(picks.every((p) => p.terms.length === 0)).toBe(true);
     // Riot's positions come from the client (fixture): Ahri/Ekko/Akali are all listed for middle.
     expect(picks.every((p) => !p.offMeta)).toBe(true);
-    expect(picks.find((p) => p.champion.id === 103)!.reasons.join(" ")).toMatch(/grades S A+/);
+    expect(picks.find((p) => p.champion.id === 103)!.reasons.map((r) => r.text).join(" ")).toMatch(/grades S A+/);
     // The list as a whole is explained: a confidence label from our own data.
     expect(coach!.state.pickAdvice.confidence?.label).toMatch(/Clear pick|Close call|Not much data yet/);
 

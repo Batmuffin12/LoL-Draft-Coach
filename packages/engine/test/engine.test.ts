@@ -281,7 +281,7 @@ describe("recommendPicks", () => {
     for (let i = 1; i < picks.length; i++) expect(picks[i - 1]!.score).toBeGreaterThanOrEqual(picks[i]!.score);
     expect(picks[0]!.factors.comfort).not.toBeNull();
     expect(picks[0]!.factors.laneMatchup).toBeNull();
-    expect(text(picks[0]!.reasons.slice(0, 1))).toMatch(/recent middle games, \d+% win rate/);
+    expect(text(picks[0]!.reasons.slice(0, 1))).toMatch(/recent mid games, \d+% win rate/);
   });
 
   it("only suggests champions from the player's pool that fit the role", () => {
@@ -354,7 +354,7 @@ describe("explanation helpers", () => {
   });
 
   it("every reason the engine emits has a template", () => {
-    const ids = ["comfort.role", "comfort.roleWithAll", "comfort.otherRoles", "comfort.any", "mastery", "mastery.grades", "team.magic", "team.physical", "team.frontline", "team.engage", "offMeta", "offMeta.usual", "whyNot.unavailable", "whyNot.notPickable", "whyNot.offMeta", "whyNot.team.magic", "whyNot.team.physical", "whyNot.team.frontline", "whyNot.team.engage", "confidence.clear", "confidence.close", "confidence.thin", "meta.strong", "meta.weak", "lane.good", "lane.bad", "blind.safe", "blind.risky", "counter.good", "counter.bad", "synergy.good", "personal.new", "whyNot.meta", "whyNot.lane", "whyNot.counter", "whyNot.synergy", "whyNot.team", "whyNot.personal", "ban.counters", "ban.meta", "ban.popular", "ban.banRate", "trend.pick", "trend.win", "trend.both", "power.late", "power.early", "power.laneAhead", "power.laneBehind", "loadout.page", "loadout.page.matchup", "loadout.spells", "loadout.skills", "loadout.starting", "loadout.core.common", "loadout.item.winAdded", "loadout.item.winAdded.negative", "loadout.page.popular", "loadout.item.popular", "loadout.later.personal", "loadout.quest", "loadout.boots", "loadout.boots.popular", "loadout.boots.personal", "loadout.item.matchup", "loadout.starting.matchup", "loadout.page.personal", "loadout.spells.popular", "loadout.spells.personal", "loadout.core.personal", ...["item", "rune"].flatMap((k) => ["magic", "physical", "frontline", "engage", "heal"].map((t) => `loadout.${k}.lift.${t}`))];
+    const ids = ["comfort.role", "comfort.roleWithAll", "comfort.otherRoles", "comfort.any", "comfort.role.weak", "comfort.none.weak", "comfort.any.weak", "comfort.none.any.weak", "mastery", "mastery.grades", "team.magic", "team.physical", "team.frontline", "team.engage", "offMeta", "offMeta.usual", "whyNot.unavailable", "whyNot.notPickable", "whyNot.offMeta", "whyNot.team.magic", "whyNot.team.physical", "whyNot.team.frontline", "whyNot.team.engage", "confidence.clear", "confidence.close", "confidence.thin", "meta.strong", "meta.weak", "lane.good", "lane.bad", "blind.safe", "blind.risky", "counter.good", "counter.bad", "synergy.good", "personal.new", "whyNot.meta", "whyNot.lane", "whyNot.counter", "whyNot.synergy", "whyNot.team", "whyNot.personal", "ban.counters", "ban.meta", "ban.popular", "ban.banRate", "trend.pick", "trend.win", "trend.both", "power.late", "power.early", "power.laneAhead", "power.laneBehind", "loadout.page", "loadout.page.matchup", "loadout.spells", "loadout.skills", "loadout.starting", "loadout.core.common", "loadout.item.winAdded", "loadout.item.winAdded.negative", "loadout.page.popular", "loadout.item.popular", "loadout.later.personal", "loadout.quest", "loadout.boots", "loadout.boots.popular", "loadout.boots.personal", "loadout.item.matchup", "loadout.starting.matchup", "loadout.page.personal", "loadout.spells.popular", "loadout.spells.personal", "loadout.core.personal", ...["item", "rune"].flatMap((k) => ["magic", "physical", "frontline", "engage", "heal"].map((t) => `loadout.${k}.lift.${t}`))];
     for (const id of ids) expect(explainCfg.templates, id).toHaveProperty([id]);
     const src = readdirSync(join(__dirname, "..", "src")).map((f) => readFileSync(join(__dirname, "..", "src", f), "utf8")).join("\n");
     for (const m of src.matchAll(/reason\("([\w.]+)"/g)) expect(ids, m[1]).toContain(m[1]);
@@ -423,7 +423,7 @@ describe("role-aware comfort and off-meta picks", () => {
     const fun = picks[1]!;
     expect(fun.offMeta).toBe(true);
     expect(picks[0]!.offMeta).toBe(false);
-    expect(text(fun.reasons)).toMatch(/Off-meta in jungle \(usually bottom\)/);
+    expect(text(fun.reasons)).toMatch(/Off-meta in jungle \(usually bot\)/);
     expect(text(fun.reasons.slice(0, 1))).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
     expect(text(picks[0]!.reasons)).toMatch(/grades S A\+/);
     const unpenalised = combineFactors(fun.factors, weightsForBand(2, engineCfg));
@@ -544,5 +544,12 @@ describe("role shares from small samples", () => {
     const fit = (s: AttributeSample[]) => roleFit(7, comfort, "utility", new Map(), deriveChampionAttributes(s, 3), engineCfg.roles);
     expect(fit(few)).toBeNull(); // 2 of 10 is noise
     expect(fit(many)).toBe("meta"); // 10 of 50 is a real pattern
+  });
+});
+
+describe("role names", () => {
+  it("shows positions as players know them, from the role.<id> templates", () => {
+    const t = { "role.utility": "support", "role.middle": "mid", r: "In {role} ({usual})" };
+    expect(renderReason({ id: "r", slots: { role: "utility", usual: "middle / jungle" } }, t, () => "")).toBe("In support (mid / jungle)");
   });
 });
