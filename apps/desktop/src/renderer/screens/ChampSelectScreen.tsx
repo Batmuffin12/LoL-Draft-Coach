@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import type { DraftView, ViewState } from "../../shared/view";
-import { BanList } from "../components/BanList";
+import { BanTable, type BanRow } from "../components/BanTable";
+import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
 import { PhaseBar } from "../components/PhaseBar";
-import { PickList } from "../components/PickList";
+import { PickTable } from "../components/PickTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
@@ -37,6 +38,16 @@ function context(state: ViewState, banning: boolean): string | null {
 }
 
 type PickTab = "picks" | "runes" | "build";
+
+/** Ban rows that fit 720px: the suggested bans, then the ones that protect your hover fill the rest. */
+const BAN_ROWS = 5;
+/** Pick rows (3–4) so the selected row's reasons fit under the table. */
+const PICK_ROWS = 4;
+
+function banRows(state: ViewState): BanRow[] {
+  const hover = (state.hoverBans?.bans ?? []).map((b) => ({ ...b, forHover: true }));
+  return [...state.bans, ...hover].slice(0, BAN_ROWS);
+}
 
 /** Champ select: the ban screen on your ban turn, otherwise the pick screen. Fits 720px without scrolling. */
 export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: DraftView }) {
@@ -80,7 +91,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
   const footer = showLoadout ? (
     <LoadoutSource pick={hover} />
   ) : (
-    <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
+    <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion. Click a row for its reasons."}</span>
   );
   const profile = state.status.profile;
   return (
@@ -89,9 +100,17 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
       {showLoadout ? (
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} />
       ) : banning ? (
-        <BanList bans={state.bans} hover={state.hoverBans} />
+        <Section title="Suggested bans">
+          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">Ban suggestions need the live meta for your rank.</p>}
+        </Section>
       ) : (
-        <PickList picks={state.picks} advice={state.pickAdvice} emptyText={profile.state === "loading" ? "Suggestions appear once your match history is loaded." : undefined} />
+        <Section title="Suggested picks" aside={state.picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
+          {state.picks.length > 0 ? (
+            <PickTable picks={state.picks.slice(0, PICK_ROWS)} whyNot={state.pickAdvice.whyNot} />
+          ) : (
+            <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
+          )}
+        </Section>
       )}
       {!state.docked && (
         <Section title="Draft" gold={false}>

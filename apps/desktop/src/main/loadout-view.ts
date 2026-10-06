@@ -97,7 +97,7 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
       : null,
     situationalRunes: l.situationalRunes.map((r) => withReasons(rune(r.runeId), r.reasons)),
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons), ...numbers(l.spells) } : null,
-    skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
+    skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), basic: [1, 2, 3].map(key), ult: key(4), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
     starting: l.starting && start ? { items: start.ids.map(item), counts: start.counts, reason: first(l.starting.reasons), ...numbers(l.starting) } : null,
     quest: l.quest.map((q) => withReasons(item(q.itemId), q.reasons)),
     situational: l.situational.map((s) => withReasons(item(s.itemId), s.reasons)),

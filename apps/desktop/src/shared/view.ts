@@ -116,7 +116,8 @@ export interface LoadoutView {
   situationalRunes: LoadoutItemView[];
   spells: ({ spells: IconView[]; reason: string | null } & ChoiceNumbers) | null;
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
-  skills: ({ first: string[]; order: string[]; reason: string | null } & ChoiceNumbers) | null;
+  /** `basic`: the three basic ability keys (grid rows), `ult`: the ultimate's key (levels 6, 11, 16). */
+  skills: ({ first: string[]; order: string[]; basic: string[]; ult: string; reason: string | null } & ChoiceNumbers) | null;
   /** Starting items without repeats; counts[i] is how many of items[i] (e.g. 2 potions). */
   starting: ({ items: IconView[]; counts: number[]; reason: string | null } & ChoiceNumbers) | null;
   /** Thin data: later items to pick from by situation (after the core), each with its reason. */

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
-import { PoolChip } from "../components/PoolChip";
+import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
@@ -61,9 +61,7 @@ function Pool({ state }: { state: ViewState }) {
         <Section key={r.role} title={`${positionLabel(r.role)} pool`} gold={i === 0} aside={<span className="micro">{`${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)}`}</span>}>
           {r.enoughData ? (
             <>
-              {r.pool.map((c) => (
-                <PoolChip key={c.champion.id} entry={c} />
-              ))}
+              {r.pool.length > 0 && <PoolTable rows={r.pool} />}
               {r.holes.map((h) => (
                 <Notice key={h.text}>
                   <strong>{h.text}</strong>

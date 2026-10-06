@@ -84,7 +84,7 @@ describe("toLoadoutView numbers", () => {
     // statPerks are stored defense, flex, offense: shown offense first.
     expect(v.page!.shardRows!.chosen).toEqual([1, 0, 0]);
     expect(v.spells).toMatchObject({ winRate: 0.528, games: 1870 });
-    expect(v.skills).toMatchObject({ winRate: 0.531, games: 1980 });
+    expect(v.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"], basic: ["Q", "W", "E"], ult: "R", winRate: 0.531, games: 1980 });
     // The starting choice has no win rate of its own (0): none is shown.
     expect(v.starting).toMatchObject({ counts: [1, 2], winRate: null, games: 300 });
     expect(v.starting!.items.map((i) => i.name)).toEqual(["Doran's Ring", "Health Potion"]);

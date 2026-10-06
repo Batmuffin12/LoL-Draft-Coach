@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { MyPickView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
-import { Loadout, type LoadoutTab } from "../components/Loadout";
+import { BuildTab, MatchupsTab, RunesTab, type LoadoutTab } from "../components/Loadout";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { WinChance } from "../components/WinChance";
@@ -31,9 +31,10 @@ export function LoadoutSource({ pick }: { pick: MyPickView }) {
   );
 }
 
-/** The loadout body for one tab (or why there is none). */
+/** The body of one loadout tab (or why there is none). */
 export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }) {
   const { busy, run } = useImport();
+  if (tab === "matchups") return <MatchupsTab pick={pick} />;
   if (!pick.loadout) {
     return (
       <Section title="Loadout">
@@ -41,16 +42,18 @@ export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }
       </Section>
     );
   }
-  return <Loadout loadout={pick.loadout} view={tab} onImport={run} busy={busy} importMessage={pick.importMessage} />;
+  const props = { loadout: pick.loadout, onImport: run, busy, importMessage: pick.importMessage };
+  return tab === "runes" ? <RunesTab {...props} /> : <BuildTab {...props} />;
 }
 
-/** Your locked-in champion and its win chance, over the loadout tabs. */
-function YouStrip({ pick }: { pick: MyPickView }) {
+/** Your champion, "Locked in · Middle vs Zed", and its win chance, over the tabs. */
+function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: string | null }) {
+  const where = [pick.role && positionLabel(pick.role), laneOpponent && `vs ${laneOpponent}`].filter(Boolean).join(" ");
   return (
     <div className="you" title={pick.reasons.map((r) => r.text).join("\n") || undefined}>
       <ChampIcon champ={pick.champion} size={44} framed />
       <div className="who">
-        <span className="label gold">{`${pick.hovering ? "Hovering" : "Locked in"}${pick.role ? ` · ${positionLabel(pick.role)}` : ""}`}</span>
+        <span className="label gold">{`${pick.hovering ? "Hovering" : "Locked in"}${where ? ` · ${where}` : ""}`}</span>
         <span className="nm">{pick.champion.name}</span>
       </div>
       <WinChance value={pick.expectedWin} size="row" />
@@ -58,7 +61,13 @@ function YouStrip({ pick }: { pick: MyPickView }) {
   );
 }
 
-/** Locked in (and after champ select until the game ends): runes & spells, and the build. */
+export const LOADOUT_TABS: { value: LoadoutTab; label: string }[] = [
+  { value: "runes", label: "Runes" },
+  { value: "build", label: "Build" },
+  { value: "matchups", label: "Matchups" },
+];
+
+/** Locked in (and after champ select until the game ends): Runes · Build · Matchups, Runes first. */
 export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: MyPickView; note?: ReactNode }) {
   const [tab, setTab] = useState<LoadoutTab>("runes");
   return (
@@ -66,15 +75,8 @@ export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: 
       header={<Header state={state} />}
       band={
         <>
-          <YouStrip pick={pick} />
-          <Segmented<LoadoutTab>
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: "runes", label: "Runes & spells" },
-              { value: "build", label: "Build" },
-            ]}
-          />
+          <YouStrip pick={pick} laneOpponent={state.laneOpponent?.champion?.name ?? null} />
+          <Segmented<LoadoutTab> value={tab} onChange={setTab} options={LOADOUT_TABS} />
         </>
       }
       footer={<LoadoutSource pick={pick} />}

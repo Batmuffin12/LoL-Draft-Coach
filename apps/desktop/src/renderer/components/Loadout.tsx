@@ -1,19 +1,25 @@
-import type { IconView, LoadoutItemView, LoadoutView } from "../../shared/view";
+import type { LoadoutItemView, LoadoutView, MyPickView } from "../../shared/view";
 import { Button } from "./Button";
+import { BuildPath } from "./BuildPath";
 import { ChampIcon } from "./ChampIcon";
+import { ItemMatrix, type MatrixSlot } from "./ItemMatrix";
+import { MatchupTable } from "./MatchupTable";
+import { RunePage } from "./RunePage";
 import { Section } from "./Section";
-import { SkillOrder } from "./SkillOrder";
+import { SkillGrid, Stat } from "./SkillGrid";
 
-export type LoadoutTab = "runes" | "build";
+export type LoadoutTab = "runes" | "build" | "matchups";
 
 export interface LoadoutProps {
   loadout: LoadoutView;
-  view: LoadoutTab;
   /** Called only from the player's click on an import button. */
   onImport: (kind: "runes" | "items") => void;
   busy: "runes" | "items" | null;
   importMessage: string | null;
 }
+
+/** Item columns in the matrix (1st–4th); with thin data the core only, then the "Later" pool. */
+const MATRIX_SLOTS = 4;
 
 const tip = (i: LoadoutItemView) => [i.name, ...i.reasons].join("\n");
 const lower = (s: string) => s.replace(/^./, (c) => c.toLowerCase());
@@ -24,173 +30,131 @@ function ImportButton({ kind, label, busy, onImport }: { kind: "runes" | "items"
       ? "Creates (or updates) an 'LDC:' rune page and sets your two summoner spells in champ select (Flash keeps its key)"
       : "Saves an item set for this champion; it shows in the shop in game";
   return (
-    <Button variant="primary" disabled={busy !== null} onClick={() => onImport(kind)} title={title}>
+    <Button variant="primary" small disabled={busy !== null} onClick={() => onImport(kind)} title={title}>
       {busy === kind ? "Importing…" : label}
     </Button>
   );
 }
 
-function IconRow({ icons, size }: { icons: (IconView | LoadoutItemView)[]; size: number }) {
+/** A labelled row of item icons with one line of text (the "Vs this team" and quest rows). */
+function ItemRow({ label, items, note }: { label: string; items: LoadoutItemView[]; note: string | null }) {
   return (
-    <div className="lo-icons">
-      {icons.map((i, n) => (
-        <ChampIcon key={`${i.id}-${n}`} champ={i} kind="game" size={size} title={"reasons" in i ? tip(i) : i.name} />
-      ))}
+    <div className="item-row" title={note ?? undefined}>
+      <span className="label k">{label}</span>
+      <span className="icons">
+        {items.map((i) => (
+          <ChampIcon key={i.id} champ={i} kind="game" size={22} title={tip(i)} />
+        ))}
+      </span>
+      {note && <span className="caption one-line">{note}</span>}
     </div>
   );
 }
 
-/** Runes, shards and the situational swaps; then spells and the skill order. */
-function RunesTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutProps, "view">) {
+/** Runes on their full trees with the page's numbers and import; then spells and the skill grid. */
+export function RunesTab({ loadout: l, onImport, busy, importMessage }: LoadoutProps) {
   const label = l.page && l.spells ? "Import runes & spells" : l.page ? "Import runes" : "Import spells";
   const button = l.canImport && (l.page || l.spells) ? <ImportButton kind="runes" label={label} busy={busy} onImport={onImport} /> : null;
   const message = importMessage && <span className="caption text">{importMessage}</span>;
-  const keystone = l.page?.runes[0];
+  const p = l.page;
   return (
     <>
-      {l.page && keystone && (
-        <Section title="Runes" aside={button}>
-          <div className="lo-row center">
-            <ChampIcon champ={keystone} kind="game" round size={30} />
-            <div className="lo-body">
-              <span className="heading">{keystone.name}</span>
-              <div className="lo-icons">
-                {l.page.runes.slice(1).map((r, i) => (
-                  <ChampIcon key={`${r.id}-${i}`} champ={r} kind="game" round size={20} />
-                ))}
-                {l.page.shards.length > 0 && <span className="divider" aria-hidden="true" />}
-                {l.page.shards.map((s, i) => (
-                  <ChampIcon key={`s${s.id}-${i}`} champ={s} kind="game" round size={18} />
-                ))}
-              </div>
+      {p && (
+        <Section
+          title="Runes"
+          aside={
+            <>
+              <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} />
+              {button}
+            </>
+          }
+        >
+          {p.primaryTree && p.secondaryTree ? (
+            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={l.situationalRunes} />
+          ) : (
+            <div className="icons">
+              {[...p.runes, ...p.shards].map((r, i) => (
+                <ChampIcon key={`${r.id}-${i}`} champ={r} kind="game" round size={i === 0 ? 30 : 22} />
+              ))}
             </div>
-          </div>
-          {l.page.reason && <span className="caption">{l.page.reason}</span>}
-          {l.situationalRunes.map((r) => (
-            <div key={r.id} className="notice info" title={tip(r)}>
-              <span className="g">Swap</span>
-              <span>
-                <strong>{r.name}</strong>
-                {r.reasons[0] ? `: ${lower(r.reasons[0])}` : ""}
-              </span>
-            </div>
-          ))}
+          )}
           {message}
         </Section>
       )}
       {(l.spells || l.skills) && (
-        <Section title="Spells & skills" aside={l.page ? null : button}>
-          <div className="two">
-            {l.spells ? (
-              <div className="lo-body">
-                <IconRow icons={l.spells.spells} size={30} />
-                <span className="heading">{l.spells.spells.map((s) => s.name).join(" + ")}</span>
-              </div>
-            ) : (
-              <span />
-            )}
-            {l.skills && <SkillOrder first={l.skills.first} order={l.skills.order} />}
-          </div>
-          {(l.spells?.reason || l.skills?.reason) && (
-            <span className="caption">{[l.spells?.reason, l.skills?.reason && (l.spells?.reason ? `Skills: ${lower(l.skills.reason)}` : l.skills.reason)].filter(Boolean).join(". ")}</span>
-          )}
-          {!l.page && message}
+        <Section title="Spells & skills" aside={p ? null : button}>
+          <SkillGrid spells={l.spells} skills={l.skills} />
+          {!p && message}
         </Section>
       )}
     </>
   );
 }
 
-/** Start, boots, the core items as numbered tiles, then later and situational items. */
-function BuildTab({ loadout: l, onImport, busy, importMessage }: Omit<LoadoutProps, "view">) {
+/** Start and boots with import; then the items by slot with their numbers, the strongest situational reason, and the extra rows. */
+export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutProps) {
   const canImport = l.canImport && (l.items.length > 0 || l.commonPath || l.starting);
   const button = canImport ? <ImportButton kind="items" label="Import item set" busy={busy} onImport={onImport} /> : null;
-  const path: { item: IconView & { reasons?: string[] }; alts: LoadoutItemView[] }[] = l.items.length
-    ? l.items.map((s) => ({ item: s.top, alts: s.alternatives }))
-    : (l.commonPath?.items.map((item) => ({ item, alts: [] })) ?? []);
-  const lead = l.items[0]?.top;
-  const unique = (icons: IconView[]) => [...new Set(icons.map((i) => i.name))].join(", ");
-  const extras = [
-    { label: "Later", icons: l.laterPool, note: l.laterNote },
-    { label: "Vs them", icons: l.situational, note: l.situational[0]?.reasons[0] ?? null },
-    { label: "Quest", icons: l.quest, note: l.quest[0]?.reasons[0] ?? null },
-  ].filter((x) => x.icons.length > 0);
+  const slots: MatrixSlot[] = l.items.length
+    ? l.items.slice(0, MATRIX_SLOTS).map((s) => ({ slot: s.slot, minute: s.minute, options: [s.top, ...s.alternatives].map((o) => ({ item: o, share: o.share, winAdded: o.winAdded })) }))
+    : (l.commonPath?.items.slice(0, MATRIX_SLOTS).map((item, i) => ({ slot: i + 1, minute: null, options: [{ item, share: null, winAdded: null }] })) ?? []);
+  // The most telling reason: a top item bought for this draft (a reason before its numbers line), else the first item's.
+  const telling = l.items.find((s) => s.top.reasons.length > 1)?.top ?? l.items[0]?.top;
+  const caption = telling?.reasons[0] ? `${telling.name}: ${lower(telling.reasons[0])}` : (l.commonPath?.reason ?? null);
   return (
     <>
       <Section title="Start & boots" aside={button}>
-        {l.starting ? (
-          <div className="lo-row center" title={l.starting.reason ?? undefined}>
-            <IconRow icons={l.starting.items} size={30} />
-            <span className="caption one-line">{unique(l.starting.items)}</span>
-          </div>
-        ) : (
-          <span className="caption">No common start yet.</span>
-        )}
-        {l.boots && (
-          <div className="lo-row center">
-            <ChampIcon champ={l.boots.top} kind="game" size={30} title={tip(l.boots.top)} />
-            <div className="lo-body">
-              <span className="heading one-line">{l.boots.top.name}</span>
-              {l.boots.top.reasons[0] && <span className="caption">{l.boots.top.reasons[0]}</span>}
-            </div>
-            {l.boots.alternatives.length > 0 && (
-              <span className="alts">
-                <span className="micro">or</span>
-                {l.boots.alternatives.map((a) => (
-                  <ChampIcon key={a.id} champ={a} kind="game" size={20} title={tip(a)} />
-                ))}
-              </span>
-            )}
-          </div>
-        )}
+        <BuildPath starting={l.starting} boots={l.boots} />
         {importMessage && <span className="caption text">{importMessage}</span>}
       </Section>
-      {(path.length > 0 || extras.length > 0) && (
-        <Section title="Core items">
-          {path.length > 0 && (
-            <div className="path" role="list" aria-label="Build order" style={{ gridTemplateColumns: `repeat(${Math.max(3, Math.min(path.length, 4))}, 1fr)` }}>
-              {path.slice(0, 4).map((s, i) => (
-                <div key={`${s.item.id}-${i}`} className="step" role="listitem" title={[s.item.name, ...(s.item.reasons ?? [])].join("\n")}>
-                  <span className="no">{i + 1}</span>
-                  <ChampIcon champ={s.item} kind="game" size={36} />
-                  <span className="nm">{s.item.name}</span>
-                  {s.alts.length > 0 && (
-                    <span className="alt">
-                      <span className="or">or</span>
-                      {s.alts.map((a) => (
-                        <ChampIcon key={a.id} champ={a} kind="game" size={20} title={tip(a)} />
-                      ))}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {lead?.reasons[0] ? (
-            <span className="caption">
-              {lead.name}: {lower(lead.reasons[0])}
+      <Section title="Items by slot" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">pick % · win added</span> : null}>
+        {slots.length > 0 ? <ItemMatrix slots={slots} /> : <span className="caption">Not enough purchases to rank items yet.</span>}
+        {caption && (
+          <span className="caption clamp2" title={caption}>
+            {caption}
+          </span>
+        )}
+        {l.laterPool.length > 0 && (
+          <div className="later">
+            <span className="label" title={l.laterNote ?? undefined}>
+              Later: pick by situation
             </span>
-          ) : (
-            l.commonPath?.reason && <span className="caption">{l.commonPath.reason}</span>
-          )}
-          {extras.length > 0 && (
-            <div className="extras">
-          {extras.map((x) => (
-            <div key={x.label} className="lo-row center extra" title={x.note ?? undefined}>
-              <span className="label k">{x.label}</span>
-              <IconRow icons={x.icons} size={20} />
-              {x.note && <span className="caption one-line">{x.note}</span>}
-            </div>
-          ))}
-            </div>
-          )}
-        </Section>
-      )}
+            {l.laterPool.map((i) => (
+              <div key={i.id} className="later-row" title={tip(i)}>
+                <ChampIcon champ={i} kind="game" size={22} title="" />
+                <span className="caption one-line">
+                  <span className="text">{i.name}</span>
+                  {i.reasons[0] ? ` — ${lower(i.reasons[0])}` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {l.situational.length > 0 && <ItemRow label="Vs this team" items={l.situational} note={l.situational[0]?.reasons[0] ?? null} />}
+        {l.quest.length > 0 && <ItemRow label="Quest" items={l.quest} note={l.quest[0]?.reasons[0] ?? null} />}
+      </Section>
     </>
   );
 }
 
-/** The champion's loadout as two tabs. The source line ("From 2,140 games in …") goes in the window footer. */
-export function Loadout({ view, ...rest }: LoadoutProps) {
-  return view === "runes" ? <RunesTab {...rest} /> : <BuildTab {...rest} />;
+/** Your champion against their team (your lane first), then with your team. */
+export function MatchupsTab({ pick }: { pick: MyPickView }) {
+  const m = pick.matchups;
+  if (!m) {
+    return (
+      <Section title="Matchups">
+        <p className="caption">Matchups need the live meta for your rank.</p>
+      </Section>
+    );
+  }
+  return (
+    <>
+      <Section title="Against their team">
+        <MatchupTable rows={m.against} title="Enemy" />
+      </Section>
+      <Section title="With your team" gold={false}>
+        <MatchupTable rows={m.with} title="Ally" />
+      </Section>
+    </>
+  );
 }

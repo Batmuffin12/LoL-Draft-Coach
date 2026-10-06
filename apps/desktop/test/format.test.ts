@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Term } from "@ldc/shared";
-import { count, initials, pct, pickReasons, positionLabel, signed, thinTerm, topTerms } from "../src/renderer/format";
+import { count, games, initials, pct, pickColumns, pickReasons, positionLabel, rate, signed, signedOrDash, skillPath, tone, winTone } from "../src/renderer/format";
 
 const term = (name: Term["name"], deltaWin: number, games = 100): Term => ({ name, deltaWin, games, rating: 0 });
 
@@ -17,26 +17,38 @@ describe("panel formats", () => {
   });
 });
 
-describe("topTerms", () => {
-  it("takes the biggest terms and always keeps the biggest negative one", () => {
-    const terms = [term("lane", 0.021), term("personal", 0.014), term("team", 0.009), term("meta", -0.004), term("counter", 0.003)];
-    expect(topTerms(terms, 3).map((t) => t.name)).toEqual(["lane", "personal", "meta"]);
-  });
-
-  it("keeps the order when the caveat is already in, and drops zero terms", () => {
-    const terms = [term("lane", -0.03), term("personal", 0.02), term("synergy", 0)];
-    expect(topTerms(terms, 3).map((t) => t.name)).toEqual(["lane", "personal"]);
+describe("table formats", () => {
+  it("shows a dash for no number, k above 10,000 games, and tones from zero and from 50%", () => {
+    expect(rate(0.532, 1)).toBe("53.2%");
+    expect(rate(null)).toBe("—");
+    expect(signedOrDash(null)).toBe("—");
+    expect(games(1240)).toBe("1,240");
+    expect(games(12_400)).toBe("12k");
+    expect([tone(0.021), tone(-0.008), tone(0.001), tone(null)]).toEqual(["pos", "neg", "flat", "flat"]);
+    expect([winTone(0.54), winTone(0.495), winTone(0.503)]).toEqual(["pos", "neg", "flat"]);
   });
 });
 
-describe("thinTerm", () => {
-  const min = { meta: 30, pair: 15 };
-  it("is faint under the engine's minimum games for that kind of term", () => {
-    expect(thinTerm(term("meta", 0.01, 20), min)).toBe(true);
-    expect(thinTerm(term("meta", 0.01, 40), min)).toBe(false);
-    expect(thinTerm(term("lane", 0.01, 10), min)).toBe(true);
-    expect(thinTerm(term("team", 0.01, 0), min)).toBe(false);
-    expect(thinTerm(term("lane", 0.01, 10), undefined)).toBe(false);
+describe("pickColumns", () => {
+  it("adds lane + counter, team + synergy, and keeps personal and meta apart", () => {
+    const c = pickColumns([term("lane", 0.021), term("counter", 0.004), term("personal", 0.014), term("team", 0.009), term("synergy", -0.002), term("meta", -0.004)]);
+    expect(c.lane).toBeCloseTo(0.025);
+    expect(c.you).toBeCloseTo(0.014);
+    expect(c.team).toBeCloseTo(0.007);
+    expect(c.meta).toBeCloseTo(-0.004);
+    expect(pickColumns([term("meta", 0.01)])).toMatchObject({ lane: null, you: null, team: null });
+  });
+});
+
+describe("skillPath", () => {
+  it("takes the first three levels, then the max order, with the ultimate at 6, 11 and 16", () => {
+    const path = skillPath(["Q", "E", "W"], ["Q", "W", "E"], "R");
+    expect(path).toHaveLength(18);
+    expect(path.slice(0, 9).join("")).toBe("QEWQQRQQW");
+    expect([path[5], path[10], path[15]]).toEqual(["R", "R", "R"]);
+    expect(path.filter((k) => k === "Q")).toHaveLength(5);
+    expect(path.filter((k) => k === "W")).toHaveLength(5);
+    expect(path.filter((k) => k === "E")).toHaveLength(5);
   });
 });
 
