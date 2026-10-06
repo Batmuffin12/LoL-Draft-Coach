@@ -1,3 +1,5 @@
+import { buildLoadout, type Loadout } from "./loadout";
+import type { LoadoutConfig } from "./config";
 import type {
   BanSuggestion,
   ChampionAttributes,
@@ -336,6 +338,25 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
  * chance, terms and reasons, scored like a suggestion. The champion itself is not treated
  * as taken (it's the player's own pick).
  */
+/**
+ * The loadout for the local player's champion in this draft, from the band's builds:
+ * enemies and the lane opponent are placed the same way as for picks. Null without a build.
+ */
+export function draftLoadout(input: LiveInput, championId: ChampionId, config: LoadoutConfig): Loadout | null {
+  const build = input.index.build(championId, input.role);
+  const cuts = input.index.snapshot.traitCuts;
+  if (!build || !cuts) return null;
+  const ctx = context(input);
+  return buildLoadout({
+    build,
+    enemies: ctx.enemies.map((e) => e.championId),
+    laneOpponent: ctx.laneEnemy?.championId ?? null,
+    attributes: ctx.attributes,
+    traitCuts: cuts,
+    config,
+  });
+}
+
 export function assessPick(input: LiveInput, championId: ChampionId): PickRecommendation {
   const unavailable = new Set(input.unavailable);
   unavailable.delete(championId);

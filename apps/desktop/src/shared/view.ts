@@ -50,6 +50,43 @@ export interface PickView {
   offMeta: boolean;
 }
 
+/** An item, rune or summoner spell as the loadout shows it (Data Dragon name and icon). */
+export interface IconView {
+  id: number;
+  name: string;
+  iconUrl: string | null;
+}
+
+export interface LoadoutItemView extends IconView {
+  reasons: string[];
+}
+
+/** Runes, spells, skill order and items for the locked-in champion (live meta only). */
+export interface LoadoutView {
+  /** Games behind the build (your band plus the one above). */
+  games: number;
+  /** Band names the build comes from, e.g. "Gold to Platinum + Emerald to Diamond". */
+  source: string;
+  page: {
+    primary: IconView;
+    secondary: IconView;
+    /** Keystone first, then the other primary runes, then the secondary runes. */
+    runes: IconView[];
+    reason: string | null;
+  } | null;
+  situationalRunes: LoadoutItemView[];
+  spells: { spells: IconView[]; reason: string | null } | null;
+  /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
+  skills: { first: string[]; order: string[]; reason: string | null } | null;
+  starting: { items: IconView[]; reason: string | null } | null;
+  /** The ranked build path: per slot the top item and alternatives, each with reasons. */
+  items: { slot: number; top: LoadoutItemView; alternatives: LoadoutItemView[] }[];
+  /** The most common path, shown when there are too few purchases to rank items. */
+  commonPath: { items: IconView[]; reason: string | null } | null;
+  /** One-click import into the League client (only on your click), when enabled. */
+  canImport: boolean;
+}
+
 /** The champion the local player has locked in, and how it looks in this draft. */
 export interface MyPickView {
   champion: ChampView;
@@ -57,6 +94,7 @@ export interface MyPickView {
   /** Predicted win chance in this draft (live meta only). */
   expectedWin: number | null;
   reasons: string[];
+  loadout: LoadoutView | null;
 }
 
 /** A suggested ban (ban phase, live meta only). */

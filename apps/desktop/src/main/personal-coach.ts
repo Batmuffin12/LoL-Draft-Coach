@@ -16,6 +16,7 @@ import {
   weightsForBand,
   adviseLivePicks,
   assessPick,
+  draftLoadout,
   suggestBans,
   suggestHoverBans,
   MetaIndex,
@@ -28,6 +29,7 @@ import type { MetaSource } from "./meta-source";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
+import { toLoadoutView } from "./loadout-view";
 import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
@@ -76,6 +78,8 @@ export class PersonalCoach extends Coach {
   private queueSupported = true;
   /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
   private metaIndex: MetaIndex | null = null;
+  /** Whether the "Import" buttons are shown (set by the LCU writer, which only writes on a click). */
+  protected canImport = false;
   /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */
   private config: LoadedConfig;
 
@@ -380,6 +384,13 @@ export class PersonalCoach extends Coach {
     const locked = lockedPick(this.draft);
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
+      const loadout = live ? draftLoadout(live, locked, engine.loadout) : null;
+      let data = null;
+      try {
+        data = this.deps.ddragon.data;
+      } catch {
+        // Data Dragon not loaded yet: names fall back to ids.
+      }
       this.update({
         picks: [],
         bans: [],
@@ -391,6 +402,9 @@ export class PersonalCoach extends Coach {
           role,
           expectedWin: assessed?.expectedWin ?? null,
           reasons: assessed ? assessed.reasons.map(say) : [],
+          loadout: loadout
+            ? toLoadoutView(loadout, { data, templates, championName: nameOf, bands: this.config.bands, band: this.band, canImport: this.canImport })
+            : null,
         },
       });
       return;

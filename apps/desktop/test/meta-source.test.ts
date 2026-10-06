@@ -38,6 +38,28 @@ function snapshot(createdAt = NOW): MetaSnapshot {
     duos: [],
     attributes: [],
     references: {},
+    traitCuts: { magic: 0.4, physical: 0.6, frontline: 0.5, engage: 0.5, heal: 0.5 },
+    builds: [
+      {
+        championId: 103,
+        role: "middle",
+        n: 400,
+        timelineN: 300,
+        games: 400,
+        wins: 200,
+        pages: [{ primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8135, 8226, 8210], statPerks: [5001, 5008, 5005], games: 300, wins: 160, n: 300 }],
+        spells: [{ spells: [4, 14], games: 350, wins: 180, n: 350 }],
+        skills: [{ first: [1, 3, 2], order: [1, 2, 3], games: 250, wins: 125, n: 250 }],
+        starting: [{ items: [1056, 2003], games: 280, wins: 140, n: 280 }],
+        core: [],
+        items: [
+          { itemId: 6655, slot: 1, n: 200, share: 0.66, winAdded: 0.012, minute: 13 },
+          { itemId: 3020, slot: 2, n: 150, share: 0.5, winAdded: 0.004, minute: 17 },
+        ],
+        lifts: [],
+        matchupPages: [],
+      },
+    ],
   };
 }
 
@@ -186,6 +208,14 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     await waitFor(() => coach!.state.myPick !== null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, role: "middle" });
     expect(coach.state.myPick!.expectedWin).toBeGreaterThan(0);
+    // …with the loadout from the band's builds.
+    const loadout = coach.state.myPick!.loadout!;
+    expect(loadout.page?.runes.map((r) => r.id)).toEqual([8112, 8139, 8138, 8135, 8226, 8210]);
+    expect(loadout.page?.reason).toBe("Most successful common page: 53.3% win rate (300 games, 75% take it)");
+    expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
+    expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
+    expect(loadout.items[0]!.top.reasons[0]).toBe("+1.2% win added as item 1, where 66% buy it (200 games)");
+    expect(loadout.source).toBe("Gold to Platinum + Emerald to Diamond");
     expect(coach.state.picks).toEqual([]);
     expect(coach.state.pickAdvice.whyNot).toBeNull();
   });
