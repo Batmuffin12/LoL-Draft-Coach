@@ -242,6 +242,25 @@ describe("adviseLivePicks", () => {
     expect(adviseLivePicks(input(draft([201]))).picks[0]!.championId).toBe(102);
   });
 
+  it("names the weak point when comfort lowers a pick, as a caveat, and keeps mastery as a plus", () => {
+    const base = computeComfort(games, [], NOW, config.comfort, "middle");
+    const c101 = base.get(101)!;
+    const comfort = new Map([[101, { ...c101, score: 0.2, masteryLevel: 8, masteryPoints: 62_000, grades: [] }]]);
+    const p = adviseLivePicks(input(draft(), { comfort, pickable: [101] })).picks.find((x) => x.championId === 101)!;
+    expect(p.terms!.find((t) => t.name === "personal")!.rating).toBeLessThan(0);
+    const ids = p.reasons.map((r) => r.id);
+    expect(ids).toContain("comfort.role.weak");
+    expect(ids).not.toContain("comfort.role");
+    expect(text(p.reasons)).toMatch(/Little recent form on it: \d+ middle games/);
+    // Mastery isn't shown as a plus when your record on it lowers the pick.
+    expect(ids).not.toContain("mastery");
+    // Comfort that helps: the record is a plus, no caveat from it.
+    const good = new Map([[101, { ...c101, score: 0.9 }]]);
+    const q = adviseLivePicks(input(draft(), { comfort: good, pickable: [101] })).picks.find((x) => x.championId === 101)!;
+    expect(q.reasons.map((r) => r.id)).toContain("comfort.role");
+    expect(q.reasons.map((r) => r.id)).not.toContain("comfort.role.weak");
+  });
+
   it("doesn't force the single most comfortable champion: comfortable picks are equal, the draft decides", () => {
     // Both are comfortable (101 even more so); into 201 the draft favours 102.
     const base = computeComfort(games, [], NOW, config.comfort, "middle");
