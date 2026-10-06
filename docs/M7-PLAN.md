@@ -6,6 +6,7 @@ Written 2026-10-06, right after v0.6.2, so a fresh session can start M7 from the
 
 | Tracker | Feature | SPEC / design |
 | --- | --- | --- |
+| m7-0 | **Design system for the whole app** (owner, 2026-10-06) | the design system artifact; the base for every new screen |
 | m7-5 | **Draft simulator** for tests and dev (owner, 2026-10-06) | not in SPEC; supports everything below |
 | m7-3 | **Post-game card + advice log** (`POST /advice`, `advice_log` table) | SPEC "After game: learning loop", API table; DESIGN §7 (F6), §8 |
 | m7-2 | **Growth focus**: one measurable focus at a time, target, progress | SPEC feature table; DESIGN §7 |
@@ -16,7 +17,11 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 
 ## Order of work (each stage = small commits, tests, a tracker update)
 
-1. **Draft simulator (m7-5) first**, so every later stage can be tested with any team.
+0. **Design system first (m7-0)**, so new screens are built from our own design system (owner: "update first so we have a design working for the whole app").
+   - The "LoL Draft Coach" design system (https://claude.ai/artifact/P9odVMtkmLEyxFW6LgmRxu) describes the redesign before the owner's changes. Bring it in line with the app as shipped in v0.6.2: the denser type scale (`--fs-*` in `apps/desktop/src/renderer/styles.css`: body 14, reasons 13, labels and micro 12, hero 32), and the components and patterns added since (Hurts bar, ban reason lines, thin-data "N games" stat, matchups without pair games, lobby roles opening as many as fit with one-line summaries, the empty item cell, the Q/W/E/R skill grid, Support/Mid/Bot names, one-line data note). Update tokens, README rules, layout.md and the component previews to match the code; the code is the reference for what shipped.
+   - Then add the M7 screens and components to it before building them: post-game card, "Your focus" (growth), new champions table, monthly report. Where they live in the panel (decision 2) is worked out here, with previews.
+   - Load the `artifact-design` skill before editing the artifact; read it with the Artifact tool, and update it in place (same URL).
+1. **Draft simulator (m7-5)**, so every later stage can be tested with any team (no UI; can run alongside stage 0).
    - A builder that produces a sanitised champ select session plus a step-by-step frame timeline in the existing `Fixture` format (`packages/lcu/src/fixture.ts`), e.g. `sim().me("middle").ally("jungle", 254).enemy(238).hover(103).ban(...)`, with phases (planning, bans, picks, finalization) and timers.
    - A synthetic `MetaSnapshot` builder (test helper) where you choose each champion's games, so "thin" and "solid" data can both be produced on purpose (solid = at least `loadout.solidGames` games).
    - Hook it into `pnpm --filter @ldc/lcu mock` (a scenario file instead of a recorded fixture) so `LDC_SCREENSHOT` runs and manual tests can use it.
@@ -37,12 +42,12 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 5. **Monthly report (m7-4).** From `growth_snapshots`: axis trend arrows, per-champion form, focus targets met, rank trend. Wording never judges single games.
 6. **Release:** versions 0.7.0, CHANGELOG, CLAUDE.md status, merge, tag, push (the server redeploys; avoid minutes :07–:22 when the collector runs).
 
-## Decide with the owner at the start
+## Owner decisions (2026-10-06)
 
-- The order above (simulator first) and whether all four features ship in v0.7.0 or the monthly report waits.
-- Where the post-game card lives (lobby after the game, until dismissed?) and where the new champions go (lobby tab vs profile window).
-- Whether new-champion suggestions may include champions the player doesn't own.
-- New screens have no design in the design system (https://claude.ai/artifact/P9odVMtkmLEyxFW6LgmRxu): design them with the existing components (Section, tables, Notice, Segmented) at the owner's denser type scale, or update the design system first.
+1. **Order:** confirmed as above (design system, simulator, post-game card, growth focus, new champions, monthly report); all four features ship in v0.7.0.
+2. **Where the post-game card and new champions live:** not decided; work it out in stage 0 with design-system previews, then ask the owner.
+3. **Unowned champions:** yes, new-champion suggestions may include champions the player doesn't own (say so in the row, e.g. "not owned").
+4. **Design:** update the design system first, for the whole app, and build new components from it (stage 0).
 
 ## Rules that matter for M7
 
@@ -55,4 +60,4 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 
 1. `git checkout milestone-7-grow && git pull` and `pnpm install`.
 2. Read CLAUDE.md, docs/SPEC.md and this file; read the tracker's M7 tasks.
-3. Confirm the decisions above with the owner, then start with stage 1.
+3. The owner decisions are above; start with stage 0 (design system), with stage 1 (simulator) alongside if useful.
