@@ -88,7 +88,7 @@ p { margin: 0; }
 /* Window: flat, framed like the client's edge */
 .window { height: 100vh; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--frame); overflow: hidden; }
 .window .scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.window .foot { flex-shrink: 0; padding: 8px 16px 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.window .foot { flex-shrink: 0; padding: 6px 16px 8px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
 .window.loading { align-items: center; justify-content: center; color: var(--muted); }
 
 /* Section: flat, a head with a hairline rule, no card */
@@ -288,8 +288,13 @@ p { margin: 0; }
 .form .btn { margin-top: 12px; }
 
 /* Footer pieces */
-.foot-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.foot-row .actions { display: flex; gap: 4px; align-items: center; }
+.foot-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.foot-row .actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
+.foot-link:hover { color: var(--text); text-decoration: underline; }
+.foot-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.foot-link.danger { color: var(--red); }
+.legal { font-size: 11px; line-height: 14px; color: var(--muted); opacity: 0.85; }
 
 /* Thin, dark scrollbar (lobby and undocked only: champ-select screens fit without one) */
 ::-webkit-scrollbar { width: 8px; }

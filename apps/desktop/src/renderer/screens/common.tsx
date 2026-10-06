@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { AccountView, ViewState } from "../../shared/view";
-import { Button } from "../components/Button";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
 import { count } from "../format";
@@ -55,42 +54,47 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
   );
 }
 
-/** Who the app is connected as, sign out and data deletion (confirmed in the panel), and the Riot notice. */
+/** A small text action for the one-line footer. */
+function FootLink({ onClick, danger, children }: { onClick: () => void; danger?: boolean; children: string }) {
+  return (
+    <button type="button" className={danger ? "foot-link danger" : "foot-link"} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+/** Who the app is connected as, sign out and data deletion (confirmed in the panel), and the Riot notice: kept short. */
 export function AccountFooter({ account }: { account: AccountView | null }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <>
       {account === null ? (
-        <span className="micro">Developer mode: your games come straight from the Riot API key in .env.</span>
+        <span className="micro">Developer mode: games from the Riot API key in .env.</span>
       ) : account.state === "registered" ? (
         confirming ? (
           <div className="foot-row">
-            <span className="micro">Delete everything the coach stores about you?</span>
+            <span className="micro one-line">Delete everything the coach stores about you?</span>
             <span className="actions">
-              <Button variant="danger" onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
+              <FootLink danger onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
                 Delete
-              </Button>
-              <Button variant="ghost" onClick={() => setConfirming(false)}>
-                Keep
-              </Button>
+              </FootLink>
+              <FootLink onClick={() => setConfirming(false)}>Keep</FootLink>
             </span>
           </div>
         ) : (
           <div className="foot-row">
-            <span className="micro">Connected as {account.riotId}</span>
+            <span className="micro one-line" title={`Connected as ${account.riotId}`}>
+              {account.riotId}
+            </span>
             <span className="actions">
-              <Button variant="ghost" onClick={() => void window.coach.signOut()}>
-                Sign out
-              </Button>
-              <Button variant="ghost" onClick={() => setConfirming(true)}>
-                Delete my data
-              </Button>
+              <FootLink onClick={() => void window.coach.signOut()}>Sign out</FootLink>
+              <FootLink onClick={() => setConfirming(true)}>Delete my data</FootLink>
             </span>
           </div>
         )
       ) : null}
       {account?.state === "registered" && account.message && <span className="micro neg">{account.message}</span>}
-      <span className="micro">{RIOT_NOTICE}</span>
+      <span className="legal">{RIOT_NOTICE}</span>
     </>
   );
 }
