@@ -90,6 +90,28 @@ export const EngineConfigSchema = z.object({
     /** A metric must separate wins from losses by at least this much win rate to be a focus. */
     minImportance: z.number().min(0),
   }),
+  /** New-champion recommender (DESIGN §6). */
+  newChamps: z.object({
+    /** Champions you played fewer games of in the role (and with less mastery) count as new. */
+    maxGames: z.number().int().min(0),
+    maxMastery: z.number().min(0),
+    /** Meta in the role: at least this many games and this pick rate in your band. */
+    minGames: z.number().int().min(1),
+    minPickRate: unit,
+    /** Smoothing toward the role's average win rate, and the win-rate difference that counts as fully strong. */
+    priorGames: z.number().min(0),
+    metaScale: z.number().positive(),
+    /** Riot difficulty (0–10): up to easyMax is easy, from hardMin hard. */
+    easyMax: z.number(),
+    hardMin: z.number(),
+    /** Similarity (−1…1) to say "plays like your X", and above which a champion counts as a clone. */
+    likeMin: z.number(),
+    cloneCut: z.number().max(0.99),
+    topN: z.number().int().min(1),
+    /** "Try it in 3 to 5 Normal Draft games." */
+    planGames: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    weights: z.object({ similarity: z.number(), gap: z.number(), meta: z.number(), ease: z.number(), overlap: z.number() }),
+  }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */
   pool: z.object({
     /** Main: at least coreGames in the role and comfort >= coreMin. */

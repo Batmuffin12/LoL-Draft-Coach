@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { FocusCard } from "../components/FocusCard";
+import { NewChampTable } from "../components/NewChampTable";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
 import { PostGameCard } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
@@ -12,7 +13,7 @@ import { pct, positionLabel, roleName } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices } from "./common";
 
-type LobbyTab = "last" | "style" | "pool";
+type LobbyTab = "last" | "style" | "pool" | "new";
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
@@ -35,15 +36,16 @@ export function LobbyScreen({ state }: { state: ViewState }) {
           onChange={setTab}
           options={[
             { value: "last", label: "Last game" },
-            { value: "style", label: "Your style" },
-            { value: "pool", label: "Your pool" },
+            { value: "style", label: "Style" },
+            { value: "pool", label: "Pool" },
+            { value: "new", label: "New" },
           ]}
         />
       }
       footer={<AccountFooter account={state.account} />}
     >
-      <Notices state={state} extra={tab === "last" ? null : "No champ select in progress. Open a lobby (a custom draft lobby works) and the draft shows up here live."} />
-      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} /> : <Pool state={state} />}
+      <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
+      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} /> : tab === "pool" ? <Pool state={state} /> : <NewChamps state={state} />}
     </Window>
   );
 }
@@ -98,6 +100,45 @@ function LastGame({ state }: { state: ViewState }) {
           <FocusCard focus={state.focus} />
         </Section>
       )}
+    </>
+  );
+}
+
+/** New champions per role: meta in your rank, like what you play well; one role open per fit, first-games plan under the table. */
+function NewChamps({ state }: { state: ViewState }) {
+  const list = state.newChamps.filter((r) => r.picks.length || r.learning);
+  const roles = useOpenRoles(list.length, list.map((r) => `${r.role}:${r.picks.map((p) => p.champion.id).join("-")}`).join());
+  if (!list.length) {
+    return (
+      <Section title="New champions">
+        <p className="caption">New champions to learn show here once the live meta for your rank is loaded and your pool for a role is known.</p>
+      </Section>
+    );
+  }
+  return (
+    <>
+      {list.map((r, i) => {
+        const title = `New for ${positionLabel(r.role).toLowerCase()}`;
+        const summary = r.learning ?? r.picks.map((p) => p.champion.name).join(", ");
+        if (!roles.isOpen(i)) return <ClosedRole key={r.role} title={title} summary={summary} onOpen={() => roles.open(i)} />;
+        return (
+          <Section key={r.role} title={title} gold={i === 0} aside={<span className="micro">meta in your rank</span>}>
+            {r.learning ? (
+              <p className="caption">{r.learning}</p>
+            ) : (
+              <>
+                <NewChampTable rows={r.picks} />
+                {r.plan && (
+                  <div className="plan">
+                    <span className="label gold">First games plan</span>
+                    <span>{r.plan}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </Section>
+        );
+      })}
     </>
   );
 }

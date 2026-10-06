@@ -65,6 +65,10 @@ export interface ChampionInfo {
   key: string;
   name: string;
   iconUrl: string;
+  /** Riot's 0–10 ratings from Data Dragon (absent if Riot drops them). */
+  info?: { attack: number; defense: number; magic: number; difficulty: number };
+  /** Riot's class tags ("Mage", "Assassin"…), as Data Dragon lists them. */
+  tags?: string[];
 }
 
 /** An item from Data Dragon, reduced to what builds and item ranking need. */

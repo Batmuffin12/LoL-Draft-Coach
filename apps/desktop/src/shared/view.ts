@@ -257,6 +257,31 @@ export interface PickAdviceView {
   minGames?: { meta: number; pair: number };
 }
 
+/** A champion to learn next in a role. */
+export interface NewChampView {
+  champion: ChampView;
+  /** Your main or comfortable champion it's most like. */
+  like: ChampView | null;
+  winRate: number;
+  games: number;
+  ease: 1 | 2 | 3;
+  /** "Easy", "Med", "Hard". */
+  easeLabel: string;
+  /** False: you don't own it yet; null: unknown (no client). */
+  owned: boolean | null;
+  reasons: string[];
+}
+
+/** New champions for one of your roles. */
+export interface NewChampRoleView {
+  role: string;
+  picks: NewChampView[];
+  /** "Learning Xin Zhao: one new champion per role at a time", when you're already learning one. */
+  learning: string | null;
+  /** The first-games plan for the top suggestion. */
+  plan: string | null;
+}
+
 /** One measurable focus on your main champion and role, with a target and your last games against it. */
 export interface FocusView {
   /** The metric as players say it, capitalised ("CS per minute"). */
@@ -331,6 +356,8 @@ export interface ViewState {
   lastGame: PostGameView | null;
   /** Your growth focus, or null without enough games. */
   focus: FocusView | null;
+  /** New champions per role (needs the band's live meta), roles in the lobby's order. */
+  newChamps: NewChampRoleView[];
   notices: string[];
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
@@ -355,6 +382,7 @@ export function emptyViewState(): ViewState {
     playstyle: [],
     lastGame: null,
     focus: null,
+    newChamps: [],
     notices: [],
     docked: true,
     roleLabels: {},

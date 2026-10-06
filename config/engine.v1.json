@@ -177,6 +177,21 @@
     }
   },
   "growth": { "window": 20, "checkGames": 10, "targetStep": 0.5, "minGames": 8, "minImportance": 0.02 },
+  "newChamps": {
+    "maxGames": 3,
+    "maxMastery": 30000,
+    "minGames": 200,
+    "minPickRate": 0.01,
+    "priorGames": 200,
+    "metaScale": 0.03,
+    "easyMax": 3,
+    "hardMin": 7,
+    "likeMin": 0.4,
+    "cloneCut": 0.92,
+    "topN": 3,
+    "planGames": [3, 5],
+    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 }
+  },
   "pool": {
     "coreMin": 0.55,
     "coreGames": 8,

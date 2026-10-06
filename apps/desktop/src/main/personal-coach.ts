@@ -19,6 +19,7 @@ import {
   assessPick,
   draftLoadout,
   pickFocus,
+  recommendNewChampions,
   type GrowthFocus,
   completedItems,
   completedBoots,
@@ -32,10 +33,11 @@ import {
   type Loadout,
 } from "@ldc/engine";
 import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
-import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
+import type { BanView, MyPickView, NewChampRoleView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
 import { focusInGame, focusView } from "./focus-view";
+import { newChampsView } from "./newchamps-view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -123,6 +125,8 @@ export class PersonalCoach extends Coach {
   private advice: AdviceRecord[] = [];
   /** Your growth focus (main role and champion), recomputed when your games or the meta change. */
   private growth: GrowthFocus | null = null;
+  /** Champions you own, from the client (null until read: ownership unknown). */
+  private owned: Set<ChampionId> | null = null;
   /** The queue of the current champ select (from the gameflow session). */
   private queueId: number | null = null;
 
@@ -251,8 +255,8 @@ export class PersonalCoach extends Coach {
     }
     this.p.ddragon.on("patch", () => {
       // Champion names and icons for the lobby and the post-game card.
-      this.updateRoleAdvice();
       this.updateFocus();
+      this.updateRoleAdvice();
       this.updateLastGame();
     });
     // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
@@ -353,6 +357,8 @@ export class PersonalCoach extends Coach {
       const perks = await this.p.connector.getPerks().catch(() => []);
       this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
       this.shardRows = await this.p.connector.getStatShardRows().catch(() => []);
+      const owned = await this.p.connector.getOwnedChampionIds().catch(() => []);
+      this.owned = owned.length ? new Set(owned) : null;
       if (!this.shardRows.length) await this.loadShardsFallback();
       this.updateRoleAdvice();
       this.onDraft();
@@ -397,9 +403,9 @@ export class PersonalCoach extends Coach {
   private setSnapshot(snapshot: MetaSnapshot | null): void {
     if (snapshot && snapshot.band !== this.band) return;
     this.metaIndex = snapshot ? new MetaIndex(snapshot, this.config.engine.rating) : null;
+    this.updateFocus();
     this.updateRoleAdvice();
     this.updatePlaystyle();
-    this.updateFocus();
     this.updateLastGame();
     this.onDraft();
   }
@@ -415,9 +421,9 @@ export class PersonalCoach extends Coach {
     this.profile = profile;
     this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
+    this.updateFocus();
     this.updateRoleAdvice();
     this.updatePlaystyle();
-    this.updateFocus();
     this.updateLastGame();
     if (first) this.refreshMeta(false);
     this.onDraft();
@@ -472,6 +478,7 @@ export class PersonalCoach extends Coach {
         return undefined;
       }
     };
+    const newChamps: NewChampRoleView[] = [];
     const roles = adviseRoles(
       this.profile.games,
       this.profile.masteries,
@@ -494,6 +501,39 @@ export class PersonalCoach extends Coach {
             config: this.config.engine,
           })
         : null;
+      if (pool && this.metaIndex) {
+        const played = new Map<ChampionId, number>();
+        for (const g of this.profile!.games) if (g.position === r.role) played.set(g.championId, (played.get(g.championId) ?? 0) + 1);
+        const advice = recommendNewChampions({
+          role: r.role,
+          pool,
+          playedInRole: played,
+          masteries: this.profile!.masteries,
+          index: this.metaIndex,
+          champions: (id) => lookup(id),
+          attributes: this.attrs,
+          owned: this.owned,
+          config: this.config.engine.newChamps,
+          coverage: this.config.engine.pool.coverage,
+        });
+        newChamps.push(
+          newChampsView(advice, {
+            explain,
+            champion: (id) => champView(id, lookup),
+            championName: (id) => lookup(id)?.name ?? `#${id}`,
+            coreItems: (id) => {
+              const items = this.metaIndex?.build(id, r.role)?.core[0]?.items ?? [];
+              try {
+                return items.map((i) => this.deps.ddragon.data.itemInfo.get(i)?.name ?? `#${i}`);
+              } catch {
+                return [];
+              }
+            },
+            planGames: this.config.engine.newChamps.planGames,
+            focus: this.growth?.focus ? metricLabel(this.growth.focus.metric, explain) : null,
+          }),
+        );
+      }
       return {
         role: r.role,
         games: r.games,
@@ -523,7 +563,7 @@ export class PersonalCoach extends Coach {
         })),
       };
     });
-    this.update({ roles });
+    this.update({ roles, newChamps });
   }
 
   /** Comfort for a role, cached until the profile changes. */
