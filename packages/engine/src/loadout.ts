@@ -1,7 +1,7 @@
 import type { ChampionAttributes, ChampionBuild, ChampionId, EnemyTrait, ItemSlotStat, OptionStat, Reason, RunePageStat, SituationalLift } from "@ldc/shared";
 import type { LoadoutConfig } from "./config";
 import { reason } from "./explain";
-import { ENEMY_TRAITS, teamTraits } from "./items";
+import { ENEMY_TRAITS, itemFitsRole, teamTraits } from "./items";
 import type { PersonalBuild } from "./loadout-sources";
 
 /** What the loadout is for: your champion and role, and what the draft shows of the enemy team. */
@@ -22,7 +22,18 @@ export interface LoadoutInput {
   personal?: PersonalBuild | null;
   /** Thin data: item reasons quote how often players buy the item, not its (noisy) win added. */
   thin?: boolean;
+  /** Which roles buy each item (snapshot `itemRoles`), to keep role-locked items in their role. */
+  itemRoles?: Record<string, Record<string, number>>;
 }
+
+/** Enemy traits with your lane opponent counted `laneWeight` times. */
+function enemyTraits(input: LoadoutInput) {
+  const lane = input.laneOpponent;
+  return teamTraits(input.enemies, input.attributes, (id) => (id === lane ? input.config.laneWeight : 1));
+}
+
+/** Items players in your role actually buy (role-locked items of other roles are left out). */
+const fits = (input: LoadoutInput, itemId: number) => itemFitsRole(itemId, input.build.role, input.itemRoles, input.config.minItemRoleShare);
 
 /** Where the loadout's numbers come from, for the "rough guide" note. */
 export interface LoadoutSource {
@@ -139,15 +150,24 @@ export function rankItems(input: LoadoutInput): ItemSlotAdvice[] {
 /** All candidates for one build slot, best first (see rankItems); `exclude` holds items already owned or chosen. */
 export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet<number>): RankedItem[] {
   const { build, config: cfg } = input;
-  const enemy = teamTraits(input.enemies, input.attributes);
+  const enemy = enemyTraits(input);
+  // Into your lane opponent: how much more often each item is the first one finished (smoothed toward its usual share).
+  const vs = slot === 1 && input.laneOpponent !== null ? build.matchupItems?.find((m) => m.enemy === input.laneOpponent && m.games >= cfg.minMatchupGames) : undefined;
   const intensity = Object.fromEntries(ENEMY_TRAITS.map((t) => [t, traitIntensity(enemy[t], input.traitCuts[t])])) as Record<EnemyTrait, number>;
   const lifts = build.lifts.filter((l) => l.kind === "item");
   return build.items
-    .filter((s) => s.slot === slot && s.share >= cfg.itemMinShare && !exclude.has(s.itemId))
+    .filter((s) => s.slot === slot && s.share >= cfg.itemMinShare && !exclude.has(s.itemId) && fits(input, s.itemId))
     .map((s: ItemSlotStat): RankedItem => {
       const mine = lifts.filter((l) => l.id === s.itemId && intensity[l.trait] > 0);
-      const situational = mine.reduce((sum, l) => sum + cfg.liftScale * Math.log(l.lift) * intensity[l.trait], 0);
+      let situational = mine.reduce((sum, l) => sum + cfg.liftScale * Math.log(l.lift) * intensity[l.trait], 0);
       const reasons: Reason[] = [];
+      if (vs) {
+        const count = vs.first.find((f) => f.itemId === s.itemId)?.n ?? 0;
+        const k = cfg.minMatchupGames;
+        const lift = (count + k * s.share) / (vs.games + k) / s.share;
+        situational += cfg.liftScale * Math.log(lift);
+        if (lift >= cfg.minLift) reasons.push(reason("loadout.item.matchup", { enemy: vs.enemy, lift: lift.toFixed(1), count, games: vs.games }));
+      }
       const best = [...mine].sort((a, b) => Math.log(b.lift) * intensity[b.trait] - Math.log(a.lift) * intensity[a.trait])[0];
       if (best) reasons.push(liftReason("item", best, enemy));
       reasons.push(
@@ -169,8 +189,10 @@ export function rankSlot(input: LoadoutInput, slot: number, exclude: ReadonlySet
 export function buildLoadout(input: LoadoutInput): Loadout {
   const { config: cfg } = input;
   const roleBuild = input.build;
-  const enemy = teamTraits(input.enemies, input.attributes);
+  const enemy = enemyTraits(input);
   // Small samples (partial pooling): too few games in your role, so the champion in all roles.
+  // Only for runes and skill order (same champion, same kit); items and starting items depend
+  // on the lane, so they always come from your role (or your own games in it).
   const pooled = roleBuild.n < cfg.solidGames && input.pooled && input.pooled.n > roleBuild.n ? input.pooled : null;
   const build = pooled ?? roleBuild;
   const thin = build.n < cfg.solidGames;
@@ -223,19 +245,29 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   const common = <T extends OptionStat>(list: T[]) => list.find((o) => o.n >= (thin ? 1 : cfg.minGames)) ?? null;
   const timelineShare = (o: OptionStat) => o.n / Math.max(1, build.timelineN);
   const skills = choice(common(build.skills), (o) => ({ first: o.first, order: o.order }), (o) => [reason("loadout.skills", { share: timelineShare(o), games: o.n })]);
-  const starting = choice(common(build.starting), (o) => o.items, (o) => [reason("loadout.starting", { share: timelineShare(o), games: o.n })]);
+  const laneStart =
+    input.laneOpponent !== null ? roleBuild.matchupItems?.find((m) => m.enemy === input.laneOpponent && m.games >= cfg.minMatchupGames && m.starting) : undefined;
+  const roleTimeline = (o: OptionStat) => o.n / Math.max(1, roleBuild.timelineN);
+  const starting = laneStart?.starting
+    ? { value: laneStart.starting.items, winRate: 0, n: laneStart.starting.n, reasons: [reason("loadout.starting.matchup", { enemy: laneStart.enemy, count: laneStart.starting.n, games: laneStart.games })] }
+    : choice(
+        roleBuild.starting.find((o) => o.n >= (thin ? 1 : cfg.minGames) && o.items.every((id) => fits(input, id))) ?? null,
+        (o) => o.items,
+        (o) => [reason("loadout.starting", { share: roleTimeline(o), games: o.n })],
+      );
   // Items come from win added and lift (rankItems), never raw win rate. Without enough
   // purchases for that, the most common path is shown as what players build.
-  const items = rankItems({ ...input, build, thin });
-  const commonPath = common(build.core.filter((c) => c.items.length >= 3)) ?? common(build.core);
+  const items = rankItems({ ...input, build: roleBuild, thin: roleBuild.n < cfg.solidGames });
+  const roleCommon = <T extends OptionStat & { items: number[] }>(list: T[]) => list.find((o) => o.n >= (thin ? 1 : cfg.minGames) && o.items.every((id) => fits(input, id))) ?? null;
+  const commonPath = roleCommon(roleBuild.core.filter((c) => c.items.length >= 3)) ?? roleCommon(roleBuild.core);
   let core: LoadoutChoice<number[]> | null;
   if (items.length) core = { value: items.map((s) => s.top.itemId), winRate: 0, n: Math.min(...items.map((s) => s.top.n)), reasons: [] };
-  else if (commonPath) core = choice(commonPath, (o) => o.items, (o) => [reason("loadout.core.common", { share: timelineShare(o), games: o.n })]);
+  else if (commonPath) core = choice(commonPath, (o) => o.items, (o) => [reason("loadout.core.common", { share: roleTimeline(o), games: o.n })]);
   else if (input.personal?.items.length) {
     // No band purchases at all: the items you finish most often on the champion.
     personalUsed = true;
     const own = input.personal;
-    core = { value: own.items.slice(0, cfg.slots).map((i) => i.itemId), winRate: 0, n: own.n, reasons: [reason("loadout.core.personal", { games: own.n, champion })] };
+    core = { value: own.items.filter((i) => fits(input, i.itemId)).slice(0, cfg.slots).map((i) => i.itemId), winRate: 0, n: own.n, reasons: [reason("loadout.core.personal", { games: own.n, champion })] };
   } else core = null;
 
   return {

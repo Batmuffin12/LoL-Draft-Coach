@@ -58,8 +58,10 @@ export const MetaConfigSchema = z.object({
     stateBins: z.object({ minutes: z.array(z.number()).min(1), goldDiff: z.array(z.number()).min(1), priorGames: z.number().min(0) }),
     /** Situational lift: smoothing, and what is published (games on each side, minimum lift, most per champion-role). */
     lift: z.object({ priorGames: z.number().min(0), minGames: z.number().int().min(1), minLift: z.number().min(1), maxPerBuild: z.number().int().min(0) }),
-    /** Rune pages into a lane opponent are kept when the matchup has this many games. */
+    /** Rune pages and items into a lane opponent are kept when the matchup has this many games. */
     minMatchupGames: z.number().int().min(1),
+    /** Items need this many games before their role shares are published. */
+    minItemRoleGames: z.number().int().min(1),
   }),
   collector: z.object({
     /** League-V4 queue to sample players from, and the Match-V5 queue id of its games. */

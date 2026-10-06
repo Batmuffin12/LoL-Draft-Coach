@@ -51,18 +51,40 @@ export function traitValue(a: ChampionAttributes, trait: EnemyTrait): number | u
   }
 }
 
-/** The enemy team's traits: the mean over the champions with measured attributes. */
-export function teamTraits(champions: ChampionId[], attributes: ReadonlyMap<ChampionId, ChampionAttributes>): Partial<Record<EnemyTrait, number>> {
+/**
+ * The enemy team's traits: the (weighted) mean over the champions with measured attributes.
+ * `weight` lets your lane opponent count more than the others.
+ */
+export function teamTraits(
+  champions: ChampionId[],
+  attributes: ReadonlyMap<ChampionId, ChampionAttributes>,
+  weight: (id: ChampionId) => number = () => 1,
+): Partial<Record<EnemyTrait, number>> {
   const out: Partial<Record<EnemyTrait, number>> = {};
   for (const t of ENEMY_TRAITS) {
-    const vals = champions.flatMap((id) => {
+    let sum = 0;
+    let w = 0;
+    for (const id of champions) {
       const a = attributes.get(id);
       const v = a ? traitValue(a, t) : undefined;
-      return v === undefined ? [] : [v];
-    });
-    if (vals.length) out[t] = vals.reduce((x, y) => x + y, 0) / vals.length;
+      if (v === undefined) continue;
+      sum += v * weight(id);
+      w += weight(id);
+    }
+    if (w > 0) out[t] = sum / w;
   }
   return out;
+}
+
+/**
+ * Whether players in a role buy an item (its share of games in that role, from the band's
+ * data): keeps role-locked items such as jungle companions or support quest items out of
+ * other roles. Items without data pass.
+ */
+export function itemFitsRole(itemId: number, role: string, itemRoles: Record<string, Record<string, number>> | undefined, minShare: number): boolean {
+  const roles = itemRoles?.[String(itemId)];
+  if (!roles || !role) return true;
+  return (roles[role] ?? 0) >= minShare;
 }
 
 /**

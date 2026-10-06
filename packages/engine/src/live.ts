@@ -363,6 +363,7 @@ export function draftLoadout(input: LiveInput, championId: ChampionId, config: L
     build,
     pooled: mergeBuilds([build, ...all.filter((b) => b !== build)].filter((b) => b.n > 0)),
     personal,
+    ...(input.index.snapshot.itemRoles ? { itemRoles: input.index.snapshot.itemRoles } : {}),
     enemies: ctx.enemies.map((e) => e.championId),
     laneOpponent: ctx.laneEnemy?.championId ?? null,
     attributes: ctx.attributes,

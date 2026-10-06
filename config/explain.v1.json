@@ -69,6 +69,8 @@
     "power.laneAhead": "Usually ahead in lane: +{gold} gold over its opponent at 15 minutes ({games} games)",
     "power.laneBehind": "Usually behind in lane: {gold} gold down on its opponent at 15 minutes ({games} games); plays for later",
     "loadout.item.popular": "Bought as item {slot} in {share:pct}% of games ({games} games)",
+    "loadout.item.matchup": "Into {enemy:champion}: finished first {lift}× more often ({count} of {games} games)",
+    "loadout.starting.matchup": "Into {enemy:champion}: {count} of {games} players start with this",
     "loadout.page.popular": "Most taken: {count} of {games} games",
     "loadout.page.personal": "Your usual page: {count} of your {games} {champion:champion} games",
     "loadout.spells.popular": "Most taken: {count} of {games} games",

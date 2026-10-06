@@ -166,6 +166,15 @@ describe("BuildAggregator", () => {
     expect(champ1(agg).matchupPages).toEqual([expect.objectContaining({ enemy: 21, primaryStyle: 8400, n: 3 })]);
   });
 
+  it("records which roles buy each item, and items into each lane opponent", () => {
+    const agg = make({ minMatchupGames: 3, minItemRoleGames: 1 });
+    for (let i = 0; i < 3; i++) agg.add(game(`z${i}`, { win: true, items: [3001, 3002] }));
+    // Champion 1 is top: its items (held and bought) are top items.
+    expect(agg.itemRoles()["3001"]).toEqual({ top: 1 });
+    expect(agg.itemRoles()["1055"]).toEqual({ top: 1 });
+    expect(champ1(agg).matchupItems).toEqual([{ enemy: 11, games: 3, starting: { items: [1055], n: 3 }, first: [{ itemId: 3001, n: 3 }] }]);
+  });
+
   it("skips games outside the window, remakes and unpositioned games", () => {
     const agg = make();
     expect(agg.add({ ...game("old", { win: true, items: [] }), endedAt: NOW - 40 * 86_400_000 })).toBe(false);

@@ -49,8 +49,9 @@ describe("loadouts from few games (partial pooling, your own games, no win rates
     expect(l.spells?.value).toEqual([4, 14]);
     expect(say(l.spells!.reasons[0]!)).toBe("Most taken: 4 of 5 games");
     expect(l.skills?.value.order).toEqual([1, 3, 2]);
+    // Items come from your lane only (never from the jungle games).
     expect(l.items[0]?.top.itemId).toBe(6692);
-    expect(say(l.items[0]!.top.reasons[0]!)).toBe("Bought as item 1 in 63% of games (7 games)");
+    expect(say(l.items[0]!.top.reasons[0]!)).toBe("Bought as item 1 in 50% of games (2 games)");
   });
 
   it("prefers your own page and spells on the champion when the band's data is thin", () => {
@@ -70,6 +71,70 @@ describe("loadouts from few games (partial pooling, your own games, no win rates
     const l = buildLoadout(input({ build: empty("middle", 0), pooled: null, personal }));
     expect(l.core?.value).toEqual([6692, 3814]);
     expect(l.core?.reasons[0]?.id).toBe("loadout.core.personal");
+  });
+});
+
+describe("items follow your lane and its matchup", () => {
+  // 1101 is a jungle companion: bought in the jungle only (snapshot itemRoles, found from data).
+  const itemRoles = { "1101": { jungle: 1 }, "1055": { middle: 0.6, top: 0.4 }, "6692": { middle: 0.5, jungle: 0.5 } };
+  const midWithStarts: ChampionBuild = {
+    ...mid,
+    starting: [
+      { items: [1101, 2003], games: 3, wins: 1, n: 3 }, // a mid game started with a jungle companion (someone's mistake)
+      { items: [1055, 2003], games: 2, wins: 1, n: 2 },
+    ],
+    items: [
+      { itemId: 1101, slot: 1, n: 3, share: 0.6, winAdded: 0, minute: 1 },
+      { itemId: 6692, slot: 1, n: 2, share: 0.4, winAdded: 0, minute: 13 },
+    ],
+  };
+
+  it("never suggests another role's role-locked items, and never pools starting items across roles", () => {
+    const jungleStart = { ...jungle, starting: [{ items: [1101, 2031], games: 8, wins: 4, n: 8 }] };
+    const l = buildLoadout(input({ build: midWithStarts, pooled: mergeBuilds([midWithStarts, jungleStart]), itemRoles }));
+    expect(l.starting?.value).toEqual([1055, 2003]);
+    expect(l.items[0]?.top.itemId).toBe(6692);
+    expect(l.items.flatMap((s) => [s.top, ...s.alternatives]).some((i) => i.itemId === 1101)).toBe(false);
+  });
+
+  it("starts and builds into your lane opponent when that matchup is common enough", () => {
+    const vsZed: ChampionBuild = {
+      ...midWithStarts,
+      n: 400,
+      games: 400,
+      wins: 200,
+      items: [
+        { itemId: 6692, slot: 1, n: 200, share: 0.6, winAdded: 0, minute: 13 },
+        { itemId: 3814, slot: 1, n: 120, share: 0.36, winAdded: 0, minute: 14 },
+      ],
+      matchupItems: [{ enemy: 238, games: 40, starting: { items: [1036, 2003], n: 25 }, first: [{ itemId: 3814, n: 30 }, { itemId: 6692, n: 8 }] }],
+    };
+    const l = buildLoadout(input({ build: vsZed, laneOpponent: 238, enemies: [238], itemRoles }));
+    expect(l.starting?.value).toEqual([1036, 2003]);
+    expect(say(l.starting!.reasons[0]!)).toBe("Into #238: 25 of 40 players start with this");
+    expect(l.items[0]?.top.itemId).toBe(3814);
+    expect(say(l.items[0]!.top.reasons[0]!)).toMatch(/^Into #238: finished first 1\.\d× more often \(30 of 40 games\)$/);
+    // Another lane opponent: the usual first item.
+    expect(buildLoadout(input({ build: vsZed, laneOpponent: 99, enemies: [99], itemRoles })).items[0]?.top.itemId).toBe(6692);
+  });
+
+  it("counts your lane opponent more than the rest of the enemy team", () => {
+    const attrs = new Map([
+      [1, { championId: 1, samples: 50, physicalShare: 0.1, magicShare: 0.9, trueShare: 0, frontline: 0.5, engage: 0.5, roleShares: {}, roleSamples: 50 }],
+      [2, { championId: 2, samples: 50, physicalShare: 0.9, magicShare: 0.1, trueShare: 0, frontline: 0.5, engage: 0.5, roleShares: {}, roleSamples: 50 }],
+    ]);
+    const b: ChampionBuild = {
+      ...mid, n: 400, games: 400, wins: 200,
+      items: [{ itemId: 3111, slot: 1, n: 100, share: 0.5, winAdded: 0, minute: 12 }, { itemId: 3047, slot: 1, n: 100, share: 0.5, winAdded: 0, minute: 12 }],
+      lifts: [
+        { kind: "item", id: 3111, trait: "magic", lift: 2, high: 0.4, low: 0.2, n: 400 },
+        { kind: "item", id: 3047, trait: "physical", lift: 2, high: 0.4, low: 0.2, n: 400 },
+      ],
+    };
+    // One magic and one physical enemy: the lane opponent decides.
+    const cuts = { magic: 0.4, physical: 0.4, frontline: 0.5, engage: 0.5, heal: 0.5 };
+    expect(buildLoadout(input({ build: b, enemies: [1, 2], laneOpponent: 1, attributes: attrs, traitCuts: cuts })).items[0]?.top.itemId).toBe(3111);
+    expect(buildLoadout(input({ build: b, enemies: [1, 2], laneOpponent: 2, attributes: attrs, traitCuts: cuts })).items[0]?.top.itemId).toBe(3047);
   });
 });
 

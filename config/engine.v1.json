@@ -253,6 +253,8 @@
     "maxSituational": 3,
     "alternatives": 2,
     "solidGames": 100,
+    "laneWeight": 2,
+    "minItemRoleShare": 0.05,
     "personalMinGames": 5,
     "slots": 3
   },

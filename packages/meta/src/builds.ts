@@ -75,6 +75,8 @@ class BuildAcc {
   /** "rune:id" / "item:id" → games taken per trait side. */
   readonly takes = new Map<string, TraitCounts>();
   readonly matchups = new Map<ChampionId, OptionCounter<Omit<RunePageStat, keyof OptionStat>>>();
+  /** Into each lane opponent (timeline games): starting items and the first completed item. */
+  readonly matchupItems = new Map<ChampionId, { games: number; starting: OptionCounter<number[]>; first: Map<number, number> }>();
 
   constructor(
     readonly championId: ChampionId,
@@ -166,6 +168,8 @@ export class BuildAggregator {
   private readonly stateN: number[];
   private readonly stateW: number[];
   private readonly goldBuckets: number;
+  /** Per item, games it was bought or held in, per role. */
+  private readonly itemRoleCounts = new Map<number, Map<string, number>>();
 
   constructor(private readonly opts: BuildAggregatorOptions) {
     const { minutes, goldDiff } = opts.config.stateBins;
@@ -259,6 +263,15 @@ export class BuildAggregator {
       const spells = p.spells.filter((s) => s > 0).sort((x, y) => x - y);
       if (spells.length === 2) b.spells.add(spells.join(","), spells, w, p.win);
 
+      // Which role holds each item: end-of-game inventory plus, with a timeline, every purchase.
+      const held = new Set(p.items.filter((x) => x > 0));
+      if (t) for (const [q, , kind, id] of t.items) if (q === i && kind === ITEM_BOUGHT) held.add(id);
+      for (const id of held) {
+        let r = this.itemRoleCounts.get(id);
+        if (!r) this.itemRoleCounts.set(id, (r = new Map()));
+        r.set(p.position, (r.get(p.position) ?? 0) + 1);
+      }
+
       if (!t) {
         // Without a timeline, the end-of-game inventory says which completed items were taken.
         for (const id of new Set(p.items.filter((x) => o.completed.has(x)))) take(`item:${id}`);
@@ -276,6 +289,15 @@ export class BuildAggregator {
 
       const bought = completedPurchases(t, i, o.completed);
       for (const it of new Set(bought.map((x) => x.itemId))) take(`item:${it}`);
+      const laneOpp = enemies.find((q) => q.position === p.position);
+      if (laneOpp) {
+        let mi = b.matchupItems.get(laneOpp.championId);
+        if (!mi) b.matchupItems.set(laneOpp.championId, (mi = { games: 0, starting: new OptionCounter(), first: new Map() }));
+        mi.games++;
+        if (start.length) mi.starting.add(start.join(","), start, w, p.win);
+        const first = bought[0]?.itemId;
+        if (first !== undefined) mi.first.set(first, (mi.first.get(first) ?? 0) + 1);
+      }
       if (bought.length >= 2) {
         const path = bought.slice(0, cfg.coreItems).map((x) => x.itemId);
         b.core.add(path.join(","), path, w, p.win);
@@ -312,6 +334,17 @@ export class BuildAggregator {
       winRate: rows,
       n: this.stateN.reduce((a, b) => a + b, 0),
     };
+  }
+
+  /** Share of each item's games per role, for items seen in at least `minItemRoleGames` games. */
+  itemRoles(): Record<string, Record<string, number>> {
+    const out: Record<string, Record<string, number>> = {};
+    for (const [id, roles] of this.itemRoleCounts) {
+      const total = [...roles.values()].reduce((a, b) => a + b, 0);
+      if (total < this.opts.config.minItemRoleGames) continue;
+      out[id] = Object.fromEntries([...roles].map(([r, n]) => [r, round(n / total)]));
+    }
+    return out;
   }
 
   finish(): ChampionBuild[] {
@@ -363,6 +396,18 @@ export class BuildAggregator {
         if (best) matchupPages.push({ enemy, ...best.value, games: round(best.games), wins: round(best.wins), n: best.n });
       }
       matchupPages.sort((x, y) => x.enemy - y.enemy);
+      const matchupItems: NonNullable<ChampionBuild["matchupItems"]> = [];
+      for (const [enemy, mi] of b.matchupItems) {
+        if (mi.games < cfg.minMatchupGames) continue;
+        const [start] = mi.starting.top(1, 1);
+        matchupItems.push({
+          enemy,
+          games: mi.games,
+          starting: start ? { items: start.value, n: start.n } : null,
+          first: [...mi.first].map(([itemId, n]) => ({ itemId, n })).sort((x, y) => y.n - x.n).slice(0, cfg.maxOptions),
+        });
+      }
+      matchupItems.sort((x, y) => x.enemy - y.enemy);
 
       out.push({
         championId: b.championId,
@@ -379,6 +424,7 @@ export class BuildAggregator {
         items,
         lifts: lifts.slice(0, maxPerBuild),
         matchupPages,
+        matchupItems,
       });
     }
     return out.sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role));

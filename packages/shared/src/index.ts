@@ -380,6 +380,11 @@ export interface ChampionBuild {
   lifts: SituationalLift[];
   /** Rune page into a lane opponent, when the matchup is common enough. */
   matchupPages: (RunePageStat & { enemy: ChampionId })[];
+  /**
+   * Into a lane opponent (timeline games, when the matchup is common enough): the most taken
+   * starting items and how often each item was the first completed one. Absent in older snapshots.
+   */
+  matchupItems?: { enemy: ChampionId; games: number; starting: { items: number[]; n: number } | null; first: { itemId: number; n: number }[] }[];
 }
 
 /** Expected win for a team by minute and team gold difference (from timelines), for win added. */
@@ -424,6 +429,12 @@ export interface MetaSnapshot {
   attributes: ChampionAttributes[];
   /** Builds per champion-role (band plus the band above). Absent before builds were collected. */
   builds?: ChampionBuild[];
+  /**
+   * Which roles buy each item (share of the games it was bought or held in, per role), so
+   * role-locked items (jungle companions, support quest items) stay in their role. Found from
+   * data, never listed. Absent in older snapshots.
+   */
+  itemRoles?: Record<string, Record<Position, number>>;
   /** Band-average enemy-team trait values: above it, a trait counts as high. */
   traitCuts?: Record<EnemyTrait, number>;
   expectedWin?: ExpectedWinTable;

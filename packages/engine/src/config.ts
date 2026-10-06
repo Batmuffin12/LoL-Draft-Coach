@@ -204,6 +204,10 @@ export const EngineConfigSchema = z.object({
      * your own games on it (at least personalMinGames), picks the most taken options and hides win rates.
      */
     solidGames: z.number().int().min(1),
+    /** Your lane opponent counts this many times in the enemy team's traits (items answer your lane first). */
+    laneWeight: z.number().min(1),
+    /** An item is suggested in a role only if at least this share of its buyers play that role (role-locked items stay in their role). */
+    minItemRoleShare: z.number().min(0).max(1),
     personalMinGames: z.number().int().min(1),
     /** Build slots (completed items) the loadout ranks. */
     slots: z.number().int().min(1),

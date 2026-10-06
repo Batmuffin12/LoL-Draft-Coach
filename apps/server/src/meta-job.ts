@@ -92,7 +92,7 @@ export function publishSnapshot(
     traitCuts,
   });
   for (const row of rows([band, ...(extra.buildBands ?? [])])) buildAgg.add(JSON.parse(row.summary) as MatchSummary);
-  const snapshot = { ...base, builds: buildAgg.finish(), traitCuts, expectedWin: buildAgg.expectedWinTable() };
+  const snapshot = { ...base, builds: buildAgg.finish(), itemRoles: buildAgg.itemRoles(), traitCuts, expectedWin: buildAgg.expectedWinTable() };
   const json = JSON.stringify(snapshot);
   const body = gzipSync(json);
   const etag = `"${createHash("sha256").update(json).digest("hex").slice(0, 32)}"`;
