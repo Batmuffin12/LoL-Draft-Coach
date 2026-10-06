@@ -17,6 +17,15 @@ After you lock in, the "Your pick" card shows a full loadout for your champion, 
 - **Item backtest**: `pnpm --filter @ldc/server backtest` also replays held-out timelines and reports our top-1/top-3 hit rate vs "most bought" and the win added when players agreed with us.
 - **Lane gold at 15** (the other half of the power curve): picks say "Usually ahead in lane: +350 gold over its opponent at 15 minutes" when clear. Information only.
 - Data Dragon: item costs and build paths, rune and summoner spell names and icons; the server keeps a cached copy next to its database.
+- **Few games? Still a loadout, labelled a rough guide** (D31): below 100 games the champion's other roles fill in runes and skill order, your own games on the champion come first ("Your usual page: 10 of your 25 Naafiri games"), choices are the most taken ones and no win rates are quoted.
+- **Items follow your lane** (D32): items and starting items never come from other roles; role-locked items (jungle companions, support quest items) are found from who buys them; your lane opponent counts double; common lane matchups get their own start and first item ("Into Zed: …").
+- **Boots** on their own row, and **role quests** (D33): quest rewards are found from data (held but never bought, e.g. tier-3 boots in mid) and a Quest row says what your quest turns your boots or starting items into; rewards are never suggested as purchases.
+- The Your pick card and its loadout stay up after champ select ends, until the game is over (custom games close champ select seconds after you lock in).
+- `pnpm local:server` / `pnpm local:desktop`: test a branch against a local server with its own panel profile.
+
+### Fixed
+- The hourly snapshot job now fits the server's 256 MB heap at full size (50k games per band): compact matchup counting (an M5 issue that would have appeared as the database filled up), bounded build counters, smaller snapshots (pairs need 5 games).
+- Wording missing from an older server's config falls back to the app's own, instead of showing ids.
 
 ## [0.5.0] — 2026-10-06 — Milestone 5: Live meta
 
