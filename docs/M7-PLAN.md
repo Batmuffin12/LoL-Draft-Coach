@@ -54,6 +54,12 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 - **Stage 0 done (2026-10-06):** the design system (version 9) matches v0.6.2 class for class (`bundle.css` is `styles.css`), and has the M7 components (`PostGameCard`, `FocusCard`, `NewChampTable`, `TrendTable`, `FormTable`, `ClosedSection`) and screens (Last game, New, Monthly report). **Proposed placement (decision 2, owner to confirm):** lobby tabs **Last game · Style · Pool · New**; Last game opens first after a game (post-game card, then Your focus); the monthly report opens from a closed "This month" head at the end of Style. Built this way unless the owner says otherwise.
 - **Stage 1 done (2026-10-06):** `packages/sim` (its own package, since it needs both the LCU fixture format and the meta types): `draft()` builder with phases, sides, timers and stop points (`planning` … `game-end`), `meta()` synthetic snapshots, scenarios, `pnpm --filter @ldc/sim mock <scenario>`, and the desktop's `LDC_META_FILE` dev aid.
 
+- **Stage 2 done** (25747ee, 7e9a0a1): advice log and the post-game card. The result is joined on the desktop from your own Match-V5 game (`adviceOutcome`, by game id), so it works in both modes; the server keeps the records for later calibration.
+- **Stage 3 done** (58d08ef): growth focus, stateless (the target comes from your games before the last 10). `growth_snapshots` became `rank_history` (stage 5): axes over time are recomputed from your games, so only the rank needs storing.
+- **Stage 4 done** (27049c9): new-champion recommender (New tab).
+- **Stage 5 done** (481481f): monthly report (Style › This month).
+- **Next (stage 6): the owner tries it**, then versions 0.7.0, CHANGELOG (an Unreleased section is ready), CLAUDE.md, merge, tag, push. Ways to try it: `pnpm local:server` + `pnpm local:desktop`, or `pnpm --filter @ldc/sim mock full-game` for a whole simulated game, then a real game. Open questions for the owner: the lobby tab placement (decision 2), and whether the focus should stay on your main role when you play another one.
+
 ## Rules that matter for M7
 
 - Everything in CLAUDE.md (compliance, Zod, adapters, pure engine/meta, config not code, Vitest, commit gates). Especially: other players never appear by name or rank; the advice log and growth data hold only the player's own data; `DELETE /me` removes them.

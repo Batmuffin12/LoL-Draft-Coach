@@ -2,6 +2,20 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [Unreleased] — milestone 7, Grow (v0.7.0 once the owner has tried it)
+
+### Added
+- **Last game** (lobby tab, opened first after a game): the post-game card. The coach remembers what it showed when you locked in (your pick and the suggestions, champion ids and numbers only), takes the game id when the game starts and sends the record when it ends (`POST /advice`, `advice_log`, deleted with "Delete my data"). The card shows your pick, the result once the game is in your history, the suggestions with yours lit, whether you took one, the term that mattered most and the prediction. A dodge leaves nothing behind.
+- **Your focus** (under the post-game card): one measurable thing to improve on your main champion and role, chosen where you're furthest below typical and it matters most for winning in your role and rank; a target halfway to typical; your last 10 games against it. Band snapshots now carry each metric's importance (the win-rate gap between its top and bottom halves). The post-game card shows the focus metric in that game.
+- **New** (lobby tab): champions to learn per role: meta in your rank, not in your pool, like the champions you play well (Data Dragon ratings and tags, measured attributes), filling a pool gap, easy enough; never a clone of your main, and one at a time while you're learning one. Champions you don't own are allowed and tagged (owned ones read from the client). A first-games plan for the top one.
+- **Monthly report** (Style › This month): games and win rate against the month before, your rank then and now (the server keeps your rank per day), each style axis then and now, your champions' form, focus targets met. Trends only, never a single game.
+- **Draft simulator** (`packages/sim`): any champ select in a few lines (`draft().me("middle").hover(103).enemy(238).stopAt("my-pick")`), synthetic meta snapshots with thin or solid data on purpose, scenarios, and `pnpm --filter @ldc/sim mock <scenario>` for the panel; dev aid `LDC_META_FILE` coaches from a snapshot file.
+- Design system synced with the app (its stylesheet is the app's `styles.css`), with the M7 screens.
+- Dev aid: `LDC_SCREENSHOT_CLICK="Style>This month"` clicks a sequence and matches a button by the start of its text.
+
+### Changed
+- Lobby tabs: Last game · Style · Pool · New. The "no champ select yet" hint shows only before your history has loaded, and closed role heads are tighter, so every tab fits 440 × 720 for players with many roles.
+
 ## [0.6.2] — 2026-10-06 — Panel redesign
 
 ### Changed
