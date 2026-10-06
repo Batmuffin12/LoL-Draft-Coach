@@ -5,6 +5,20 @@ export interface Rect {
   height: number;
 }
 
+/** Panel width at the base client height; the whole panel scales with the client like the client scales itself. */
+export const PANEL_WIDTH = 440;
+export const BASE_CLIENT_HEIGHT = 720;
+
+/** Zoom for a client this tall: client height ÷ 720, never below 1 (text never shrinks). */
+export function dockZoom(clientHeight: number): number {
+  return Math.max(1, clientHeight / BASE_CLIENT_HEIGHT);
+}
+
+/** Docked width at a zoom: 440 at 720p, 550 at 900p, 660 at 1080p. */
+export function dockWidth(zoom: number): number {
+  return Math.round(PANEL_WIDTH * zoom);
+}
+
 /**
  * Where to put the panel next to the League client: to its right if there is room on
  * that display, otherwise to its left, otherwise overlapping its right edge.
