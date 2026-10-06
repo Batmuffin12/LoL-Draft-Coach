@@ -38,6 +38,28 @@ function snapshot(createdAt = NOW): MetaSnapshot {
     duos: [],
     attributes: [],
     references: {},
+    traitCuts: { magic: 0.4, physical: 0.6, frontline: 0.5, engage: 0.5, heal: 0.5 },
+    builds: [
+      {
+        championId: 103,
+        role: "middle",
+        n: 400,
+        timelineN: 300,
+        games: 400,
+        wins: 200,
+        pages: [{ primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8135, 8226, 8210], statPerks: [5001, 5008, 5005], games: 300, wins: 160, n: 300 }],
+        spells: [{ spells: [4, 14], games: 350, wins: 180, n: 350 }],
+        skills: [{ first: [1, 3, 2], order: [1, 2, 3], games: 250, wins: 125, n: 250 }],
+        starting: [{ items: [1056, 2003], games: 280, wins: 140, n: 280 }],
+        core: [],
+        items: [
+          { itemId: 6655, slot: 1, n: 200, share: 0.66, winAdded: 0.012, minute: 13 },
+          { itemId: 3020, slot: 2, n: 150, share: 0.5, winAdded: 0.004, minute: 17 },
+        ],
+        lifts: [],
+        matchupPages: [],
+      },
+    ],
   };
 }
 
@@ -141,7 +163,14 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const meta = new MetaSource({ client: () => profiles.serverClient, cacheDir: tmp("ldc-meta-") });
 
     lcu = new MockLcuServer(loadFixture("synthetic-draft-pick"), {
-      "/lol-summoner/v1/current-summoner": { puuid: "client-only", gameName: "Me", tagLine: "EUW" },
+      "/lol-summoner/v1/current-summoner": { puuid: "client-only", gameName: "Me", tagLine: "EUW", summonerId: 7 },
+      "/lol-perks/v1/pages": [],
+      "/lol-perks/v1/perks": [
+        { id: 5005, name: "Attack Speed", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAttackSpeedIcon.png" },
+        { id: 5008, name: "Adaptive Force", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceIcon.png" },
+        { id: 5001, name: "Health", iconPath: "/lol-game-data/assets/v1/perk-images/StatMods/StatModsHealthPlusIcon.png" },
+      ],
+      "/lol-item-sets/v1/item-sets/7/sets": { itemSets: [] },
       "/lol-ranked/v1/current-ranked-stats": { queues: [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD", division: "I" }] },
     });
     const creds = await lcu.start();
@@ -169,6 +198,14 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     await waitFor(() => coach!.state.hoverBans?.champion.id === 245);
     expect(coach.state.hoverBans?.champion.id).toBe(245);
     expect(coach.state.hoverBans!.bans.every((b) => !coach!.state.bans.some((x) => x.champion.id === b.champion.id))).toBe(true);
+    // Hovering shows the loadout before lock-in (245 has none in the band, so it comes from your own games), and follows the hover.
+    expect(coach.state.hoverPick?.champion.id).toBe(245);
+    session.myTeam.find((m) => m.cellId === 2)!.championPickIntent = 103;
+    lcu.push("/lol-champ-select/v1/session", session);
+    await waitFor(() => coach!.state.hoverPick?.champion.id === 103);
+    expect(coach.state.hoverPick).toMatchObject({ hovering: true, loadout: { canImport: true } });
+    // Stat shards with the client's names, shown in the client's order (offense, flex, defense).
+    expect(coach.state.hoverPick!.loadout!.page!.shards.map((s) => s.name)).toEqual(["Attack Speed", "Adaptive Force", "Health"]);
 
     while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
     await waitFor(() => coach!.state.picks.length > 0);
@@ -177,8 +214,9 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const strong = picks.find((p) => p.champion.id === 245);
     expect(strong?.reasons.join(" ")).toMatch(/Strong in middle in your rank: 56\.0% win rate \(400 games\)/);
 
-    // A new scoring config from the server applies immediately.
-    coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 } });
+    // A new scoring config from the server applies immediately; wording an older server lacks falls back to the bundled copy.
+    const { ["loadout.page"]: _dropped, ...olderTemplates } = config.explain.templates;
+    coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: olderTemplates } });
     expect(coach.state.picks).toHaveLength(2);
 
     // Once the player locks in, suggestions stop and the panel shows their own pick.
@@ -186,6 +224,36 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     await waitFor(() => coach!.state.myPick !== null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, role: "middle" });
     expect(coach.state.myPick!.expectedWin).toBeGreaterThan(0);
+    // …with the loadout from the band's builds.
+    const loadout = coach.state.myPick!.loadout!;
+    expect(loadout.page?.runes.map((r) => r.id)).toEqual([8112, 8139, 8138, 8135, 8226, 8210]);
+    expect(loadout.page?.reason).toBe("Most successful common page: 53.3% win rate (300 games, 75% take it)");
+    expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
+    expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
+    expect(loadout.items[0]!.top.reasons[0]).toBe("+1.2% win added as item 1, where 66% buy it (200 games)");
+    expect(loadout.source).toBe("Gold to Platinum + Emerald to Diamond");
+    expect(loadout.thinNote).toBeNull(); // 400 games: enough
+
+    // Import happens only when asked (the buttons), and writes only the rune page and the item set.
+    expect(loadout.canImport).toBe(true);
+    expect(lcu.writes).toEqual([]);
+    await coach.importLoadout("runes");
+    await coach.importLoadout("items");
+    expect(lcu.writes.map((w) => `${w.method} ${w.path}`)).toEqual(["POST /lol-perks/v1/pages", "PUT /lol-item-sets/v1/item-sets/7/sets"]);
+    // Shards go to the client as offense, flex, defense.
+    expect((lcu.writes[0]!.body as { selectedPerkIds: number[] }).selectedPerkIds).toEqual([8112, 8139, 8138, 8135, 8226, 8210, 5005, 5008, 5001]);
+    const set = (lcu.writes[1]!.body as { itemSets: { associatedChampions: number[]; blocks: { items: { id: string }[] }[] }[] }).itemSets[0]!;
+    expect(set.associatedChampions).toEqual([103]);
+    expect(set.blocks.map((b) => b.items.map((i) => i.id))).toEqual([["1056", "2003"], ["6655", "3020"]]);
+    expect(coach.state.myPick!.importMessage).toBe("Item set saved: open the shop in game to see it");
+
+    // Champ select often ends seconds after you lock in: the card and its loadout stay until the game is over.
+    lcu.push("/lol-champ-select/v1/session", null, "Delete");
+    lcu.push("/lol-gameflow/v1/gameflow-phase", "InProgress");
+    await waitFor(() => coach!.state.draft === null);
+    expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, loadout: { canImport: false } });
+    lcu.push("/lol-gameflow/v1/gameflow-phase", "EndOfGame");
+    await waitFor(() => coach!.state.myPick === null);
     expect(coach.state.picks).toEqual([]);
     expect(coach.state.pickAdvice.whyNot).toBeNull();
   });

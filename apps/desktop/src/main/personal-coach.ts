@@ -1,4 +1,5 @@
-import { unavailableChampions } from "@ldc/lcu";
+import { communityDragonAsset } from "@ldc/ddragon";
+import { LcuImporter, LcuWriteError, unavailableChampions } from "@ldc/lcu";
 import {
   adviseRoles,
   bandFromRankedEntries,
@@ -16,18 +17,24 @@ import {
   weightsForBand,
   adviseLivePicks,
   assessPick,
+  draftLoadout,
+  completedItems,
+  completedBoots,
+  personalBuild,
   suggestBans,
   suggestHoverBans,
   MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
+  type Loadout,
 } from "@ldc/engine";
 import type { ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
-import type { BanView, PickView, PlaystyleView } from "../shared/view";
+import type { BanView, MyPickView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
+import { toLoadoutView } from "./loadout-view";
 import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
@@ -76,6 +83,63 @@ export class PersonalCoach extends Coach {
   private queueSupported = true;
   /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
   private metaIndex: MetaIndex | null = null;
+  /** The loadout shown in the Your pick card, for the import buttons. */
+  private shownLoadout: { loadout: Loadout; champion: string } | null = null;
+  private importMessage: string | null = null;
+  /**
+   * The last "Your pick" card, kept after champ select ends (champ select often closes
+   * seconds after you lock in, e.g. in custom games) until the game is over.
+   */
+  private keptPick: MyPickView | null = null;
+  /** Rune and stat shard names from the client (Data Dragon has no shards), with mirror icons. */
+  private perks = new Map<number, { name: string; iconUrl: string | null }>();
+
+  /** Import buttons show when the config enables import and the client is connected. */
+  private get canImport(): boolean {
+    return this.config.app.import.enabled && this.p.connector.credentials !== null;
+  }
+
+  /**
+   * Writes the shown rune page or item set into the League client. Called only from the
+   * player's click on an import button (CLAUDE.md: the single approved LCU write exception).
+   */
+  async importLoadout(kind: "runes" | "items"): Promise<void> {
+    const shown = this.shownLoadout;
+    const creds = this.p.connector.credentials;
+    if (!shown || !creds || !this.config.app.import.enabled) return;
+    const { templates } = this.config.explain;
+    const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, String);
+    const importer = new LcuImporter(creds);
+    try {
+      const l = shown.loadout;
+      if (kind === "runes") {
+        if (!l.page) return;
+        const p = l.page.value;
+        // Stored shards are in Riot's match order (defense, flex, offense); the client wants offense, flex, defense.
+        const result = await importer.importRunePage({
+          name: shown.champion,
+          primaryStyleId: p.primaryStyle,
+          subStyleId: p.subStyle,
+          selectedPerkIds: [...p.runes, ...[...p.statPerks].reverse()],
+        });
+        this.importMessage = say(`import.runes.${result}`);
+      } else {
+        const blocks = [
+          ...(l.starting ? [{ type: say("import.block.starting"), items: l.starting.value }] : []),
+          ...(l.core ? [{ type: say("import.block.core"), items: l.core.value }] : []),
+          ...(l.boots ? [{ type: say("import.block.boots"), items: [l.boots.top.itemId, ...l.boots.alternatives.map((a) => a.itemId)] }] : []),
+          ...l.items.filter((s) => s.alternatives.length).map((s) => ({ type: say("import.block.alternatives", { slot: s.slot }), items: s.alternatives.map((a) => a.itemId) })),
+        ];
+        await importer.importItemSet({ title: `${shown.champion} ${l.role}`, championId: l.championId, mapId: Number(this.config.engine.loadout.items.mapId), blocks });
+        this.importMessage = say("import.items.done");
+      }
+    } catch (err) {
+      this.importMessage = err instanceof LcuWriteError && err.reason === "pagesFull" ? say("import.runes.full") : say("import.failed", { error: (err as Error).message });
+    } finally {
+      importer.close();
+    }
+    this.onDraft();
+  }
   /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */
   private config: LoadedConfig;
 
@@ -87,7 +151,8 @@ export class PersonalCoach extends Coach {
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
   setConfig(config: LoadedConfig): void {
-    this.config = config;
+    // Wording the server doesn't have yet (an older server) falls back to the bundled copy, never to raw ids.
+    this.config = { ...config, explain: { ...config.explain, templates: { ...this.p.config.explain.templates, ...config.explain.templates } } };
     this.comfortByRole.clear();
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
@@ -129,6 +194,11 @@ export class PersonalCoach extends Coach {
     this.p.connector.on("gameflowPhase", (phase) => {
       // New games are in the player's history once a game has ended.
       if (phase === "EndOfGame") void this.p.profiles?.refresh();
+      // The kept loadout is for the game being played: drop it once that game is over or left.
+      if (["EndOfGame", "Lobby", "None"].includes(phase) && this.keptPick) {
+        this.keptPick = null;
+        this.onDraft();
+      }
     });
     await super.start();
     // Without the League client, fall back to the Riot ID from .env.
@@ -148,6 +218,8 @@ export class PersonalCoach extends Coach {
       const me = await this.p.connector.getCurrentSummoner();
       const ranked = await this.p.connector.getRankedStats().catch(() => null);
       this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
+      const perks = await this.p.connector.getPerks().catch(() => []);
+      this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
@@ -343,10 +415,16 @@ export class PersonalCoach extends Coach {
 
   protected override onDraft(): void {
     super.onDraft();
-    if (this.draft && !this.hadDraft) void this.onChampSelectStart();
+    if (this.draft && !this.hadDraft) {
+      this.keptPick = null; // a new champ select: the last game's pick no longer applies
+      void this.onChampSelectStart();
+    }
     this.hadDraft = this.draft !== null;
     if (!this.draft || !this.profile || !this.queueSupported) {
-      this.update({ picks: [], bans: [], hoverBans: null, myPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
+      this.shownLoadout = null;
+      // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
+      const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null });
       return;
     }
     const { engine } = this.config;
@@ -378,21 +456,49 @@ export class PersonalCoach extends Coach {
 
     // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
     const locked = lockedPick(this.draft);
+    /** The card for a champion: how it looks in this draft and its loadout (the import buttons use it). */
+    const card = (championId: number, hovering: boolean): MyPickView => {
+      const assessed = live ? assessPick(live, championId) : null;
+      // Your own games on the champion fill in when your rank has too few (completed items from Data Dragon).
+      let completed: Set<number> = new Set();
+      let boots: Set<number> = new Set();
+      let data = null;
+      try {
+        data = this.deps.ddragon.data;
+        completed = completedItems(data.itemInfo, engine.loadout.items);
+        boots = completedBoots(data.itemInfo, engine.loadout.items);
+      } catch {
+        // Data Dragon not loaded yet: names fall back to ids.
+      }
+      const personal = personalBuild(this.profile!.matches, championId, role, completed);
+      const buildsFrom = (id: number) => this.deps.ddragon.data.itemInfo.get(id)?.from ?? [];
+      const loadout = live ? draftLoadout(live, championId, engine.loadout, personal, boots, buildsFrom) : null;
+      if (this.shownLoadout?.loadout.championId !== championId) this.importMessage = null;
+      this.shownLoadout = loadout ? { loadout, champion: nameOf(championId) } : null;
+      return {
+        champion: champView(championId, lookup)!,
+        role,
+        expectedWin: assessed?.expectedWin ?? null,
+        reasons: assessed ? assessed.reasons.map(say) : [],
+        loadout: loadout
+          ? toLoadoutView(loadout, {
+              data,
+              templates,
+              championName: nameOf,
+              bands: this.config.bands,
+              band: this.band,
+              canImport: this.canImport,
+              perk: (id) => this.perks.get(id),
+            })
+          : null,
+        importMessage: this.importMessage,
+        hovering,
+      };
+    };
+
     if (locked !== null) {
-      const assessed = live ? assessPick(live, locked) : null;
-      this.update({
-        picks: [],
-        bans: [],
-        hoverBans: null,
-        pickAdvice: { whyNot: null, confidence: null },
-        pickRole: role,
-        myPick: {
-          champion: champView(locked, lookup)!,
-          role,
-          expectedWin: assessed?.expectedWin ?? null,
-          reasons: assessed ? assessed.reasons.map(say) : [],
-        },
-      });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, myPick: card(locked, false) });
+      this.keptPick = this.view.myPick;
       return;
     }
     const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.config.explain.settings);
@@ -420,6 +526,11 @@ export class PersonalCoach extends Coach {
             bans: suggestHoverBans(live, hovered, banSuggestions.map((b) => b.championId)).map(toView),
           }
         : null;
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, pickRole: role });
+    // Hovering (or selected, not locked yet): its loadout already, so there's time to read and import it.
+    const me = this.draft.myTeam.find((s) => s.isLocalPlayer);
+    const pending = me ? me.championId || me.pickIntentId : 0;
+    const hoverCard = live && pending > 0 ? card(pending, true) : null;
+    if (!hoverCard?.loadout) this.shownLoadout = null;
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role });
   }
 }

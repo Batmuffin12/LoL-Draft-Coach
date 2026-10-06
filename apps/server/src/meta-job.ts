@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { desc, eq, isNotNull } from "drizzle-orm";
-import type { EngineConfig, RankBandConfig } from "@ldc/engine";
-import { BandAggregator, type MetaConfig } from "@ldc/meta";
+import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
+import { BandAggregator, BuildAggregator, ExpectedWinFitter, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
-import type { MatchSummary, RankBandId } from "@ldc/shared";
+import type { ExpectedWinTable, ItemInfo, MatchSummary, RankBandId } from "@ldc/shared";
 import { collect, pruneCollected, type CollectorRiot, type CollectResult } from "./collector";
 import type { Db } from "./db";
 import { collectorRuns, metaSnapshots, users } from "./db/schema";
@@ -41,6 +41,13 @@ export function activeBands(db: Db, cfg: RankBandConfig): RankBandId[] {
   return bands.length ? bands : [cfg.defaultBand];
 }
 
+/** The band above each active band, collected for builds only (spec: builds from your band plus the one above). */
+export function buildBandsFor(active: RankBandId[], cfg: RankBandConfig): RankBandId[] {
+  const ids = cfg.bands.map((b) => b.id).sort((a, b) => a - b);
+  const above = active.map((b) => ids[ids.indexOf(b) + 1]).filter((b): b is RankBandId => b !== undefined && !active.includes(b));
+  return [...new Set(above)];
+}
+
 export interface PublishedSnapshot {
   band: RankBandId;
   matches: number;
@@ -49,15 +56,90 @@ export interface PublishedSnapshot {
   etag: string;
 }
 
-/** Aggregates a band's stored matches (streamed newest first) and stores the gzipped snapshot. */
-export function publishSnapshot(db: Db, band: RankBandId, settings: MetaSettings, now: number): PublishedSnapshot {
+/**
+ * Aggregates a band's stored matches (streamed newest first) and stores the gzipped snapshot.
+ * A second pass over the band and the band above (`buildBands`) adds builds, with enemy
+ * traits from the first pass's attributes. Without an item catalog (Data Dragon unreachable),
+ * builds have runes, spells and skills but no items.
+ */
+type Rows = (bands: RankBandId[], withBand?: boolean) => Iterable<{ summary: string; band: number }>;
+
+/**
+ * Pass 1: the band's stats, and the expected-win fit over the band and the band above (for
+ * win added in pass 2). A function of its own so its accumulators can be freed before pass 2
+ * (the server runs in a 256 MB heap).
+ */
+function bandPass(rows: Rows, band: RankBandId, bands: RankBandId[], settings: MetaSettings, now: number) {
   const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine) });
-  const rows = db.$client
-    .prepare("SELECT summary FROM matches WHERE band = ? AND ended_at > ? ORDER BY ended_at DESC")
-    .iterate(band, now - settings.meta.aggregation.windowDays * DAY_MS) as Iterable<{ summary: string }>;
-  for (const row of rows) agg.add(JSON.parse(row.summary) as MatchSummary);
-  const snapshot = agg.finish();
-  const json = JSON.stringify(snapshot);
+  const fitter = new ExpectedWinFitter(settings.meta.builds.stateBins);
+  for (const row of rows(bands, true)) {
+    const m = JSON.parse(row.summary) as MatchSummary;
+    if (row.band === band) agg.add(m);
+    fitter.add(m);
+  }
+  const base = agg.finish();
+  // Keep the snapshot as text and only what pass 2 needs as objects (memory).
+  return {
+    baseJson: JSON.stringify(base),
+    attributes: base.attributes,
+    champions: base.champions.map((c) => ({ championId: c.championId, games: c.games })),
+    summary: { matches: base.matches, patch: base.patch, newestMatchAt: base.newestMatchAt },
+    expected: fitter.table(),
+  };
+}
+
+/** Pass 2: builds from the band and the band above, with enemy traits from pass 1's attributes. */
+function buildPass(
+  rows: Rows,
+  bands: RankBandId[],
+  settings: MetaSettings,
+  now: number,
+  base: Pick<ReturnType<typeof bandPass>, "attributes" | "champions">,
+  expected: ExpectedWinTable,
+  items: ReadonlyMap<number, ItemInfo> | null,
+) {
+  const { aggregation, builds } = settings.meta;
+  const attributes = new Map(base.attributes.map((a) => [a.championId, a]));
+  const traitCuts = traitCutsFrom(base.champions, attributes);
+  const agg = new BuildAggregator({
+    now,
+    halfLifeDays: aggregation.halfLifeDays,
+    windowDays: aggregation.windowDays,
+    minDurationSec: aggregation.minDurationSec,
+    config: builds,
+    completed: items ? completedItems(items, settings.engine.loadout.items) : new Set(),
+    attributes,
+    traitCuts,
+    expected,
+  });
+  for (const row of rows(bands)) agg.add(JSON.parse(row.summary) as MatchSummary);
+  return { builds: agg.finish(), itemRoles: agg.itemRoles(), roleRewards: agg.roleRewards(), traitCuts, expectedWin: agg.expectedWinTable() };
+}
+
+/**
+ * Aggregates a band's stored matches (streamed newest first) and stores the gzipped snapshot.
+ * A second pass over the band and the band above (`buildBands`) adds builds, with enemy
+ * traits from the first pass's attributes. Without an item catalog (Data Dragon unreachable),
+ * builds have runes, spells and skills but no items.
+ */
+export function publishSnapshot(
+  db: Db,
+  band: RankBandId,
+  settings: MetaSettings,
+  now: number,
+  extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null } = {},
+): PublishedSnapshot {
+  const since = now - settings.meta.aggregation.windowDays * DAY_MS;
+  const rows: Rows = (bands) =>
+    db.$client
+      .prepare(`SELECT summary, band FROM matches WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? ORDER BY ended_at DESC`)
+      .iterate(...bands, since) as Iterable<{ summary: string; band: number }>;
+  const bands = [band, ...(extra.buildBands ?? [])];
+  const first = bandPass(rows, band, bands, settings, now);
+  const builds = JSON.stringify(buildPass(rows, bands, settings, now, first, first.expected, extra.items ?? null));
+  // The two parts are JSON objects with distinct keys: join them into one snapshot object.
+  const json = `${first.baseJson.slice(0, -1)},${builds.slice(1)}`;
+  const snapshot = first.summary;
   const body = gzipSync(json);
   const etag = `"${createHash("sha256").update(json).digest("hex").slice(0, 32)}"`;
   const row = {
@@ -85,6 +167,8 @@ export interface MetaRunResult {
 }
 
 export interface MetaJobOptions {
+  /** Data Dragon items for the current patch (to tell completed items); null when unavailable. */
+  items?: () => Promise<ReadonlyMap<number, ItemInfo> | null>;
   now?: () => number;
   log?: (msg: string) => void;
   random?: () => number;
@@ -131,6 +215,7 @@ export class MetaJob {
     const startedAt = this.now();
     const runId = this.db.insert(collectorRuns).values({ startedAt }).returning({ id: collectorRuns.id }).get().id;
     const bands = activeBands(this.db, bandConfig);
+    const buildBands = buildBandsFor(bands, bandConfig);
     let collected: CollectResult | null = null;
     let error: string | null = null;
 
@@ -140,6 +225,7 @@ export class MetaJob {
       try {
         collected = await collect(this.db, this.riot, {
           bands,
+          buildBands,
           bandConfig,
           collector: meta.collector,
           keepChallenges: challengeFields(engine),
@@ -155,13 +241,21 @@ export class MetaJob {
 
     let pruned = 0;
     const snapshots: PublishedSnapshot[] = [];
-    for (const band of bands) {
+    for (const band of [...bands, ...buildBands]) {
       pruned += pruneCollected(this.db, band, {
         windowDays: meta.aggregation.windowDays,
         maxStoredMatches: meta.collector.maxStoredMatches,
         now: this.now(),
       });
-      snapshots.push(publishSnapshot(this.db, band, this.settings, this.now()));
+    }
+    // Snapshots only for bands someone plays in; build-only bands feed the builds of the band below.
+    const items = await (this.opts.items?.() ?? Promise.resolve(null)).catch((err: unknown) => {
+      this.log(`meta: no item data, builds without items (${(err as Error).message})`);
+      return null;
+    });
+    for (const band of bands) {
+      const above = buildBandsFor([band], bandConfig);
+      snapshots.push(publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items }));
     }
 
     const finishedAt = this.now();
@@ -171,7 +265,7 @@ export class MetaJob {
       .where(eq(collectorRuns.id, runId))
       .run();
     this.log(
-      `meta: +${collected?.newMatches ?? 0} matches, ${collected?.riotCalls ?? 0} Riot calls, pruned ${pruned}, ` +
+      `meta: +${collected?.newMatches ?? 0} matches (${collected?.timelines ?? 0} with timelines), ${collected?.riotCalls ?? 0} Riot calls, pruned ${pruned}, ` +
         snapshots.map((s) => `band ${s.band}: ${s.matches} matches ${Math.round(s.sizeBytes / 1024)} KB`).join("; ") +
         (error ? ` (${error})` : ""),
     );

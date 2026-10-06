@@ -7,11 +7,13 @@ import {
   MasteryListSchema,
   MatchIdsSchema,
   MatchSchema,
+  TimelineSchema,
   type Account,
   type LeagueEntry,
   type LeaguePlayer,
   type Mastery,
   type Match,
+  type Timeline,
 } from "./schemas";
 
 export type KeyType = "development" | "personal" | "production";
@@ -129,6 +131,11 @@ export class RiotApi {
 
   match(matchId: string, priority: Priority = "user"): Promise<Match | null> {
     return this.request(this.opts.region, "match-v5.match", `/lol/match/v5/matches/${encodeURIComponent(matchId)}`, MatchSchema, priority);
+  }
+
+  /** Match-V5 timeline: frames each minute and events (items, skill level-ups). One extra call per match. */
+  timeline(matchId: string, priority: Priority = "user"): Promise<Timeline | null> {
+    return this.request(this.opts.region, "match-v5.timeline", `/lol/match/v5/matches/${encodeURIComponent(matchId)}/timeline`, TimelineSchema, priority);
   }
 
   async masteriesByPuuid(puuid: string, priority: Priority = "user"): Promise<Mastery[]> {

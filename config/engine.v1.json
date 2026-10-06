@@ -234,8 +234,29 @@
       "maxReasons": 4,
       "clearGapWin": 0.015,
       "powerCurveGap": 0.05,
+      "laneGoldGap": 300,
       "barScaleWin": 0.08
     }
+  },
+  "loadout": {
+    "items": { "mapId": "11", "legendaryMinGold": 2000 },
+    "minShare": 0.08,
+    "minGames": 5,
+    "priorGames": 40,
+    "minMatchupGames": 25,
+    "itemMinShare": 0.04,
+    "winAddedScale": 695,
+    "shareScale": 50,
+    "liftScale": 60,
+    "negativeGuard": -0.02,
+    "minLift": 1.3,
+    "maxSituational": 3,
+    "alternatives": 2,
+    "solidGames": 100,
+    "laneWeight": 2,
+    "minItemRoleShare": 0.05,
+    "personalMinGames": 5,
+    "slots": 3
   },
   "topN": 3
 }

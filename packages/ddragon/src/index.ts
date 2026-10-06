@@ -2,9 +2,23 @@ import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
 import { z } from "zod";
-import type { ChampionId, ChampionInfo } from "@ldc/shared";
+import type { ChampionId, ChampionInfo, ItemInfo, RuneInfo, SpellInfo } from "@ldc/shared";
 
 export const DEFAULT_BASE_URL = "https://ddragon.leagueoflegends.com";
+
+/** CommunityDragon's public mirror of the client's game-data files (the spec's "LCU game data / CommunityDragon"). */
+export const COMMUNITY_DRAGON_GAME_DATA = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/";
+
+/**
+ * The public CommunityDragon URL for an icon path the League client reports (e.g. a stat
+ * shard's "/lol-game-data/assets/v1/perk-images/StatMods/…png"). The client serves its own
+ * copy only with its local password, so the panel loads the mirror. Null for other paths.
+ */
+export function communityDragonAsset(clientPath: string, base = COMMUNITY_DRAGON_GAME_DATA): string | null {
+  const prefix = "/lol-game-data/assets/";
+  if (!clientPath.toLowerCase().startsWith(prefix)) return null;
+  return base + clientPath.slice(prefix.length).toLowerCase();
+}
 
 const VersionsSchema = z.array(z.string().min(1)).min(1);
 
@@ -24,16 +38,34 @@ const ChampionFileSchema = z.looseObject({
 const ItemFileSchema = z.looseObject({
   data: z.record(
     z.string(),
-    z.looseObject({ name: z.string(), stats: z.record(z.string(), z.number()).default({}) }),
+    z.looseObject({
+      name: z.string(),
+      stats: z.record(z.string(), z.number()).default({}),
+      image: z.looseObject({ full: z.string() }).optional(),
+      gold: z.looseObject({ total: z.number().default(0), purchasable: z.boolean().default(true) }).default({ total: 0, purchasable: true }),
+      into: z.array(z.string()).default([]),
+      from: z.array(z.string()).default([]),
+      tags: z.array(z.string()).default([]),
+      maps: z.record(z.string(), z.boolean()).default({}),
+      inStore: z.boolean().optional(),
+      hideFromAll: z.boolean().optional(),
+      requiredChampion: z.string().optional(),
+    }),
   ),
 });
 
 const RunesFileSchema = z.array(
-  z.looseObject({ id: z.number(), key: z.string(), name: z.string(), slots: z.array(z.unknown()) }),
+  z.looseObject({
+    id: z.number(),
+    key: z.string(),
+    name: z.string(),
+    icon: z.string().default(""),
+    slots: z.array(z.looseObject({ runes: z.array(z.looseObject({ id: z.number(), name: z.string(), icon: z.string().default("") })).default([]) })),
+  }),
 );
 
 const SummonerFileSchema = z.looseObject({
-  data: z.record(z.string(), z.looseObject({ id: z.string(), key: z.string(), name: z.string() })),
+  data: z.record(z.string(), z.looseObject({ id: z.string(), key: z.string(), name: z.string(), image: z.looseObject({ full: z.string() }).optional() })),
 });
 
 /** The static data files we load for each patch, with their validators. */
@@ -50,6 +82,10 @@ export interface StaticData {
   version: string;
   locale: string;
   champions: Map<ChampionId, ChampionInfo>;
+  /** Items, runes (paths included) and summoner spells by numeric id. */
+  itemInfo: Map<number, ItemInfo>;
+  runeInfo: Map<number, RuneInfo>;
+  spellInfo: Map<number, SpellInfo>;
   items: RawFiles["item"];
   runes: RawFiles["runesReforged"];
   summonerSpells: RawFiles["summoner"];
@@ -156,7 +192,37 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
         iconUrl: `${this.base}/cdn/${version}/img/champion/${c.image.full}`,
       });
     }
-    return { version, locale: this.locale, champions, items: raw.item, runes: raw.runesReforged, summonerSpells: raw.summoner };
+    const cdn = `${this.base}/cdn/${version}/img`;
+    const itemInfo = new Map<number, ItemInfo>();
+    for (const [key, it] of Object.entries(raw.item.data)) {
+      const id = Number(key);
+      if (!Number.isInteger(id)) continue;
+      itemInfo.set(id, {
+        id,
+        name: it.name,
+        iconUrl: `${cdn}/item/${it.image?.full ?? `${key}.png`}`,
+        gold: it.gold.total,
+        into: it.into.map(Number),
+        from: it.from.map(Number),
+        tags: it.tags,
+        maps: Object.entries(it.maps).filter(([, on]) => on).map(([m]) => m),
+        purchasable: it.gold.purchasable && it.inStore !== false && it.hideFromAll !== true,
+        requiredChampion: it.requiredChampion ?? null,
+        stats: it.stats,
+      });
+    }
+    const runeInfo = new Map<number, RuneInfo>();
+    for (const style of raw.runesReforged) {
+      runeInfo.set(style.id, { id: style.id, name: style.name, iconUrl: `${this.base}/cdn/img/${style.icon}`, styleId: style.id });
+      for (const slot of style.slots)
+        for (const r of slot.runes) runeInfo.set(r.id, { id: r.id, name: r.name, iconUrl: `${this.base}/cdn/img/${r.icon}`, styleId: style.id });
+    }
+    const spellInfo = new Map<number, SpellInfo>();
+    for (const s of Object.values(raw.summoner.data)) {
+      const id = Number(s.key);
+      if (Number.isInteger(id)) spellInfo.set(id, { id, name: s.name, iconUrl: `${cdn}/spell/${s.image?.full ?? `${s.id}.png`}` });
+    }
+    return { version, locale: this.locale, champions, itemInfo, runeInfo, spellInfo, items: raw.item, runes: raw.runesReforged, summonerSpells: raw.summoner };
   }
 
   private async getJson(url: string): Promise<unknown> {

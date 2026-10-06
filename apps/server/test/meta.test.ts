@@ -1,14 +1,14 @@
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { MatchSchema, RiotApiError, RiotKeyError, type LeaguePlayer, type Match } from "@ldc/riot-api";
+import { MatchSchema, TimelineSchema, RiotApiError, RiotKeyError, type LeaguePlayer, type Match } from "@ldc/riot-api";
 import type { MetaSnapshot } from "@ldc/shared";
 import { createApp } from "../src/app";
 import { sha256 } from "../src/auth";
 import { collect, nextCursor, pruneCollected, type CollectorRiot, type CollectOptions } from "../src/collector";
 import { findConfigDir, loadServerConfig } from "../src/config";
 import { openDb, schema, type Db } from "../src/db";
-import { activeBands, challengeFields, MetaJob, publishSnapshot } from "../src/meta-job";
+import { activeBands, buildBandsFor, challengeFields, MetaJob, publishSnapshot } from "../src/meta-job";
 
 const NOW = 1_800_000_000_000;
 const MIN = 60_000;
@@ -65,6 +65,22 @@ function fakeRiot(opts: { pages?: number; perPage?: number; failFor?: string; ke
       calls.push(`match:${id}`);
       return rawMatch(id, NOW - 5 * MIN);
     },
+    async timeline(id) {
+      calls.push(`timeline:${id}`);
+      return TimelineSchema.parse({
+        metadata: { matchId: id },
+        info: {
+          participants: Array.from({ length: 10 }, (_, i) => ({ participantId: i + 1, puuid: `SECRET-${id}-${i}` })),
+          frames: [
+            {
+              timestamp: 0,
+              participantFrames: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(i + 1), { participantId: i + 1, totalGold: 500 }])),
+              events: [{ type: "ITEM_PURCHASED", timestamp: 1000, participantId: 1, itemId: 1055 }],
+            },
+          ],
+        },
+      });
+    },
   };
 }
 
@@ -97,6 +113,7 @@ describe("collector", () => {
     const riot = fakeRiot();
     const r = await collect(db, riot, options({ maxMatchesPerRun: 4 }));
     expect(r.newMatches).toBe(4);
+    expect(r.timelines).toBe(4);
     expect(r.perBand).toEqual({ 2: 4 });
     const rows = collected(db);
     expect(rows).toHaveLength(4);
@@ -105,6 +122,7 @@ describe("collector", () => {
     expect(text).not.toContain("SECRET");
     expect(text).not.toContain("Name0");
     expect(rows[0]!.summary.participants[0]!.challenges).toEqual({ killParticipation: 0.5 });
+    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []) });
     // Players' identifiers are never stored anywhere.
     const dump = JSON.stringify(db.$client.prepare("SELECT * FROM collector_cursors").all());
     expect(dump).not.toContain("P-");
@@ -131,6 +149,35 @@ describe("collector", () => {
       divisionIndex: 0,
       page: 5,
     });
+  });
+
+  it("fetches timelines only for timelineShare of the games", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const r = await collect(db, riot, { ...options({ maxMatchesPerRun: 4, timelineShare: 0.5 }), random: () => 0.7 });
+    expect(r.timelines).toBe(0);
+    expect(riot.calls.some((c) => c.startsWith("timeline:"))).toBe(false);
+    expect(collected(db).every((m) => m.summary.timeline === undefined)).toBe(true);
+  });
+
+  it("gives the band above its share of the budget, for builds", async () => {
+    const db = openDb(":memory:");
+    const r = await collect(db, fakeRiot(), { ...options({ maxMatchesPerRun: 10, buildBandShare: 0.3 }), buildBands: [3] });
+    // A player's new games are stored together, so a band can go one player over its share.
+    expect(r.perBand[2]).toBeGreaterThanOrEqual(7);
+    expect(r.perBand[3]).toBeGreaterThanOrEqual(3);
+    expect(r.perBand[3]).toBeLessThan(r.perBand[2]!);
+    expect(buildBandsFor([2], config.bands)).toEqual([3]);
+    expect(buildBandsFor([2, 3], config.bands)).toEqual([4]);
+    expect(buildBandsFor([4], config.bands)).toEqual([]);
+  });
+
+  it("shares the time budget too, so a slow run still reaches the band above", async () => {
+    const db = openDb(":memory:");
+    let t = NOW;
+    const r = await collect(db, fakeRiot(), { ...options({ maxMatchesPerRun: 100, buildBandShare: 0.3 }, () => (t += 1_000)), deadline: NOW + 60_000, buildBands: [3] });
+    expect(r.perBand[3]).toBeGreaterThan(0);
+    expect(r.perBand[2]).toBeGreaterThan(r.perBand[3]!);
   });
 
   it("stops at the deadline", async () => {
@@ -190,14 +237,24 @@ describe("meta job", () => {
     addUser(db, "a", 2);
     addUser(db, "b", 2);
     expect(activeBands(db, config.bands)).toEqual([2]);
-    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0 });
+    // Item 1055 counts as a completed item in this catalog.
+    const items = async () => new Map([[1055, { id: 1055, name: "X", iconUrl: "", gold: 3000, into: [], from: [], tags: [], maps: ["11"], purchasable: true, requiredChampion: null, stats: {} }]]);
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0, items });
     const r = await job.run();
     expect(r.error).toBeNull();
     expect(r.collected?.newMatches).toBeGreaterThan(0);
-    expect(r.snapshots).toEqual([expect.objectContaining({ band: 2, matches: r.collected!.newMatches, patch: "16.19" })]);
+    // Band 3 is collected for builds only: no snapshot of its own.
+    expect(r.collected?.perBand[3]).toBeGreaterThan(0);
+    expect(r.snapshots).toEqual([expect.objectContaining({ band: 2, matches: r.collected!.perBand[2], patch: "16.19" })]);
     const row = db.select().from(schema.metaSnapshots).get()!;
     const snap = JSON.parse(gunzipSync(row.body).toString()) as MetaSnapshot;
     expect(snap.champions.length).toBe(10);
+    // Builds come from band 2 and the band above; champion 100 bought item 1055 first in every game.
+    const build = snap.builds!.find((b) => b.championId === 100)!;
+    expect(build.n).toBe(r.collected!.newMatches);
+    expect(build.items[0]).toMatchObject({ itemId: 1055, slot: 1, share: 1 });
+    expect(snap.traitCuts).toBeDefined();
+    expect(snap.expectedWin?.winRate.length).toBeGreaterThan(0);
     expect(job.lastRun()).toMatchObject({ newMatches: r.collected!.newMatches, error: null });
   });
 

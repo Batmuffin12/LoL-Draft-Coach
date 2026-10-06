@@ -2,7 +2,9 @@
  * Server entry point (Railway runs `node dist/main.js`). Reads the environment and
  * config, opens the database, starts the HTTP API and the background sync loop.
  */
+import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
+import { DataDragon } from "@ldc/ddragon";
 import { RiotApi } from "@ldc/riot-api";
 import { createApp } from "./app";
 import { findConfigDir, loadServerConfig } from "./config";
@@ -11,7 +13,7 @@ import { readServerEnv } from "./env";
 import { MetaJob } from "./meta-job";
 import { SyncScheduler } from "./sync-scheduler";
 
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);
@@ -29,7 +31,13 @@ const sync = riot
     })
   : null;
 // Collector + aggregator: started only by POST /admin/collect (hourly cron), never by a timer here.
-const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine });
+// Data Dragon items (completed items for builds), cached next to the database; checked once per wake-up.
+const ddragon = new DataDragon({ cacheDir: join(dirname(env.DATABASE_PATH), "ddragon") });
+const items = async () => {
+  await ddragon.load();
+  return ddragon.data.itemInfo;
+};
+const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine }, { items });
 const app = createApp({
   db,
   version: VERSION,

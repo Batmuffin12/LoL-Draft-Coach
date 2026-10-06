@@ -9,6 +9,8 @@ import {
   GameflowPhaseSchema,
   GameflowSessionSchema,
   PickableChampionIdsSchema,
+  PerksSchema,
+  type Perk,
   RankedStatsSchema,
   RecommendedPositionsSchema,
   parseLcu,
@@ -26,6 +28,7 @@ export const LCU_PATHS = {
   rankedStats: "/lol-ranked/v1/current-ranked-stats",
   currentSummoner: "/lol-summoner/v1/current-summoner",
   recommendedPositions: "/lol-perks/v1/recommended-champion-positions",
+  perks: "/lol-perks/v1/perks",
 } as const;
 
 export interface ConnectorEvents {
@@ -55,6 +58,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   private socket: LcuSocket | null = null;
   private running = false;
   private state: ConnectionState = "disconnected";
+  private creds: LcuCredentials | null = null;
 
   constructor(private readonly opts: ConnectorOptions) {
     super();
@@ -62,6 +66,11 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
 
   get status(): ConnectionState {
     return this.state;
+  }
+
+  /** The connected client's credentials, for the click-only importer (null when not connected). */
+  get credentials(): LcuCredentials | null {
+    return this.state === "connected" ? this.creds : null;
   }
 
   start(): void {
@@ -117,6 +126,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     await socket.connect();
     this.http = http;
     this.socket = socket;
+    this.creds = creds;
 
     socket.on("event", (e) => this.onEvent(e));
     socket.subscribe(LCU_PATHS.champSelectSession);
@@ -183,6 +193,12 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     return new Map(
       Object.entries(parsed).map(([id, v]) => [Number(id), v.recommendedPositions.map(normalizePosition).filter(Boolean)]),
     );
+  }
+
+  /** All runes and stat shards with names and icon paths (static game data; read only). */
+  async getPerks(): Promise<Perk[]> {
+    const data = await this.requireHttp().get(LCU_PATHS.perks);
+    return data == null ? [] : parseLcu(PerksSchema, LCU_PATHS.perks, data);
   }
 
   /** The local player's own summoner (used only to load their own history). */

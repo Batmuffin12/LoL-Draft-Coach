@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FactorName } from "@ldc/shared";
-import type { AccountView, BanView, ChampView, DraftView, MetaView, MyPickView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
+import type { AccountView, BanView, ChampView, DraftView, IconView, LoadoutItemView, LoadoutView, MetaView, MyPickView, PickView, PlaystyleView, RoleView, SlotView, ViewState } from "../shared/view";
 
 const TIMER_PHASE_LABEL: Record<string, string> = {
   PLANNING: "Declare your pick",
@@ -140,13 +140,164 @@ function Picks({ picks, role, state }: { picks: PickView[]; role: string | null;
   );
 }
 
-/** The champion you locked in, and how it looks in this draft. Runes and items will go here (milestone 6). */
+/** The champion you locked in, how it looks in this draft, and its loadout (kept until the game ends). */
+function GameIcon({ icon, size = 22, title }: { icon: IconView; size?: number; title?: string }) {
+  const t = title ?? icon.name;
+  return icon.iconUrl ? (
+    <img className="icon game" src={icon.iconUrl} width={size} height={size} alt={icon.name} title={t} />
+  ) : (
+    <div className="icon empty" style={{ width: size, height: size }} title={t} />
+  );
+}
+
+const tip = (i: LoadoutItemView) => [i.name, ...i.reasons].join("\n");
+
+function LoadoutRow({ label, children, reason }: { label: string; children: React.ReactNode; reason?: string | null }) {
+  return (
+    <div className="lo-row">
+      <span className="lo-label">{label}</span>
+      <div className="lo-body">
+        <div className="lo-icons">{children}</div>
+        {reason && <div className="lo-reason">{reason}</div>}
+      </div>
+    </div>
+  );
+}
+
+function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message: string | null }) {
+  const [busy, setBusy] = useState<"runes" | "items" | null>(null);
+  const run = (kind: "runes" | "items") => {
+    if (busy) return;
+    setBusy(kind);
+    void window.coach.importLoadout(kind).finally(() => setBusy(null));
+  };
+  if (!l.canImport) return null;
+  return (
+    <div className="lo-import">
+      {l.page && (
+        <button className="btn" disabled={busy !== null} onClick={() => run("runes")} title="Creates (or updates) an 'LDC:' rune page in your client">
+          {busy === "runes" ? "Importing…" : "Import runes"}
+        </button>
+      )}
+      {(l.items.length > 0 || l.commonPath || l.starting) && (
+        <button className="btn" disabled={busy !== null} onClick={() => run("items")} title="Saves an item set for this champion; it shows in the shop in game">
+          {busy === "items" ? "Importing…" : "Import item set"}
+        </button>
+      )}
+      {message && <span className="muted small">{message}</span>}
+    </div>
+  );
+}
+
+function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMessage: string | null }) {
+  return (
+    <div className="loadout">
+      {l.page && (
+        <LoadoutRow label="Runes" reason={l.page.reason}>
+          <GameIcon icon={l.page.runes[0]!} size={28} />
+          <strong className="lo-name">{l.page.runes[0]!.name}</strong>
+          {l.page.runes.slice(1).map((r, i) => (
+            <GameIcon key={`${r.id}-${i}`} icon={r} size={18} />
+          ))}
+          <GameIcon icon={l.page.secondary} size={16} title={`Secondary: ${l.page.secondary.name}`} />
+        </LoadoutRow>
+      )}
+      {l.page && l.page.shards.length > 0 && (
+        <LoadoutRow label="Shards" reason={l.page.shards.map((s) => s.name).join(" · ")}>
+          {l.page.shards.map((s, i) => (
+            <GameIcon key={`${s.id}-${i}`} icon={s} size={18} />
+          ))}
+        </LoadoutRow>
+      )}
+      {l.situationalRunes.length > 0 && (
+        <LoadoutRow label="Consider" reason={l.situationalRunes[0]!.reasons[0] ?? null}>
+          {l.situationalRunes.map((r) => (
+            <span key={r.id} className="lo-chip" title={tip(r)}>
+              <GameIcon icon={r} size={16} title={tip(r)} /> {r.name}
+            </span>
+          ))}
+        </LoadoutRow>
+      )}
+      {l.spells && (
+        <LoadoutRow label="Spells" reason={l.spells.reason}>
+          {l.spells.spells.map((s) => (
+            <GameIcon key={s.id} icon={s} />
+          ))}
+        </LoadoutRow>
+      )}
+      {l.skills && (
+        <LoadoutRow label="Skills" reason={l.skills.reason}>
+          <span className="lo-skills">
+            Start {l.skills.first.join(" ")} · Max {l.skills.order.join(" > ")}
+          </span>
+        </LoadoutRow>
+      )}
+      {l.starting && (
+        <LoadoutRow label="Start" reason={l.starting.reason}>
+          {l.starting.items.map((it, i) => (
+            <GameIcon key={`${it.id}-${i}`} icon={it} />
+          ))}
+        </LoadoutRow>
+      )}
+      {l.boots && (
+        <LoadoutRow label="Boots" reason={l.boots.top.reasons[0] ?? null}>
+          <GameIcon icon={l.boots.top} size={24} title={tip(l.boots.top)} />
+          <strong className="lo-name">{l.boots.top.name}</strong>
+          {l.boots.alternatives.length > 0 && <span className="muted small">or</span>}
+          {l.boots.alternatives.map((a) => (
+            <GameIcon key={a.id} icon={a} size={18} title={tip(a)} />
+          ))}
+        </LoadoutRow>
+      )}
+      {l.quest.length > 0 && (
+        <LoadoutRow label="Quest" reason={l.quest[0]!.reasons[0] ?? null}>
+          {l.quest.map((q) => (
+            <GameIcon key={q.id} icon={q} size={22} title={tip(q)} />
+          ))}
+        </LoadoutRow>
+      )}
+      {l.items.length > 0 && (
+        <div className="lo-row">
+          <span className="lo-label">Build</span>
+          <ol className="lo-build">
+            {l.items.map((s) => (
+              <li key={s.slot}>
+                <div className="lo-icons">
+                  <GameIcon icon={s.top} size={26} title={tip(s.top)} />
+                  <strong className="lo-name">{s.top.name}</strong>
+                  {s.alternatives.length > 0 && <span className="muted small">or</span>}
+                  {s.alternatives.map((a) => (
+                    <GameIcon key={a.id} icon={a} size={18} title={tip(a)} />
+                  ))}
+                </div>
+                {s.top.reasons[0] && <div className="lo-reason">{s.top.reasons[0]}</div>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {l.commonPath && (
+        <LoadoutRow label="Build" reason={l.commonPath.reason}>
+          {l.commonPath.items.map((it) => (
+            <GameIcon key={it.id} icon={it} size={24} />
+          ))}
+        </LoadoutRow>
+      )}
+      <ImportButtons loadout={l} message={importMessage} />
+      <p className="muted small lo-source">
+        From {l.games.toLocaleString("en-US")} games in {l.source}.{l.thinNote ? ` ${l.thinNote}.` : ""} Hover an icon for details.
+      </p>
+    </div>
+  );
+}
+
 function YourPick({ pick }: { pick: MyPickView }) {
   return (
     <section className="card picks your-pick">
       <h2 className="picks-head">
         <span>
-          Your pick{pick.role ? <span className="muted"> · {pick.role}</span> : null}
+          {pick.hovering ? "Your hover" : "Your pick"}
+          {pick.role ? <span className="muted"> · {pick.role}</span> : null}
         </span>
       </h2>
       <div className="pick">
@@ -169,7 +320,11 @@ function YourPick({ pick }: { pick: MyPickView }) {
           )}
         </div>
       </div>
-      <p className="muted small">Locked in. Runes and items for {pick.champion.name} will show here.</p>
+      {pick.loadout ? (
+        <Loadout loadout={pick.loadout} importMessage={pick.importMessage} />
+      ) : (
+        <p className="muted small">Locked in. No build data for {pick.champion.name} in this role yet.</p>
+      )}
     </section>
   );
 }
@@ -458,6 +613,7 @@ export function App() {
 
             <BanSuggestions bans={state.bans} hover={state.hoverBans} />
             {state.myPick ? <YourPick pick={state.myPick} /> : <Picks picks={state.picks} role={state.pickRole} state={state} />}
+            {!state.myPick && state.hoverPick && <YourPick pick={state.hoverPick} />}
 
             <section className="card teams">
               <div>
@@ -474,8 +630,9 @@ export function App() {
           </>
         ) : (
           <>
+          {state.myPick && <YourPick pick={state.myPick} />}
           <section className="card idle">
-            <p>No champ select in progress.</p>
+            <p>{state.myPick ? "Champ select is over: your loadout stays here until the game ends." : "No champ select in progress."}</p>
             <p className="muted small">Open a lobby (a custom draft lobby works) and the draft will show up here live.</p>
             {state.status.profile.state !== "idle" && state.status.profile.state !== "ready" && (
               <Picks picks={[]} role={state.pickRole} state={state} />

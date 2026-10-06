@@ -35,27 +35,78 @@ export function quantiles(sorted: number[], count: number): number[] {
   return out;
 }
 
+/**
+ * Counts champion pairs compactly: a numeric key per pair and three growable Float64Arrays
+ * (games, wins, n), because a band of 50k games has hundreds of thousands of pairs and the
+ * server runs in a 256 MB heap. Positions are interned to small numbers.
+ */
 class PairCounter {
-  private readonly map = new Map<string, PairStat>();
+  private readonly index = new Map<number, number>();
+  private readonly positions: string[] = [];
+  private readonly positionIds = new Map<string, number>();
+  private games = new Float64Array(1024);
+  private wins = new Float64Array(1024);
+  private counts = new Float64Array(1024);
+  private keys = new Float64Array(1024);
+  private size = 0;
+
+  private pos(p: string): number {
+    let id = this.positionIds.get(p);
+    if (id === undefined) {
+      id = this.positions.length;
+      this.positions.push(p);
+      this.positionIds.set(p, id);
+    }
+    return id;
+  }
+
+  private static readonly P = 64;
+  private static readonly C = 1 << 16;
 
   /** Adds one game of the pair; `aWon` is from the first champion's side. Stored once per unordered pair. */
   add(a: ParticipantSummary, b: ParticipantSummary, aWon: boolean, weight: number): void {
     const swap = a.championId > b.championId || (a.championId === b.championId && a.position > b.position);
     const [x, y] = swap ? [b, a] : [a, b];
     const xWon = swap ? !aWon : aWon;
-    const key = `${x.championId}|${x.position}|${y.championId}|${y.position}`;
-    let s = this.map.get(key);
-    if (!s) this.map.set(key, (s = [x.championId, x.position, y.championId, y.position, 0, 0, 0]));
-    s[4] += weight;
-    if (xWon) s[5] += weight;
-    s[6] += 1;
+    const { P, C } = PairCounter;
+    const key = ((x.championId * P + this.pos(x.position)) * C + y.championId) * P + this.pos(y.position);
+    let i = this.index.get(key);
+    if (i === undefined) {
+      i = this.size++;
+      if (i >= this.games.length) {
+        const grow = (arr: Float64Array) => {
+          const next = new Float64Array(arr.length * 2);
+          next.set(arr);
+          return next;
+        };
+        this.games = grow(this.games);
+        this.wins = grow(this.wins);
+        this.counts = grow(this.counts);
+        this.keys = grow(this.keys);
+      }
+      this.keys[i] = key;
+      this.index.set(key, i);
+    }
+    this.games[i]! += weight;
+    if (xWon) this.wins[i]! += weight;
+    this.counts[i]! += 1;
   }
 
   list(minGames: number): PairStat[] {
-    return [...this.map.values()]
-      .filter((s) => s[6] >= minGames)
-      .map((s): PairStat => [s[0], s[1], s[2], s[3], round(s[4]), round(s[5]), s[6]])
-      .sort((p, q) => p[0] - q[0] || p[2] - q[2] || p[1].localeCompare(q[1]) || p[3].localeCompare(q[3]));
+    const { P, C } = PairCounter;
+    const out: PairStat[] = [];
+    for (let i = 0; i < this.size; i++) {
+      if (this.counts[i]! < minGames) continue;
+      let k = this.keys[i]!;
+      const yr = k % P;
+      k = (k - yr) / P;
+      const yc = k % C;
+      k = (k - yc) / C;
+      const xr = k % P;
+      const xc = (k - xr) / P;
+      out.push([xc, this.positions[xr]!, yc, this.positions[yr]!, round(this.games[i]!), round(this.wins[i]!), this.counts[i]!]);
+    }
+    return out.sort((p, q) => p[0] - q[0] || p[2] - q[2] || p[1].localeCompare(q[1]) || p[3].localeCompare(q[3]));
   }
 }
 
@@ -93,6 +144,8 @@ export class BandAggregator {
   private readonly trendCounts = new Map<string, { championId: ChampionId; role: Position; rN: number; rW: number; bN: number; bW: number }>();
   private recentMatches = 0;
   private readonly powerCurves = new Map<ChampionId, { early: { n: number; w: number }; late: { n: number; w: number } }>();
+  /** Gold lead over the lane opponent at minute 15, per champion (timelines only). */
+  private readonly gold15 = new Map<ChampionId, { n: number; sum: number }>();
   private beforeMatches = 0;
   private newest: number | null = null;
 
@@ -145,8 +198,18 @@ export class BandAggregator {
       }
     }
     const ps = m.participants;
+    const gold = m.timeline?.gold;
     for (let i = 0; i < ps.length; i++) {
       const p = ps[i]!;
+      const opp = gold ? ps.findIndex((q) => q.teamId !== p.teamId && q.position === p.position) : -1;
+      const g15 = gold?.[i]?.[15];
+      const o15 = opp >= 0 ? gold?.[opp]?.[15] : undefined;
+      if (g15 !== undefined && o15 !== undefined) {
+        const s = this.gold15.get(p.championId) ?? { n: 0, sum: 0 };
+        s.n++;
+        s.sum += g15 - o15;
+        this.gold15.set(p.championId, s);
+      }
       const key = `${p.championId}|${p.position}`;
       let c = this.champions.get(key);
       if (!c) this.champions.set(key, (c = { championId: p.championId, role: p.position, games: 0, wins: 0, n: 0 }));
@@ -170,6 +233,7 @@ export class BandAggregator {
         damageTaken: p.damageTaken,
         selfMitigated: p.selfMitigated,
         ccSeconds: p.ccSeconds,
+        ...(p.heal !== undefined ? { heal: p.heal } : {}),
         durationSec: m.durationSec,
       });
 
@@ -233,9 +297,17 @@ export class BandAggregator {
 
   private powerCurveOf(id: ChampionId): Pick<ChampionAttributes, "powerCurve"> {
     const pc = this.powerCurves.get(id);
-    if (!pc) return {};
+    const g = this.gold15.get(id);
+    if (!pc && !g) return {};
     const side = (s: { n: number; w: number }) => ({ games: s.n, winRate: s.n ? round(s.w / s.n) : 0 });
-    return { powerCurve: { early: side(pc.early), late: side(pc.late) } };
+    const none = { n: 0, w: 0 };
+    return {
+      powerCurve: {
+        early: side(pc?.early ?? none),
+        late: side(pc?.late ?? none),
+        ...(g ? { goldAt15: { games: g.n, diff: Math.round(g.sum / g.n) } } : {}),
+      },
+    };
   }
 
   finish(): MetaSnapshot {
@@ -258,6 +330,7 @@ export class BandAggregator {
         trueShare: round(a.trueShare),
         frontline: round(a.frontline),
         engage: round(a.engage),
+        ...(a.heal !== undefined ? { heal: round(a.heal) } : {}),
         roleShares: Object.fromEntries(Object.entries(a.roleShares).map(([k, v]) => [k, round(v)])),
         ...this.powerCurveOf(a.championId),
       }))

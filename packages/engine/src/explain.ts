@@ -35,10 +35,16 @@ export const reason = (id: string, slots: Reason["slots"] = {}): Reason => ({ id
 /**
  * Fills a template from a reason's slots. Supported slot forms:
  * `{x}` value, `{x:pct}` 0..1 share as a whole percent, `{x:champion}` champion name,
+ * `{x:item}` / `{x:rune}` item or rune name,
  * `{x|one|many}` singular/plural by the number in slot x. A missing template renders
  * the id, so a typo is visible instead of silent.
  */
-export function renderReason(r: Reason, templates: Record<string, string>, championName: (id: ChampionId) => string): string {
+export interface ReasonNames {
+  item?: (id: number) => string;
+  rune?: (id: number) => string;
+}
+
+export function renderReason(r: Reason, templates: Record<string, string>, championName: (id: ChampionId) => string, names: ReasonNames = {}): string {
   const t = templates[r.id];
   if (t === undefined) return r.id;
   return t.replace(/\{(\w+)(?::(\w+))?(?:\|([^|}]*)\|([^}]*))?\}/g, (_all, key: string, fmt: string | undefined, one?: string, many?: string) => {
@@ -52,6 +58,8 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
       return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s;
     }
     if (fmt === "champion" && typeof v === "number") return championName(v);
+    if (fmt === "item" && typeof v === "number") return names.item?.(v) ?? `#${v}`;
+    if (fmt === "rune" && typeof v === "number") return names.rune?.(v) ?? `#${v}`;
     return String(v);
   });
 }

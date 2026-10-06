@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
 import type { RankBandConfig } from "@ldc/engine";
 import type { MetaConfig } from "@ldc/meta";
-import { RiotKeyError, summarizeMatch, type RiotApi } from "@ldc/riot-api";
+import { RiotKeyError, summarizeMatch, summarizeTimeline, type RiotApi } from "@ldc/riot-api";
 import type { MatchSummary, RankBandId } from "@ldc/shared";
 import type { Db } from "./db";
 import { collectorCursors, matches, userMatches } from "./db/schema";
@@ -10,10 +10,15 @@ const DAY_MS = 86_400_000;
 const MAX_FAILURES = 5;
 
 /** What collecting needs from the Riot API adapter. */
-export type CollectorRiot = Pick<RiotApi, "leaguePlayers" | "matchIdsByPuuid" | "match">;
+export type CollectorRiot = Pick<RiotApi, "leaguePlayers" | "matchIdsByPuuid" | "match" | "timeline">;
 
 export interface CollectOptions {
   bands: RankBandId[];
+  /**
+   * Bands collected for builds only (the band above each active one: the spec takes builds,
+   * runes and skill orders from your band plus the one above). They get `buildBandShare` of the match budget.
+   */
+  buildBands?: RankBandId[];
   bandConfig: RankBandConfig;
   collector: MetaConfig["collector"];
   /** Match-V5 `challenges` fields to keep on collected matches (the ones the engine reads). */
@@ -29,6 +34,8 @@ export interface CollectOptions {
 
 export interface CollectResult {
   newMatches: number;
+  /** New matches that came with their timeline. */
+  timelines: number;
   perBand: Record<number, number>;
   riotCalls: number;
 }
@@ -91,21 +98,34 @@ function shuffle<T>(list: T[], random: () => number): T[] {
 export async function collect(db: Db, riot: CollectorRiot, opts: CollectOptions): Promise<CollectResult> {
   const { collector: cfg, now } = opts;
   const random = opts.random ?? Math.random;
-  const result: CollectResult = { newMatches: 0, perBand: {}, riotCalls: 0 };
+  const result: CollectResult = { newMatches: 0, timelines: 0, perBand: {}, riotCalls: 0 };
   if (!opts.bands.length) return result;
-  const perBandMax = Math.ceil(cfg.maxMatchesPerRun / opts.bands.length);
+  const buildBands = (opts.buildBands ?? []).filter((b) => !opts.bands.includes(b));
+  const buildBudget = buildBands.length ? Math.round(cfg.maxMatchesPerRun * cfg.buildBandShare) : 0;
+  const budgets = new Map<RankBandId, number>([
+    ...opts.bands.map((b): [RankBandId, number] => [b, Math.ceil((cfg.maxMatchesPerRun - buildBudget) / opts.bands.length)]),
+    ...buildBands.map((b): [RankBandId, number] => [b, Math.ceil(buildBudget / buildBands.length)]),
+  ]);
   // A few failed calls (Riot 5xx, a changed payload) skip that player; many in one run stop it.
   let failures = 0;
   const onFailure = (err: unknown) => {
     if (err instanceof RiotKeyError || ++failures >= MAX_FAILURES) throw err;
   };
 
-  for (const band of opts.bands) {
+  // Time is shared like the match budget: each band must stop by its slice's end (a band that
+  // finishes early leaves its time to the next ones).
+  const start = now();
+  const total = [...budgets.values()].reduce((a, b) => a + b, 0);
+  let usedBudget = 0;
+  for (const [band, perBandMax] of budgets) {
+    usedBudget += perBandMax;
+    if (perBandMax <= 0) continue;
+    const bandDeadline = Math.min(opts.deadline, start + ((opts.deadline - start) * usedBudget) / total);
     const tiers = opts.bandConfig.bands.find((b) => b.id === band)?.tiers ?? [];
     if (!tiers.length) continue;
     let added = 0;
     let emptyInARow = 0;
-    const done = () => added >= perBandMax || now() >= opts.deadline;
+    const done = () => added >= perBandMax || now() >= bandDeadline;
 
     while (!done()) {
       const cursor = loadCursor(db, band);
@@ -173,7 +193,16 @@ async function collectPlayer(
     const match = await riot.match(id, "collector");
     result.riotCalls++;
     if (!match || match.info.queueId !== cfg.queueId) continue;
-    const summary = trimChallenges(summarizeMatch(match), opts.keepChallenges);
+    let summary = trimChallenges(summarizeMatch(match), opts.keepChallenges);
+    // Timelines (builds, item purchases, skill order) cost one more call, so only a share of games get one.
+    if ((opts.random ?? Math.random)() < cfg.timelineShare && !done()) {
+      const timeline = await riot.timeline(id, "collector").catch((err: unknown) => {
+        if (err instanceof RiotKeyError) throw err;
+        return null;
+      });
+      result.riotCalls++;
+      if (timeline) summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+    }
     const inserted = db
       .insert(matches)
       .values({
@@ -190,6 +219,7 @@ async function collectPlayer(
       .onConflictDoNothing()
       .run();
     added += inserted.changes;
+    if (inserted.changes && summary.timeline) result.timelines++;
   }
   return added;
 }

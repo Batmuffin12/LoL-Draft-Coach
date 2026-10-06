@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DataDragon, DataDragonError } from "../src/index";
+import { communityDragonAsset, DataDragon, DataDragonError } from "../src/index";
 
 /** A fake Data Dragon CDN whose newest version can be changed by the test. */
 function fakeCdn() {
@@ -15,9 +15,15 @@ function fakeCdn() {
         Beta: { id: "Beta", key: "2", name: "Beta", image: { full: "Beta.png" } },
       },
     },
-    item: { data: { "1001": { name: "Boots", stats: { FlatMovementSpeedMod: 25 } } } },
-    runesReforged: [{ id: 8000, key: "Precision", name: "Precision", slots: [] }],
-    summoner: { data: { SummonerFlash: { id: "SummonerFlash", key: "4", name: "Flash" } } },
+    item: {
+      data: {
+        "1001": { name: "Boots", stats: { FlatMovementSpeedMod: 25 }, into: ["3006"], gold: { total: 300, purchasable: true }, tags: ["Boots"], maps: { "11": true, "12": false } },
+        "3006": { name: "Greaves", from: ["1001"], gold: { total: 1100, purchasable: true }, image: { full: "3006.png" }, maps: { "11": true } },
+        "9999": { name: "Quest reward", gold: { total: 0, purchasable: false }, inStore: false, requiredChampion: "Alpha" },
+      },
+    },
+    runesReforged: [{ id: 8000, key: "Precision", name: "Precision", icon: "perk-images/Styles/7201_Precision.png", slots: [{ runes: [{ id: 8005, name: "Press the Attack", icon: "pta.png" }] }] }],
+    summoner: { data: { SummonerFlash: { id: "SummonerFlash", key: "4", name: "Flash", image: { full: "SummonerFlash.png" } } } },
   });
   const fetchFn = (async (input: string | URL | Request) => {
     const url = String(input);
@@ -37,6 +43,15 @@ beforeEach(() => {
   cacheDir = mkdtempSync(join(tmpdir(), "ldc-dd-"));
 });
 
+describe("communityDragonAsset", () => {
+  it("maps a client game-data icon path to the public mirror, lower-cased", () => {
+    expect(communityDragonAsset("/lol-game-data/assets/v1/perk-images/StatMods/StatModsAdaptiveForceIcon.png")).toBe(
+      "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png",
+    );
+    expect(communityDragonAsset("/other/thing.png")).toBeNull();
+  });
+});
+
 describe("DataDragon", () => {
   it("uses the newest version from versions.json and builds champion info", async () => {
     const cdn = fakeCdn();
@@ -46,6 +61,17 @@ describe("DataDragon", () => {
     expect(dd.champion(1)).toEqual({ id: 1, key: "Alpha", name: "Alpha 1.2.1", iconUrl: "https://cdn.test/cdn/1.2.1/img/champion/Alpha.png" });
     expect(dd.data.champions.size).toBe(2);
     expect(dd.data.summonerSpells.data.SummonerFlash?.name).toBe("Flash");
+  });
+
+  it("builds item, rune and summoner spell info by numeric id", async () => {
+    const dd = new DataDragon({ cacheDir, fetch: fakeCdn().fetchFn, baseUrl: "https://cdn.test" });
+    await dd.load();
+    expect(dd.data.itemInfo.get(1001)).toMatchObject({ gold: 300, into: [3006], from: [], tags: ["Boots"], maps: ["11"], purchasable: true, requiredChampion: null });
+    expect(dd.data.itemInfo.get(3006)).toMatchObject({ from: [1001], iconUrl: "https://cdn.test/cdn/1.2.1/img/item/3006.png" });
+    expect(dd.data.itemInfo.get(9999)).toMatchObject({ purchasable: false, requiredChampion: "Alpha" });
+    expect(dd.data.runeInfo.get(8005)).toEqual({ id: 8005, name: "Press the Attack", iconUrl: "https://cdn.test/cdn/img/pta.png", styleId: 8000 });
+    expect(dd.data.runeInfo.get(8000)?.styleId).toBe(8000);
+    expect(dd.data.spellInfo.get(4)).toEqual({ id: 4, name: "Flash", iconUrl: "https://cdn.test/cdn/1.2.1/img/spell/SummonerFlash.png" });
   });
 
   it("does not re-download when the cache is current", async () => {

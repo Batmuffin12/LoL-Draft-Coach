@@ -1,6 +1,6 @@
 {
   "name": "@ldc/server",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "LoL Draft Coach server: users, profiles, meta snapshots and background jobs (Hono + SQLite)",
   "type": "module",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",
+    "@ldc/ddragon": "workspace:*",
     "@ldc/engine": "workspace:*",
     "@ldc/meta": "workspace:*",
     "@ldc/riot-api": "workspace:*",

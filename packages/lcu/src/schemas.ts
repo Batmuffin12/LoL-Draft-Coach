@@ -91,6 +91,10 @@ export const RecommendedPositionsSchema = z.record(
   z.looseObject({ recommendedPositions: z.array(z.string()).default([]) }),
 );
 
+/** Every perk the client knows (runes and stat shards), with its name and the client's icon path. */
+export const PerksSchema = z.array(z.looseObject({ id: z.number().int(), name: z.string(), iconPath: z.string().default("") }));
+export type Perk = z.infer<typeof PerksSchema>[number];
+
 export class LcuSchemaError extends Error {
   constructor(
     readonly endpoint: string,

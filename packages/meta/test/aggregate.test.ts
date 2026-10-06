@@ -210,6 +210,16 @@ describe("helpers", () => {
     expect(newestPatch(["15.9", "15.10", null, "14.24"])).toBe("15.10");
   });
 
+  it("measures the gold lead over the lane opponent at 15 minutes from timelines", () => {
+    // Blue (1..5) has 500 more gold than red at every minute; only the first game has a timeline.
+    const gold = Array.from({ length: 10 }, (_, i) => Array.from({ length: 20 }, (_, f) => f * 300 + (i < 5 ? 500 : 0)));
+    const withTimeline = match("t1", BLUE, RED, true, 0, { timeline: { gold, items: [], skills: [] } });
+    const snap = aggregateBand({ ...base, matches: [withTimeline, match("t2", BLUE, RED, false)] });
+    const curve = (id: number) => snap.attributes.find((a) => a.championId === id)?.powerCurve;
+    expect(curve(1)?.goldAt15).toEqual({ games: 1, diff: 500 });
+    expect(curve(11)?.goldAt15).toEqual({ games: 1, diff: -500 });
+  });
+
   it("interpolates quantiles", () => {
     expect(quantiles([0, 10], 3)).toEqual([0, 5, 10]);
     expect(quantiles([], 3)).toEqual([]);

@@ -1,5 +1,9 @@
+import { buildLoadout, type Loadout } from "./loadout";
+import { mergeBuilds, type PersonalBuild } from "./loadout-sources";
+import type { LoadoutConfig } from "./config";
 import type {
   BanSuggestion,
+  ChampionBuild,
   ChampionAttributes,
   ChampionId,
   FactorScores,
@@ -138,6 +142,11 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
       const slots = { early: curve.early.winRate, late: curve.late.winRate };
       notes.push({ r: reason(gap > 0 ? "power.late" : "power.early", slots), weight: cfg.explain.minDeltaWin, positive: true });
     }
+  }
+  // Lane gold at 15 (information only, like the power curve).
+  const lane15 = curve?.goldAt15;
+  if (lane15 && lane15.games >= cfg.minGames.meta && Math.abs(lane15.diff) >= cfg.explain.laneGoldGap) {
+    notes.push({ r: reason(lane15.diff > 0 ? "power.laneAhead" : "power.laneBehind", { gold: Math.abs(lane15.diff), games: lane15.games }), weight: cfg.explain.minDeltaWin, positive: true });
   }
   // Rising in the band lately: information only (no evidence yet that trends add to the win chance).
   const rising = trendReason(index, id, role);
@@ -336,6 +345,43 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
  * chance, terms and reasons, scored like a suggestion. The champion itself is not treated
  * as taken (it's the player's own pick).
  */
+/**
+ * The loadout for the local player's champion in this draft, from the band's builds:
+ * enemies and the lane opponent are placed the same way as for picks. Null without a build.
+ */
+export function draftLoadout(
+  input: LiveInput,
+  championId: ChampionId,
+  config: LoadoutConfig,
+  personal: PersonalBuild | null = null,
+  boots: ReadonlySet<number> = new Set(),
+  buildsFrom?: (itemId: number) => number[],
+): Loadout | null {
+  const cuts = input.index.snapshot.traitCuts;
+  const all = input.index.buildsOf(championId);
+  if (!cuts || (!all.length && !personal)) return null;
+  // Your role's build; when the band has none for this role yet, an empty one (the other roles and your own games fill in).
+  const role = input.role ?? all[0]?.role ?? "";
+  const build =
+    all.find((b) => b.role === role) ??
+    ({ championId, role, n: 0, timelineN: 0, games: 0, wins: 0, pages: [], spells: [], skills: [], starting: [], core: [], items: [], lifts: [], matchupPages: [] } as ChampionBuild);
+  const ctx = context(input);
+  return buildLoadout({
+    build,
+    pooled: mergeBuilds([build, ...all.filter((b) => b !== build)].filter((b) => b.n > 0)),
+    personal,
+    boots,
+    ...(buildsFrom ? { buildsFrom } : {}),
+    ...(input.index.snapshot.roleRewards?.[role] ? { roleRewards: input.index.snapshot.roleRewards[role] } : {}),
+    ...(input.index.snapshot.itemRoles ? { itemRoles: input.index.snapshot.itemRoles } : {}),
+    enemies: ctx.enemies.map((e) => e.championId),
+    laneOpponent: ctx.laneEnemy?.championId ?? null,
+    attributes: ctx.attributes,
+    traitCuts: cuts,
+    config,
+  });
+}
+
 export function assessPick(input: LiveInput, championId: ChampionId): PickRecommendation {
   const unavailable = new Set(input.unavailable);
   unavailable.delete(championId);

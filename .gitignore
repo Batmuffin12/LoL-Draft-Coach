@@ -35,6 +35,8 @@ latest*.yml
 *.sqlite3
 *.sqlite-wal
 *.sqlite-shm
+# Data Dragon cache next to a local server database
+apps/server/data/
 *.db
 *.db-journal
 *.db-wal
@@ -60,3 +62,9 @@ Thumbs.db
 
 # Local one-off check scripts
 *.tmp.ts
+
+# Test profile for pnpm local:desktop
+.local/
+
+# Panel screenshots (local checks)
+screenshots/

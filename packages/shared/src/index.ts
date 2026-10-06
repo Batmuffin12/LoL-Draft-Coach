@@ -67,6 +67,42 @@ export interface ChampionInfo {
   iconUrl: string;
 }
 
+/** An item from Data Dragon, reduced to what builds and item ranking need. */
+export interface ItemInfo {
+  id: number;
+  name: string;
+  iconUrl: string;
+  /** Total cost in gold (components included). */
+  gold: number;
+  /** Items this one builds into, and its components. */
+  into: number[];
+  from: number[];
+  tags: string[];
+  /** Map ids (Riot's) where the item exists. */
+  maps: string[];
+  /** Can be bought in the shop (not hidden, not a quest or champion-only reward). */
+  purchasable: boolean;
+  /** Champion (Data Dragon id) the item is limited to, if any. */
+  requiredChampion: string | null;
+  stats: Record<string, number>;
+}
+
+/** A rune or rune path (style) from Data Dragon. */
+export interface RuneInfo {
+  id: number;
+  name: string;
+  iconUrl: string;
+  /** The path (style) id; equals id for a path itself. */
+  styleId: number;
+}
+
+/** A summoner spell from Data Dragon, keyed by its numeric id. */
+export interface SpellInfo {
+  id: number;
+  name: string;
+  iconUrl: string;
+}
+
 /** Score breakdown per factor; null when the factor has no data yet. */
 export interface FactorScores {
   comfort: number | null;
@@ -159,11 +195,13 @@ export interface ParticipantSummary {
   /** Seconds spent crowd-controlling others (Match-V5 timeCCingOthers). */
   ccSeconds: number;
   objectiveDamage: number;
+  /** Health restored (Match-V5 totalHeal: self and allies). Absent on games stored before it was kept. */
+  heal?: number;
   /** Item ids in slots 0–6 (0 = empty). */
   items: number[];
   /** Summoner spell ids. */
   spells: number[];
-  /** Rune page, when Riot sent one. */
+  /** Rune page, when Riot sent one. `statPerks` are in Riot's key order: defense, flex, offense. */
   perks: { primaryStyle: number; subStyle: number; runes: number[]; statPerks: number[] } | null;
   /** Numeric Match-V5 `challenges` metrics, as Riot names them; any may be missing. */
   challenges: Record<string, number>;
@@ -182,6 +220,27 @@ export interface MatchSummary {
    * (they don't count toward ban rates); an empty list means the game had no bans.
    */
   bans?: { teamId: number; championId: ChampionId }[];
+  /** What happened over time, when the collector fetched the match's timeline (only a share of games). */
+  timeline?: MatchTimeline;
+}
+
+/** Item event kinds in a MatchTimeline: bought, sold, destroyed (used up or built into another item). */
+export const ITEM_BOUGHT = 0;
+export const ITEM_SOLD = 1;
+export const ITEM_DESTROYED = 2;
+
+/**
+ * A Match-V5 timeline reduced to what builds and item ranking need, without any player
+ * identifier. Participant indexes are positions in `MatchSummary.participants`.
+ * Undone purchases and sales are already removed.
+ */
+export interface MatchTimeline {
+  /** totalGold per participant at each frame (frame i is minute i). */
+  gold: number[][];
+  /** Item events in time order: [participant, second, kind (ITEM_*), itemId]. */
+  items: [number, number, number, number][];
+  /** Skill slots (1 = Q … 4 = R) per participant, in level-up order (normal level-ups only). */
+  skills: number[][];
 }
 
 /** A match from a user's own history, with which participant they were. */
@@ -202,12 +261,19 @@ export interface ChampionAttributes {
   frontline: number;
   /** CC seconds per minute, as a percentile among measured champions (0..1). */
   engage: number;
+  /** Healing (self and allies) per minute, as a percentile among measured champions (0..1); absent without heal data. */
+  heal?: number;
   /** Share of other players' samples per position (the player's own games excluded). */
   roleShares: Record<Position, number>;
   /** Number of other players' samples behind roleShares. */
   roleSamples: number;
   /** Win rate in short and long games (measured; band snapshots only). */
-  powerCurve?: { early: { games: number; winRate: number }; late: { games: number; winRate: number } };
+  powerCurve?: {
+    early: { games: number; winRate: number };
+    late: { games: number; winRate: number };
+    /** Average gold lead over the lane opponent at minute 15 (from timelines), when measured. */
+    goldAt15?: { games: number; diff: number };
+  };
 }
 
 /** A champion in a role, in one rank band. Games and wins are recency-weighted sums. */
@@ -236,6 +302,99 @@ export interface TrendingChampion {
   pickRate: { before: number; recent: number };
   winRate: { before: number; recent: number };
   games: { before: number; recent: number };
+}
+
+/**
+ * Enemy-team traits that situational runes and items answer. Measured per champion
+ * (ChampionAttributes) and averaged over the enemy team; "high" means above the band's average.
+ */
+export type EnemyTrait = "magic" | "physical" | "frontline" | "engage" | "heal";
+
+/** How often an option was taken, and how it did. Games and wins are recency-weighted; n is the unweighted count. */
+export interface OptionStat {
+  games: number;
+  wins: number;
+  n: number;
+}
+
+export interface RunePageStat extends OptionStat {
+  primaryStyle: number;
+  subStyle: number;
+  /** Primary path runes (keystone first), then secondary path runes. */
+  runes: number[];
+  /** Stat shards in Riot's key order: defense, flex, offense. */
+  statPerks: number[];
+}
+
+/**
+ * A completed item bought as the champion's `slot`-th completed item (1 = first), from
+ * timelines. `winAdded` is the result minus the expected win for the game state when it
+ * was bought (minute and team gold difference), shrunk toward 0: never raw item win rate.
+ */
+export interface ItemSlotStat {
+  itemId: number;
+  slot: number;
+  n: number;
+  /** Share of the champion-role's games with this slot that bought this item there. */
+  share: number;
+  winAdded: number;
+  /** Average minute it was completed. */
+  minute: number;
+}
+
+/**
+ * A rune or item taken more often when the enemy team is high in a trait than when it is
+ * low (pick-rate ratio, smoothed). Found from data: anti-heal, magic resist and so on are
+ * never listed in code.
+ */
+export interface SituationalLift {
+  kind: "rune" | "item";
+  id: number;
+  trait: EnemyTrait;
+  lift: number;
+  /** Pick rate when the trait is high and when it is low (0..1). */
+  high: number;
+  low: number;
+  /** Games behind the two rates. */
+  n: number;
+}
+
+/** Builds for one champion in one role, from the band plus the band above (spec). */
+export interface ChampionBuild {
+  championId: ChampionId;
+  role: Position;
+  /** Games behind the build (unweighted) and how many of them had a timeline. */
+  n: number;
+  timelineN: number;
+  games: number;
+  wins: number;
+  pages: RunePageStat[];
+  spells: (OptionStat & { spells: number[] })[];
+  /** First three skill points and the order the basic skills are maxed (slots 1 = Q … 3 = E). */
+  skills: (OptionStat & { first: number[]; order: number[] })[];
+  /** Items bought before leaving base at the start. */
+  starting: (OptionStat & { items: number[] })[];
+  /** The first completed items in order: three-item paths, then two-item paths. */
+  core: (OptionStat & { items: number[] })[];
+  items: ItemSlotStat[];
+  lifts: SituationalLift[];
+  /** Rune page into a lane opponent, when the matchup is common enough. */
+  matchupPages: (RunePageStat & { enemy: ChampionId })[];
+  /**
+   * Into a lane opponent (timeline games, when the matchup is common enough): the most taken
+   * starting items and how often each item was the first completed one. Absent in older snapshots.
+   */
+  matchupItems?: { enemy: ChampionId; games: number; starting: { items: number[]; n: number } | null; first: { itemId: number; n: number }[] }[];
+}
+
+/** Expected win for a team by minute and team gold difference (from timelines), for win added. */
+export interface ExpectedWinTable {
+  /** Bucket edges: minute < minutes[0] is bucket 0, and so on. */
+  minutes: number[];
+  goldDiff: number[];
+  /** winRate[minuteBucket][goldBucket], smoothed. */
+  winRate: number[][];
+  n: number;
 }
 
 /**
@@ -268,6 +427,23 @@ export interface MetaSnapshot {
   matchups: PairStat[];
   duos: PairStat[];
   attributes: ChampionAttributes[];
+  /** Builds per champion-role (band plus the band above). Absent before builds were collected. */
+  builds?: ChampionBuild[];
+  /**
+   * Which roles buy each item (share of the games it was bought or held in, per role), so
+   * role-locked items (jungle companions, support quest items) stay in their role. Found from
+   * data, never listed. Absent in older snapshots.
+   */
+  itemRoles?: Record<string, Record<Position, number>>;
+  /**
+   * Role quest rewards per role, found from data: items players in the role hold at the end of
+   * games but almost never buy (e.g. upgraded boots from the mid quest). `share` = share of the
+   * role's games that ended with the item. Absent in older snapshots.
+   */
+  roleRewards?: Record<Position, { itemId: number; share: number }[]>;
+  /** Band-average enemy-team trait values: above it, a trait counts as high. */
+  traitCuts?: Record<EnemyTrait, number>;
+  expectedWin?: ExpectedWinTable;
   /**
    * Playstyle references: per role and metric, evenly spaced quantiles (min … max) of
    * the metric over all collected players in that role.

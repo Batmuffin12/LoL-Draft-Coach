@@ -9,6 +9,9 @@
       400
     ]
   },
+  "import": {
+    "enabled": true
+  },
   "supportedQueues": [
     420,
     440,

@@ -31,6 +31,8 @@ export interface AttributeSample {
   selfMitigated: number;
   /** Seconds spent crowd-controlling others (Match-V5 timeCCingOthers). */
   ccSeconds: number;
+  /** Health restored (self and allies), when the match kept it. */
+  heal?: number;
   durationSec: number;
   /** True for the player's own participant: excluded from role shares (what others play). */
   self?: boolean;

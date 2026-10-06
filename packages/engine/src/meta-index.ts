@@ -1,4 +1,4 @@
-import type { ChampionAttributes, ChampionId, ChampionRoleStat, MetaSnapshot, Position, TrendingChampion } from "@ldc/shared";
+import type { ChampionAttributes, ChampionId, ChampionRoleStat, MetaSnapshot, Position, TrendingChampion, ChampionBuild } from "@ldc/shared";
 import type { RatingConfig } from "./config";
 import { rating, smoothRate, winOf } from "./rating";
 
@@ -32,6 +32,7 @@ export class MetaIndex {
   private readonly matchups = new Map<string, Stat>();
   private readonly duos = new Map<string, Stat>();
   readonly attributes: Map<ChampionId, ChampionAttributes>;
+  private readonly builds = new Map<string, ChampionBuild>();
   private readonly bansById: Map<ChampionId, { bans: number; n: number }>;
   private readonly trends: Map<string, TrendingChampion>;
   /** Roles seen in the data, most games first (positions come from Riot's data, never from code). */
@@ -52,9 +53,23 @@ export class MetaIndex {
     this.attributes = new Map(snapshot.attributes.map((a) => [a.championId, a]));
     this.bansById = new Map((snapshot.bans ?? []).map((b) => [b.championId, b]));
     this.trends = new Map((snapshot.trending ?? []).map((t) => [key(t.championId, t.role), t]));
+    for (const b of snapshot.builds ?? []) this.builds.set(key(b.championId, b.role), b);
     this.roles = Object.entries(snapshot.roleGames)
       .sort((x, y) => y[1] - x[1])
       .map(([r]) => r);
+  }
+
+  /** All of a champion's builds (one per role it's played in), most games first. */
+  buildsOf(id: ChampionId): ChampionBuild[] {
+    return (this.snapshot.builds ?? []).filter((b) => b.championId === id).sort((a, b) => b.n - a.n);
+  }
+
+  /** The champion's build in a role; without one (or no role), its build in the role it's played most. */
+  build(id: ChampionId, role: Position | null): ChampionBuild | null {
+    const exact = role ? this.builds.get(key(id, role)) : undefined;
+    if (exact) return exact;
+    const all = (this.snapshot.builds ?? []).filter((b) => b.championId === id);
+    return all.sort((a, b) => b.n - a.n)[0] ?? null;
   }
 
   champion(id: ChampionId, role: Position): Stat {

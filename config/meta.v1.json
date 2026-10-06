@@ -5,7 +5,7 @@
     "halfLifeDays": 10,
     "windowDays": 30,
     "minDurationSec": 300,
-    "minPairGames": 2,
+    "minPairGames": 5,
     "minAttributeSamples": 10,
     "referenceQuantiles": 21,
     "referenceMaxSamples": 4000,
@@ -23,6 +23,30 @@
       "minZ": 2
     }
   },
+  "builds": {
+    "minGames": 3,
+    "startingSeconds": 90,
+    "minSkillPoints": 9,
+    "coreItems": 3,
+    "maxSlots": 5,
+    "maxOptions": 4,
+    "minOptionGames": 1,
+    "minItemGames": 2,
+    "winAddedPriorGames": 300,
+    "stateBins": {
+      "minutes": [10, 15, 20, 25, 30],
+      "goldDiff": [-5000, -2500, -1000, 1000, 2500, 5000],
+      "priorGames": 20
+    },
+    "lift": { "priorGames": 20, "minGames": 10, "minLift": 1.3, "maxPerBuild": 12 },
+    "minMatchupGames": 15,
+    "minItemRoleGames": 5,
+    "counterCapacity": 12,
+    "maxMatchups": 20,
+    "maxItemsPerSlot": 8,
+    "rewardMinShare": 0.03,
+    "rewardMaxBought": 0.2
+  },
   "collector": {
     "leagueQueue": "RANKED_SOLO_5x5",
     "queueId": 420,
@@ -35,6 +59,8 @@
     "matchesPerPlayer": 5,
     "budgetSeconds": 900,
     "maxMatchesPerRun": 450,
+    "timelineShare": 1,
+    "buildBandShare": 0.3,
     "maxStoredMatches": 50000,
     "staleAfterHours": 6
   }
