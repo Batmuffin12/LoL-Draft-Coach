@@ -544,6 +544,7 @@ export class PersonalCoach extends Coach {
     const pickAdvice = {
       whyNot: advice.whyNot ? say(advice.whyNot) : null,
       confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
+      minGames: this.config.engine.rating.minGames,
     };
     const banning = live !== null && banningNow(this.draft);
     const banSuggestions = banning ? suggestBans(live) : [];

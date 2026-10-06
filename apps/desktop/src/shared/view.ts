@@ -204,6 +204,8 @@ export interface PickAdviceView {
   /** "Picked over your usual X because …", or null. */
   whyNot: string | null;
   confidence: { level: "clear" | "close" | "thin"; label: string } | null;
+  /** Fewest games for a term to count (engine v2 config): meta for the champion, pair for matchups and duos. Below it, bars draw faint. */
+  minGames?: { meta: number; pair: number };
 }
 
 export interface ViewState {

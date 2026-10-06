@@ -219,6 +219,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(strong!.terms.map((t) => t.name)).toEqual(["meta", "lane", "counter", "synergy", "team", "personal"]);
     expect(strong!.terms.find((t) => t.name === "meta")).toMatchObject({ games: 400 });
     expect(strong!.terms.every((t) => Number.isFinite(t.deltaWin))).toBe(true);
+    expect(coach.state.pickAdvice.minGames).toEqual(config.engine.rating.minGames);
 
     // A new scoring config from the server applies immediately; wording an older server lacks falls back to the bundled copy.
     const { ["loadout.page"]: _dropped, ...olderTemplates } = config.explain.templates;
