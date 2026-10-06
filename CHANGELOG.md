@@ -2,6 +2,14 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
 
+## [0.6.1] — 2026-10-06
+
+### Added
+- **Import runes & spells** (one button): on your click, creates the rune page and sets your own two summoner spells in champ select; a spell already on a key keeps it (Flash stays on D or F). Within Riot's policy (D34): your choice, on a click, never automatic; nothing else in champ select is touched.
+- **Full build in the item set** (D35): five items plus boots, as Start, Boots, Core (items 1–3), Later (items 4–5), what to buy against this enemy team ("Vs heavy healing", …) and Other options.
+- **Later: pick by situation** (D36): with few games, the build is a 3-item core plus a pool of later items to choose from, each with its reason, instead of a shaky 4th and 5th item.
+- **Situational** row in the loadout: items your role buys more often against teams like this one, with the reason.
+
 ## [0.6.0] — 2026-10-06 — Milestone 6: Loadout
 
 After you lock in, the "Your pick" card shows a full loadout for your champion, role and this enemy team, with the numbers behind each choice, and can import it into the client on your click.

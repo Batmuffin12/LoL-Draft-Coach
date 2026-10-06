@@ -209,6 +209,9 @@ export const EngineConfigSchema = z.object({
     /** An item is suggested in a role only if at least this share of its buyers play that role (role-locked items stay in their role). */
     minItemRoleShare: z.number().min(0).max(1),
     personalMinGames: z.number().int().min(1),
+    /** Thin data: this many items stay a fixed core; later ones become a pool of up to laterPoolSize to choose from. */
+    coreSlots: z.number().int().min(1),
+    laterPoolSize: z.number().int().min(0),
     /** Build slots (completed items) the loadout ranks. */
     slots: z.number().int().min(1),
   }),

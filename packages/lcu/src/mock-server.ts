@@ -52,7 +52,7 @@ export class MockLcuServer {
         return;
       }
       const path = (req.url ?? "/").split("?")[0] ?? "/";
-      if (req.method === "POST" || req.method === "PUT") {
+      if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
         const chunks: Buffer[] = [];
         req.on("data", (c: Buffer) => chunks.push(c));
         req.on("end", () => {
@@ -69,6 +69,9 @@ export class MockLcuServer {
           if (req.method === "PUT" && pageId) {
             this.state.set("/lol-perks/v1/pages", pages.map((p) => (p.id === Number(pageId) ? { ...body, id: p.id } : p)));
             return void res.writeHead(200).end("{}");
+          }
+          if (req.method === "PATCH" && path === "/lol-champ-select/v1/session/my-selection") {
+            return void res.writeHead(204).end();
           }
           if (req.method === "PUT" && /^\/lol-item-sets\/v1\/item-sets\/\d+\/sets$/.test(path)) {
             this.state.set(path, body);

@@ -25,6 +25,8 @@ export interface ConfigSourceDeps {
   /** Where the last valid server config is kept, so tuning survives restarts and offline starts. */
   cacheFile: string;
   log?: (msg: string) => void;
+  /** After a failed request, try again this much later (ms); 0 = don't. */
+  retryMs?: number;
 }
 
 /**
@@ -35,6 +37,7 @@ export interface ConfigSourceDeps {
 export class ConfigSource extends EventEmitter<{ config: [LoadedConfig] }> {
   private etag: string | null = null;
   private readonly log: (msg: string) => void;
+  private retry: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly deps: ConfigSourceDeps) {
     super();
@@ -67,6 +70,15 @@ export class ConfigSource extends EventEmitter<{ config: [LoadedConfig] }> {
       await writeFile(this.deps.cacheFile, JSON.stringify({ etag: r.etag, config: r.config }));
     } catch (err) {
       this.log(`Keeping the current scoring config: ${(err as Error).message}`);
+      // The server may be restarting or asleep: try again soon instead of waiting for the next app start.
+      const retryMs = this.deps.retryMs ?? 60_000;
+      if (retryMs > 0 && !this.retry) {
+        this.retry = setTimeout(() => {
+          this.retry = null;
+          void this.refresh();
+        }, retryMs);
+        this.retry.unref?.();
+      }
     }
   }
 }

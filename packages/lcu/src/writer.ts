@@ -5,16 +5,19 @@ import { basicAuth, createLocalAgent, LCU_HOST } from "./http";
 import { parseLcu } from "./schemas";
 
 /**
- * The only League client writes the app may make (CLAUDE.md, approved Oct 5, 2026): create or
- * replace a rune page, and write an item set, each only when the player clicks an import
- * button. Nothing here touches champ select (no pick, ban or lock). Every write goes through
- * `write()`, which refuses any other method or path.
+ * The only League client writes the app may make (CLAUDE.md, approved Oct 5 and 6, 2026):
+ * create or replace a rune page, write an item set, and set the player's own two summoner
+ * spells, each only when the player clicks an import button. Nothing here picks, bans, locks
+ * or changes a champion or skin. Every write goes through `write()`, which refuses any other
+ * method, path, or (for champ select) any body field but the two spells.
  */
-const ALLOWED_WRITES: readonly { method: "POST" | "PUT"; path: RegExp }[] = [
+const ALLOWED_WRITES: readonly { method: "POST" | "PUT" | "PATCH"; path: RegExp; fields?: readonly string[] }[] = [
   { method: "POST", path: /^\/lol-perks\/v1\/pages$/ },
   { method: "PUT", path: /^\/lol-perks\/v1\/pages\/\d+$/ },
   { method: "PUT", path: /^\/lol-item-sets\/v1\/item-sets\/\d+\/sets$/ },
+  { method: "PATCH", path: /^\/lol-champ-select\/v1\/session\/my-selection$/, fields: ["spell1Id", "spell2Id"] },
 ];
+export const MY_SELECTION = "/lol-champ-select/v1/session/my-selection";
 
 /** Rune pages and item sets the app wrote start with this, so it replaces its own page instead of adding more. */
 export const IMPORT_PREFIX = "LDC: ";
@@ -48,6 +51,11 @@ export interface ItemSetImport {
 
 const PagesSchema = z.array(z.looseObject({ id: z.number().int(), name: z.string(), isEditable: z.boolean().optional() }));
 const SummonerSchema = z.looseObject({ summonerId: z.number().int() });
+const CHAMP_SELECT = "/lol-champ-select/v1/session";
+const SessionSpellsSchema = z.looseObject({
+  localPlayerCellId: z.number().int(),
+  myTeam: z.array(z.looseObject({ cellId: z.number().int(), spell1Id: z.number().optional(), spell2Id: z.number().optional() })).default([]),
+});
 const ItemSetsSchema = z.looseObject({ itemSets: z.array(z.looseObject({ uid: z.string().optional() })).default([]) });
 
 export const PERKS_PAGES = "/lol-perks/v1/pages";
@@ -66,7 +74,7 @@ export class LcuImporter {
     private readonly host: string = LCU_HOST,
   ) {}
 
-  private send(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<{ status: number; data: unknown }> {
+  private send(method: "GET" | "POST" | "PUT" | "PATCH", path: string, body?: unknown): Promise<{ status: number; data: unknown }> {
     return new Promise((resolve, reject) => {
       const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
       const req = request(
@@ -112,9 +120,13 @@ export class LcuImporter {
   }
 
   /** The single gate for writes: only the allowlisted rune page and item set calls pass. */
-  async write(method: "POST" | "PUT", path: string, body: unknown): Promise<unknown> {
-    if (!ALLOWED_WRITES.some((w) => w.method === method && w.path.test(path))) {
-      throw new LcuWriteError(`Refused LCU ${method} ${path}: the app only writes rune pages and item sets`, 0, "notAllowed");
+  async write(method: "POST" | "PUT" | "PATCH", path: string, body: unknown): Promise<unknown> {
+    const rule = ALLOWED_WRITES.find((w) => w.method === method && w.path.test(path));
+    const fieldsOk =
+      !rule?.fields ||
+      (typeof body === "object" && body !== null && Object.keys(body).length > 0 && Object.keys(body).every((k) => rule.fields!.includes(k)));
+    if (!rule || !fieldsOk) {
+      throw new LcuWriteError(`Refused LCU ${method} ${path}: the app only writes rune pages, item sets and your own summoner spells`, 0, "notAllowed");
     }
     const r = await this.send(method, path, body);
     if (r.status >= 200 && r.status < 300) return r.data;
@@ -162,6 +174,19 @@ export class LcuImporter {
       }),
     };
     await this.write("PUT", path, { ...current, itemSets: [...current.itemSets.filter((s) => s.uid !== uid), ours] });
+  }
+
+  /**
+   * Sets your own two summoner spells in champ select. Keeps a spell on the key it's on now
+   * (e.g. Flash on D or F); the other spell takes the remaining key.
+   */
+  async importSpells(spells: [number, number]): Promise<void> {
+    const session = await this.read(CHAMP_SELECT, SessionSpellsSchema);
+    const me = session.myTeam.find((m) => m.cellId === session.localPlayerCellId);
+    const [a, b] = spells;
+    let pair: [number, number] = [a, b];
+    if (me?.spell1Id === b || me?.spell2Id === a) pair = [b, a];
+    await this.write("PATCH", MY_SELECTION, { spell1Id: pair[0], spell2Id: pair[1] });
   }
 
   close(): void {

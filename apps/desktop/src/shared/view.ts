@@ -84,6 +84,11 @@ export interface LoadoutView {
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
   skills: { first: string[]; order: string[]; reason: string | null } | null;
   starting: { items: IconView[]; reason: string | null } | null;
+  /** Thin data: later items to pick from by situation (after the core), each with its reason. */
+  laterPool: LoadoutItemView[];
+  laterNote: string | null;
+  /** Items to buy against this enemy team (e.g. magic resist vs magic damage), with the reason. */
+  situational: LoadoutItemView[];
   /** What your role quest turns items of this loadout into (e.g. tier-3 boots in mid). */
   quest: LoadoutItemView[];
   /** Boots on their own row, with other boots players take. */

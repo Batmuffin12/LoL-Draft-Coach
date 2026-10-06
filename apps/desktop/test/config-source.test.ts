@@ -25,6 +25,20 @@ function server(publicConfig: Record<string, unknown>) {
 const tuned = { ...bundled, engine: { ...bundled.engine, topN: 2, rating: { ...bundled.engine.rating, offMetaPenalty: 35 } } };
 
 describe("ConfigSource", () => {
+  it("tries again after a failed request instead of keeping old settings until the next start", async () => {
+    const s = server(tuned);
+    let up = false;
+    const flaky = { config: (etag: string | null) => (up ? s.client.config(etag) : Promise.reject(new Error("server restarting"))) } as unknown as ServerClient;
+    const src = new ConfigSource({ client: () => flaky, cacheFile: cacheFile(), log: () => {}, retryMs: 20 });
+    const seen: LoadedConfig[] = [];
+    src.on("config", (c) => seen.push(c));
+    await src.refresh();
+    expect(seen).toHaveLength(0);
+    up = true;
+    await new Promise((r) => setTimeout(r, 80));
+    expect(seen.at(-1)?.engine.topN).toBe(2);
+  });
+
   it("applies the server's tuning, caches it, and only downloads it again when it changes", async () => {
     const s = server(tuned);
     const file = cacheFile();

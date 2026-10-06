@@ -174,9 +174,14 @@ function ImportButtons({ loadout: l, message }: { loadout: LoadoutView; message:
   if (!l.canImport) return null;
   return (
     <div className="lo-import">
-      {l.page && (
-        <button className="btn" disabled={busy !== null} onClick={() => run("runes")} title="Creates (or updates) an 'LDC:' rune page in your client">
-          {busy === "runes" ? "Importing…" : "Import runes"}
+      {(l.page || l.spells) && (
+        <button
+          className="btn"
+          disabled={busy !== null}
+          onClick={() => run("runes")}
+          title="Creates (or updates) an 'LDC:' rune page and sets your two summoner spells in champ select (Flash keeps its key)"
+        >
+          {busy === "runes" ? "Importing…" : l.page && l.spells ? "Import runes & spells" : l.page ? "Import runes" : "Import spells"}
         </button>
       )}
       {(l.items.length > 0 || l.commonPath || l.starting) && (
@@ -275,6 +280,22 @@ function Loadout({ loadout: l, importMessage }: { loadout: LoadoutView; importMe
             ))}
           </ol>
         </div>
+      )}
+      {l.laterPool.length > 0 && (
+        <LoadoutRow label="Later" reason={l.laterNote}>
+          {l.laterPool.map((s) => (
+            <GameIcon key={s.id} icon={s} size={22} title={tip(s)} />
+          ))}
+        </LoadoutRow>
+      )}
+      {l.situational.length > 0 && (
+        <LoadoutRow label="Situational" reason={l.situational[0]!.reasons[0] ?? null}>
+          {l.situational.map((s) => (
+            <span key={s.id} className="lo-chip" title={tip(s)}>
+              <GameIcon icon={s} size={16} title={tip(s)} /> {s.name}
+            </span>
+          ))}
+        </LoadoutRow>
       )}
       {l.commonPath && (
         <LoadoutRow label="Build" reason={l.commonPath.reason}>

@@ -68,6 +68,15 @@ if (mode === "server") {
   };
   console.log(`Panel against the local server (close the window to stop):`);
   show(env, ["SERVER_URL", "LDC_USER_DATA_DIR", "RIOT_ID"]);
+  // A registered profile keeps using the server it registered with, whatever SERVER_URL says.
+  try {
+    const registered = JSON.parse(readFileSync(join(env.LDC_USER_DATA_DIR, "account.json"), "utf8")).serverUrl;
+    if (registered && registered !== env.SERVER_URL) {
+      console.warn(`  Note: this profile is registered to ${registered}, so the panel talks to that server. Sign out in the panel to register with ${env.SERVER_URL}.`);
+    }
+  } catch {
+    // Not registered yet: the panel offers to register with SERVER_URL.
+  }
   run("pnpm desktop", root, env);
 } else {
   console.error("Usage: node scripts/local.mjs server|desktop");

@@ -256,7 +256,9 @@
     "laneWeight": 2,
     "minItemRoleShare": 0.05,
     "personalMinGames": 5,
-    "slots": 3
+    "slots": 5,
+    "coreSlots": 3,
+    "laterPoolSize": 5
   },
   "topN": 3
 }

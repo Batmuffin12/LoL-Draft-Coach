@@ -202,6 +202,44 @@ describe("boots on their own row", () => {
   });
 });
 
+describe("full build and situational items", () => {
+  it("with thin data, keeps a 3-item core and offers later items as a pool to pick from", () => {
+    const personal = { championId: 950, n: 25, pages: [], spells: [], items: [1, 2, 3, 4, 5, 6].map((id, i) => ({ itemId: 6690 + id, n: 25 - i })) };
+    const l = buildLoadout(input({ personal }));
+    expect(l.core?.value).toEqual([6691, 6692, 6693]);
+    expect(l.laterPool.map((x) => x.itemId)).toEqual([6694, 6695, 6696]);
+    expect(say(l.laterPool[0]!.reasons[0]!)).toBe("Built in 22 of your 25 Naafiri games");
+  });
+
+  it("with solid data, keeps a ranked five-item path and no pool", () => {
+    const solid: ChampionBuild = {
+      ...mid, n: 500, games: 500, wins: 250,
+      items: [1, 2, 3, 4, 5].map((slot) => ({ itemId: 6690 + slot, slot, n: 300, share: 0.6, winAdded: 0, minute: 10 * slot })),
+    };
+    const l = buildLoadout(input({ build: solid }));
+    expect(l.core?.value).toEqual([6691, 6692, 6693, 6694, 6695]);
+    expect(l.laterPool).toEqual([]);
+  });
+
+  it("suggests items that answer this enemy team, strongest need first, never boots or items on the path", () => {
+    const attrs = new Map([[1, { championId: 1, samples: 50, physicalShare: 0.1, magicShare: 0.9, trueShare: 0, frontline: 0.5, engage: 0.5, heal: 0.95, roleShares: {}, roleSamples: 50 }]]);
+    const b: ChampionBuild = {
+      ...mid, n: 400, games: 400, wins: 200,
+      items: [{ itemId: 6692, slot: 1, n: 200, share: 0.6, winAdded: 0, minute: 12 }],
+      lifts: [
+        { kind: "item", id: 3156, trait: "magic", lift: 3, high: 0.3, low: 0.1, n: 400 },
+        { kind: "item", id: 3033, trait: "heal", lift: 4, high: 0.4, low: 0.1, n: 400 },
+        { kind: "item", id: 3047, trait: "physical", lift: 3, high: 0.3, low: 0.1, n: 400 }, // this team isn't physical
+        { kind: "item", id: 6692, trait: "magic", lift: 1.5, high: 0.6, low: 0.4, n: 400 }, // already on the path
+        { kind: "item", id: 3111, trait: "magic", lift: 2, high: 0.2, low: 0.1, n: 400 }, // boots
+      ],
+    };
+    const l = buildLoadout(input({ build: b, enemies: [1], laneOpponent: 1, attributes: attrs, boots: new Set([3111]), traitCuts: { magic: 0.4, physical: 0.4, frontline: 0.5, engage: 0.5, heal: 0.5 } }));
+    expect(l.situational.map((s) => [s.itemId, s.trait])).toEqual([[3033, "heal"], [3156, "magic"]]);
+    expect(say(l.situational[0]!.reasons[0]!)).toBe("Bought 4.0× more vs teams that heal a lot, like this one (400 games)");
+  });
+});
+
 describe("personalBuild", () => {
   const me = (championId: number, position: string, win: boolean, runes: number[], items: number[]): ParticipantSummary => ({
     championId, teamId: 100, position, win, kills: 0, deaths: 0, assists: 0, cs: 0, gold: 0, visionScore: 0, physicalDamage: 0, magicDamage: 0, trueDamage: 0, damageTaken: 0,
