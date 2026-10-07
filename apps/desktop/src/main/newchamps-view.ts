@@ -15,6 +15,8 @@ export interface NewChampsViewDeps {
 }
 
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
+/** Reasons the table's columns already show. */
+const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
 
 /** New champions for a role as the lobby shows them, with the first-games plan for the top one. */
 export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewChampRoleView {
@@ -43,8 +45,9 @@ export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewCh
           ease: p.ease,
           easeLabel: say({ id: `newchamp.easeShort.${EASE[p.ease]}`, slots: {} }),
           owned: p.owned,
-          // The Plays like column already says who it's like; the line under the row says something else.
-          reasons: p.reasons.filter((r) => !(p.like !== null && r.id === "newchamp.like")).map(say),
+          // The line under the row says only what the columns don't: a pool gap it fills, "not owned"
+          // (Plays like, Win % and Difficulty are columns; with no "plays like" match that reason stays).
+          reasons: p.reasons.filter((r) => !COLUMN_REASONS.test(r.id) && !(p.like !== null && r.id === "newchamp.like")).map(say),
         },
       ];
     }),

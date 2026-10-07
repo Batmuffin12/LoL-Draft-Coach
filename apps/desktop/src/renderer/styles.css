@@ -190,7 +190,7 @@ p { margin: 0; }
 .table .trow:hover { background: var(--card-raised); }
 .table .trow.sel { background: var(--card); }
 .table .c-champ { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.table .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); line-height: var(--lh-heading); min-width: 0; overflow-wrap: anywhere; }
+.table .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); line-height: var(--lh-heading); min-width: 0; overflow-wrap: break-word; }
 .table .nm.col { display: flex; flex-direction: column; gap: 0; line-height: 18px; }
 .table .nm .why { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: 14px; color: var(--muted); }
 .table .c-num, .table .c-win { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); white-space: nowrap; }
@@ -288,7 +288,7 @@ p { margin: 0; }
 .seats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .seat { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border-radius: var(--radius-sm); min-width: 0; }
 .seat.me { background: var(--gold-tint); }
-.seat .nm { font-size: var(--fs-label); line-height: var(--lh-label); max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+.seat .nm { font-size: var(--fs-label); line-height: var(--lh-label); max-width: 100%; overflow-wrap: break-word; text-align: center; }
 .seat .nm.dim { color: var(--muted); font-style: italic; }
 .seat .seat-pos { font-family: var(--font-display); font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .seat.me .seat-pos { color: var(--gold); font-weight: 600; }
@@ -348,7 +348,7 @@ p { margin: 0; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
 /* Text is never cut: what used to be one line wraps when it doesn't fit. */
-.one-line { min-width: 0; overflow-wrap: anywhere; }
+.one-line { min-width: 0; overflow-wrap: break-word; }
 .clamp2 { min-width: 0; }
 .section-head.closed { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 22px; cursor: pointer; width: 100%; }
 .section-head.closed:hover .label, .section-head.closed:hover .micro { color: var(--text); }
