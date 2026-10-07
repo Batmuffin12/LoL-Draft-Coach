@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { RiotApi } from "@ldc/riot-api";
 import { newInviteCode, newToken, normalizeInviteCode, sha256 } from "./auth";
 import type { Db } from "./db";
@@ -72,11 +72,18 @@ export async function registerUser(
     if (!fresh || fresh.usedAt !== null) {
       throw new AccountError("invite_invalid", "This invite code is wrong, already used or expired. Ask for a new one.");
     }
-    const existing = tx.select().from(users).where(eq(users.puuid, account.puuid)).get();
+    // By Riot ID too: after an API key change the same player comes back with a new PUUID.
+    const existing =
+      tx.select().from(users).where(eq(users.puuid, account.puuid)).get() ??
+      tx
+        .select()
+        .from(users)
+        .where(and(eq(users.gameName, account.gameName ?? gameName), eq(users.tagLine, account.tagLine ?? tagLine)))
+        .get();
     const saved = existing
       ? tx
           .update(users)
-          .set({ tokenHash, gameName: account.gameName ?? gameName, tagLine: account.tagLine ?? tagLine })
+          .set({ puuid: account.puuid, tokenHash, gameName: account.gameName ?? gameName, tagLine: account.tagLine ?? tagLine })
           .where(eq(users.id, existing.id))
           .returning()
           .get()

@@ -74,6 +74,15 @@ describe("registration", () => {
     expect(JSON.stringify(db.select().from(schema.invites).all())).not.toContain(code);
   });
 
+  it("keeps the same user when they register again after an API key change (new PUUID)", async () => {
+    const { db, invite } = setup();
+    const first = await registerUser(db, fakeRiot(), { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    const newKey: AccountLookup = { accountByRiotId: async (gameName, tagLine) => ({ puuid: "PUUID-NEWKEY", gameName, tagLine }) };
+    const again = await registerUser(db, newKey, { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    expect(again.user.id).toBe(first.user.id);
+    expect(db.select().from(schema.users).all().map((u) => u.puuid)).toEqual(["PUUID-NEWKEY"]);
+  });
+
   it("accepts the code in lower case with spaces", async () => {
     const { invite, register } = setup();
     const code = invite().toLowerCase().replaceAll("-", " ");

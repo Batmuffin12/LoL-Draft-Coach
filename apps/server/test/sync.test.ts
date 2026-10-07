@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { RiotKeyError, MatchSchema, type Match } from "@ldc/riot-api";
+import { RiotApiError, RiotKeyError, MatchSchema, type Match } from "@ldc/riot-api";
 import { createInvite, deleteUser, registerUser, type User } from "../src/accounts";
 import { openDb, schema, type Db } from "../src/db";
 import { pruneUserHistory, sortMatchIdsNewestFirst, syncUser, usersDueForSync, type SyncRiot, type SyncSettings } from "../src/sync";
@@ -38,18 +38,32 @@ interface FakeRiot extends SyncRiot {
   calls: string[];
   ids: Record<string, string[]>;
   store: Map<string, Match>;
+  /** Riot ID -> PUUID for Account-V1. */
+  accounts: Record<string, string>;
+  /** PUUIDs from another API key: Riot answers HTTP 400. */
+  foreign: Set<string>;
 }
 
 function fakeRiot(): FakeRiot {
   const calls: string[] = [];
   const ids: Record<string, string[]> = {};
   const store = new Map<string, Match>();
+  const accounts: Record<string, string> = {};
+  const foreign = new Set<string>();
   return {
     calls,
     ids,
     store,
+    accounts,
+    foreign,
+    async accountByRiotId(gameName, tagLine) {
+      calls.push(`account:${gameName}#${tagLine}`);
+      const puuid = accounts[`${gameName}#${tagLine}`];
+      return puuid ? { puuid, gameName, tagLine } : null;
+    },
     async masteriesByPuuid(puuid) {
       calls.push(`mastery:${puuid}`);
+      if (foreign.has(puuid)) throw new RiotApiError(400, "champion-mastery-v4.by-puuid");
       return [{ championId: 103, championLevel: 7, championPoints: 120_000, milestoneGrades: ["S"] }];
     },
     async leagueEntriesByPuuid(puuid) {
@@ -154,6 +168,27 @@ describe("syncUser", () => {
     deleteUser(db, b.id);
     expect(db.select().from(schema.matches).all()).toHaveLength(0);
     expect(db.select().from(schema.userMasteries).all()).toHaveLength(0);
+  });
+
+  it("looks the user up again by Riot ID when the API key changed (PUUIDs are per key)", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-DEVKEY");
+    riot.foreign.add("PUUID-DEVKEY");
+    riot.accounts["Ofek#EUW"] = "PUUID-NEWKEY";
+    seed(riot, "PUUID-NEWKEY", 2);
+
+    expect((await syncUser(db, riot, user, settings(), NOW)).newMatches).toBe(2);
+    expect(db.select().from(schema.users).where(eq(schema.users.id, user.id)).get()?.puuid).toBe("PUUID-NEWKEY");
+    expect(db.select().from(schema.userMatches).all().map((l) => l.participantIndex)).toEqual([2, 2]);
+  });
+
+  it("still fails on a rejected PUUID when the Riot ID can't be found", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-DEVKEY");
+    riot.foreign.add("PUUID-DEVKEY");
+    await expect(syncUser(db, riot, user, settings(), NOW)).rejects.toMatchObject({ status: 400 });
   });
 
   it("skips matches where the user isn't found", async () => {

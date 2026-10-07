@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc/engine";
-import { participantIndex, summarizeMatch, type RiotApi } from "@ldc/riot-api";
+import { participantIndex, RiotApiError, RiotKeyError, summarizeMatch, type Mastery, type RiotApi } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
 import { matches, rankHistory, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
@@ -9,7 +9,25 @@ import { matches, rankHistory, userMasteries, userMatches, users, type StoredMas
 export const MATCH_IDS_PAGE = 100;
 
 /** What syncing needs from the Riot API adapter. */
-export type SyncRiot = Pick<RiotApi, "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match">;
+export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match">;
+
+/**
+ * The user's masteries and their PUUID for the server's current key. PUUIDs are encrypted
+ * per API key, so a stored one stops working when the key changes (e.g. development to
+ * personal key) and Riot answers HTTP 400. Then the user is looked up again by Riot ID
+ * and the new PUUID is stored.
+ */
+async function masteriesWithCurrentPuuid(db: Db, riot: SyncRiot, user: User): Promise<{ puuid: string; masteries: Mastery[] }> {
+  try {
+    return { puuid: user.puuid, masteries: await riot.masteriesByPuuid(user.puuid) };
+  } catch (err) {
+    if (!(err instanceof RiotApiError) || err instanceof RiotKeyError || err.status !== 400) throw err;
+    const account = await riot.accountByRiotId(user.gameName, user.tagLine);
+    if (!account || account.puuid === user.puuid) throw err;
+    db.update(users).set({ puuid: account.puuid }).where(eq(users.id, user.id)).run();
+    return { puuid: account.puuid, masteries: await riot.masteriesByPuuid(account.puuid) };
+  }
+}
 
 export interface SyncSettings {
   history: AppConfig["history"];
@@ -44,14 +62,16 @@ export async function syncUser(
 ): Promise<SyncResult> {
   const { history } = settings;
 
-  const masteries: StoredMastery[] = (await riot.masteriesByPuuid(user.puuid)).map((m) => ({
+  const current = await masteriesWithCurrentPuuid(db, riot, user);
+  const { puuid } = current;
+  const masteries: StoredMastery[] = current.masteries.map((m) => ({
     championId: m.championId,
     level: m.championLevel,
     points: m.championPoints,
     ...(m.lastPlayTime !== undefined ? { lastPlayTime: m.lastPlayTime } : {}),
     ...(m.milestoneGrades ? { grades: m.milestoneGrades } : {}),
   }));
-  const ranked = (await riot.leagueEntriesByPuuid(user.puuid)).map((e) => ({
+  const ranked = (await riot.leagueEntriesByPuuid(puuid)).map((e) => ({
     queueType: e.queueType,
     tier: e.tier,
     ...(e.rank !== undefined ? { rank: e.rank } : {}),
@@ -63,7 +83,7 @@ export async function syncUser(
   const idPages: string[][] = [];
   for (const queue of history.queues) {
     for (let start = 0; start < history.matchCount; start += MATCH_IDS_PAGE) {
-      const page = await riot.matchIdsByPuuid(user.puuid, { queue, start, count: Math.min(MATCH_IDS_PAGE, history.matchCount - start) });
+      const page = await riot.matchIdsByPuuid(puuid, { queue, start, count: Math.min(MATCH_IDS_PAGE, history.matchCount - start) });
       idPages.push(page);
       if (page.length < MATCH_IDS_PAGE) break;
     }
@@ -87,7 +107,7 @@ export async function syncUser(
     // The raw match is needed even when another user already stored it: only the raw
     // payload says which participant this user was (stored summaries carry no PUUIDs).
     const match = await riot.match(id);
-    const index = match ? participantIndex(match, user.puuid) : -1;
+    const index = match ? participantIndex(match, puuid) : -1;
     if (match && index >= 0) {
       const summary = summarizeMatch(match);
       db.transaction((tx) => {

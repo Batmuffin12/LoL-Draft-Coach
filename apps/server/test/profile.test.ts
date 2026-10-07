@@ -33,6 +33,7 @@ function fakeRiot(): SyncRiot {
   ]);
   const ids: Record<string, string[]> = { PO: ["EUW1_3", "EUW1_2"], PF: ["EUW1_2", "EUW1_1"] };
   return {
+    accountByRiotId: async () => null,
     masteriesByPuuid: async () => [{ championId: 100, championLevel: 5, championPoints: 30_000 }],
     leagueEntriesByPuuid: async () => [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD" }],
     matchIdsByPuuid: async (puuid, q = {}) => (ids[puuid] ?? []).slice(q.start ?? 0, (q.start ?? 0) + (q.count ?? 20)),
