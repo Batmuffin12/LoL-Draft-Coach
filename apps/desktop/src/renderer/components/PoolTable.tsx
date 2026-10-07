@@ -10,7 +10,7 @@ export function PoolTable({ rows }: { rows: PoolChampView[] }) {
         <span className="c-champ">Champion</span>
         <span className="c-num">Tier</span>
         <span className="c-num">Games</span>
-        <span className="c-num">Win</span>
+        <span className="c-num">Win %</span>
       </div>
       {rows.map((c) => (
         <div key={c.champion.id} className={cx("trow", c.tier)} role="row">

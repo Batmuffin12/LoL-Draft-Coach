@@ -43,7 +43,8 @@ export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewCh
           ease: p.ease,
           easeLabel: say({ id: `newchamp.easeShort.${EASE[p.ease]}`, slots: {} }),
           owned: p.owned,
-          reasons: p.reasons.map(say),
+          // The Plays like column already says who it's like; the line under the row says something else.
+          reasons: p.reasons.filter((r) => !(p.like !== null && r.id === "newchamp.like")).map(say),
         },
       ];
     }),

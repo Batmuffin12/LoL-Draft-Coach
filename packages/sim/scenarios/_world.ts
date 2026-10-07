@@ -18,7 +18,7 @@ export function ahriBuild(games: number): BuildSpec {
     games,
     winRate: 0.52,
     pages: [
-      { primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8106, 8226, 8210], statPerks: [5008, 5008, 5011], winRate: 0.53 },
+      { primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8140, 8106, 8226, 8210], statPerks: [5008, 5008, 5011], winRate: 0.53 },
       { primaryStyle: 8200, subStyle: 8100, runes: [8229, 8226, 8210, 8237, 8139, 8106], statPerks: [5008, 5008, 5011], winRate: 0.5 },
     ],
     spells: [{ spells: [4, 14], winRate: 0.53 }, { spells: [4, 12], winRate: 0.5 }],

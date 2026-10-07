@@ -42,7 +42,7 @@ describe("adviceOutcome", () => {
     expect(own.game).toBeNull();
     expect(own.rank).toBe(0);
     expect(own.lines[0]!.id).toBe("postgame.team.bad");
-    expect(own.lines.map(say)).toEqual(["Biggest minus: what your team needed (-1.1%)", "Win chance when you locked in: 49% (the #1 suggestion, Ahri, had 54%)"]);
+    expect(own.lines.map(say)).toEqual(["Biggest minus: what your team needed (−1.1%)", "Win chance when you locked in: 49% (the #1 suggestion, Ahri, had 54%)"]);
     expect(adviceOutcome(record(99), [], 0.003).rank).toBe(3);
   });
 

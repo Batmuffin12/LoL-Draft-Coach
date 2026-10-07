@@ -141,3 +141,17 @@ describe("AdviceStore (direct mode)", () => {
     expect(await store.list()).toEqual(list);
   });
 });
+
+describe("FileProfileSource (LDC_PROFILE_FILE)", () => {
+  it("serves a saved history and the local advice log without a Riot key", async () => {
+    const { FileProfileSource } = await import("../src/main/profile-source");
+    const source = new FileProfileSource({ read: async () => ({ matches: history, masteries: [] }), advice: new AdviceStore(join(tmp("ldc-fp-"), "advice.json")) });
+    const games: number[] = [];
+    const statuses: string[] = [];
+    source.on("profile", (p) => games.push(p.games.length));
+    source.on("status", (s) => statuses.push(s.state));
+    await source.load();
+    expect(games).toEqual([12]);
+    expect(statuses).toEqual(["ready"]);
+  });
+});

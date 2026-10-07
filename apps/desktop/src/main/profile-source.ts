@@ -126,6 +126,37 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
   }
 }
 
+/**
+ * Dev aid (LDC_PROFILE_FILE, development builds only): your history from a saved file
+ * ({ matches, masteries }), so the panel and screenshots work without a Riot key.
+ */
+export class FileProfileSource extends EventEmitter<ProfileSourceEvents> implements ProfileSource {
+  constructor(
+    private readonly deps: {
+      read: () => Promise<{ matches: UserMatch[]; masteries: PersonalProfile["masteries"] }>;
+      advice?: AdviceStore;
+    },
+  ) {
+    super();
+  }
+
+  async load(): Promise<void> {
+    if (this.deps.advice) this.emit("advice", await this.deps.advice.list());
+    const { matches, masteries } = await this.deps.read();
+    const profile = profileFromMatches(matches, masteries);
+    this.emit("profile", profile);
+    this.emit("status", readyStatus(profile.games));
+  }
+
+  async refresh(): Promise<void> {
+    await this.load();
+  }
+
+  async recordAdvice(record: AdviceRecord): Promise<void> {
+    if (this.deps.advice) this.emit("advice", await this.deps.advice.add(record));
+  }
+}
+
 export interface ServerProfileSourceDeps {
   accounts: AccountStore;
   /** Prefilled in the registration form (from SERVER_URL or the app config). */

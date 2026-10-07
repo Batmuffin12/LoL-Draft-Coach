@@ -35,7 +35,7 @@ describe("new champions view", () => {
     const a: NewChampAdvice = { role: "middle", picks: [pick(99), pick(245, { ease: 3, owned: true, like: null })], learning: null };
     const v = newChampsView(a, deps);
     expect(v.picks.map((p) => [p.champion.name, p.like?.name ?? null, p.easeLabel, p.owned])).toEqual([["Lux", "Ahri", "Easy", false], ["Ekko", null, "Hard", true]]);
-    expect(v.picks[0]!.reasons).toEqual(["Plays like your Ahri", "You don't own it yet"]);
+    expect(v.picks[0]!.reasons).toEqual(["You don't own it yet"]);
     expect(v.plan).toBe("Try Lux in 3 to 5 Normal Draft games: Luden's Companion, then Shadowflame. Keep your focus on CS per minute.");
     expect(v.learning).toBeNull();
   });

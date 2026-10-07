@@ -99,7 +99,8 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
     ? l.items.slice(0, MATRIX_SLOTS).map((s) => ({ slot: s.slot, minute: s.minute, options: [s.top, ...s.alternatives].map((o) => ({ item: o, share: o.share, winAdded: o.winAdded })) }))
     : (l.commonPath?.items.slice(0, MATRIX_SLOTS).map((item, i) => ({ slot: i + 1, minute: null, options: [{ item, share: null, winAdded: null }] })) ?? []);
   // The most telling reason: a top item bought for this draft (a reason before its numbers line), else the first item's.
-  const telling = l.items.find((s) => s.top.reasons.length > 1)?.top ?? l.items[0]?.top;
+  // Only a reason the cells don't already show: a top item bought for this draft.
+  const telling = l.items.find((s) => s.top.reasons.length > 1)?.top;
   // Each item once: what the matrix or the Later pool already show isn't repeated under "Vs this team".
   const shown = new Set([...slots.flatMap((s) => s.options.map((o) => o.item.id)), ...l.laterPool.map((i) => i.id)]);
   const vsTeam = l.situational.filter((i) => !shown.has(i.id));

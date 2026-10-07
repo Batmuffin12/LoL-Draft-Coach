@@ -55,14 +55,15 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
     if (fmt === "pct1" && typeof v === "number") return (v * 100).toFixed(1);
     if (fmt === "signedPct1" && typeof v === "number") {
       const s = (v * 100).toFixed(1);
-      return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s;
+      return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s.replace("-", "−");
     }
     if (fmt === "champion" && typeof v === "number") return championName(v);
     if (fmt === "item" && typeof v === "number") return names.item?.(v) ?? `#${v}`;
     if (fmt === "rune" && typeof v === "number") return names.rune?.(v) ?? `#${v}`;
     // Positions as players know them: Riot's "utility" is "support" (templates "role.<id>"; "a / b" lists too).
     if (typeof v === "string") return v.split(" / ").map((x) => templates[`role.${x}`] ?? x).join(" / ");
-    return String(v);
+    // Game counts and other whole numbers read like the build sites: 1,240.
+    return typeof v === "number" && Number.isInteger(v) && Math.abs(v) >= 1000 ? v.toLocaleString("en-US") : String(v);
   });
 }
 

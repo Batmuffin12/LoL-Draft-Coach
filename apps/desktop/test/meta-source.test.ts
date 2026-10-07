@@ -250,7 +250,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
     expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
     expect(loadout.items[0]!.top.reasons[0]).toBe("+1.2% win added as item 1, where 66% buy it (200 games)");
-    expect(loadout.source).toBe("Gold to Platinum + Emerald to Diamond");
+    expect(loadout.source).toBe("Gold to Diamond");
     expect(loadout.thinNote).toBeNull(); // 400 games: enough
 
     // Import happens only when asked (the buttons), and writes only the rune page and the item set.

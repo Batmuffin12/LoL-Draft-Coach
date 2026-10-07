@@ -212,7 +212,7 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
 function Pool({ state }: { state: ViewState }) {
   const roles = useOpenRoles(state.roles.length, state.roles.map((r) => `${r.role}:${r.games}`).join());
   if (!state.roles.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
-  const stats = (r: ViewState["roles"][number]) => `${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)}`;
+  const stats = (r: ViewState["roles"][number]) => `${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)} WR`;
   return (
     <>
       {state.roles.map((r, i) =>

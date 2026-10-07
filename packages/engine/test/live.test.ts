@@ -201,15 +201,15 @@ describe("adviseLivePicks", () => {
     expect(say(into201.whyNot)).toMatch(/Picked over your #101: a better lane into #201 \(\+\d+\.\d%\)/);
     // The main's bad matchup shows as a caveat.
     const main = into201.picks.find((p) => p.championId === 101);
-    if (main) expect(text(main.reasons)).toMatch(/But -\d+\.\d% into #201/);
+    if (main) expect(text(main.reasons)).toMatch(/But −\d+\.\d% into #201/);
   });
 
   it("rates blind picks by their likely opponents: risky with a common counter, safe without", () => {
     const advice = adviseLivePicks(input(draft()));
     const r101 = advice.picks.find((p) => p.championId === 101);
     const r102 = advice.picks.find((p) => p.championId === 102);
-    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: -\d+\.\d% into #(201|202)/);
-    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: -\d+\.\d% into #202/);
+    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: −\d+\.\d% into #(201|202)/);
+    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: −\d+\.\d% into #202/);
   });
 
   it("suggests a strong champion the player hasn't played, with the learning cost, only if pickable", () => {
@@ -327,7 +327,7 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft([], 301)));
     const ids = bans.map((b) => b.championId);
     expect(ids[0]).toBe(202);
-    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: -\d+\.\d% \(200 games\); picked in 40% of mid games/);
+    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: −\d+\.\d% \(200 games\); picked in 40% of mid games/);
     expect(ids).not.toContain(301); // an ally is hovering it
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
@@ -355,7 +355,7 @@ describe("suggestBans", () => {
     expect(hover.some((b) => general.includes(b.championId))).toBe(false);
     if (!general.includes(203)) {
       expect(hover[0]!.championId).toBe(203);
-      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: -\d+\.\d% \(200 games\)/);
+      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: −\d+\.\d% \(200 games\)/);
     }
     expect(suggestHoverBans(inp, top, general)).toHaveLength(config.rating.bans.hoverTopNWhenSuggested);
   });
