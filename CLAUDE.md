@@ -6,7 +6,7 @@
 
 | Item | Status |
 | --- | --- |
-| Riot API key | Development key (expires every 24h) in `.env` and on the Railway service. Swap both with `pnpm riot:key RGAPI-... [--personal]`; `/health` shows `riotKey: "rejected"` when it has expired. Personal key applied for. The key lives only on the server (and the local .env for dev). |
+| Riot API key | **Personal key** (approved 2026-10-08, never expires; 20 req/s, 100 req/2 min) in `.env` and on the Railway service (`RIOT_KEY_TYPE=personal`). Swap both with `pnpm riot:key RGAPI-... [--personal]`; `/health` shows `riotKey: "rejected"` if Riot revokes it. A personal key covers only a small private group: going public needs a production key and Riot's approval. New features must be added to the product's description in the Developer Portal. PUUIDs are per key: a key change makes stored PUUIDs invalid; sync and registration recover them by Riot ID (live once v0.7.0 is on main). The key lives only on the server (and the local .env for dev). |
 | Overwolf | Developer access **pending** and no longer needed for data: in-game data comes from Riot's Live Client Data API. Overwolf is optional, only for an overlay window later. Keep `apps/desktop` ow-electron-compatible: only standard Electron APIs. |
 | Jev (TypeSafe AI) | **Optional, off the critical path** (decided Oct 5, 2026). `packages/jev` stays frozen behind `JEV_ENABLED=false`. Confidence labels come from our own sample sizes. Do not guess Jev's API. |
 | Sentry | Milestone 8. |
