@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { desc, eq, isNotNull } from "drizzle-orm";
+import { desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
 import { BandAggregator, BuildAggregator, ExpectedWinFitter, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
@@ -8,6 +8,8 @@ import type { ExpectedWinTable, ItemInfo, MatchSummary, RankBandId } from "@ldc/
 import { collect, pruneCollected, type CollectorRiot, type CollectResult } from "./collector";
 import type { Db } from "./db";
 import { collectorRuns, metaSnapshots, users } from "./db/schema";
+
+const INTERRUPTED = "interrupted: the server stopped during the run";
 
 const DAY_MS = 86_400_000;
 
@@ -205,6 +207,14 @@ export class MetaJob {
     return this.current;
   }
 
+  /**
+   * Closes runs that never finished (the server stopped or was redeployed mid-run), so /health
+   * doesn't show them as running forever. Called on shutdown and before each run.
+   */
+  closeOpenRuns(): void {
+    this.db.update(collectorRuns).set({ finishedAt: this.now(), error: INTERRUPTED }).where(isNull(collectorRuns.finishedAt)).run();
+  }
+
   /** The newest finished or running run, for /health. */
   lastRun() {
     return this.db.select().from(collectorRuns).orderBy(desc(collectorRuns.id)).limit(1).get() ?? null;
@@ -212,6 +222,7 @@ export class MetaJob {
 
   private async execute(): Promise<MetaRunResult> {
     const { meta, bands: bandConfig, engine } = this.settings;
+    this.closeOpenRuns();
     const startedAt = this.now();
     const runId = this.db.insert(collectorRuns).values({ startedAt }).returning({ id: collectorRuns.id }).get().id;
     const bands = activeBands(this.db, bandConfig);

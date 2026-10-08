@@ -88,6 +88,8 @@ railway metrics --service ldc-server --since 7d                      # CPU, memo
 railway service status --service ldc-server                          # deployment state (SLEEPING when asleep)
 ```
 
+**Collector alert:** when no new game has been collected for `staleAfterHours` (config/meta.v1.json), `POST /admin/collect` still starts the run but answers 503, so the hourly `ldc-meta-wake` run fails and shows red in Railway. `/health` says why (`collector.stale`, `lastRun.error`). A run cut short by a redeploy is closed as `interrupted` instead of showing as running forever.
+
 ## Cost log
 
 | Date | Event | This project (period to date) | Workspace | Notes |

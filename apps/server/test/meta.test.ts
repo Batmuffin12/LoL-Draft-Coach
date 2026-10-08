@@ -281,6 +281,16 @@ describe("meta job", () => {
     expect(r.snapshots).toHaveLength(1);
   });
 
+  it("closes a run the server never finished (a redeploy mid-run) before the next one", async () => {
+    const db = openDb(":memory:");
+    db.insert(schema.collectorRuns).values({ startedAt: NOW - 3_600_000 }).run();
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {} });
+    await job.run();
+    const runs = db.select().from(schema.collectorRuns).all();
+    expect(runs[0]).toMatchObject({ finishedAt: NOW, error: expect.stringMatching(/interrupted/) });
+    expect(runs[1]).toMatchObject({ finishedAt: NOW, error: null });
+  });
+
   it("runs one wake-up at a time", async () => {
     const db = openDb(":memory:");
     const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {} });
@@ -360,10 +370,16 @@ describe("meta routes", () => {
     expect((await app.request("/admin/collect", { method: "POST" })).status).toBe(404);
     expect((await app.request("/admin/collect", { method: "POST", headers: auth("tok") })).status).toBe(404);
     const res = await app.request("/admin/collect", { method: "POST", headers: auth(ADMIN) });
-    expect(res.status).toBe(202);
-    expect(await res.json()).toEqual({ started: true, running: true });
+    // Nothing collected yet counts as stale: the run starts, and the cron sees a failure (503).
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "collector_stale", started: true, running: true });
     await job.run();
     expect(job.lastRun()?.finishedAt).toBe(NOW);
+    // Fresh data now: a normal 202.
+    const again = await app.request("/admin/collect", { method: "POST", headers: auth(ADMIN) });
+    expect(again.status).toBe(202);
+    expect(await again.json()).toEqual({ started: true, running: true });
+    await job.run();
   });
 
   it("serves the scoring config with an ETag", async () => {

@@ -68,6 +68,8 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
 
 const shutdown = () => {
   sync?.stop();
+  // A run cut short by a redeploy is marked as such (the next run would close it too).
+  if (meta.running) meta.closeOpenRuns();
   server.close();
   db.$client.close();
   process.exit(0);

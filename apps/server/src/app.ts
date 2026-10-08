@@ -44,6 +44,14 @@ export interface AppDeps {
   publicConfig?: Record<string, unknown> | null;
 }
 
+/** When the collector last stored a new game, and whether that is too long ago. */
+function collectorFreshness(deps: AppDeps): { lastData: number | null; stale: boolean } {
+  const lastData = (deps.db.$client.prepare("SELECT max(stored_at) AS t FROM matches WHERE source = 'collector'").get() as { t: number | null }).t;
+  const staleAfterMs = deps.collectorStaleAfterMs ?? 6 * 3_600_000;
+  const now = (deps.now ?? Date.now)();
+  return { lastData, stale: deps.meta ? lastData === null || now - lastData > staleAfterMs : false };
+}
+
 /** Collector status and data freshness for /health. */
 function metaHealth(deps: AppDeps) {
   const snaps = deps.db
@@ -52,15 +60,13 @@ function metaHealth(deps: AppDeps) {
     .all();
   const last = deps.meta?.lastRun() ?? null;
   // When the collector last stored a new game: the spec's "is it still receiving data" signal.
-  const lastData = (deps.db.$client.prepare("SELECT max(stored_at) AS t FROM matches WHERE source = 'collector'").get() as { t: number | null }).t;
-  const staleAfterMs = deps.collectorStaleAfterMs ?? 6 * 3_600_000;
-  const now = (deps.now ?? Date.now)();
+  const { lastData, stale } = collectorFreshness(deps);
   return {
     patch: newestPatch(snaps.map((s) => s.patch)),
     newestMatchAt: snaps.length ? Math.max(...snaps.map((s) => s.newestMatchAt ?? 0)) || null : null,
     collector: {
       // Stale: no new collected game for staleAfter (e.g. the dev key expired, or the cron stopped).
-      stale: deps.meta ? lastData === null || now - lastData > staleAfterMs : false,
+      stale,
       lastDataAt: lastData,
       running: deps.meta?.running ?? false,
       lastRun: last && { startedAt: last.startedAt, finishedAt: last.finishedAt, newMatches: last.newMatches, riotCalls: last.riotCalls, error: last.error },
@@ -144,7 +150,11 @@ export function createApp(deps: AppDeps): Hono<Env> {
     app.post("/admin/collect", (c) => {
       if (!deps.meta) return c.json({ error: "meta_unavailable", message: "The meta job isn't configured." }, 503);
       const alreadyRunning = deps.meta.running;
+      const { stale } = collectorFreshness(deps);
       deps.meta.run().catch((err: unknown) => console.error("meta run failed:", err));
+      // The run starts either way; a stale collector answers 503 so the cron run fails visibly in
+      // Railway (the spec's "alert when the collector stops receiving data").
+      if (stale) return c.json({ error: "collector_stale", message: "No new collected game for too long; see /health.", started: !alreadyRunning, running: true }, 503);
       return c.json({ started: !alreadyRunning, running: true }, 202);
     });
   }
