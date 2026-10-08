@@ -366,11 +366,39 @@ export class PersonalCoach extends Coach {
     });
   }
 
-  /** The post-game card: your newest logged game, joined with your history for its result. */
+  /**
+   * The post-game card: your newest game. With the advice the coach showed for it (the advice
+   * log), joined with your history for its result; a game played without the coach open shows
+   * from your history alone (result and goal, no suggestions).
+   */
   private updateLastGame(): void {
     const latest = this.advice[0];
-    if (!latest) return this.update({ lastGame: null });
+    const matches = this.profile?.matches ?? [];
+    const newest = matches.reduce<(typeof matches)[number] | null>((a, m) => (!a || m.match.endedAt > a.match.endedAt ? m : a), null);
     const lookup = this.championLookup;
+    const logged = latest && (!newest || newest.match.matchId.endsWith(`_${latest.gameId}`) || latest.lockedAt > newest.match.endedAt);
+    if (!logged) {
+      const me = newest?.match.participants[newest.me];
+      if (!newest || !me) return this.update({ lastGame: null });
+      const champion = champView(me.championId, lookup);
+      if (!champion) return this.update({ lastGame: null });
+      return this.update({
+        lastGame: {
+          champion,
+          role: me.position || null,
+          lockedAt: newest.match.endedAt - newest.match.durationSec * 1000,
+          endedAt: newest.match.endedAt,
+          minutes: Math.round(newest.match.durationSec / 60),
+          result: me.win ? "win" : "loss",
+          shown: [],
+          verdict: "",
+          followed: false,
+          lines: [],
+          prediction: null,
+          focus: focusInGame(this.growth, newest.match.matchId, matches, this.config.explain),
+        },
+      });
+    }
     const view = postGameView(latest, this.profile?.matches ?? [], {
       templates: this.config.explain.templates,
       minDeltaWin: this.config.engine.rating.explain.minDeltaWin,
