@@ -220,3 +220,17 @@ export function compareSpikeHalves(first: ChampionSpikes[], second: ChampionSpik
     strongPairs: strong.length,
   };
 }
+
+/**
+ * The split-half check on a fixed set of games, two ways: "alternate" (every other game, like
+ * the hourly check) or "time" (older half vs newer half: do spikes measured on older games hold
+ * on newer ones, e.g. across a patch). Pure.
+ */
+export function checkSpikes(matches: MatchSummary[], opts: SpikeOptions, split: "alternate" | "time"): SpikeCheck {
+  const raw = { ...opts, config: { ...opts.config, priorGames: 0, minGames: Math.max(1, Math.ceil(opts.config.minGames / 2)) } };
+  const [a, b] = [new SpikeAggregator(raw), new SpikeAggregator(raw)];
+  const usable = matches.filter((m) => m.timeline);
+  const ordered = split === "time" ? [...usable].sort((x, y) => x.endedAt - y.endedAt || x.matchId.localeCompare(y.matchId)) : usable;
+  ordered.forEach((m, i) => (split === "time" ? (i < ordered.length / 2 ? a : b) : i % 2 === 0 ? a : b).add(m));
+  return compareSpikeHalves(a.finish(), b.finish(), opts.config.checkZ);
+}

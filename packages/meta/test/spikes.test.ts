@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ITEM_BOUGHT, type MatchSummary } from "@ldc/shared";
-import { parseMetaConfig, SpikeAggregator, SpikeMeasure } from "../src/index";
+import { checkSpikes, parseMetaConfig, SpikeAggregator, SpikeMeasure } from "../src/index";
 
 const config = parseMetaConfig(JSON.parse(readFileSync(new URL("../../../config/meta.v1.json", import.meta.url), "utf8")));
 const NOW = Date.UTC(2026, 9, 8);
@@ -107,5 +107,18 @@ describe("SpikeAggregator", () => {
     }
     const gold = (a: SpikeAggregator) => a.finish().find((c) => c.championId === 1)!.spikes[0]!.gold;
     expect(gold(shrunk)).toBeLessThan(gold(raw) / 5);
+  });
+});
+
+describe("checkSpikes", () => {
+  const opts = { now: NOW, config: { ...config.spikes, minGames: 5 }, minDurationSec: 0, windowDays: 30, completed: new Set([ITEM]) };
+
+  it("passes when spikes hold from older games to newer ones, and fails when they flip", () => {
+    const steady = Array.from({ length: 40 }, (_, s) => [game(1, true, s), game(2, false, s)].map((g) => ({ ...g, endedAt: NOW - 86_400_000 + s * 1000 }))).flat();
+    expect(checkSpikes(steady, opts, "time")).toMatchObject({ signAgreement: 1 });
+    // Champion 1 spikes only in the older games, champion 2 only in the newer ones (a patch swapped them).
+    const flipped = Array.from({ length: 40 }, (_, s) => [game(1, s < 20, s), game(2, s >= 20, s)].map((g) => ({ ...g, endedAt: NOW - 86_400_000 + s * 1000 }))).flat();
+    // Over time the flip fails the bar (0.5).
+    expect(checkSpikes(flipped, opts, "time").goldCorrelation!).toBeLessThan(0.5);
   });
 });
