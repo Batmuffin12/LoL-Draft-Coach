@@ -57,8 +57,8 @@ describe("new champions view", () => {
     expect(v.picks[1]!.reasons).toEqual(["You don't own it yet"]);
     expect(v.plan).toBe("Try Ekko in 3 to 5 Normal Draft games.");
     expect(v.planLearn).toEqual({
-      stage: "Before your first game",
-      focus: { text: "Deaths before 14 min: hold your usual (1.2 or fewer) while you learn the kit", recent: [] },
+      stage: "First game on it",
+      focus: { text: "Keep your deaths before 14 min at 1.2 or fewer, your usual", recent: [] },
       lines: [], // no generic advice: only what the data says about the champion
     });
     expect(v.learning).toBeNull();
@@ -70,14 +70,14 @@ describe("new champions view", () => {
       title: "Learning Lux",
       progress: "3 of 7 games · 12 days left",
       learn: {
-        stage: "Building up",
-        focus: { text: "Deaths before 14 min: 2.5 on it, 1.2 on your other mid champions. Get back to 1.2 or fewer", recent: [false, true, false] },
+        stage: "Getting comfortable",
+        focus: { text: "On it: deaths before 14 min 2.5, vs 1.2 on your other mid picks", recent: [false, true, false] },
         lines: [
-          "How it wins in your rank: deaths before 14 min 1.1 in wins vs 2.0 in losses (you: 2.5); CS at 10 min 68 in wins vs 61 in losses",
-          "Wins more of long games (53% vs 47% in short ones): farm safely and fight later",
-          "Easier first games into Orianna (+3.1%)",
-          "Avoid or ban while learning: Zed (−4.2%), LeBlanc (−2.0%)",
-          "Your games on it: 2 won, 1 lost",
+          "It wins with fewer deaths before 14 min: 1.1 in wins, 2.0 in losses (you: 2.5); and more CS at 10 min: 68 in wins, 61 in losses",
+          "Stronger in long games: wins 53%, vs 47% in short ones",
+          "Good first matchups: Orianna (+3.1%)",
+          "Tough matchups for now: Zed (−4.2%), LeBlanc (−2.0%)",
+          "You on it: 2–1",
         ],
       },
       after: "After Lux",

@@ -39,7 +39,7 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
     const f = p.focus;
     const fmt = (v: number) => formatMetric(v, f.metric, explain);
     const slots = {
-      metric: capital(metricLabel(f.metric, explain)),
+      metric: metricLabel(f.metric, explain),
       role,
       goal: say({ id: `growth.goal.${f.lowerIsBetter ? "less" : "more"}`, slots: { target: fmt(f.target) } }),
       value: f.value === null ? "" : fmt(f.value),
@@ -54,11 +54,11 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
     const items = p.wins.map((w) => {
       const fmt = (v: number) => formatMetric(v, w.metric, explain);
       return say({
-        id: w.you === null ? "newchamp.learn.win" : "newchamp.learn.win.you",
+        id: `newchamp.learn.win.${w.lowerIsBetter ? "less" : "more"}${w.you === null ? "" : ".you"}`,
         slots: { metric: metricLabel(w.metric, explain), winners: fmt(w.winners), losers: fmt(w.losers), you: w.you === null ? "" : fmt(w.you) },
       });
     });
-    lines.push(say({ id: "newchamp.learn.wins", slots: { items: items.join("; ") } }));
+    lines.push(say({ id: "newchamp.learn.wins", slots: { items: items.join("; and ") } }));
   }
   if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
   if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
