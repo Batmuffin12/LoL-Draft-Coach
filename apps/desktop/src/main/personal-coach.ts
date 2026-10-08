@@ -46,7 +46,7 @@ import { champView } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
 import { capital, reasonView } from "./reason-view";
 import { banNumbers, draftMatchups } from "./stats-view";
-import type { PersonalProfile } from "./profile";
+import { profileFromMatches, type PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
 export interface PersonalCoachDeps extends CoachDeps {
@@ -626,7 +626,10 @@ export class PersonalCoach extends Coach {
       void this.onChampSelectStart();
     }
     this.hadDraft = this.draft !== null;
-    if (!this.draft || !this.profile || !this.queueSupported) {
+    // While your history loads, bans still come from the live meta alone (picks wait for your history).
+    const loading = !this.profile && this.draft !== null && this.queueSupported && this.metaIndex !== null && banningNow(this.draft);
+    const profile = this.profile ?? (loading ? profileFromMatches([], []) : null);
+    if (!this.draft || !profile || !this.queueSupported) {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
       const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
@@ -634,8 +637,8 @@ export class PersonalCoach extends Coach {
       return;
     }
     const { engine } = this.config;
-    const role = draftRole(this.draft, this.profile.games);
-    const comfort = this.comfortFor(role);
+    const role = draftRole(this.draft, profile.games);
+    const comfort = loading ? new Map<ChampionId, ComfortStats>() : this.comfortFor(role);
     const input = {
       draft: this.draft,
       pickable: this.pickable,
@@ -672,7 +675,7 @@ export class PersonalCoach extends Coach {
       } catch {
         // Data Dragon not loaded yet: names fall back to ids.
       }
-      const personal = personalBuild(this.profile!.matches, championId, role, completed);
+      const personal = personalBuild(profile.matches, championId, role, completed);
       const buildsFrom = (id: number) => this.deps.ddragon.data.itemInfo.get(id)?.from ?? [];
       const loadout = live ? draftLoadout(live, championId, engine.loadout, personal, boots, buildsFrom) : null;
       if (this.shownLoadout?.loadout.championId !== championId) this.importMessage = null;
@@ -742,6 +745,7 @@ export class PersonalCoach extends Coach {
     const pending = me ? me.championId || me.pickIntentId : 0;
     const hoverCard = live && pending > 0 ? card(pending, true) : null;
     if (!hoverCard?.loadout) this.shownLoadout = null;
+    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane });
     this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane });
   }
 }
