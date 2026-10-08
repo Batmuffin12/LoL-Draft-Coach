@@ -212,7 +212,22 @@
     "cloneCut": 0.92,
     "topN": 3,
     "planGames": [3, 5],
-    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 }
+    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 },
+    "learn": {
+      "firstGames": 3,
+      "settleGames": { "easy": 15, "medium": 20, "hard": 30 },
+      "blockGames": [2, 3],
+      "focusMinGames": 2,
+      "usualMinGames": 5,
+      "dropMin": 0.3,
+      "basics": {
+        "top": "-earlyDeaths",
+        "jungle": "challenges.jungleCsBefore10Minutes",
+        "middle": "-earlyDeaths",
+        "bottom": "challenges.laneMinionsFirst10Minutes",
+        "utility": "challenges.visionScorePerMinute"
+      }
+    }
   },
   "pool": {
     "coreMin": 0.55,
@@ -238,7 +253,7 @@
       "3": { "meta": 1, "lane": 1.1, "counter": 1.1, "synergy": 1, "team": 1.1, "personal": 1 },
       "4": { "meta": 1, "lane": 1.2, "counter": 1.2, "synergy": 1.1, "team": 1.2, "personal": 0.9 }
     },
-    "priorGames": { "meta": 150, "pair": 60 },
+    "priorGames": { "meta": 150, "pair": 400 },
     "minGames": { "meta": 30, "pair": 15 },
     "counterWeight": 0.4,
     "synergyWeight": 0.5,

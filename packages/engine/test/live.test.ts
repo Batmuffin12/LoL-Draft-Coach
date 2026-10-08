@@ -26,7 +26,9 @@ import {
 
 const CONFIG_DIR = join(__dirname, "..", "..", "..", "config");
 const readJson = (f: string) => JSON.parse(readFileSync(join(CONFIG_DIR, f), "utf8"));
-const config = parseEngineConfig(readJson("engine.v1.json"));
+// The fixture games are sized for a pair prior of 60: pinned, so tuning the shipped prior (backtest) doesn't change what these tests check.
+const shipped = parseEngineConfig(readJson("engine.v1.json"));
+const config = { ...shipped, rating: { ...shipped.rating, priorGames: { ...shipped.rating.priorGames, pair: 60 } } };
 const explain = parseExplainConfig(readJson("explain.v1.json"));
 const say = (r: Reason | null) => (r ? renderReason(r, explain.templates, (id) => `#${id}`) : "");
 const text = (reasons: Reason[]) => reasons.map(say).join(" | ");
