@@ -131,6 +131,15 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 6,
+    name: "indexes for queries that filter matches by source (the summary JSON makes full scans expensive)",
+    sql: `
+      CREATE INDEX matches_source_stored ON matches(source, stored_at);
+      CREATE INDEX matches_band_source_ended ON matches(band, source, ended_at);
+      CREATE INDEX user_matches_by_match ON user_matches(match_id);
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

@@ -49,6 +49,16 @@ describe("migrations", () => {
     }
   });
 
+  it("serve the source-filtered match queries from an index, not a full scan", () => {
+    const db = openDb(":memory:");
+    const plan = (q: string) => (db.$client.prepare(`EXPLAIN QUERY PLAN ${q}`).all() as { detail: string }[]).map((r) => r.detail).join(" | ");
+    expect(plan("SELECT max(stored_at) FROM matches WHERE source = 'collector'")).toMatch(/matches_source_stored/);
+    expect(plan("SELECT ended_at FROM matches WHERE band = 2 AND source = 'collector' ORDER BY ended_at DESC LIMIT 1 OFFSET 10")).toMatch(/matches_band_source_ended/);
+    expect(
+      plan("DELETE FROM matches WHERE source = 'user' AND NOT EXISTS (SELECT 1 FROM user_matches WHERE user_matches.match_id = matches.match_id)"),
+    ).toMatch(/matches_source_stored.*user_matches_by_match/);
+  });
+
   it("let Drizzle write and read a user", () => {
     const db = openDb(":memory:");
     db.insert(schema.users).values({ puuid: "P", gameName: "Name", tagLine: "EUW", tokenHash: "h", createdAt: 1 }).run();
