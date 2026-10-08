@@ -166,13 +166,6 @@
           "challenges.getTakedownsInAllLanesEarlyJungleAsLaner",
           "challenges.moreEnemyJungleThanOpponent"
         ]
-      },
-      "playmaking": {
-        "metrics": [
-          "ccPerMinute",
-          "challenges.enemyChampionImmobilizations",
-          "challenges.pickKillWithAlly"
-        ]
       }
     }
   },
