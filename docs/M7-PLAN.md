@@ -13,7 +13,7 @@ Written 2026-10-06, right after v0.6.2, so a fresh session can start M7 from the
 | m7-1 | **New-champion recommender**: top 3 per role with reasons and a first-games plan | SPEC feature table; DESIGN §6 |
 | m7-4 | **Monthly report**: axis trends, focus targets met, rank trend | DESIGN §7 (F8) |
 
-Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.0` when all of it works and the owner has tried it.
+Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.0` when all of it works and the owner has tried it. **Released 2026-10-08:** v0.7.0 and v0.7.1 tagged retroactively on this branch, v0.7.2 merged into `main` (CHANGELOG.md).
 
 ## Order of work (each stage = small commits, tests, a tracker update)
 

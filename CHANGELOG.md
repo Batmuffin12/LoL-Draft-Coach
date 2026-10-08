@@ -1,8 +1,48 @@
 # Changelog
 
-All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags.
+All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
-## [Unreleased] — milestone 7, Grow (v0.7.0 once the owner has tried it)
+## [0.7.2] — 2026-10-08 — Learning a champion, goals per role
+
+### Added
+- **The New tab teaches how to learn a champion** (research/LEARNING.md): a stage (before the first game, first games, building up), one "This game" focus with your games on it, the champion's job by class, a cue per role, the matchups to start into and avoid while learning, its power curve, and how many games to give it before judging it (by difficulty). Thresholds in `newChamps.learn`, wording in `explain`.
+- **Goals per role** (research/ROLE-GOALS.md): each role has its own goal metrics (`growth.roles`): vision for a support, early farm and ganks for a jungler, lane CS and early deaths for laners. The goal follows the role of your last game (else your main role), and the goal card shows "Keep in mind" tips for the role and metric.
+- **Timelines keep champion kills and levels per minute** (no identifiers), groundwork for measured power spikes (milestone 8) and "when you die". Every Gold–Platinum game now gets a timeline; the run budget goes from 1800 to 2400 s (docs/CLOUD.md).
+
+### Changed
+- **Goals come from early-game metrics and habits only** (deaths before 14 min, CS at 10, early takedowns, plates, early ganks, control wards, vision): whole-game totals mostly follow the result, so the goal was nearly always deaths. The server publishes band references for them.
+- The last game's goal line shows only for a game in the goal's role; the goal card says "Typical jungle player in your rank". The New tab no longer shows a build (champ select does).
+
+### Fixed
+- **Matchups and duos are smoothed with a 400-game prior** (was 60): on 13,414 production games the lane and synergy terms made predictions worse than a coin flip and shown chances ran high (56% shown, 48.5% won); at 400 shown chances are within ~3 points of actual.
+
+## [0.7.1] — 2026-10-08 — Personal key and review follow-up
+
+Tagged retroactively at `37e4506` (its package versions still read 0.6.2).
+
+### Added
+- **Game plan** (Plan tab, first after lock-in): the lane in a word with its number, which team wins long games, their damage type and main engage, and your own record against your lane opponent's champion.
+- **Take a short break**: after 2 losses in a row or 6 games in a session, the lobby says so, with your own record after such streaks once you have enough games. From your own games only.
+- **Their team in one line** during champ select (damage type, main engage) once two enemies are picked.
+- **Deaths before 14 minutes** as a playstyle and growth metric; each user's 30 newest games get a timeline (`history.timelineCount`).
+- **The New tab shows your learning progress** (games of the learning limit, days left, next-games plan) and the next suggestions under "After <champion>".
+- **Backtests**: a draft-level backtest (time-split train/validation/test, baselines, drop-one-term ablations, fitted term weights, bootstrap intervals, calibration) and the personal term on users' own games.
+- Server: the wake-up cron fails when the collector is stale and closes interrupted runs; only bands of recently active users are collected; more fresh games per run (10-day lookback, timelines for half the win-rate games); the collector uses at most 80% of each rate limit, so user syncs don't wait.
+
+### Changed
+- **One number per fact in the panel**: Matchup is the lane alone, counters join team and synergy in a Draft column; bans show a threat bar and win rate (pick and ban rates on hover); matchups read Favoured / Even / Hard; the build shows pick rate per item with a star on the one that helps most. Calmer lobby screens.
+- **A clear pick must lead beyond the sampling noise** (`clearZ`), and is never a new or weak champion for you; thin data reads as a close call.
+- Aggregation reads in chunks, so the API keeps answering during a run. Railway deploys `main` only after CI passes.
+
+### Fixed
+- **Users keep working after a Riot API key change** (the personal key went live on 2026-10-08): sync and registration find the user again by Riot ID and store the new PUUID, after confirming it's the same player (the account's newest games include one stored for the user).
+- Advice waits in an outbox until the server confirms it (a sleeping server lost the post-game card); a dodged pick is forgotten when the client returns to the lobby.
+- Bans come from the live meta while your history is still loading; the post-game card says each number once, with counts as whole numbers; the goal tooltip uses the configured step; growth importance splits at the median.
+- Matches are indexed by source, so syncs and prunes don't scan the whole database.
+
+## [0.7.0] — 2026-10-07 — Milestone 7: Grow
+
+Tagged retroactively at `6104aef` (its package versions still read 0.6.2).
 
 ### Added
 - **Last game** (lobby tab, opened first after a game): the post-game card. The coach remembers what it showed when you locked in (your pick and the suggestions, champion ids and numbers only), takes the game id when the game starts and sends the record when it ends (`POST /advice`, `advice_log`, deleted with "Delete my data"). The card shows your pick, the result once the game is in your history, the suggestions with yours lit, whether you took one, the term that mattered most and the prediction. A dodge leaves nothing behind.
@@ -11,9 +51,10 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 - **Monthly report** (Style › This month): games and win rate against the month before, your rank then and now (the server keeps your rank per day), each style axis then and now, your champions' form, focus targets met. Trends only, never a single game.
 - **Draft simulator** (`packages/sim`): any champ select in a few lines (`draft().me("middle").hover(103).enemy(238).stopAt("my-pick")`), synthetic meta snapshots with thin or solid data on purpose, scenarios, and `pnpm --filter @ldc/sim mock <scenario>` for the panel; dev aid `LDC_META_FILE` coaches from a snapshot file.
 - Design system synced with the app (its stylesheet is the app's `styles.css`), with the M7 screens.
-- Dev aid: `LDC_SCREENSHOT_CLICK="Style>This month"` clicks a sequence and matches a button by the start of its text.
+- Dev aids: `LDC_SCREENSHOT_CLICK="Style>This month"` clicks a sequence and matches a button by the start of its text; `LDC_PROFILE_FILE` loads a saved history so the panel works without a Riot key.
 
 ### Changed
+- **Panel wording like the build sites** (op.gg, lolalytics): Win %, Pick %, Ban %, Threat, Starter items, Core build, Skill priority; win-chance changes carry a % everywhere. "Your focus" becomes **Your goal** (Now → Goal with the rank average). No text is ever cut with "…": it wraps between whole words.
 - Lobby tabs: Last game · Style · Pool · New. The "no champ select yet" hint shows only before your history has loaded, and closed role heads are tighter, so every tab fits 440 × 720 for players with many roles.
 
 ## [0.6.2] — 2026-10-06 — Panel redesign
