@@ -80,7 +80,7 @@ const CHUNK_ROWS = 500;
  * (the server runs in a 256 MB heap).
  */
 async function bandPass(rows: Rows, band: RankBandId, bands: RankBandId[], settings: MetaSettings, now: number) {
-  const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine) });
+  const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine), championMetrics: settings.engine.growth.roles ?? {} });
   const fitter = new ExpectedWinFitter(settings.meta.builds.stateBins);
   for await (const row of rows(bands)) {
     const m = JSON.parse(row.summary) as MatchSummary;

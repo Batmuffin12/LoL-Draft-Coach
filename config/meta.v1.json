@@ -10,6 +10,8 @@
     "referenceQuantiles": 21,
     "referenceMaxSamples": 4000,
     "minReferenceSamples": 40,
+    "championWinMinGames": 40,
+    "championWinMinZ": 2,
     "powerCurve": {
       "earlyMinutes": 25,
       "lateMinutes": 32

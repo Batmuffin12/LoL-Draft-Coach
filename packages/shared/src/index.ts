@@ -498,6 +498,11 @@ export interface MetaSnapshot {
    * between the top and bottom halves (growth focus; absent in older snapshots).
    */
   references: Record<Position, Record<string, { n: number; quantiles: number[]; importance?: number }>>;
+  /**
+   * How each champion wins in a role: for the role's goal metrics (early game and habits),
+   * the mean in its won and lost games, as [winMean, lossMean, games]. Absent in older snapshots.
+   */
+  championWins?: { championId: ChampionId; role: Position; n: number; metrics: Record<string, [number, number, number]> }[];
 }
 
 /** Status shown in the panel. */
