@@ -68,17 +68,20 @@ export interface PublishedSnapshot {
  * traits from the first pass's attributes. Without an item catalog (Data Dragon unreachable),
  * builds have runes, spells and skills but no items.
  */
-type Rows = (bands: RankBandId[], withBand?: boolean) => Iterable<{ summary: string; band: number }>;
+type Rows = (bands: RankBandId[]) => AsyncIterable<{ summary: string; band: number }>;
+
+/** Rows read per chunk; between chunks the event loop runs, so the API keeps answering during aggregation. */
+const CHUNK_ROWS = 500;
 
 /**
  * Pass 1: the band's stats, and the expected-win fit over the band and the band above (for
  * win added in pass 2). A function of its own so its accumulators can be freed before pass 2
  * (the server runs in a 256 MB heap).
  */
-function bandPass(rows: Rows, band: RankBandId, bands: RankBandId[], settings: MetaSettings, now: number) {
+async function bandPass(rows: Rows, band: RankBandId, bands: RankBandId[], settings: MetaSettings, now: number) {
   const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine) });
   const fitter = new ExpectedWinFitter(settings.meta.builds.stateBins);
-  for (const row of rows(bands, true)) {
+  for await (const row of rows(bands)) {
     const m = JSON.parse(row.summary) as MatchSummary;
     if (row.band === band) agg.add(m);
     fitter.add(m);
@@ -95,12 +98,12 @@ function bandPass(rows: Rows, band: RankBandId, bands: RankBandId[], settings: M
 }
 
 /** Pass 2: builds from the band and the band above, with enemy traits from pass 1's attributes. */
-function buildPass(
+async function buildPass(
   rows: Rows,
   bands: RankBandId[],
   settings: MetaSettings,
   now: number,
-  base: Pick<ReturnType<typeof bandPass>, "attributes" | "champions">,
+  base: Pick<Awaited<ReturnType<typeof bandPass>>, "attributes" | "champions">,
   expected: ExpectedWinTable,
   items: ReadonlyMap<number, ItemInfo> | null,
 ) {
@@ -118,7 +121,7 @@ function buildPass(
     traitCuts,
     expected,
   });
-  for (const row of rows(bands)) agg.add(JSON.parse(row.summary) as MatchSummary);
+  for await (const row of rows(bands)) agg.add(JSON.parse(row.summary) as MatchSummary);
   return { builds: agg.finish(), itemRoles: agg.itemRoles(), roleRewards: agg.roleRewards(), traitCuts, expectedWin: agg.expectedWinTable() };
 }
 
@@ -128,21 +131,34 @@ function buildPass(
  * traits from the first pass's attributes. Without an item catalog (Data Dragon unreachable),
  * builds have runes, spells and skills but no items.
  */
-export function publishSnapshot(
+export async function publishSnapshot(
   db: Db,
   band: RankBandId,
   settings: MetaSettings,
   now: number,
   extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null } = {},
-): PublishedSnapshot {
+): Promise<PublishedSnapshot> {
   const since = now - settings.meta.aggregation.windowDays * DAY_MS;
-  const rows: Rows = (bands) =>
-    db.$client
-      .prepare(`SELECT summary, band FROM matches WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? ORDER BY ended_at DESC`)
-      .iterate(...bands, since) as Iterable<{ summary: string; band: number }>;
+  // Newest first, in chunks (keyset on ended_at, match_id), yielding to the event loop between them.
+  const rows: Rows = async function* (bands) {
+    const stmt = db.$client.prepare(
+      `SELECT summary, band, ended_at AS endedAt, match_id AS id FROM matches
+       WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND match_id < ?))
+       ORDER BY ended_at DESC, match_id DESC LIMIT ?`,
+    );
+    let at = Number.MAX_SAFE_INTEGER;
+    let id = "";
+    for (;;) {
+      const chunk = stmt.all(...bands, since, at, at, id, CHUNK_ROWS) as { summary: string; band: number; endedAt: number; id: string }[];
+      yield* chunk;
+      if (chunk.length < CHUNK_ROWS) return;
+      ({ endedAt: at, id } = chunk[chunk.length - 1]!);
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  };
   const bands = [band, ...(extra.buildBands ?? [])];
-  const first = bandPass(rows, band, bands, settings, now);
-  const builds = JSON.stringify(buildPass(rows, bands, settings, now, first, first.expected, extra.items ?? null));
+  const first = await bandPass(rows, band, bands, settings, now);
+  const builds = JSON.stringify(await buildPass(rows, bands, settings, now, first, first.expected, extra.items ?? null));
   // The two parts are JSON objects with distinct keys: join them into one snapshot object.
   const json = `${first.baseJson.slice(0, -1)},${builds.slice(1)}`;
   const snapshot = first.summary;
@@ -272,7 +288,7 @@ export class MetaJob {
     });
     for (const band of bands) {
       const above = buildBandsFor([band], bandConfig);
-      snapshots.push(publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items }));
+      snapshots.push(await publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items }));
     }
 
     const finishedAt = this.now();

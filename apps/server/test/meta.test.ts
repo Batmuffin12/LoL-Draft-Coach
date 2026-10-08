@@ -326,6 +326,16 @@ describe("meta routes", () => {
   }
   const auth = (t: string) => ({ authorization: `Bearer ${t}` });
 
+  it("aggregates every game across read chunks, even when many end at the same time", async () => {
+    const { db } = setup();
+    const { summarizeMatch } = await import("@ldc/riot-api");
+    const insert = db.$client.prepare("INSERT INTO matches (match_id, queue_id, game_version, ended_at, duration_sec, summary, source, stored_at, band) VALUES (?, 420, '16.19.1', ?, 1800, ?, 'collector', ?, 2)");
+    db.$client.transaction(() => {
+      for (let i = 0; i < 1203; i++) insert.run(`m${i}`, NOW - MIN, JSON.stringify(summarizeMatch(rawMatch(`m${i}`, NOW - MIN))), NOW);
+    })();
+    expect((await publishSnapshot(db, 2, settings, NOW)).matches).toBe(1203);
+  });
+
   it("serves the band snapshot to registered users only, gzipped with an ETag", async () => {
     const { db, app } = setup();
     expect((await app.request("/meta/2")).status).toBe(401);
@@ -334,7 +344,7 @@ describe("meta routes", () => {
     db.insert(schema.matches)
       .values({ matchId: "m", queueId: 420, gameVersion: "16.19.1", endedAt: NOW - MIN, durationSec: 1800, summary: (await import("@ldc/riot-api")).summarizeMatch(rawMatch("m", NOW - MIN)), source: "collector", storedAt: NOW, band: 2 })
       .run();
-    publishSnapshot(db, 2, settings, NOW);
+    await publishSnapshot(db, 2, settings, NOW);
 
     const res = await app.request("/meta/2", { headers: { ...auth("tok"), "accept-encoding": "gzip" } });
     expect(res.status).toBe(200);
