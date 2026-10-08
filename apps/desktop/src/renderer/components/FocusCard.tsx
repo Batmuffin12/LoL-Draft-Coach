@@ -39,6 +39,16 @@ export function FocusCard({ focus: f }: { focus: FocusView }) {
           {` hit the goal`}
         </span>
       </div>
+      {f.tips.length > 0 && (
+        <div className="f-tips">
+          <span className="label">Keep in mind</span>
+          <ul className="notes">
+            {f.tips.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <span className="micro">{f.why}</span>
     </div>
   );

@@ -19,6 +19,7 @@ import {
   assessPick,
   draftLoadout,
   pickFocus,
+  focusRoles,
   learningPlan,
   recommendNewChampions,
   monthlyReport,
@@ -174,7 +175,8 @@ export class PersonalCoach extends Coach {
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
   setConfig(config: LoadedConfig): void {
     // Wording the server doesn't have yet (an older server) falls back to the bundled copy, never to raw ids.
-    this.config = { ...config, explain: { ...config.explain, templates: { ...this.p.config.explain.templates, ...config.explain.templates } } };
+    const local = this.p.config.explain;
+    this.config = { ...config, explain: { ...config.explain, templates: { ...local.templates, ...config.explain.templates }, tips: { ...local.tips, ...config.explain.tips } } };
     this.comfortByRole.clear();
     this.update({ roleLabels: roleLabels(this.config.explain.templates) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
@@ -282,15 +284,20 @@ export class PersonalCoach extends Coach {
   /** What the focus and month report were last computed from (they change only with these). */
   private growthInputs: unknown[] = [];
 
-  /** Your growth focus: on your main role (and champion), from your games and the band's references. */
+  /**
+   * Your growth focus: on the role of your last game (each role has its own goals: vision for a
+   * support, early farm and ganks for a jungler), else your main role; from your games and the
+   * band's references.
+   */
   private updateFocus(): void {
     if (!this.profile) return;
     const inputs = [this.profile, this.metaIndex?.snapshot, this.config, this.band];
     if (inputs.every((x, i) => x === this.growthInputs[i])) return;
     this.growthInputs = inputs;
     const { engine, explain } = this.config;
-    const role = mainRole(this.profile.games);
-    this.growth = role ? pickFocus(this.profile.matches, role, engine, this.metaIndex?.snapshot.references[role]) : null;
+    const pick = (role: Position) => pickFocus(this.profile!.matches, role, engine, this.metaIndex?.snapshot.references[role]);
+    const roles = focusRoles(this.profile.matches, mainRole(this.profile.games));
+    this.growth = roles.map(pick).find((g) => g?.focus) ?? null;
     const lookup = (id: number) => this.championLookup(id)?.name ?? `#${id}`;
     const view = this.growth
       ? focusView(this.growth, {

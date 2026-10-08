@@ -96,6 +96,11 @@ export const EngineConfigSchema = z.object({
      * Absent: every playstyle metric.
      */
     metrics: z.array(z.string().min(1)).min(1).optional(),
+    /**
+     * Per role (Riot position), the metrics that matter for it, most important first (research/ROLE-GOALS.md):
+     * a support is judged on vision, a jungler on early farm and ganks. Overrides `metrics` for that role.
+     */
+    roles: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
   }),
   /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
   earlyDeathsMinute: z.number().positive().default(14),

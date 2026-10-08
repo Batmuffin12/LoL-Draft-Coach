@@ -406,5 +406,93 @@
       "format": "decimal",
       "count": true
     }
+  },
+  "tips": {
+    "top:challenges.laneMinionsFirst10Minutes": [
+      "Last-hit first, trade second: a lost wave costs more than a won trade.",
+      "Recall after crashing a wave into their tower, not mid-wave.",
+      "Use Teleport early to get back to lane fast and save the next wave."
+    ],
+    "top:earlyDeaths": [
+      "Ward river or tri-brush before you push past the middle of the lane.",
+      "If you can't see the enemy jungler, assume they're near your lane.",
+      "Recall before you're too low to fight one more trade."
+    ],
+    "top:challenges.turretPlatesTaken": [
+      "After a kill or their recall, hit the tower before you back.",
+      "Void Grubs speed up tower damage: join grubs when your wave is pushed."
+    ],
+    "top:challenges.controlWardsPlaced": [
+      "Buy one control ward on your first back and put it in river or tri-brush."
+    ],
+    "jungle:challenges.jungleCsBefore10Minutes": [
+      "Finish your full clear before ganking unless a lane is clearly gankable.",
+      "Never walk past a camp that's up: take it on the way.",
+      "If a gank fails, go straight back to farm."
+    ],
+    "jungle:challenges.killsOnLanersEarlyJungleAsJungler": [
+      "Gank when two hold: enemy pushed, no flash, no ward, your laner has CC.",
+      "Come from behind the enemy, not up the lane.",
+      "Gank at level 3, level 6 or right after your first item."
+    ],
+    "jungle:earlyDeaths": [
+      "Track the enemy jungler: if you saw them top, path bot.",
+      "Don't invade without lane priority from the nearby laners."
+    ],
+    "jungle:challenges.wardTakedowns": [
+      "Swap to sweeper once your early ganks are done.",
+      "Sweep the objective area before a fight."
+    ],
+    "jungle:challenges.controlWardsPlaced": [
+      "Put a control ward on your side of the next objective."
+    ],
+    "middle:challenges.laneMinionsFirst10Minutes": [
+      "Shove the wave before you roam so you lose no minions.",
+      "Use the cannon wave timing to recall."
+    ],
+    "middle:earlyDeaths": [
+      "Keep a ward on one side of mid and play toward it.",
+      "When their jungler is missing, stop pushing past half the lane."
+    ],
+    "middle:challenges.takedownsFirstXMinutes": [
+      "Roam right after you push or kill your laner, never mid-wave.",
+      "Roam to lanes with CC or kill pressure; skip lanes that can't follow."
+    ],
+    "middle:challenges.turretPlatesTaken": [
+      "After a kill or their recall, hit the tower before you back."
+    ],
+    "middle:challenges.controlWardsPlaced": [
+      "Keep one control ward in a mid-lane side brush or river."
+    ],
+    "bottom:challenges.laneMinionsFirst10Minutes": [
+      "Under tower: let the tower hit melee minions twice, then last-hit.",
+      "Crash the wave before you recall."
+    ],
+    "bottom:earlyDeaths": [
+      "Don't trade when their wave is bigger: minion aggro hurts.",
+      "Stand behind your minions against hooks and skillshots."
+    ],
+    "bottom:challenges.turretPlatesTaken": [
+      "After a won fight or a dragon, hit plates before you back."
+    ],
+    "bottom:challenges.takedownsFirstXMinutes": [
+      "Fight when your support's engage and your level spike line up."
+    ],
+    "utility:challenges.controlWardsPlaced": [
+      "Buy a control ward on every back.",
+      "Place it where you'll fight next: dragon pit edge or river bush.",
+      "A control ward in your inventory gives no vision: place it."
+    ],
+    "utility:challenges.wardTakedowns": [
+      "Swap to sweeper once your support item's quest is done.",
+      "Sweep before dragon, not during it."
+    ],
+    "utility:earlyDeaths": [
+      "Ward from your side of the river, not deep and alone.",
+      "Roam only when your bot laner can stay safe without you."
+    ],
+    "utility:challenges.visionScorePerMinute": [
+      "Wards in unwarded spots score more than wards next to others."
+    ]
   }
 }

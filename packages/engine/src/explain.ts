@@ -10,6 +10,8 @@ export const ExplainConfigSchema = z.object({
   axes: z.record(z.string(), z.string()).default({}),
   /** Display names and number formats of playstyle metrics; `count`: counted per game (deaths, plates), so one game's value reads as a whole number. */
   metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
+  /** What to keep in mind for a growth goal, by "role:metric" (research/ROLE-GOALS.md). */
+  tips: z.record(z.string(), z.array(z.string())).default({}),
   settings: z.object({
     /** Score gap (0..1) between #1 and #2 at or above which #1 is a "clear pick". */
     clearGap: z.number().min(0).max(1),

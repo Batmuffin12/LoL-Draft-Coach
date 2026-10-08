@@ -27,6 +27,9 @@ describe("focus view", () => {
     expect(v).toMatchObject({ label: "CS per minute", title: "More CS per minute", goalText: "6.8 or more", goalHint: expect.stringMatching(/^Your next step: \d+% of the way to the average$/), on: "Ahri · Mid", youText: "6.1", targetText: "6.8", typicalText: "7.6", recent: [true, false, false] });
     expect(v.why).toBe("Why this: in Gold to Platinum, mid players on the better half here win 8 points more of their games than the other half.");
     expect(v.met).toEqual(["Deaths per minute: 0.42 → 0.31, goal met"]);
+    expect(v.tips).toEqual(config.explain.tips["middle:csPerMinute"] ?? []);
+    const support = focusView({ ...growth, role: "utility", focus: { ...growth.focus!, metric: "challenges.controlWardsPlaced" } }, deps)!;
+    expect(support.tips.length).toBeGreaterThan(0);
     expect(focusView({ ...growth, focus: null }, deps)).toBeNull();
   });
 

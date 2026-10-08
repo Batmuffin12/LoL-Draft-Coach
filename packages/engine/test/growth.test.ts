@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { ParticipantSummary, UserMatch } from "@ldc/shared";
-import { metricImportance, parseEngineConfig, pickFocus } from "../src/index";
+import { focusRoles, metricImportance, parseEngineConfig, pickFocus } from "../src/index";
 
 const engine = parseEngineConfig(JSON.parse(readFileSync(new URL("../../../config/engine.v1.json", import.meta.url), "utf8")));
 // Two metrics only, so each test reads clearly: CS per minute, and deaths per minute (lower is better).
 const cfg = {
-  growth: { ...engine.growth, window: 20, checkGames: 10, targetStep: 0.5, minGames: 8, minImportance: 0.02, metrics: undefined },
+  growth: { ...engine.growth, window: 20, checkGames: 10, targetStep: 0.5, minGames: 8, minImportance: 0.02, metrics: undefined, roles: undefined },
   playstyle: { ...engine.playstyle, minReferenceSamples: 20, axes: { farming: { metrics: ["csPerMinute"] }, risk: { metrics: ["-deathsPerMinute"] } } },
 };
 
@@ -54,6 +54,21 @@ describe("metricImportance", () => {
 });
 
 describe("pickFocus", () => {
+  it("uses the role's own goal list when the config has one", () => {
+    const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60, 9));
+    const perRole = { ...cfg, growth: { ...cfg.growth, roles: { middle: ["-deathsPerMinute"], jungle: ["csPerMinute"] } } };
+    const f = pickFocus(matches, "middle", perRole)!;
+    expect([f.focus, ...f.met].every((m) => m === null || m.metric === "deathsPerMinute")).toBe(true);
+    expect(engine.growth.roles?.utility?.[0]).toBe("challenges.controlWardsPlaced");
+  });
+
+  it("looks for a goal in the role of your last game first, then your main role", () => {
+    const ms = [game(1, 103, 60, 3, "middle"), game(0, 412, 20, 3, "utility")];
+    expect(focusRoles(ms, "middle")).toEqual(["utility", "middle"]);
+    expect(focusRoles(ms.slice(0, 1), "middle")).toEqual(["middle"]);
+    expect(focusRoles([], null)).toEqual([]);
+  });
+
   it("chooses only from growth.metrics when set (early-game metrics and habits, not totals that follow the result)", () => {
     const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60, 9));
     expect(pickFocus(matches, "middle", cfg)!.focus?.metric).toBe("csPerMinute");

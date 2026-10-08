@@ -22,7 +22,7 @@ export interface MetaSettings {
 
 /** Playstyle and growth-focus metric names from the engine config (without the lower-is-better "-"). */
 export function playstyleMetrics(engine: EngineConfig): string[] {
-  const all = [...Object.values(engine.playstyle.axes).flatMap((a) => a.metrics), ...(engine.growth.metrics ?? [])];
+  const all = [...Object.values(engine.playstyle.axes).flatMap((a) => a.metrics), ...(engine.growth.metrics ?? []), ...Object.values(engine.growth.roles ?? {}).flat()];
   return [...new Set(all.map((m) => m.replace(/^-/, "")))];
 }
 

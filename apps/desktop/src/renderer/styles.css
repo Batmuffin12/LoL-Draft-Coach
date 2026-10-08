@@ -457,5 +457,8 @@ p { margin: 0; }
 .focus .f-goal .f-target b { color: var(--gold-bright); }
 .focus .f-arrow { color: var(--muted); }
 .focus .f-avg { margin-left: auto; font-size: var(--fs-micro); color: var(--muted); }
+.focus .f-tips { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.focus .f-tips .notes { margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
+.focus .f-tips .notes li::marker { color: var(--muted); }
 .table .open.no-games { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
 .tree.shards { gap: 3px; }

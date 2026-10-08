@@ -95,7 +95,7 @@ export function pickFocus(
   const older = games.slice(g.checkGames);
   const baseGames = older.length >= Math.ceil(g.checkGames / 2) ? older : games;
 
-  const metrics = [...new Set(g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
+  const metrics = [...new Set(g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
   const useBand = Object.values(bandReferences ?? {}).some((r) => r.importance !== undefined && r.n >= cfg.playstyle.minReferenceSamples);
   const candidates: FocusMetric[] = [];
   for (const raw of metrics) {
@@ -157,4 +157,14 @@ export function pickFocus(
   }
   candidates.sort((a, b) => b.impact - a.impact);
   return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games" };
+}
+
+/**
+ * The roles to look for a growth goal in, in order: the role of your last game (the goal follows
+ * what you just played), then your main role (when the last role has too few games or no goal left).
+ */
+export function focusRoles(matches: UserMatch[], main: Position | null): Position[] {
+  const newest = matches.reduce<UserMatch | null>((a, m) => (!a || m.match.endedAt > a.match.endedAt ? m : a), null);
+  const last = newest?.match.participants[newest.me]?.position || null;
+  return [...new Set([last, main].filter((r): r is Position => !!r))];
 }

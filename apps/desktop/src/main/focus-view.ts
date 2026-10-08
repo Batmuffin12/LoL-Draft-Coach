@@ -49,6 +49,7 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
     checkGames: deps.checkGames,
     recent: f.recent,
     why,
+    tips: explain.tips[`${g.role}:${f.metric}`] ?? [],
     met: g.met.map((m: FocusMetric) =>
       renderReason({ id: "growth.met", slots: { metric: capital(metricLabel(m.metric, explain)), from: formatMetric(m.baseline, m.metric, explain), to: formatMetric(m.you, m.metric, explain) } }, explain.templates, deps.championName),
     ),
