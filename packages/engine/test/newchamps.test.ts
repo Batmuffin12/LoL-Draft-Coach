@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { ChampionInfo, MetaSnapshot } from "@ldc/shared";
-import { MetaIndex, parseEngineConfig, parseExplainConfig, recommendNewChampions, renderReason, type NewChampInput, type RolePool } from "../src/index";
+import { learningNotes, MetaIndex, parseEngineConfig, parseExplainConfig, recommendNewChampions, renderReason, type NewChampInput, type RolePool } from "../src/index";
 
 const read = (n: string) => JSON.parse(readFileSync(new URL(`../../../config/${n}`, import.meta.url), "utf8"));
 const config = parseEngineConfig(read("engine.v1.json"));
@@ -66,5 +66,43 @@ describe("recommendNewChampions", () => {
     expect(r.learning).toEqual({ championId: 2, progress });
     expect(r.picks.length).toBeGreaterThan(0);
     expect(r.picks.map((p) => p.championId)).not.toContain(2);
+  });
+});
+
+describe("learningNotes", () => {
+  const game = (championId: number, position: string, win: boolean, deaths: number) => ({
+    match: { matchId: `M${Math.random()}`, queueId: 420, gameVersion: "16.19", endedAt: 1, durationSec: 1800, participants: [{ championId, position, win, deaths, challenges: { deathsByEnemyChamps: deaths } }] },
+    me: 0,
+  });
+  const pair = (b: number, games: number, winsOfA: number) => [4, "middle", b, "middle", games, winsOfA, games] as [number, string, number, string, number, number, number];
+  const snap: MetaSnapshot = {
+    ...snapshot,
+    matchups: [pair(1, 1000, 600), pair(2, 1000, 380), pair(3, 1000, 540), pair(5, 10, 9), [4, "middle", 6, "top", 1000, 900, 1000]],
+    attributes: [{ championId: 4, samples: 500, physicalShare: 0.2, magicShare: 0.8, trueShare: 0, frontline: 0.3, engage: 0.4, roleShares: {}, roleSamples: 500, powerCurve: { early: { games: 800, winRate: 0.46 }, late: { games: 800, winRate: 0.55 } } }],
+  };
+  const notes = (over: Partial<Parameters<typeof learningNotes>[0]> = {}) =>
+    learningNotes({
+      championId: 4,
+      role: "middle",
+      matches: [game(4, "middle", true, 3), game(4, "middle", false, 7), game(4, "jungle", true, 0), game(1, "middle", true, 0)] as never,
+      index: new MetaIndex(snap, config.rating),
+      focus: { role: "middle", metric: "challenges.deathsByEnemyChamps", lowerIsBetter: true, target: 6 },
+      config,
+      ...over,
+    });
+
+  it("gives your record and goal on it, the lane opponents it does best and worst into, and its power curve", () => {
+    const n = notes();
+    expect(n.record).toEqual({ games: 2, wins: 1 });
+    expect(n.focus).toMatchObject({ value: 5, target: 6, met: true });
+    expect(n.good.map((o) => o.championId)).toEqual([1]); // 3 is near even, 5 too few games, 6 another role
+    expect(n.hard.map((o) => o.championId)).toEqual([2]);
+    expect(n.hard[0]!.deltaWin).toBeLessThan(0);
+    expect(n.curve).toMatchObject({ late: true });
+  });
+
+  it("leaves out a goal from another role, and matchups and curve without meta", () => {
+    const n = notes({ focus: { role: "jungle", metric: "challenges.deathsByEnemyChamps", lowerIsBetter: true, target: 6 }, index: null });
+    expect(n).toMatchObject({ focus: null, good: [], hard: [], curve: null });
   });
 });

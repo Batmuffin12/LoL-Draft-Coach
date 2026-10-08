@@ -1,8 +1,10 @@
-import type { ChampionId, ChampionInfo, Position, Reason } from "@ldc/shared";
+import type { ChampionId, ChampionInfo, Position, Reason, UserMatch } from "@ldc/shared";
 import type { EngineConfig } from "./config";
 import type { MetaIndex } from "./meta-index";
 import type { LearningProgress, PoolNeed, RolePool } from "./pool";
 import type { ChampionAttributes, MasteryEntry } from "./types";
+import { readMetric } from "./playstyle";
+import { deltaWin } from "./rating";
 
 export type NewChampsConfig = EngineConfig["newChamps"];
 
@@ -163,4 +165,89 @@ export function recommendNewChampions(input: NewChampInput): NewChampAdvice {
   }
   out.sort((a, b) => b.fit - a.fit || a.championId - b.championId);
   return { role, picks: out.slice(0, cfg.topN), learning };
+}
+
+/** A lane opponent of the champion you're learning, measured in your rank. */
+export interface LearningMatchup {
+  championId: ChampionId;
+  /** Win-chance difference over what both champions usually win (deltaWin), and the games behind it. */
+  deltaWin: number;
+  games: number;
+}
+
+export interface LearningNotes {
+  /** Your games on it in the role. */
+  record: { games: number; wins: number };
+  /** Your focus metric on it: mean over those games (null without a focus in this role or a reading). */
+  focus: { metric: string; lowerIsBetter: boolean; value: number; target: number; met: boolean } | null;
+  /** Opponents in the same role it does best and worst into (beyond `evenWin`), at most `count` each. */
+  good: LearningMatchup[];
+  hard: LearningMatchup[];
+  /** Whether it wins more of long or short games (beyond `scalingGap`), when its power curve is measured. */
+  curve: { late: boolean; early: number; lateRate: number } | null;
+}
+
+export interface LearningNotesInput {
+  championId: ChampionId;
+  role: Position;
+  matches: UserMatch[];
+  index: MetaIndex | null;
+  focus: { role: Position; metric: string; lowerIsBetter: boolean; target: number } | null;
+  config: Pick<EngineConfig, "rating" | "plan">;
+  /** Opponents listed per side. */
+  count?: number;
+}
+
+/**
+ * What to know while learning a champion, from your own games on it and the band's data: your
+ * record, your focus metric on it, the lane opponents it does best and worst into, and whether
+ * it wins more of short or long games. Champions and aggregates only. Pure.
+ */
+export function learningNotes(input: LearningNotesInput): LearningNotes {
+  const { championId: id, role, index, config } = input;
+  const count = input.count ?? 2;
+  const mine = input.matches.filter((m) => {
+    const p = m.match.participants[m.me];
+    return p?.championId === id && p.position === role;
+  });
+  const record = { games: mine.length, wins: mine.filter((m) => m.match.participants[m.me]!.win).length };
+
+  let focus: LearningNotes["focus"] = null;
+  const f = input.focus;
+  if (f && f.role === role) {
+    const values = mine.flatMap((m) => {
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, f.metric);
+      return v === null ? [] : [v];
+    });
+    if (values.length) {
+      const value = values.reduce((a, b) => a + b, 0) / values.length;
+      focus = { metric: f.metric, lowerIsBetter: f.lowerIsBetter, value, target: f.target, met: f.lowerIsBetter ? value <= f.target : value >= f.target };
+    }
+  }
+
+  const opponents = index
+    ? index
+        .opponentsOf(id, role)
+        .map((o) => {
+          const d = index.matchupDelta(id, role, o, role);
+          return { championId: o, deltaWin: deltaWin(d.delta), games: d.n };
+        })
+        .filter((o) => o.games >= config.rating.minGames.pair)
+    : [];
+  const good = opponents
+    .filter((o) => o.deltaWin >= config.plan.evenWin)
+    .sort((a, b) => b.deltaWin - a.deltaWin || a.championId - b.championId)
+    .slice(0, count);
+  const hard = opponents
+    .filter((o) => o.deltaWin <= -config.plan.evenWin)
+    .sort((a, b) => a.deltaWin - b.deltaWin || a.championId - b.championId)
+    .slice(0, count);
+
+  const pc = index?.attributes.get(id)?.powerCurve;
+  const minCurve = config.rating.minGames.meta;
+  const curve =
+    pc && pc.early.games >= minCurve && pc.late.games >= minCurve && Math.abs(pc.late.winRate - pc.early.winRate) >= config.plan.scalingGap
+      ? { late: pc.late.winRate > pc.early.winRate, early: pc.early.winRate, lateRate: pc.late.winRate }
+      : null;
+  return { record, focus, good, hard, curve };
 }

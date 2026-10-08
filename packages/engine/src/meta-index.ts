@@ -140,6 +140,17 @@ export class MetaIndex {
     return { delta: rating(smoothRate(s.wins, s.games, expected, this.cfg.priorGames.pair)) - rating(expected), n: s.n };
   }
 
+  /** Champions with matchup data against `id` in `role`, both in that role (lane opponents). */
+  opponentsOf(id: ChampionId, role: Position): ChampionId[] {
+    const out: ChampionId[] = [];
+    for (const [a, ra, b, rb] of this.snapshot.matchups) {
+      if (ra !== role || rb !== role) continue;
+      if (a === id) out.push(b);
+      else if (b === id) out.push(a);
+    }
+    return out;
+  }
+
   /** How much better `a` and `b` do together than their meta strengths predict. */
   duoDelta(a: ChampionId, ra: Position, b: ChampionId, rb: Position): PairDelta {
     const expected = winOf(this.metaRating(a, ra) + this.metaRating(b, rb));
