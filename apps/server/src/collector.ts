@@ -26,8 +26,10 @@ export interface CollectOptions {
   now: () => number;
   /** Stop starting new work after this time (epoch ms). */
   deadline: number;
-  /** Only games that ended after this (epoch ms) are listed: the aggregation window. */
+  /** Only games that ended after this (epoch ms) are listed. */
   since: number;
+  /** Games shorter than this are remakes the aggregation drops: they get no timeline. */
+  minDurationSec?: number;
   /** For shuffling a page of players (tests pass a fixed one). */
   random?: () => number;
 }
@@ -126,6 +128,7 @@ export async function collect(db: Db, riot: CollectorRiot, opts: CollectOptions)
     let added = 0;
     let emptyInARow = 0;
     const done = () => added >= perBandMax || now() >= bandDeadline;
+    const timelineShare = buildBands.includes(band) ? cfg.buildBandTimelineShare : cfg.timelineShare;
 
     while (!done()) {
       const cursor = loadCursor(db, band);
@@ -153,7 +156,7 @@ export async function collect(db: Db, riot: CollectorRiot, opts: CollectOptions)
       for (const player of shuffle(players.filter((p) => !p.inactive), random)) {
         if (done()) break;
         try {
-          const n = await collectPlayer(db, riot, player.puuid, band, opts, result, done);
+          const n = await collectPlayer(db, riot, player.puuid, band, timelineShare, opts, result, done);
           added += n;
           result.newMatches += n;
         } catch (err) {
@@ -172,6 +175,7 @@ async function collectPlayer(
   riot: CollectorRiot,
   puuid: string,
   band: RankBandId,
+  timelineShare: number,
   opts: CollectOptions,
   result: CollectResult,
   done: () => boolean,
@@ -194,8 +198,10 @@ async function collectPlayer(
     result.riotCalls++;
     if (!match || match.info.queueId !== cfg.queueId) continue;
     let summary = trimChallenges(summarizeMatch(match), opts.keepChallenges);
-    // Timelines (builds, item purchases, skill order) cost one more call, so only a share of games get one.
-    if ((opts.random ?? Math.random)() < cfg.timelineShare && !done()) {
+    // Timelines (builds, item purchases, skill order) cost one more call, so only a share of games get one
+    // (never remakes: the aggregation drops them).
+    const remake = summary.durationSec < (opts.minDurationSec ?? 0);
+    if (!remake && (opts.random ?? Math.random)() < timelineShare && !done()) {
       const timeline = await riot.timeline(id, "collector").catch((err: unknown) => {
         if (err instanceof RiotKeyError) throw err;
         return null;

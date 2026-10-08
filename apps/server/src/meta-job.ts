@@ -231,7 +231,8 @@ export class MetaJob {
           keepChallenges: challengeFields(engine),
           now: this.now,
           deadline: startedAt + meta.collector.budgetSeconds * 1000,
-          since: startedAt - meta.aggregation.windowDays * DAY_MS,
+          since: startedAt - Math.min(meta.collector.lookbackDays, meta.aggregation.windowDays) * DAY_MS,
+          minDurationSec: meta.aggregation.minDurationSec,
           ...(this.opts.random ? { random: this.opts.random } : {}),
         });
       } catch (err) {

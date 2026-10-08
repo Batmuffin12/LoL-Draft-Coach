@@ -160,6 +160,21 @@ describe("collector", () => {
     expect(collected(db).every((m) => m.summary.timeline === undefined)).toBe(true);
   });
 
+  it("always fetches timelines in the build-only band, and never for remakes", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const opts = { ...options({ maxMatchesPerRun: 10, buildBandShare: 0.3, timelineShare: 0.5, buildBandTimelineShare: 1 }), buildBands: [3 as const], random: () => 0.7 };
+    await collect(db, riot, opts);
+    const rows = collected(db);
+    expect(rows.filter((m) => m.band === 3).every((m) => m.summary.timeline !== undefined)).toBe(true);
+    expect(rows.filter((m) => m.band === 2).every((m) => m.summary.timeline === undefined)).toBe(true);
+
+    const db2 = openDb(":memory:");
+    const riot2 = fakeRiot();
+    await collect(db2, riot2, { ...options({ maxMatchesPerRun: 4, timelineShare: 1 }), minDurationSec: 3600 });
+    expect(riot2.calls.some((c) => c.startsWith("timeline:"))).toBe(false);
+  });
+
   it("gives the band above its share of the budget, for builds", async () => {
     const db = openDb(":memory:");
     const r = await collect(db, fakeRiot(), { ...options({ maxMatchesPerRun: 10, buildBandShare: 0.3 }), buildBands: [3] });
