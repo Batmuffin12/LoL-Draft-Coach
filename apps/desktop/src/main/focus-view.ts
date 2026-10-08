@@ -23,7 +23,7 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
   const fmt = (v: number) => formatMetric(v, f.metric, explain);
   const label = metricLabel(f.metric, explain);
   const why = renderReason(
-    { id: g.reference === "band" && deps.bandName ? "growth.why.band" : "growth.why.games", slots: { band: deps.bandName ?? "", role: g.role, metric: label, gap: Math.abs(f.importance), step: deps.targetStep } },
+    { id: f.importanceFrom === "band" && deps.bandName ? "growth.why.band" : "growth.why.games", slots: { band: deps.bandName ?? "", role: g.role, metric: label, gap: Math.abs(f.importance), step: deps.targetStep } },
     explain.templates,
     deps.championName,
   );

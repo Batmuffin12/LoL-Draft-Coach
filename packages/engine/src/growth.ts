@@ -44,6 +44,8 @@ export interface FocusMetric {
   /** The median in your role (and rank, with the band's data). */
   typical: number;
   importance: number;
+  /** Where the importance was measured: your rank's games, or the players in your own games. */
+  importanceFrom: "band" | "games";
   impact: number;
   /** Your last games on it, oldest first: whether each reached the target. */
   recent: boolean[];
@@ -132,12 +134,16 @@ export function pickFocus(
     let typical: number;
     let spread: number;
     let importance: number;
+    let importanceFrom: FocusMetric["importanceFrom"] = "games";
     const band = bandReferences?.[metric];
     if (useBand) {
       if (!bandOk(band)) continue;
       typical = at(band.quantiles, 0.5);
       spread = at(band.quantiles, 0.75) - at(band.quantiles, 0.25);
-      if (band.importance !== undefined) importance = band.importance;
+      if (band.importance !== undefined) {
+        importance = band.importance;
+        importanceFrom = "band";
+      }
       else {
         const o = others();
         if (o.length < cfg.playstyle.minReferenceSamples) continue;
@@ -173,6 +179,7 @@ export function pickFocus(
       target,
       typical,
       importance,
+      importanceFrom,
       impact: (gap / spread) * s * importance,
       recent: [...recentValues].reverse().map((v) => s * (v - target) >= 0),
       done: s * (you - target) >= 0,
