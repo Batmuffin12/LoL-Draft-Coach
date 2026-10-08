@@ -153,7 +153,7 @@
     "postgame.verdict.listed": "You took #{rank}",
     "postgame.verdict.own": "Your own pick",
     "growth.why.band": "Why this: in {band}, {role} players on the better half here win {gap:pct} points more of their games than the other half.",
-    "growth.on.general": "{role} · a goal for any role",
+    "growth.on.few": "{role} · from your {games} {games|game|games} so far",
     "growth.typical.band": "Typical {role} player in your rank: {value}",
     "growth.typical.games": "Typical {role} player in your games: {value}",
     "growth.why.games": "Why this: in your games, {role} players on the better half here won {gap:pct} points more of their games than the other half.",

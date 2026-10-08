@@ -62,10 +62,12 @@ export interface GrowthFocus {
   /** Where the typical values and importance came from. */
   reference: "band" | "games";
   /**
-   * "role": from your games in the role and its own goals. "general": too few games in the role, so
-   * from your games in every role and goals fair in any role (`growth.general`), against the role's typical.
+   * "role": enough games in the role to set the target from your older games and track the newer
+   * ones. "few": fewer games than that; the role's goals all the same, from the games you have.
    */
-  scope: "role" | "general";
+  scope: "role" | "few";
+  /** Your games in the role behind it. */
+  games: number;
 }
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -83,15 +85,16 @@ export function pickFocus(
   role: Position,
   cfg: { growth: GrowthConfig; playstyle: PlaystyleConfig },
   bandReferences?: Record<string, GrowthReference>,
-  scope: GrowthFocus["scope"] = "role",
 ): GrowthFocus | null {
   const g = cfg.growth;
-  const general = scope === "general";
   const inRole = [...matches]
     .sort((a, b) => b.match.endedAt - a.match.endedAt)
-    .filter((m) => (general ? !!m.match.participants[m.me]?.position : m.match.participants[m.me]?.position === role))
+    .filter((m) => m.match.participants[m.me]?.position === role)
     .slice(0, g.window);
-  if (!role || inRole.length < g.minGames) return null;
+  if (!role || !inRole.length) return null;
+  // Few games in the role: the same goals, from the games you have (no older games to set a target from).
+  const scope: GrowthFocus["scope"] = inRole.length >= g.minGames ? "role" : "few";
+  const few = scope === "few";
 
   const counts = new Map<ChampionId, number>();
   for (const m of inRole) {
@@ -99,13 +102,13 @@ export function pickFocus(
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   const [mainId, mainGames] = [...counts].sort((a, b) => b[1] - a[1])[0]!;
-  const championId = !general && mainGames >= g.minGames ? mainId : null;
+  const championId = !few && mainGames >= g.minGames ? mainId : null;
   const games = championId === null ? inRole : inRole.filter((m) => m.match.participants[m.me]!.championId === championId);
   const recentGames = games.slice(0, g.checkGames);
   const older = games.slice(g.checkGames);
   const baseGames = older.length >= Math.ceil(g.checkGames / 2) ? older : games;
 
-  const metrics = [...new Set(general ? g.general : (g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics)))];
+  const metrics = [...new Set(g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
   const useBand = Object.values(bandReferences ?? {}).some((r) => r.importance !== undefined && r.n >= cfg.playstyle.minReferenceSamples);
   const candidates: FocusMetric[] = [];
   for (const raw of metrics) {
@@ -146,7 +149,7 @@ export function pickFocus(
     });
     const base = valuesOf(baseGames);
     const recentValues = valuesOf(recentGames);
-    if (base.length < Math.ceil(g.minGames / 2) || !recentValues.length) continue;
+    if (base.length < (few ? 1 : Math.ceil(g.minGames / 2)) || !recentValues.length) continue;
     const baseline = mean(base);
     const gap = s * (typical - baseline);
     if (gap <= 0) continue;
@@ -166,13 +169,12 @@ export function pickFocus(
     });
   }
   candidates.sort((a, b) => b.impact - a.impact);
-  return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games", scope };
+  return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games", scope, games: inRole.length };
 }
 
 /**
- * Your growth goal after a game (pure): from the role of your last game and its own goals; with
- * too few games in that role, from goals fair in any role over all your games (so a jungle main's
- * first support game doesn't ask for jungle CS). With no games at all, your main role.
+ * Your growth goal after a game (pure): from the role of your last game and its own goals (a
+ * jungle main's first support game gets a support goal, from that one game). With no games, your main role.
  */
 export function focusAfterLastGame(
   matches: UserMatch[],
@@ -183,5 +185,5 @@ export function focusAfterLastGame(
   const newest = matches.reduce<UserMatch | null>((a, m) => (!a || m.match.endedAt > a.match.endedAt ? m : a), null);
   const role = newest?.match.participants[newest.me]?.position || main;
   if (!role) return null;
-  return pickFocus(matches, role, cfg, references(role)) ?? pickFocus(matches, role, cfg, references(role), "general");
+  return pickFocus(matches, role, cfg, references(role));
 }

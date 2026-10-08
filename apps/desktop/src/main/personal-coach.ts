@@ -286,7 +286,7 @@ export class PersonalCoach extends Coach {
 
   /**
    * Your growth focus: on the role of your last game (each role has its own goals: vision for a
-   * support, early farm and ganks for a jungler); with too few games there, goals fair in any role.
+   * support, early farm and ganks for a jungler), even from your first games there.
    * From your games and the band's references.
    */
   private updateFocus(): void {

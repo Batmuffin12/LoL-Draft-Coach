@@ -62,13 +62,13 @@ describe("pickFocus", () => {
     expect(engine.growth.roles?.utility?.[0]).toBe("challenges.controlWardsPlaced");
   });
 
-  it("after a game in a role you rarely play: a goal fair in any role, over all your games, not your main role's", () => {
-    const general = { ...cfg, growth: { ...cfg.growth, general: ["csPerMinute"], roles: { middle: ["-deathsPerMinute"] } } };
+  it("after a game in a role you rarely play: that role's own goals, from the games you have there", () => {
+    const general = { ...cfg, growth: { ...cfg.growth, roles: { middle: ["-deathsPerMinute"], utility: ["csPerMinute"] } } };
     const refs = () => ({ csPerMinute: { n: 100, quantiles: [4, 6, 7, 8, 9], importance: 0.1 } });
     // A mid main (20 games) whose last game was a first support game.
     const ms = [game(0, 412, 20, 3, "utility"), ...Array.from({ length: 20 }, (_, i) => game(i + 1, 103, 60, 3, "middle"))];
     const f = focusAfterLastGame(ms, "middle", general, refs)!;
-    expect(f).toMatchObject({ role: "utility", scope: "general", championId: null });
+    expect(f).toMatchObject({ role: "utility", scope: "few", games: 1, championId: null });
     expect(f.focus?.metric).toBe("csPerMinute");
     // Enough games in the role: its own goals.
     const own = focusAfterLastGame(ms.slice(1), "middle", general, refs)!;
@@ -126,7 +126,8 @@ describe("pickFocus", () => {
   });
 
   it("needs enough games in the role, and focuses on the whole role without a main champion", () => {
-    expect(pickFocus(Array.from({ length: 5 }, (_, i) => game(i, 103, 60)), "middle", cfg)).toBeNull();
+    expect(pickFocus(Array.from({ length: 5 }, (_, i) => game(i, 103, 60)), "middle", cfg)).toMatchObject({ scope: "few", games: 5, championId: null });
+    expect(pickFocus([], "middle", cfg)).toBeNull();
     const spread = Array.from({ length: 20 }, (_, i) => game(i, 100 + (i % 4), 60));
     expect(pickFocus(spread, "middle", cfg)!.championId).toBeNull();
   });
