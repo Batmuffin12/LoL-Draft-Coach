@@ -4,6 +4,7 @@ import type { MetaIndex } from "./meta-index";
 import type { LearningProgress, PoolNeed, RolePool } from "./pool";
 import type { ChampionAttributes, MasteryEntry } from "./types";
 import { readMetric } from "./playstyle";
+import { curveGap } from "./power-curve";
 import { deltaWin } from "./rating";
 
 export type NewChampsConfig = EngineConfig["newChamps"];
@@ -321,10 +322,7 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
     .slice(0, count);
 
   const pc = index?.attributes.get(id)?.powerCurve;
-  const minCurve = config.rating.minGames.meta;
-  const curve =
-    pc && pc.early.games >= minCurve && pc.late.games >= minCurve && Math.abs(pc.late.winRate - pc.early.winRate) >= config.plan.scalingGap
-      ? { late: pc.late.winRate > pc.early.winRate, early: pc.early.winRate, lateRate: pc.late.winRate }
-      : null;
+  const gap = curveGap(pc, config.rating.minGames.meta, config.plan.scalingGap, config.rating.explain.powerCurveZ);
+  const curve = pc && gap !== null ? { late: gap > 0, early: pc.early.winRate, lateRate: pc.late.winRate } : null;
   return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve };
 }

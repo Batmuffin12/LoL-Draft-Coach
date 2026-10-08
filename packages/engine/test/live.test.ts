@@ -295,11 +295,13 @@ describe("adviseLivePicks", () => {
       roleShares: { middle: 1 }, roleSamples: 400,
       powerCurve: { early: { games, winRate: early }, late: { games, winRate: late } },
     });
-    const idx = index({ ...snapshot(), attributes: [attr(103, 0.47, 0.55), attr(101, 0.5, 0.52), attr(102, 0.6, 0.4, 5)] });
+    const idx = index({ ...snapshot(), attributes: [attr(103, 0.47, 0.55, 400), attr(101, 0.5, 0.52), attr(102, 0.6, 0.4, 5), attr(104, 0.47, 0.55, 100)] });
     const reasons = (id: number) => text(adviseLivePicks(input(draft(), { index: idx })).picks.find((p) => p.championId === id)!.reasons);
     expect(reasons(103)).toMatch(/Scales: wins 55\.0% of long games vs 47\.0% of short ones/);
     expect(reasons(101)).not.toMatch(/Scales|Strong early/); // small gap
     expect(reasons(102)).not.toMatch(/Scales|Strong early/); // too few games
+    const r104 = adviseLivePicks(input(draft(), { index: idx })).picks.find((p) => p.championId === 104);
+    if (r104) expect(text(r104.reasons)).not.toMatch(/Scales|Strong early/); // the same gap from 100 games a side is within chance
   });
 
   it("adds synergy with allies already picked", () => {
