@@ -68,6 +68,9 @@ export function postGameView(
   if (!champion) return null;
   const o = adviceOutcome(record, matches, opts.minDeltaWin);
   const say = (r: Reason) => renderReason(r, opts.templates, opts.championName);
+  const predicted = o.lines.find((r) => r.id.startsWith("postgame.predicted"));
+  // The plain prediction repeats the % already shown on the pick you took in the suggestion row.
+  const repeats = predicted?.id === "postgame.predicted" && record.shown.some((s) => s.championId === record.pick.championId && s.expectedWin !== null);
   const verdict: Reason = o.rank === 1 ? { id: "postgame.verdict.top", slots: {} } : o.rank > 1 ? { id: "postgame.verdict.listed", slots: { rank: o.rank } } : { id: "postgame.verdict.own", slots: {} };
   return {
     champion,
@@ -83,7 +86,7 @@ export function postGameView(
     verdict: say(verdict),
     followed: o.rank > 0,
     lines: o.lines.filter((r) => !r.id.startsWith("postgame.predicted")).map((r) => reasonView(r, say)),
-    prediction: o.lines.filter((r) => r.id.startsWith("postgame.predicted")).map(say)[0] ?? null,
+    prediction: predicted && !repeats ? say(predicted) : null,
     focus: o.game && opts.focus ? opts.focus(o.game.matchId) : null,
   };
 }

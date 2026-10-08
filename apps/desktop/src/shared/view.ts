@@ -328,6 +328,8 @@ export interface FocusView {
   youText: string;
   targetText: string;
   typicalText: string;
+  /** "Rank average 6.0", or "Average in your games 6.0" when your rank's data was too thin. */
+  typicalLine: string;
   lowerIsBetter: boolean;
   checkGames: number;
   /** Your last games, oldest first: whether each reached the target. */

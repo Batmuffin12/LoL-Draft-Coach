@@ -153,6 +153,8 @@
     "postgame.verdict.listed": "You took #{rank}",
     "postgame.verdict.own": "Your own pick",
     "growth.why.band": "Why this: in {band}, {role} players who beat the average here win more (win rate +{gap:pct} points).",
+    "growth.typical.band": "Rank average {value}",
+    "growth.typical.games": "Average in your games {value}",
     "growth.why.games": "Why this: in your games, {role} players who beat the average here won more (win rate +{gap:pct} points).",
     "growth.met": "{metric}: {from} → {to}, goal met",
     "newchamp.like": "Plays like your {like:champion}",
@@ -209,7 +211,8 @@
   "metrics": {
     "challenges.takedownsFirstXMinutes": {
       "label": "takedowns before 10 min",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.earlyLaningPhaseGoldExpAdvantage": {
       "label": "early lane lead",
@@ -225,19 +228,23 @@
     },
     "challenges.turretPlatesTaken": {
       "label": "turret plates",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.killsOnLanersEarlyJungleAsJungler": {
       "label": "early gank kills",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.initialCrabCount": {
       "label": "first scuttle crabs",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.enemyJungleMonsterKills": {
       "label": "enemy jungle camps taken",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.killParticipation": {
       "label": "kill participation",
@@ -253,7 +260,8 @@
     },
     "challenges.soloKills": {
       "label": "solo kills",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "csPerMinute": {
       "label": "CS per minute",
@@ -261,7 +269,8 @@
     },
     "challenges.laneMinionsFirst10Minutes": {
       "label": "CS at 10 min",
-      "format": "integer"
+      "format": "integer",
+      "count": true
     },
     "challenges.jungleCsBefore10Minutes": {
       "label": "jungle CS at 10 min",
@@ -277,11 +286,13 @@
     },
     "challenges.controlWardsPlaced": {
       "label": "control wards",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.wardTakedowns": {
       "label": "wards cleared",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.visionScoreAdvantageLaneOpponent": {
       "label": "vision lead over your opponent",
@@ -293,23 +304,28 @@
     },
     "challenges.deathsByEnemyChamps": {
       "label": "deaths to champions",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.dragonTakedowns": {
       "label": "dragons",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.riftHeraldTakedowns": {
       "label": "heralds",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.baronTakedowns": {
       "label": "barons",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.turretTakedowns": {
       "label": "turrets",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "objectiveDamagePerMinute": {
       "label": "objective damage per minute",
@@ -317,11 +333,13 @@
     },
     "challenges.killsOnOtherLanesEarlyJungleAsLaner": {
       "label": "early kills in other lanes",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.getTakedownsInAllLanesEarlyJungleAsLaner": {
       "label": "early takedowns in every lane",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.moreEnemyJungleThanOpponent": {
       "label": "enemy jungle taken vs opponent",
@@ -333,11 +351,13 @@
     },
     "challenges.enemyChampionImmobilizations": {
       "label": "enemy immobilisations",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     },
     "challenges.pickKillWithAlly": {
       "label": "picks with an ally",
-      "format": "decimal"
+      "format": "decimal",
+      "count": true
     }
   }
 }

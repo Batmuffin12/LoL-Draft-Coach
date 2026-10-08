@@ -36,4 +36,16 @@ describe("focus view", () => {
     expect(focusInGame(growth, "EUW1_5", [m], config.explain)).toEqual({ label: "CS per minute", value: "7.0", target: "6.8", met: true });
     expect(focusInGame(growth, "EUW1_6", [m], config.explain)).toBeNull();
   });
+
+  it("shows one game's count as a whole number, and averages with a decimal", () => {
+    const deaths: GrowthFocus = { ...growth, focus: { ...growth.focus!, metric: "challenges.deathsByEnemyChamps", lowerIsBetter: true, target: 8 } };
+    const me = { championId: 103, position: "middle", win: true, challenges: { deathsByEnemyChamps: 8 } } as unknown as ParticipantSummary;
+    const m: UserMatch = { match: { matchId: "EUW1_5", queueId: 420, gameVersion: "16.19", endedAt: 1, durationSec: 1800, participants: [me] }, me: 0 };
+    expect(focusInGame(deaths, "EUW1_5", [m], config.explain)).toMatchObject({ value: "8", target: "8.0", met: true });
+  });
+
+  it("names the average by where it came from: your rank, or your own games when the rank's data is thin", () => {
+    expect(focusView(growth, deps)!.typicalLine).toBe("Rank average 7.6");
+    expect(focusView({ ...growth, reference: "games" }, deps)!.typicalLine).toBe("Average in your games 7.6");
+  });
 });

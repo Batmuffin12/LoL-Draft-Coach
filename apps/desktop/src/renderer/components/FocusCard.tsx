@@ -21,12 +21,12 @@ export function FocusCard({ focus: f }: { focus: FocusView }) {
         <span className="f-arrow" aria-hidden="true">
           →
         </span>
-        <span className="f-target" title="Your next step: halfway to the rank average">
+        <span className="f-target" title="Your next step: halfway to the average">
           <span className="label gold">Goal</span>
           <b>{f.goalText}</b>
         </span>
-        <span className="f-avg" title="The middle value for players in your role and rank">
-          Rank average {f.typicalText}
+        <span className="f-avg" title="The middle value for players in your role">
+          {f.typicalLine}
         </span>
       </div>
       <div className="games" title="Filled: you reached the goal in that game">

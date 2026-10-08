@@ -39,6 +39,11 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
     youText: fmt(f.you),
     targetText: fmt(f.target),
     typicalText: fmt(f.typical),
+    typicalLine: renderReason(
+      { id: g.reference === "band" ? "growth.typical.band" : "growth.typical.games", slots: { value: fmt(f.typical) } },
+      explain.templates,
+      deps.championName,
+    ),
     lowerIsBetter: f.lowerIsBetter,
     checkGames: deps.checkGames,
     recent: f.recent,
@@ -58,9 +63,11 @@ export function focusInGame(g: GrowthFocus | null, matchId: string | null, match
   if (!m || !me) return null;
   const v = readMetric(me, m.match.durationSec, f.metric);
   if (v === null) return null;
+  // One game's count (deaths, kills) reads as a whole number: "8", not the averages' "8.0".
+  const whole = Number.isInteger(v) && explain.metrics[f.metric]?.count === true;
   return {
     label: capital(metricLabel(f.metric, explain)),
-    value: formatMetric(v, f.metric, explain),
+    value: whole ? String(v) : formatMetric(v, f.metric, explain),
     target: formatMetric(f.target, f.metric, explain),
     met: f.lowerIsBetter ? v <= f.target : v >= f.target,
   };
