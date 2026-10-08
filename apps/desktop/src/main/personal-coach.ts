@@ -270,6 +270,7 @@ export class PersonalCoach extends Coach {
     });
     this.p.connector.on("gameflowPhase", (phase) => {
       if (phase === "InProgress") void this.onGameStarted();
+      if (["Lobby", "None", "Matchmaking", "ReadyCheck"].includes(phase)) this.recorder.leftChampSelect();
       // New games are in the player's history once a game has ended (the advice for it is sent first).
       if (phase === "EndOfGame") void this.onGameEnded();
       // The kept loadout is for the game being played: drop it once that game is over or left.

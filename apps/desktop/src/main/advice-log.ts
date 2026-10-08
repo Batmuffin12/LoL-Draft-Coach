@@ -36,6 +36,14 @@ export class AdviceRecorder {
     this.pending = { gameId: null, queueId: ctx.queueId, role: ctx.role, band: ctx.band, lockedAt: ctx.now, pick, shown: this.suggested };
   }
 
+  /**
+   * The client is back in the lobby (or queue) without a game having started: the champ select
+   * was dodged, so its pick must not be attached to a later game (one without a champ select).
+   */
+  leftChampSelect(): void {
+    if (this.pending && this.pending.gameId === null) this.newChampSelect();
+  }
+
   /** The game started: the client now knows its id. */
   gameStarted(gameId: number | null, queueId: number | null): void {
     if (!this.pending || !gameId) return;

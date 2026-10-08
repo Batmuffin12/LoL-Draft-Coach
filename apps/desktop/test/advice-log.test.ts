@@ -120,6 +120,19 @@ describe("AdviceRecorder", () => {
     expect(rec.gameEnded()).toBeNull();
   });
 
+  it("drops a dodged pick when the client goes back to the lobby, even with no new champ select", () => {
+    const rec = new AdviceRecorder();
+    rec.locked(opt(103), ctx);
+    rec.leftChampSelect(); // dodge: back to the lobby; the next game (e.g. TFT) has no champ select
+    rec.gameStarted(77, 1090);
+    expect(rec.gameEnded()).toBeNull();
+
+    rec.locked(opt(245), ctx);
+    rec.gameStarted(78, 420);
+    rec.leftChampSelect(); // a game is running: nothing is dropped
+    expect(rec.gameEnded()).toMatchObject({ gameId: 78 });
+  });
+
   it("needs the game id, and hands the record over once", () => {
     const rec = new AdviceRecorder();
     rec.shown([opt(103), opt(245)]);
