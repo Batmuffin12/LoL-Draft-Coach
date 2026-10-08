@@ -183,6 +183,38 @@ describe("syncUser", () => {
     expect(db.select().from(schema.userMatches).all().map((l) => l.participantIndex)).toEqual([2, 2]);
   });
 
+  it("keeps the user only when the account found by Riot ID played the user's stored games", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-DEVKEY");
+    seed(riot, "PUUID-DEVKEY", 3);
+    await syncUser(db, riot, user, settings(), NOW);
+    riot.foreign.add("PUUID-DEVKEY");
+
+    // Someone else took the Riot ID: their games share nothing with the stored ones.
+    riot.accounts["Ofek#EUW"] = "PUUID-STRANGER";
+    seed(riot, "PUUID-STRANGER", 2, 500);
+    await expect(syncUser(db, riot, user, settings(), NOW)).rejects.toThrow(/different Riot account/);
+    expect(db.select().from(schema.users).where(eq(schema.users.id, user.id)).get()?.puuid).toBe("PUUID-DEVKEY");
+
+    // The same player under the new key: their newest games include the stored ones.
+    riot.accounts["Ofek#EUW"] = "PUUID-NEWKEY";
+    riot.ids["PUUID-NEWKEY"] = [...riot.ids["PUUID-DEVKEY"]!];
+    seed(riot, "PUUID-NEWKEY", 1, -1);
+    expect((await syncUser(db, riot, user, settings(), NOW)).newMatches).toBe(1);
+    expect(db.select().from(schema.users).where(eq(schema.users.id, user.id)).get()?.puuid).toBe("PUUID-NEWKEY");
+  });
+
+  it("fails with a clear error when the new PUUID already belongs to another user", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-DEVKEY");
+    await newUser(db, "Again#EUW", "PUUID-NEWKEY");
+    riot.foreign.add("PUUID-DEVKEY");
+    riot.accounts["Ofek#EUW"] = "PUUID-NEWKEY";
+    await expect(syncUser(db, riot, user, settings(), NOW)).rejects.toThrow(/registered again/);
+  });
+
   it("still fails on a rejected PUUID when the Riot ID can't be found", async () => {
     const db = openDb(":memory:");
     const riot = fakeRiot();

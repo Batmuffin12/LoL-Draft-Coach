@@ -1,8 +1,9 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc/engine";
-import { participantIndex, RiotApiError, RiotKeyError, summarizeMatch, type Mastery, type RiotApi } from "@ldc/riot-api";
+import { participantIndex, summarizeMatch, type Mastery, type RiotApi } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
+import { isForeignPuuidError, isSamePlayer } from "./identity";
 import { matches, rankHistory, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
 
 /** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
@@ -15,15 +16,21 @@ export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "l
  * The user's masteries and their PUUID for the server's current key. PUUIDs are encrypted
  * per API key, so a stored one stops working when the key changes (e.g. development to
  * personal key) and Riot answers HTTP 400. Then the user is looked up again by Riot ID
- * and the new PUUID is stored.
+ * and, once that account is confirmed to be the same player, the new PUUID is stored.
  */
 async function masteriesWithCurrentPuuid(db: Db, riot: SyncRiot, user: User): Promise<{ puuid: string; masteries: Mastery[] }> {
   try {
     return { puuid: user.puuid, masteries: await riot.masteriesByPuuid(user.puuid) };
   } catch (err) {
-    if (!(err instanceof RiotApiError) || err instanceof RiotKeyError || err.status !== 400) throw err;
+    if (!isForeignPuuidError(err)) throw err;
     const account = await riot.accountByRiotId(user.gameName, user.tagLine);
     if (!account || account.puuid === user.puuid) throw err;
+    if (!(await isSamePlayer(db, riot, user, account.puuid, { storedPuuidForeign: true }))) {
+      throw new Error(`${user.gameName}#${user.tagLine} now belongs to a different Riot account; the user must register again.`);
+    }
+    if (db.select({ id: users.id }).from(users).where(eq(users.puuid, account.puuid)).get()) {
+      throw new Error(`${user.gameName}#${user.tagLine} is registered again as another user; this older user can be deleted.`);
+    }
     db.update(users).set({ puuid: account.puuid }).where(eq(users.id, user.id)).run();
     return { puuid: account.puuid, masteries: await riot.masteriesByPuuid(account.puuid) };
   }
