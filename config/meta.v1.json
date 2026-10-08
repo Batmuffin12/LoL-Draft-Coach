@@ -23,6 +23,12 @@
       "minZ": 2
     }
   },
+  "spikes": {
+    "windowMinutes": 3,
+    "itemSlots": 3,
+    "minGames": 60,
+    "priorGames": 100
+  },
   "builds": {
     "minGames": 3,
     "startingSeconds": 90,

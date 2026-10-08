@@ -35,6 +35,17 @@ export const MetaConfigSchema = z.object({
       minZ: z.number().min(0),
     }),
   }),
+  /** Power spikes per champion-role, measured from timelines of all bands (docs/ENGINE-PLAN.md). */
+  spikes: z.object({
+    /** Minutes before and after a spike event that are compared. */
+    windowMinutes: z.number().int().min(1),
+    /** Completed items measured (1 = the first). */
+    itemSlots: z.number().int().min(1),
+    /** Games a champion-role needs at an event before it is published. */
+    minGames: z.number().int().min(1),
+    /** Shrinks a champion's swing toward its role's: games worth of "no spike". */
+    priorGames: z.number().min(0),
+  }),
   /** Builds per champion-role (band plus the band above), from end-of-game data and timelines. */
   builds: z.object({
     /** Champion-roles need this many games for a build. */
