@@ -19,7 +19,6 @@ const deps = {
   explain: config.explain,
   champion: (id: number) => (NAMES[id] ? { id, name: NAMES[id]!, iconUrl: null } : null),
   championName: (id: number) => NAMES[id] ?? `#${id}`,
-  coreItems: (id: number) => (id === 99 ? ["Luden's Companion", "Shadowflame"] : []),
   planGames: [3, 5] as [number, number],
   notes: (id: number): LearningNotes | null => (id === 99 ? NOTES : null),
 };
@@ -46,12 +45,12 @@ describe("new champions view", () => {
     const v = newChampsView(a, deps);
     expect(v.picks.map((p) => [p.champion.name, p.like?.name ?? null, p.easeLabel, p.owned])).toEqual([["Lux", "Ahri", "Easy", false], ["Ekko", null, "Hard", true]]);
     expect(v.picks[0]!.reasons).toEqual(["You don't own it yet"]);
-    expect(v.plan).toBe("Try Lux in 3 to 5 Normal Draft games: Luden's Companion, then Shadowflame.");
+    expect(v.plan).toBe("Try Lux in 3 to 5 Normal Draft games.");
     expect(v.planNotes).toContain("Good into Orianna (+3.1%) in your rank");
     expect(v.learning).toBeNull();
   });
 
-  it("while you're learning one: your record and goal on it, its matchups, power curve and build; the picks are for after it", () => {
+  it("while you're learning one: your record and goal on it, its matchups, power curve; the picks are for after it", () => {
     const v = newChampsView({ role: "middle", picks: [pick(245)], learning: { championId: 99, progress: { games: 3, maxGames: 7, daysLeft: 12 } } }, deps);
     expect(v.learning).toMatchObject({
       title: "Learning Lux",
@@ -62,7 +61,6 @@ describe("new champions view", () => {
         "Good into Orianna (+3.1%) in your rank",
         "Hard into Zed (−4.2%), LeBlanc (−2.0%)",
         "Wins more of long games (53% vs 47% in short ones): farm safely and fight later",
-        "Build: Luden's Companion, then Shadowflame",
       ],
       after: "After Lux",
       why: "one new champion per role at a time",

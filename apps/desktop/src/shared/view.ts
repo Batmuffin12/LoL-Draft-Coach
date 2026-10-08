@@ -311,7 +311,7 @@ export interface NewChampRoleView {
     champion: ChampView | null;
     /** "3 of 7 games · 12 days left". */
     progress: string | null;
-    /** Your record and goal on it, its best and worst lane matchups, its power curve, then its build. */
+    /** Your record and goal on it, its best and worst lane matchups, its power curve. */
     lines: string[];
     /** "After Lillia", the head over the picks. */
     after: string;

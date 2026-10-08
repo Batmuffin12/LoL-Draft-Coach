@@ -551,14 +551,6 @@ export class PersonalCoach extends Coach {
             explain,
             champion: (id) => champView(id, lookup),
             championName: (id) => lookup(id)?.name ?? `#${id}`,
-            coreItems: (id) => {
-              const items = this.metaIndex?.build(id, r.role)?.core[0]?.items ?? [];
-              try {
-                return items.map((i) => this.deps.ddragon.data.itemInfo.get(i)?.name ?? `#${i}`);
-              } catch {
-                return [];
-              }
-            },
             planGames: this.config.engine.newChamps.planGames,
             notes: (id) =>
               learningNotes({

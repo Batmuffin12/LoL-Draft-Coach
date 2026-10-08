@@ -7,8 +7,6 @@ export interface NewChampsViewDeps {
   explain: ExplainConfig;
   champion: (id: number) => ChampView | null;
   championName: (id: number) => string;
-  /** The top suggestion's usual first items in the role (names), for the plan. */
-  coreItems: (championId: number) => string[];
   /** "Try it in 3 to 5 Normal Draft games." */
   planGames: [number, number];
   /** What to know while learning a champion (your games on it, its matchups and power curve); null without data. */
@@ -54,23 +52,20 @@ export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewCh
   let learning: NewChampRoleView["learning"] = null;
   if (a.learning) {
     const { championId, progress: p } = a.learning;
-    const core = deps.coreItems(championId);
     learning = {
       title: say({ id: "newchamp.learning", slots: { champion: championId } }),
       champion: deps.champion(championId),
       progress: p
         ? say({ id: p.daysLeft === 1 ? "newchamp.learning.progress.oneDay" : "newchamp.learning.progress", slots: { games: Math.min(p.games, p.maxGames), max: p.maxGames, days: p.daysLeft } })
         : null,
-      lines: [...notesOf(championId), ...(core.length ? [say({ id: "newchamp.learning.plan", slots: { core: core.join(", then ") } })] : [])],
+      // The build is left out: champ select shows it when you play the champion.
+      lines: notesOf(championId),
       after: say({ id: "newchamp.after", slots: { champion: championId } }),
       why: say({ id: "newchamp.after.why", slots: {} }),
     };
   } else if (top) {
-    const core = deps.coreItems(top.championId);
     const [from, to] = deps.planGames;
-    plan = core.length
-      ? say({ id: "newchamp.plan", slots: { champion: top.championId, from, to, core: core.join(", then ") } })
-      : say({ id: "newchamp.plan.nocore", slots: { champion: top.championId, from, to } });
+    plan = say({ id: "newchamp.plan", slots: { champion: top.championId, from, to } });
     planNotes = notesOf(top.championId);
   }
   return {
