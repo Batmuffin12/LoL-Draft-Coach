@@ -18,6 +18,7 @@ import {
   calibration,
   DRAFT_TERMS,
   draftGames,
+  experienceCurve,
   ENGINE_AS_IS,
   expectedCalibrationError,
   fitDraftModel,
@@ -26,6 +27,8 @@ import {
   only,
   onlyTerms,
   pairedLogLossInterval,
+  personalGames,
+  personalPredictions,
   predict,
   predictDrafts,
   prepareBacktest,
@@ -36,7 +39,7 @@ import {
   type Prediction,
   type Scores,
 } from "@ldc/meta";
-import type { MatchSummary, TermName } from "@ldc/shared";
+import type { MatchSummary, TermName, UserMatch } from "@ldc/shared";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
 import { readServerEnv } from "./env";
@@ -59,8 +62,15 @@ const bandsForBuilds = [band, ...buildBandsFor([band], config.bands)];
 const buildRows = db.$client
   .prepare(`SELECT summary FROM matches WHERE band IN (${bandsForBuilds.map(() => "?").join(",")}) AND json_extract(summary, '$.timeline') IS NOT NULL`)
   .all(...bandsForBuilds) as { summary: string }[];
+// Users' own games (for the personal term): each user's history, oldest first.
+const userRows = db.$client
+  .prepare("SELECT um.user_id AS user, um.participant_index AS me, m.summary AS summary FROM user_matches um JOIN matches m ON m.match_id = um.match_id ORDER BY um.ended_at")
+  .all() as { user: number; me: number; summary: string }[];
 db.$client.close();
 const matches = rows.map((r) => JSON.parse(r.summary) as MatchSummary);
+const byUser = new Map<number, UserMatch[]>();
+for (const r of userRows) byUser.set(r.user, [...(byUser.get(r.user) ?? []), { match: JSON.parse(r.summary) as MatchSummary, me: r.me }]);
+const histories = [...byUser.values()];
 
 const bt = prepareBacktest({ band, matches, testShare, aggregation: config.meta.aggregation, engine: config.engine, metrics: playstyleMetrics(config.engine) });
 const pct = (x: number) => (Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : "—");
@@ -150,6 +160,27 @@ Draft level (one prediction per game): train ${split.train.length}, validation $
   console.log(`  fitted vs engine as is: ${ivl(fittedLine.p, asIs)}`);
   console.log(`  fitted weights: ${DRAFT_TERMS.map((t) => `${t} ${fitted.weights[t].toFixed(2)}`).join(", ")}; blue side ${fitted.intercept >= 0 ? "+" : ""}${fitted.intercept.toFixed(1)} points`);
   console.log("  (a weight near 0 means the term adds nothing; near 1, it is right as designed; a negative weight hurts.)");
+}
+
+// The personal term, on users' own games: comfort from each player's earlier games only.
+{
+  const index = indexAsOf(matches, band, config.meta.aggregation, config.engine, playstyleMetrics(config.engine));
+  const games = personalGames(histories, index, band, config.engine);
+  console.log(`\nPersonal term on users' own games (${histories.length} users, ${games.length} games after each user's first 20):`);
+  if (games.length) {
+    const off = personalPredictions(games, 0);
+    for (const scale of [0, 0.5, 1, 1.5, 2]) {
+      const p = personalPredictions(games, scale);
+      const [lo, hi] = pairedLogLossInterval(p, off);
+      const s = score(p);
+      console.log(`  personal × ${scale.toFixed(1)}${scale === 1 ? " (as configured)" : "                "} log-loss ${s.logLoss.toFixed(4)}  right ${pct(s.accuracy)}  vs off [${lo >= 0 ? "+" : ""}${lo.toFixed(4)}, ${hi >= 0 ? "+" : ""}${hi.toFixed(4)}]`);
+    }
+    console.log("  Your learning curve (win rate by games on the champion before):");
+    for (const b of experienceCurve(games, [0, 1, 5, 10, 20, 50])) {
+      const label = b.to === null ? `${b.from}+` : b.to - b.from === 1 ? String(b.from) : `${b.from}–${b.to - 1}`;
+      console.log(`    ${label.padEnd(6)} ${pct(b.winRate)} of ${b.games} games`);
+    }
+  }
 }
 
 // Items: rank each held-out purchase's slot from builds learned on older games.
