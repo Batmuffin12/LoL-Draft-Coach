@@ -90,6 +90,8 @@ export const EngineConfigSchema = z.object({
     /** A metric must separate wins from losses by at least this much win rate to be a focus. */
     minImportance: z.number().min(0),
   }),
+  /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
+  earlyDeathsMinute: z.number().positive().default(14),
   /** The game plan after lock-in: when its lines are said (all from measured snapshot data). */
   plan: z.object({
     /** A lane within this change in win chance (0..1) either way is "even". */

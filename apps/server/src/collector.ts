@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
 import type { RankBandConfig } from "@ldc/engine";
 import type { MetaConfig } from "@ldc/meta";
-import { RiotKeyError, summarizeMatch, summarizeTimeline, type RiotApi } from "@ldc/riot-api";
+import { deathsBefore, RiotKeyError, summarizeMatch, summarizeTimeline, withEarlyDeaths, type RiotApi } from "@ldc/riot-api";
 import type { MatchSummary, RankBandId } from "@ldc/shared";
 import type { Db } from "./db";
 import { collectorCursors, matches, userMatches } from "./db/schema";
@@ -30,6 +30,8 @@ export interface CollectOptions {
   since: number;
   /** Games shorter than this are remakes the aggregation drops: they get no timeline. */
   minDurationSec?: number;
+  /** Deaths before this second count as early (stamped on participants when there is a timeline). */
+  earlyDeathsSec?: number;
   /** For shuffling a page of players (tests pass a fixed one). */
   random?: () => number;
 }
@@ -207,7 +209,10 @@ async function collectPlayer(
         return null;
       });
       result.riotCalls++;
-      if (timeline) summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+      if (timeline) {
+        summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+        if (opts.earlyDeathsSec) summary = withEarlyDeaths(summary, deathsBefore(timeline, match, opts.earlyDeathsSec));
+      }
     }
     const inserted = db
       .insert(matches)

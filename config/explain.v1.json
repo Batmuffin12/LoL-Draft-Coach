@@ -222,6 +222,11 @@
     "playmaking": "Playmaking (CC)"
   },
   "metrics": {
+    "earlyDeaths": {
+      "label": "deaths before 14 min",
+      "format": "decimal",
+      "count": true
+    },
     "challenges.takedownsFirstXMinutes": {
       "label": "takedowns before 10 min",
       "format": "decimal",

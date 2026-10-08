@@ -30,7 +30,7 @@ const riot = env.RIOT_API_KEY
     })
   : null;
 const sync = riot
-  ? new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands }, {
+  ? new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands, earlyDeathsMinute: config.engine.earlyDeathsMinute }, {
       tickMs: Math.max(1, env.SYNC_INTERVAL_MINUTES) * MINUTE,
       // Refresh a user's games when older than SYNC_STALE_MINUTES while they've used the app in the last 14 days.
       staleAfterMs: env.SYNC_STALE_MINUTES * MINUTE,

@@ -6,6 +6,33 @@ import type { Match, Timeline } from "./schemas";
  * order per participant, indexed like the match's participants. PUUIDs are only used here
  * to line the two up and are dropped. Undone purchases and sales are removed.
  */
+/**
+ * Each participant's deaths to champions before `beforeSec` (from CHAMPION_KILL events), indexed
+ * like the match's participants: for the "deaths before 14 min" metric.
+ */
+export function deathsBefore(timeline: Timeline, match: Match, beforeSec: number): number[] {
+  const byPuuid = new Map(match.info.participants.map((p, i) => [p.puuid, i]));
+  const indexOf = new Map<number, number>();
+  for (const p of timeline.info.participants) {
+    const i = byPuuid.get(p.puuid);
+    if (i !== undefined) indexOf.set(p.participantId, i);
+  }
+  const out = match.info.participants.map(() => 0);
+  for (const frame of timeline.info.frames) {
+    for (const e of frame.events) {
+      if (e.type !== "CHAMPION_KILL" || e.victimId === undefined || e.timestamp / 1000 >= beforeSec) continue;
+      const i = indexOf.size ? indexOf.get(e.victimId) : e.victimId - 1;
+      if (i !== undefined && i >= 0 && i < out.length) out[i]!++;
+    }
+  }
+  return out;
+}
+
+/** The summary with each participant's early deaths stamped on (see `deathsBefore`). */
+export function withEarlyDeaths<T extends { participants: object[] }>(summary: T, deaths: number[]): T {
+  return { ...summary, participants: summary.participants.map((p, i) => (deaths[i] === undefined ? p : { ...p, earlyDeaths: deaths[i] })) };
+}
+
 export function summarizeTimeline(timeline: Timeline, match: Match): MatchTimeline {
   const indexOf = new Map<number, number>();
   const byPuuid = new Map(match.info.participants.map((p, i) => [p.puuid, i]));

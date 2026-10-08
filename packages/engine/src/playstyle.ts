@@ -28,6 +28,8 @@ export function readMetric(p: ParticipantSummary, durationSec: number, metric: s
       return p.objectiveDamage / minutes;
     case "visionScorePerMinute":
       return p.visionScore / minutes;
+    case "earlyDeaths":
+      return p.earlyDeaths ?? null;
     default:
       return null;
   }

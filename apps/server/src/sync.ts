@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc/engine";
-import { participantIndex, RiotKeyError, summarizeMatch, summarizeTimeline, type Mastery, type RiotApi } from "@ldc/riot-api";
+import { deathsBefore, participantIndex, RiotKeyError, summarizeMatch, summarizeTimeline, withEarlyDeaths, type Mastery, type RiotApi } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
 import { isForeignPuuidError, isSamePlayer } from "./identity";
@@ -39,6 +39,8 @@ async function masteriesWithCurrentPuuid(db: Db, riot: SyncRiot, user: User): Pr
 export interface SyncSettings {
   history: AppConfig["history"];
   bands: RankBandConfig;
+  /** Engine `earlyDeathsMinute`: deaths before it are stamped on your games that have a timeline. */
+  earlyDeathsMinute?: number;
 }
 
 export interface SyncResult {
@@ -123,7 +125,10 @@ export async function syncUser(
           if (err instanceof RiotKeyError) throw err;
           return null;
         });
-        if (timeline) summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+        if (timeline) {
+          summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+          if (settings.earlyDeathsMinute) summary = withEarlyDeaths(summary, deathsBefore(timeline, match, settings.earlyDeathsMinute * 60));
+        }
       }
       db.transaction((tx) => {
         tx.insert(matches)

@@ -235,6 +235,8 @@ export interface ParticipantSummary {
   perks: { primaryStyle: number; subStyle: number; runes: number[]; statPerks: number[] } | null;
   /** Numeric Match-V5 `challenges` metrics, as Riot names them; any may be missing. */
   challenges: Record<string, number>;
+  /** Deaths to champions before the configured minute (engine `earlyDeathsMinute`), from the timeline; absent without one. */
+  earlyDeaths?: number;
 }
 
 /** A stored match: game facts and the ten anonymised participants. */

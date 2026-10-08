@@ -148,7 +148,8 @@
       "riskControl": {
         "metrics": [
           "-deathsPerMinute",
-          "-challenges.deathsByEnemyChamps"
+          "-challenges.deathsByEnemyChamps",
+          "-earlyDeaths"
         ]
       },
       "objectives": {
@@ -177,6 +178,7 @@
     }
   },
   "growth": { "window": 20, "checkGames": 10, "targetStep": 0.5, "minGames": 8, "minImportance": 0.02 },
+  "earlyDeathsMinute": 14,
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
   "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },

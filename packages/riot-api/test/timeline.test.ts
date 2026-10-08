@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ITEM_BOUGHT, ITEM_SOLD } from "@ldc/shared";
-import { MatchSchema, TimelineSchema, summarizeTimeline } from "../src/index";
+import { deathsBefore, MatchSchema, TimelineSchema, summarizeTimeline, withEarlyDeaths } from "../src/index";
 
 const match = MatchSchema.parse({
   metadata: { matchId: "EUW1_1" },
@@ -76,5 +76,23 @@ describe("summarizeTimeline", () => {
 
   it("never keeps PUUIDs", () => {
     expect(JSON.stringify(t)).not.toContain("SECRET");
+  });
+});
+
+describe("deathsBefore", () => {
+  const timeline = TimelineSchema.parse(raw);
+
+  it("counts each participant's deaths before the minute, lined up with the match", () => {
+    // Participant 2 (SECRET-B, match index 0) died at 13:50.
+    expect(deathsBefore(timeline, match, 14 * 60)).toEqual([1, 0]);
+    expect(deathsBefore(timeline, match, 13 * 60)).toEqual([0, 0]);
+  });
+
+  it("stamps the counts on the summary's participants", () => {
+    const s = withEarlyDeaths({ participants: [{ championId: 2 }, { championId: 1 }] }, [1, 0]);
+    expect(s.participants).toEqual([
+      { championId: 2, earlyDeaths: 1 },
+      { championId: 1, earlyDeaths: 0 },
+    ]);
   });
 });
