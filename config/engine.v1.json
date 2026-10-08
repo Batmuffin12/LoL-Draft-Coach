@@ -177,7 +177,24 @@
       }
     }
   },
-  "growth": { "window": 20, "checkGames": 10, "targetStep": 0.5, "minGames": 8, "minImportance": 0.02 },
+  "growth": {
+    "window": 20,
+    "checkGames": 10,
+    "targetStep": 0.5,
+    "minGames": 8,
+    "minImportance": 0.02,
+    "metrics": [
+      "-earlyDeaths",
+      "challenges.laneMinionsFirst10Minutes",
+      "challenges.jungleCsBefore10Minutes",
+      "challenges.takedownsFirstXMinutes",
+      "challenges.turretPlatesTaken",
+      "challenges.initialCrabCount",
+      "challenges.killsOnLanersEarlyJungleAsJungler",
+      "challenges.controlWardsPlaced",
+      "challenges.visionScorePerMinute"
+    ]
+  },
   "earlyDeathsMinute": 14,
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },

@@ -69,7 +69,8 @@ const at = (q: number[], f: number) => q[Math.round(f * (q.length - 1))]!;
 /**
  * The growth focus (DESIGN §7): on your main champion and role, the metric where you are
  * furthest below typical, scaled by how much it separates wins from losses in that role:
- * impact = max(0, typical − you) / spread × importance. Pure; stateless: the target is set
+ * impact = max(0, typical − you) / spread × importance, over `growth.metrics` (early-game
+ * metrics and habits, not totals that follow the result). Pure; stateless: the target is set
  * from your games before the last `checkGames`, and those last games are the progress.
  */
 export function pickFocus(
@@ -94,7 +95,7 @@ export function pickFocus(
   const older = games.slice(g.checkGames);
   const baseGames = older.length >= Math.ceil(g.checkGames / 2) ? older : games;
 
-  const metrics = [...new Set(Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
+  const metrics = [...new Set(g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
   const useBand = Object.values(bandReferences ?? {}).some((r) => r.importance !== undefined && r.n >= cfg.playstyle.minReferenceSamples);
   const candidates: FocusMetric[] = [];
   for (const raw of metrics) {

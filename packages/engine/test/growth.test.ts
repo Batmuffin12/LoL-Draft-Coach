@@ -6,7 +6,7 @@ import { metricImportance, parseEngineConfig, pickFocus } from "../src/index";
 const engine = parseEngineConfig(JSON.parse(readFileSync(new URL("../../../config/engine.v1.json", import.meta.url), "utf8")));
 // Two metrics only, so each test reads clearly: CS per minute, and deaths per minute (lower is better).
 const cfg = {
-  growth: { ...engine.growth, window: 20, checkGames: 10, targetStep: 0.5, minGames: 8, minImportance: 0.02 },
+  growth: { ...engine.growth, window: 20, checkGames: 10, targetStep: 0.5, minGames: 8, minImportance: 0.02, metrics: undefined },
   playstyle: { ...engine.playstyle, minReferenceSamples: 20, axes: { farming: { metrics: ["csPerMinute"] }, risk: { metrics: ["-deathsPerMinute"] } } },
 };
 
@@ -54,6 +54,14 @@ describe("metricImportance", () => {
 });
 
 describe("pickFocus", () => {
+  it("chooses only from growth.metrics when set (early-game metrics and habits, not totals that follow the result)", () => {
+    const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60, 9));
+    expect(pickFocus(matches, "middle", cfg)!.focus?.metric).toBe("csPerMinute");
+    const onlyDeaths = pickFocus(matches, "middle", { ...cfg, growth: { ...cfg.growth, metrics: ["-deathsPerMinute"] } })!;
+    expect([onlyDeaths.focus, ...onlyDeaths.met].every((m) => m === null || m.metric === "deathsPerMinute")).toBe(true);
+    expect(engine.growth.metrics).toContain("-earlyDeaths");
+  });
+
   it("picks the metric that matters and where you are below typical, on your main champion", () => {
     // 20 Ahri games farming 60 (typical is ~80); a few games on another champion.
     const matches = [...Array.from({ length: 20 }, (_, i) => game(i, 103, 60)), ...Array.from({ length: 3 }, (_, i) => game(30 + i, 245, 90))];

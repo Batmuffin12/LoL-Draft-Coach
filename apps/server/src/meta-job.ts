@@ -20,9 +20,10 @@ export interface MetaSettings {
   engine: EngineConfig;
 }
 
-/** Playstyle metric names from the engine config (without the lower-is-better "-"). */
+/** Playstyle and growth-focus metric names from the engine config (without the lower-is-better "-"). */
 export function playstyleMetrics(engine: EngineConfig): string[] {
-  return [...new Set(Object.values(engine.playstyle.axes).flatMap((a) => a.metrics.map((m) => m.replace(/^-/, ""))))];
+  const all = [...Object.values(engine.playstyle.axes).flatMap((a) => a.metrics), ...(engine.growth.metrics ?? [])];
+  return [...new Set(all.map((m) => m.replace(/^-/, "")))];
 }
 
 /** The `challenges` fields the engine reads. */

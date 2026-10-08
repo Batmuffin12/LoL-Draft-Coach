@@ -89,6 +89,13 @@ export const EngineConfigSchema = z.object({
     minGames: z.number().int().min(1),
     /** A metric must separate wins from losses by at least this much win rate to be a focus. */
     minImportance: z.number().min(0),
+    /**
+     * The metrics a focus is chosen from ("-" = lower is better): ones measured before the game is
+     * decided (first 10–14 minutes) or habits (control wards). Whole-game totals like deaths mostly
+     * follow the result (the losing team dies more), so they would always look most important.
+     * Absent: every playstyle metric.
+     */
+    metrics: z.array(z.string().min(1)).min(1).optional(),
   }),
   /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
   earlyDeathsMinute: z.number().positive().default(14),
