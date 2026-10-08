@@ -112,6 +112,20 @@ export const MetaSnapshotSchema = z.looseObject({
     }),
   ),
   references: z.record(z.string(), z.record(z.string(), z.looseObject({ n: z.number(), quantiles: z.array(z.number()) }))),
+  // Builds (loadout): the fields every build carries; absent in snapshots made before builds.
+  builds: z
+    .array(
+      z.looseObject({
+        championId: z.number(),
+        role: z.string(),
+        n: z.number(),
+        games: z.number(),
+        wins: z.number(),
+        pages: z.array(z.looseObject({ runes: z.array(z.number()), n: z.number() })),
+        items: z.array(z.looseObject({ itemId: z.number(), slot: z.number(), n: z.number() })),
+      }),
+    )
+    .optional(),
 });
 
 const ErrorBodySchema = z.looseObject({ error: z.string(), message: z.string().optional() });
