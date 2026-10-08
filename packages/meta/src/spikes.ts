@@ -15,6 +15,13 @@ export interface SpikeOptions {
   windowDays: number;
   /** Completed items (Data Dragon with the engine's item rules). */
   completed: ReadonlySet<number>;
+  /**
+   * Item-specific spikes: each player's swing at their own event time minus their swing at the
+   * role's usual second for that event ("role|item:1" → second, from `roleSeconds()` of a first
+   * pass). Without it, a spike also contains the champion's game phase (production, 2026-10-08:
+   * with long windows nearly all of it).
+   */
+  baselineSec?: ReadonlyMap<string, number>;
 }
 
 interface Acc {
@@ -75,16 +82,16 @@ export class SpikeAggregator {
     return out;
   }
 
-  private measure(t: MatchTimeline, i: number, opp: number, championId: ChampionId, role: Position, event: SpikeEvent, sec: number): void {
+  /** Gold-lead (and fights-won) swing around second `sec`: the window after minus the window before; null when it doesn't fit the game. */
+  private swing(t: MatchTimeline, i: number, opp: number, sec: number): { gold: number; fights: number | null } | null {
     const w = this.opts.config.windowMinutes;
     const a = Math.floor(sec / 60);
     const b = a + 1;
     const gi = t.gold[i]!;
     const go = t.gold[opp]!;
-    if (a - w < 0 || b + w >= gi.length || b + w >= go.length) return;
+    if (a - w < 0 || b + w >= gi.length || b + w >= go.length) return null;
     const lead = (f: number) => gi[f]! - go[f]!;
     const gold = lead(b + w) - lead(b) - (lead(a) - lead(a - w));
-
     let fights: number | null = null;
     if (t.kills) {
       const net = (from: number, to: number) => {
@@ -97,6 +104,21 @@ export class SpikeAggregator {
         return n;
       };
       fights = net(b, b + w) - net(a - w, a);
+    }
+    return { gold, fights };
+  }
+
+  private measure(t: MatchTimeline, i: number, opp: number, championId: ChampionId, role: Position, event: SpikeEvent, sec: number): void {
+    const real = this.swing(t, i, opp, sec);
+    if (!real) return;
+    let { gold, fights } = real;
+    // Item-specific: minus the same player's swing at the role's usual time for the event (the game phase).
+    const base = this.opts.baselineSec?.get(`${role}|${event.kind === "item" ? `item:${event.slot}` : `level:${event.level}`}`);
+    if (base !== undefined) {
+      const phase = this.swing(t, i, opp, base);
+      if (!phase) return;
+      gold -= phase.gold;
+      fights = fights !== null && phase.fights !== null ? fights - phase.fights : null;
     }
 
     const key = event.kind === "item" ? `item:${event.slot}` : `level:${event.level}`;
@@ -115,6 +137,11 @@ export class SpikeAggregator {
         x.fsq += fights * fights;
       }
     }
+  }
+
+  /** The mean second each role reaches each event ("role|item:1" → second): the `baselineSec` of an item-specific run. */
+  roleSeconds(): Map<string, number> {
+    return new Map([...this.byRole].map(([k, x]) => [k, (x.minutes / x.n) * 60]));
   }
 
   /** Matches with a usable timeline. */

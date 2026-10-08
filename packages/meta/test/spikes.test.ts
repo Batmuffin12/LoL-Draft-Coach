@@ -122,3 +122,33 @@ describe("checkSpikes", () => {
     expect(checkSpikes(flipped, opts, "time").goldCorrelation!).toBeLessThan(0.5);
   });
 });
+
+describe("item-specific spikes (baselineSec)", () => {
+  /**
+   * Champion 5 gets stronger at minute 12 whatever it builds (game phase); champion 6 right after
+   * its own first item, finished anywhere from minute 8 to 16. Both against champion 9, mid.
+   */
+  function timed(champion: 5 | 6, seed: number): MatchSummary {
+    const itemMin = 8 + (seed % 9);
+    const from = champion === 5 ? 12 : itemMin;
+    const g = game(champion, false, seed);
+    const gold = g.timeline!.gold[0]!.map((v, m) => v + (m > from ? 150 * (m - from) : 0));
+    return { ...g, timeline: { ...g.timeline!, gold: [gold, g.timeline!.gold[1]!], items: [[0, itemMin * 60, ITEM_BOUGHT, ITEM], [1, 600, ITEM_BOUGHT, ITEM]] } };
+  }
+  const games = Array.from({ length: 45 }, (_, s) => [timed(5, s), timed(6, s)]).flat();
+  const opts = { now: NOW, config: { ...config.spikes, minGames: 5, priorGames: 0 }, minDurationSec: 0, windowDays: 30, completed: new Set([ITEM]) };
+  const item1 = (a: SpikeAggregator, id: number) => a.finish().find((c) => c.championId === id)!.spikes.find((s) => s.kind === "item" && s.at === 1)!.gold;
+
+  it("keeps the spike that follows the item and drops the one that follows the clock", () => {
+    const plain = new SpikeAggregator(opts);
+    for (const g of games) plain.add(g);
+    // Without the baseline both look like item spikes.
+    expect(item1(plain, 5)).toBeGreaterThan(50);
+    expect(item1(plain, 6)).toBeGreaterThan(50);
+
+    const specific = new SpikeAggregator({ ...opts, baselineSec: plain.roleSeconds() });
+    for (const g of games) specific.add(g);
+    expect(item1(specific, 6)).toBeGreaterThan(item1(specific, 5) + 100);
+    expect(item1(specific, 5)).toBeLessThan(50);
+  });
+});

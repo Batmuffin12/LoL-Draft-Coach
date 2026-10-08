@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
-import { BandAggregator, BuildAggregator, ExpectedWinFitter, SpikeMeasure, type MetaConfig } from "@ldc/meta";
+import { BandAggregator, BuildAggregator, ExpectedWinFitter, SpikeAggregator, SpikeMeasure, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
 import type { ChampionSpikes, ExpectedWinTable, ItemInfo, MatchSummary, RankBandId, SpikeCheck } from "@ldc/shared";
 import { collect, pruneCollected, type CollectorRiot, type CollectResult } from "./collector";
@@ -170,21 +170,28 @@ export interface SpikesResult {
 
 /**
  * Power spikes from the timelines of every collected band (docs/ENGINE-PLAN.md: pooled), with
- * their split-half check. One pass per run; every band's snapshot carries the same result.
+ * their split-half check. Two passes per run (the roles' usual timings, then item-specific spikes); every band's snapshot carries the same result.
  */
 export async function measureSpikes(db: Db, bands: RankBandId[], settings: MetaSettings, now: number, items: ReadonlyMap<number, ItemInfo> | null): Promise<SpikesResult> {
   const { aggregation, spikes } = settings.meta;
-  const measure = new SpikeMeasure({
+  const opts = {
     now,
     config: spikes,
     minDurationSec: aggregation.minDurationSec,
     windowDays: aggregation.windowDays,
-    completed: items ? completedItems(items, settings.engine.loadout.items) : new Set(),
-  });
-  for await (const row of storedRows(db, now - aggregation.windowDays * DAY_MS)(bands)) {
-    // Most of the cost is parsing: skip rows without a timeline unread.
-    if (row.summary.includes('"timeline"')) measure.add(JSON.parse(row.summary) as MatchSummary);
-  }
+    completed: items ? completedItems(items, settings.engine.loadout.items) : new Set<number>(),
+  };
+  const rows = async function* () {
+    for await (const row of storedRows(db, now - aggregation.windowDays * DAY_MS)(bands)) {
+      // Most of the cost is parsing: skip rows without a timeline unread.
+      if (row.summary.includes('"timeline"')) yield JSON.parse(row.summary) as MatchSummary;
+    }
+  };
+  // Pass 1: each role's usual time for each event. Pass 2: item-specific spikes (minus that game phase).
+  const first = new SpikeAggregator(opts);
+  for await (const m of rows()) first.add(m);
+  const measure = new SpikeMeasure({ ...opts, baselineSec: first.roleSeconds() });
+  for await (const m of rows()) measure.add(m);
   return measure.finish();
 }
 
