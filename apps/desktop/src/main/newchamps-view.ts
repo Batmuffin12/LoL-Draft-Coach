@@ -21,8 +21,8 @@ const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
 
 /**
  * A learning plan as the New tab shows it: the stage, the one thing to watch next game, then
- * what to do at this stage, the champion's job, the role's cue, when it's strong, its matchups,
- * how long to give it and your record on it.
+ * only what the data says about this champion: how it wins in your rank (with your numbers on
+ * it), when it's strong, its matchups and your record on it. No generic advice.
  */
 export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "blockGames">): LearnView {
   const { explain } = deps;
@@ -49,15 +49,20 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
     focus = { text: say({ id, slots }), recent: f.recent };
   }
 
-  const lines: string[] = [say({ id: `newchamp.stage.${p.stage}`, slots: {} })];
-  if (p.stage === "practice" && p.ease === 3) lines.push(say({ id: "newchamp.stage.practice.hard", slots: {} }));
-  if (p.job && t[`newchamp.job.${p.job}`]) lines.push(say({ id: `newchamp.job.${p.job}`, slots: {} }));
-  if (t[`newchamp.role.${role}`]) lines.push(say({ id: `newchamp.role.${role}`, slots: {} }));
+  const lines: string[] = [];
+  if (p.wins.length) {
+    const items = p.wins.map((w) => {
+      const fmt = (v: number) => formatMetric(v, w.metric, explain);
+      return say({
+        id: w.you === null ? "newchamp.learn.win" : "newchamp.learn.win.you",
+        slots: { metric: metricLabel(w.metric, explain), winners: fmt(w.winners), losers: fmt(w.losers), you: w.you === null ? "" : fmt(w.you) },
+      });
+    });
+    lines.push(say({ id: "newchamp.learn.wins", slots: { items: items.join("; ") } }));
+  }
   if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
   if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
   if (p.hard.length) lines.push(say({ id: "newchamp.learn.hard", slots: { champions: list(p.hard) } }));
-  const [from, to] = deps.blockGames;
-  lines.push(say({ id: "newchamp.learn.settle", slots: { from, to, games: p.settleGames } }));
   if (p.record.games > 0) lines.push(say({ id: "newchamp.learn.record", slots: { wins: p.record.wins, losses: p.record.games - p.record.wins } }));
   return { stage: say({ id: `newchamp.stage.${p.stage}.label`, slots: {} }), focus, lines };
 }

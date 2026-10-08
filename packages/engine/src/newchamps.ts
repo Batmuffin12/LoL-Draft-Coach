@@ -217,6 +217,22 @@ export interface LearningPlan {
   hard: LearningMatchup[];
   /** Whether it wins more of long or short games (beyond `scalingGap`), when its power curve is measured. */
   curve: { late: boolean; early: number; lateRate: number } | null;
+  /**
+   * How it wins in your rank: the role's goal metrics where its won games differ most from its
+   * lost ones (in spreads of the role), at most `count`; with your own mean on it when you have games.
+   */
+  wins: LearningWin[];
+}
+
+export interface LearningWin {
+  metric: string;
+  lowerIsBetter: boolean;
+  /** Mean in its won and lost games in your rank. */
+  winners: number;
+  losers: number;
+  games: number;
+  /** Your mean on it in the role (null without games). */
+  you: number | null;
 }
 
 export interface LearningPlanInput {
@@ -281,7 +297,7 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
   let focus: LearningFocus | null = null;
   if (mine.length >= learn.focusMinGames) {
     let best = learn.dropMin;
-    for (const raw of config.growth.metrics ?? []) {
+    for (const raw of config.growth.roles?.[role] ?? config.growth.metrics ?? []) {
       const { metric, lowerIsBetter } = parseMetric(raw);
       const values = read(mine, metric);
       const usual = read(usualGames, metric);
@@ -324,5 +340,25 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
   const pc = index?.attributes.get(id)?.powerCurve;
   const gap = curveGap(pc, config.rating.minGames.meta, config.plan.scalingGap, config.rating.explain.powerCurveZ);
   const curve = pc && gap !== null ? { late: gap > 0, early: pc.early.winRate, lateRate: pc.late.winRate } : null;
-  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve };
+  // How it wins: the role's goal metrics, measured on this champion's won and lost games in the band.
+  const measured = index?.championWins(id, role) ?? null;
+  const refs = index?.snapshot.references[role] ?? {};
+  const wins: LearningWin[] = measured
+    ? (config.growth.roles?.[role] ?? config.growth.metrics ?? [])
+        .map(parseMetric)
+        .flatMap(({ metric, lowerIsBetter }) => {
+          const m = measured[metric];
+          if (!m) return [];
+          const q = refs[metric]?.quantiles;
+          const spread = q && q.length >= 3 ? q[Math.round(0.75 * (q.length - 1))]! - q[Math.round(0.25 * (q.length - 1))]! : 0;
+          const gap = (lowerIsBetter ? m[1] - m[0] : m[0] - m[1]) / (spread > 0 ? spread : Math.max(1e-9, Math.abs(m[0]) + Math.abs(m[1])));
+          if (gap <= 0) return [];
+          const you = read(mine, metric);
+          return [{ gap, win: { metric, lowerIsBetter, winners: m[0], losers: m[1], games: m[2], you: you.length ? avg(you) : null } }];
+        })
+        .sort((a, b) => b.gap - a.gap)
+        .slice(0, count)
+        .map((x) => x.win)
+    : [];
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, wins };
 }

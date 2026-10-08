@@ -18,8 +18,12 @@ const PLAN: LearningPlan = {
     { championId: 7, deltaWin: -0.02, games: 300 },
   ],
   curve: { late: true, early: 0.47, lateRate: 0.53 },
+  wins: [
+    { metric: "earlyDeaths", lowerIsBetter: true, winners: 1.1, losers: 2.05, games: 900, you: 2.5 },
+    { metric: "challenges.laneMinionsFirst10Minutes", lowerIsBetter: false, winners: 68.4, losers: 61.2, games: 900, you: null },
+  ],
 };
-const FIRST: LearningPlan = { ...PLAN, stage: "practice", ease: 3, settleGames: 30, record: { games: 0, wins: 0 }, focus: { ...PLAN.focus!, source: "basic", value: null, recent: [] }, good: [], hard: [], curve: null };
+const FIRST: LearningPlan = { ...PLAN, stage: "practice", ease: 3, settleGames: 30, record: { games: 0, wins: 0 }, focus: { ...PLAN.focus!, source: "basic", value: null, recent: [] }, good: [], hard: [], curve: null, wins: [] };
 const deps = {
   explain: config.explain,
   champion: (id: number) => (NAMES[id] ? { id, name: NAMES[id]!, iconUrl: null } : null),
@@ -55,18 +59,12 @@ describe("new champions view", () => {
     expect(v.planLearn).toEqual({
       stage: "Before your first game",
       focus: { text: "Deaths before 14 min: hold your usual (1.2 or fewer) while you learn the kit", recent: [] },
-      lines: [
-        "Spend a few minutes in the Practice Tool on its combo and spell ranges, then play it in Normal Draft, not ranked",
-        "Hard to learn: practise its combo before each game and give it Normal Draft games before ranked",
-        "Its job: hit spells from range before the fight starts; stay behind your frontline",
-        "Mid: learn its trading pattern (short trades or all-in) and when it can leave lane to help",
-        "Play it in blocks of 2 to 3 games; players keep improving on a new champion for about 30 games, so don't judge it before",
-      ],
+      lines: [], // no generic advice: only what the data says about the champion
     });
     expect(v.learning).toBeNull();
   });
 
-  it("while you're learning one: the stage, what dropped on it, its job, matchups, power curve and your record; the picks are for after it", () => {
+  it("while you're learning one: the stage, what dropped on it, how it wins in your rank, power curve, matchups and your record; the picks are for after it", () => {
     const v = newChampsView({ role: "middle", picks: [pick(245)], learning: { championId: 99, progress: { games: 3, maxGames: 7, daysLeft: 12 } } }, deps);
     expect(v.learning).toMatchObject({
       title: "Learning Lux",
@@ -75,13 +73,10 @@ describe("new champions view", () => {
         stage: "Building up",
         focus: { text: "Deaths before 14 min: 2.5 on it, 1.2 on your other mid champions. Get back to 1.2 or fewer", recent: [false, true, false] },
         lines: [
-          "One thing per game, then look back at that game before the next",
-          "Its job: hit spells from range before the fight starts; stay behind your frontline",
-          "Mid: learn its trading pattern (short trades or all-in) and when it can leave lane to help",
+          "How it wins in your rank: deaths before 14 min 1.1 in wins vs 2.0 in losses (you: 2.5); CS at 10 min 68 in wins vs 61 in losses",
           "Wins more of long games (53% vs 47% in short ones): farm safely and fight later",
           "Easier first games into Orianna (+3.1%)",
           "Avoid or ban while learning: Zed (−4.2%), LeBlanc (−2.0%)",
-          "Play it in blocks of 2 to 3 games; players keep improving on a new champion for about 15 games, so don't judge it before",
           "Your games on it: 2 won, 1 lost",
         ],
       },
