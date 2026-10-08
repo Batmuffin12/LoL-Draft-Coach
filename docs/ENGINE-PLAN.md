@@ -75,3 +75,16 @@ Steps 2–6 are the power-spike feature (one milestone-sized chunk, roughly a we
 1. **Power spikes are their own milestone: M8 (v0.8.0)**, after v0.7.0; in game and polish moves to M9 (SPEC roadmap updated).
 2. **Spikes pool all rank bands.**
 3. **Timelines on every Gold–Plat game: approved.** Done on `milestone-7-grow` so production collects spike data from the v0.7.0 deploy on: `timelineShare` 1, run budget 2400 s (docs/CLOUD.md), and timelines keep champion kills and levels per minute (step 2 of the plan). Older stored rows have neither; the aggregator must skip them.
+
+## M8 progress (branch `milestone-8-spikes`, from `milestone-7-grow`)
+
+| Step | Commit | State |
+| --- | --- | --- |
+| Timeline data (kills, levels; timelines on every Gold–Plat game) | 75b0f7f, 1675a99 | Done; reaches production with v0.7.0 |
+| `SpikeAggregator` (gold swing and fights won after vs before each item and level, minus the role's, shrunk) | 87f209b | Done |
+| `pnpm --filter @ldc/server spikes`: split-half check + strongest/weakest list | 8080c96 | Done; **local data fails the check (0.09)** |
+| Spikes and `spikeCheck` in every band's snapshot (one pass per run, all bands) | 267e374 | Done |
+| Shown in the game plan, the New tab and the Build tab, only when `spikeCheck` passes (`engine.v1.json` `spikes`) | 02c5a70 | Done; sim scenario `locked-spikes` |
+| Your first-item timing vs typical (New tab) | 5438184 | Done; needs ≥ 2 of your games on the champion with a timeline |
+
+**Waiting on data:** ship v0.7.0 (the owner tries M7 first), let production collect a few days of timelines with kills and levels, copy the DB (docs/CLOUD.md) and run `pnpm --filter @ldc/server spikes`. If the check passes (correlation ≥ 0.5, ≥ 80% same direction), merge M8 and the spikes appear on their own; if not, try the time-matched comparison or a longer window before showing anything.
