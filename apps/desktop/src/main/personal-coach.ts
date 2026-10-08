@@ -1,5 +1,5 @@
 import { communityDragonAsset } from "@ldc/ddragon";
-import { LcuImporter, LcuWriteError, unavailableChampions } from "@ldc/lcu";
+import { LcuImporter, unavailableChampions } from "@ldc/lcu";
 import {
   adviseRoles,
   bandFromRankedEntries,
@@ -40,6 +40,7 @@ import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot,
 import type { BanView, MyPickView, NewChampRoleView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
+import { importLoadout } from "./loadout-import";
 import { focusInGame, focusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
 import { monthView } from "./month-view";
@@ -153,45 +154,7 @@ export class PersonalCoach extends Coach {
     const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, String);
     const importer = new LcuImporter(creds);
     try {
-      const l = shown.loadout;
-      if (kind === "runes") {
-        // The rune page and the spells are separate client calls: one failing doesn't stop the other.
-        const done: string[] = [];
-        const failed = (err: unknown) =>
-          done.push(err instanceof LcuWriteError && err.reason === "pagesFull" ? say("import.runes.full") : say("import.failed", { error: (err as Error).message }));
-        if (l.page) {
-          const p = l.page.value;
-          // Stored shards are in Riot's match order (defense, flex, offense); the client wants offense, flex, defense.
-          await importer
-            .importRunePage({ name: shown.champion, primaryStyleId: p.primaryStyle, subStyleId: p.subStyle, selectedPerkIds: [...p.runes, ...[...p.statPerks].reverse()] })
-            .then((result) => done.push(say(`import.runes.${result}`)), failed);
-        }
-        const s = l.spells?.value;
-        if (s?.length === 2) await importer.importSpells([s[0]!, s[1]!]).then(() => done.push(say("import.spells.done")), failed);
-        this.importMessage = done.join(" · ");
-      } else {
-        // A full build: start, boots, the core (items 1-3) and later items (4+), what to buy
-        // against this enemy team (one block per need), and the other options players take.
-        const path = l.core?.value ?? [];
-        const onPath = new Set([...path, ...(l.boots ? [l.boots.top.itemId] : [])]);
-        const others = [...new Set([...l.items.flatMap((s) => s.alternatives.map((a) => a.itemId)), ...(l.boots?.alternatives.map((a) => a.itemId) ?? [])])].filter((id) => !onPath.has(id));
-        const byTrait = new Map<string, number[]>();
-        for (const s of l.situational) byTrait.set(s.trait, [...(byTrait.get(s.trait) ?? []), s.itemId]);
-        const blocks = [
-          { type: say("import.block.starting"), items: l.starting?.value ?? [] },
-          { type: say("import.block.boots"), items: l.boots ? [l.boots.top.itemId] : [] },
-          { type: say("import.block.core"), items: path.slice(0, 3) },
-          l.laterPool.length
-            ? { type: say("import.block.laterPool"), items: l.laterPool.map((x) => x.itemId) }
-            : { type: say("import.block.later"), items: path.slice(3) },
-          ...[...byTrait].map(([trait, items]) => ({ type: say(`import.block.situational.${trait}`), items })),
-          { type: say("import.block.alternatives"), items: others },
-        ].filter((b) => b.items.length > 0);
-        await importer.importItemSet({ title: `${shown.champion} ${l.role}`, championId: l.championId, mapId: Number(this.config.engine.loadout.items.mapId), blocks });
-        this.importMessage = say("import.items.done");
-      }
-    } catch (err) {
-      this.importMessage = err instanceof LcuWriteError && err.reason === "pagesFull" ? say("import.runes.full") : say("import.failed", { error: (err as Error).message });
+      this.importMessage = await importLoadout(kind, shown, importer, { say, mapId: Number(this.config.engine.loadout.items.mapId) });
     } finally {
       importer.close();
     }
