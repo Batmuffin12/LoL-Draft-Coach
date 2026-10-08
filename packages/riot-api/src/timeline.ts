@@ -46,14 +46,28 @@ export function summarizeTimeline(timeline: Timeline, match: Match): MatchTimeli
   const n = match.info.participants.length;
   const gold: number[][] = Array.from({ length: n }, () => []);
   const skills: number[][] = Array.from({ length: n }, () => []);
+  const levels: number[][] = Array.from({ length: n }, () => []);
   const items: [number, number, number, number][] = [];
+  const kills: [number, number, number, number][] = [];
 
   for (const frame of timeline.info.frames) {
     for (const pf of Object.values(frame.participantFrames)) {
       const i = index(pf.participantId);
-      if (i !== undefined) gold[i]!.push(Math.round(pf.totalGold));
+      if (i === undefined) continue;
+      gold[i]!.push(Math.round(pf.totalGold));
+      if (pf.level !== undefined) levels[i]!.push(pf.level);
     }
     for (const e of frame.events) {
+      if (e.type === "CHAMPION_KILL") {
+        const victim = index(e.victimId);
+        if (victim === undefined) continue;
+        const assists = (e.assistingParticipantIds ?? []).reduce((bits, id) => {
+          const a = index(id);
+          return a === undefined ? bits : bits | (1 << a);
+        }, 0);
+        kills.push([Math.round(e.timestamp / 1000), e.killerId ? (index(e.killerId) ?? -1) : -1, victim, assists]);
+        continue;
+      }
       const i = index(e.participantId);
       if (i === undefined) continue;
       const sec = Math.round(e.timestamp / 1000);
@@ -92,5 +106,7 @@ export function summarizeTimeline(timeline: Timeline, match: Match): MatchTimeli
       }
     }
   }
-  return { gold, items, skills };
+  // Levels only when every participant has one per frame (older timelines may lack them).
+  const withLevels = levels.every((l, i) => l.length === gold[i]!.length && l.length > 0);
+  return { gold, items, skills, ...(withLevels ? { levels } : {}), kills };
 }

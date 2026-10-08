@@ -273,6 +273,13 @@ export interface MatchTimeline {
   items: [number, number, number, number][];
   /** Skill slots (1 = Q … 4 = R) per participant, in level-up order (normal level-ups only). */
   skills: number[][];
+  /** Champion level per participant at each frame (absent in timelines stored before 2026-10-08). */
+  levels?: number[][];
+  /**
+   * Champion kills in time order: [second, killer, victim, assists bitmask (bit i = participant i)];
+   * killer is -1 when no champion got the kill. For power spikes and "when you die" (absent before 2026-10-08).
+   */
+  kills?: [number, number, number, number][];
 }
 
 /** A match from a user's own history, with which participant they were. */

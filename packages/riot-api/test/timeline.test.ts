@@ -74,6 +74,26 @@ describe("summarizeTimeline", () => {
     expect(t.skills).toEqual([[1, 2], []]);
   });
 
+  it("keeps champion kills lined up with the match: second, killer, victim, assists bitmask", () => {
+    expect(t.kills).toEqual([[830, 1, 0, 0]]);
+    const withAssist = structuredClone(raw);
+    withAssist.info.frames[1]!.events.push({ type: "CHAMPION_KILL", timestamp: 900000, killerId: 0, victimId: 1, assistingParticipantIds: [2] } as never);
+    expect(summarizeTimeline(TimelineSchema.parse(withAssist), match).kills).toEqual([
+      [830, 1, 0, 0],
+      [900, -1, 1, 0b01],
+    ]);
+  });
+
+  it("keeps levels per minute only when every participant has them", () => {
+    expect(t.levels).toBeUndefined();
+    const leveled = structuredClone(raw);
+    leveled.info.frames.forEach((f, k) => Object.values(f.participantFrames).forEach((pf) => Object.assign(pf, { level: k + 1 })));
+    expect(summarizeTimeline(TimelineSchema.parse(leveled), match).levels).toEqual([
+      [1, 2],
+      [1, 2],
+    ]);
+  });
+
   it("never keeps PUUIDs", () => {
     expect(JSON.stringify(t)).not.toContain("SECRET");
   });
