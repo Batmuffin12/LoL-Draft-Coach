@@ -46,7 +46,7 @@
     "pool.hole.frontline": "No frontline pick",
     "pool.hole.engage": "No crowd-control pick",
     "pool.hole.evidence": "Your team lacked it in {lacking} of your last {losses} {role} {losses|loss|losses}",
-    "pool.hole.coveredBy": "{champions} would cover it",
+    "pool.hole.coveredBy": "try {champions}",
     "meta.strong": "Strong in {role} in your rank: {winRate:pct1}% win rate ({games} games)",
     "meta.weak": "Weak in {role} in your rank right now: {winRate:pct1}% win rate ({games} games)",
     "lane.good": "{delta:signedPct1}% into {enemy:champion} ({games} games)",

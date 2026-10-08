@@ -208,6 +208,9 @@ p { margin: 0; }
 .table .c-bar { height: 8px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
 .table .c-bar .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
 .table.matchups .trow { min-height: 30px; padding: 1px 6px; }
+.table.pool .trow { min-height: 34px; padding: 2px 6px; }
+.table.pool .c-num.big { font-size: var(--fs-heading); line-height: var(--lh-heading); }
+.table.pool .nm { font-size: var(--fs-body); line-height: var(--lh-body); }
 .table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .table .trow .sub b { color: var(--text); font-weight: 600; }
 .table .detail { padding: 6px 6px 0; }
@@ -355,7 +358,7 @@ p { margin: 0; }
 .section-head.closed:hover .label, .section-head.closed:hover .micro { color: var(--text); }
 .section-head.closed:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .section-head.closed .rule { flex: 0 0 16px; }
-.section-head.closed .micro { flex: 1; line-height: 15px; }
+.section-head.closed .micro { flex: 1; line-height: 15px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section-head.closed { align-items: center; }
 .section-head .chev { color: var(--muted); font-size: var(--fs-heading); }
 

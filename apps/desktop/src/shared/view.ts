@@ -209,7 +209,7 @@ export interface PoolChampView {
 export interface PoolHoleView {
   text: string;
   evidence: string | null;
-  /** e.g. "Lillia (learning) would cover it". */
+  /** e.g. "try Lillia (rusty)". */
   coveredBy: string | null;
 }
 
