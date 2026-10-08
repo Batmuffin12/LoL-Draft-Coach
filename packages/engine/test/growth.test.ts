@@ -39,6 +39,17 @@ describe("metricImportance", () => {
     expect(metricImportance(s)).toBe(1);
     expect(metricImportance(s.map((x) => ({ ...x, win: !x.win })))).toBe(-1);
     expect(metricImportance([{ value: 1, win: true }])).toBe(0);
+    expect(metricImportance([{ value: 2, win: true }, { value: 2, win: false }])).toBe(0);
+  });
+
+  it("never splits a block of tied values by input order", () => {
+    // Deaths: six games with 0 (all wins), four with more (all losses). Any order gives the same answer.
+    const s = [
+      ...Array.from({ length: 6 }, () => ({ value: 0, win: true })),
+      ...Array.from({ length: 4 }, (_, i) => ({ value: 3 + i, win: false })),
+    ];
+    expect(metricImportance(s)).toBe(-1);
+    expect(metricImportance([...s].reverse())).toBe(-1);
   });
 });
 

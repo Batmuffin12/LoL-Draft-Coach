@@ -13,15 +13,23 @@ export interface GrowthReference {
 }
 
 /**
- * How strongly a metric separates wins from losses: the win rate of the games in the top half
- * of the metric minus the bottom half (a simple measured number; negative when more is worse).
+ * How strongly a metric separates wins from losses: the win rate of the games above the median
+ * minus the games below it (a simple measured number; negative when more is worse). Games equal
+ * to the median go to whichever side keeps the halves most even, never split by input order, so
+ * whole-number metrics with many ties (deaths, plates) are measured fairly.
  */
 export function metricImportance(samples: { value: number; win: boolean }[]): number {
   if (samples.length < 2) return 0;
   const sorted = [...samples].sort((a, b) => a.value - b.value);
-  const half = Math.floor(sorted.length / 2);
+  const median = sorted[Math.floor((sorted.length - 1) / 2)]!.value;
   const rate = (xs: typeof sorted) => xs.filter((x) => x.win).length / xs.length;
-  return rate(sorted.slice(sorted.length - half)) - rate(sorted.slice(0, half));
+  const splits = [
+    [sorted.filter((x) => x.value > median), sorted.filter((x) => x.value <= median)],
+    [sorted.filter((x) => x.value >= median), sorted.filter((x) => x.value < median)],
+  ].filter(([hi, lo]) => hi!.length && lo!.length);
+  if (!splits.length) return 0;
+  const [hi, lo] = splits.reduce((a, b) => (Math.min(a[0]!.length, a[1]!.length) >= Math.min(b[0]!.length, b[1]!.length) ? a : b));
+  return rate(hi!) - rate(lo!);
 }
 
 export interface FocusMetric {
