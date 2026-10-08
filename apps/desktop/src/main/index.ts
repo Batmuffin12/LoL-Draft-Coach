@@ -192,6 +192,7 @@ async function main(): Promise<void> {
     profiles = new ServerProfileSource({
       accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
       defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
+      outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
     });
     await profiles.init();
   }

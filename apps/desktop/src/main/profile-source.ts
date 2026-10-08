@@ -166,6 +166,8 @@ export interface ServerProfileSourceDeps {
   pollMs?: number;
   /** Wait function for wake-up retries (tests pass a no-op). */
   sleep?: (ms: number) => Promise<void>;
+  /** Advice records not yet confirmed by the server, kept across restarts (none: posted once). */
+  outbox?: AdviceStore;
 }
 
 /**
@@ -180,6 +182,9 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private registeredAs: string | null = null;
   private matches = new Map<string, UserMatch>();
   private advice: AdviceRecord[] = [];
+  /** Records waiting for the server, also shown until it has them. */
+  private pending: AdviceRecord[] = [];
+  private flushing = false;
   private polling = false;
   private stopped = false;
   private view: AccountView;
@@ -209,6 +214,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
 
   /** Reads the stored registration (if any). Call once at startup. */
   async init(): Promise<void> {
+    if (this.deps.outbox) this.pending = await this.deps.outbox.list();
     const a = await this.deps.accounts.load();
     if (!a) return this.setAccount({ state: "unregistered" });
     this.client = new ServerClient(a.serverUrl, a.token, this.deps.fetch, this.deps.sleep);
@@ -246,13 +252,42 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
 
   async recordAdvice(record: AdviceRecord): Promise<void> {
     if (!this.client || this.view.state !== "registered") return;
-    // Shown at once; the server's copy comes back with the next profile.
+    // Kept in the outbox first (the server may be asleep or down), and shown at once.
+    this.pending = this.deps.outbox ? await this.deps.outbox.add(record) : mergeAdvice(this.pending, record);
     this.advice = mergeAdvice(this.advice, record);
     this.emit("advice", this.advice);
+    await this.flushOutbox();
+  }
+
+  /**
+   * Posts the records the server hasn't confirmed, oldest first. A network or server error
+   * keeps them for the next try (after the next profile fetch); a record the server refuses
+   * as invalid (HTTP 400) is dropped, since sending it again can't succeed.
+   */
+  private async flushOutbox(): Promise<void> {
+    if (!this.client || this.flushing || !this.pending.length) return;
+    this.flushing = true;
+    const done: number[] = [];
     try {
-      await this.client.postAdvice(record);
-    } catch (err) {
-      this.onServerError(err);
+      for (const record of [...this.pending].reverse()) {
+        try {
+          await this.client.postAdvice(record);
+          done.push(record.gameId);
+        } catch (err) {
+          if (err instanceof ServerError && err.status === 400) {
+            done.push(record.gameId);
+            continue;
+          }
+          this.onServerError(err);
+          break;
+        }
+      }
+    } finally {
+      if (done.length) {
+        const drop = new Set(done);
+        this.pending = this.deps.outbox ? await this.deps.outbox.remove(drop) : this.pending.filter((a) => !drop.has(a.gameId));
+      }
+      this.flushing = false;
     }
   }
 
@@ -287,6 +322,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.registeredAs = null;
     this.matches.clear();
     this.advice = [];
+    // Unsent records belong to this registration: never post them under another one.
+    this.pending = this.deps.outbox ? await this.deps.outbox.remove(this.pending.map((r) => r.gameId)) : [];
     this.setAccount({ state: "unregistered", riotId: null, serverUrl: null, message: null });
     this.emit("profile", profileFromMatches([], []));
     this.emit("advice", []);
@@ -309,6 +346,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       const newest = Math.max(0, ...[...this.matches.values()].map((m) => m.match.endedAt));
       const p = await this.client.profile(this.matches.size ? newest : undefined);
       this.apply(p);
+      await this.flushOutbox();
       if (p.sync.state === "running") await this.waitForSync();
     } catch (err) {
       this.onServerError(err);
@@ -332,7 +370,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     );
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
     this.emit("profile", { ...profile, rankHistory: p.rankHistory });
-    this.advice = p.advice;
+    // The server's log, plus records still in the outbox (so a card doesn't vanish while unsent).
+    this.advice = this.pending.reduce(mergeAdvice, p.advice);
     this.emit("advice", this.advice);
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
     else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });

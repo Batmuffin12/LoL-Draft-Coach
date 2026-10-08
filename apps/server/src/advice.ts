@@ -1,11 +1,11 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { AdviceRecord } from "@ldc/shared";
+import { TERM_NAMES, type AdviceRecord } from "@ldc/shared";
 import type { Db } from "./db";
 import { adviceLog } from "./db/schema";
 
 const TermSchema = z.object({
-  name: z.enum(["meta", "lane", "counter", "synergy", "team", "personal"]),
+  name: z.enum(TERM_NAMES),
   rating: z.number(),
   deltaWin: z.number(),
   games: z.number().nonnegative(),

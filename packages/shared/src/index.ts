@@ -127,8 +127,9 @@ export interface Reason {
   slots: Record<string, string | number>;
 }
 
-/** The parts of a rating-based (engine v2) score. */
-export type TermName = "meta" | "lane" | "counter" | "synergy" | "team" | "personal";
+/** The parts of a rating-based (engine v2) score (also what the server accepts in the advice log). */
+export const TERM_NAMES = ["meta", "lane", "counter", "synergy", "team", "personal"] as const;
+export type TermName = (typeof TERM_NAMES)[number];
 
 /** One part of a pick's predicted win chance, in rating points (log-odds × 400 / ln 10). */
 export interface Term {
