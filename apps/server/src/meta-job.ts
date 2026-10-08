@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
 import { BandAggregator, BuildAggregator, ExpectedWinFitter, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
@@ -30,12 +30,16 @@ export function challengeFields(engine: EngineConfig): Set<string> {
   return new Set(playstyleMetrics(engine).filter((m) => m.startsWith("challenges.")).map((m) => m.slice("challenges.".length)));
 }
 
-/** Bands someone in the group plays in (the spec: only those are collected); the default band when nobody has one yet. */
-export function activeBands(db: Db, cfg: RankBandConfig): RankBandId[] {
+/**
+ * Bands someone in the group plays in (the spec: only those are collected); the default band when
+ * nobody has one yet. With `activeSince`, only users seen since then count: a friend who stopped
+ * using the app no longer splits the collection budget.
+ */
+export function activeBands(db: Db, cfg: RankBandConfig, activeSince?: number): RankBandId[] {
   const bands = db
     .selectDistinct({ band: users.band })
     .from(users)
-    .where(isNotNull(users.band))
+    .where(and(isNotNull(users.band), activeSince !== undefined ? gte(sql`coalesce(${users.lastSeenAt}, ${users.createdAt})`, activeSince) : undefined))
     .all()
     .map((r) => r.band!)
     .filter((b) => cfg.bands.some((x) => x.id === b))
@@ -225,7 +229,7 @@ export class MetaJob {
     this.closeOpenRuns();
     const startedAt = this.now();
     const runId = this.db.insert(collectorRuns).values({ startedAt }).returning({ id: collectorRuns.id }).get().id;
-    const bands = activeBands(this.db, bandConfig);
+    const bands = activeBands(this.db, bandConfig, startedAt - meta.collector.activeUserDays * DAY_MS);
     const buildBands = buildBandsFor(bands, bandConfig);
     let collected: CollectResult | null = null;
     let error: string | null = null;

@@ -252,6 +252,11 @@ describe("meta job", () => {
     addUser(db, "a", 2);
     addUser(db, "b", 2);
     expect(activeBands(db, config.bands)).toEqual([2]);
+    const away = addUser(db, "c", 3);
+    db.update(schema.users).set({ lastSeenAt: NOW - 90 * 86_400_000 }).where(eq(schema.users.id, away.id)).run();
+    expect(activeBands(db, config.bands)).toEqual([2, 3]);
+    expect(activeBands(db, config.bands, NOW - 30 * 86_400_000)).toEqual([2]);
+    db.delete(schema.users).where(eq(schema.users.id, away.id)).run();
     // Item 1055 counts as a completed item in this catalog.
     const items = async () => new Map([[1055, { id: 1055, name: "X", iconUrl: "", gold: 3000, into: [], from: [], tags: [], maps: ["11"], purchasable: true, requiredChampion: null, stats: {} }]]);
     const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0, items });

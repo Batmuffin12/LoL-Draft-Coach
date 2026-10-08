@@ -93,6 +93,8 @@ export const MetaConfigSchema = z.object({
     buildBandShare: z.number().min(0).max(1),
     /** Collected matches kept per band (newest first); older ones are pruned to bound disk and memory. */
     maxStoredMatches: z.number().int().min(1),
+    /** Users seen in the app within this many days decide which bands are collected. */
+    activeUserDays: z.number().positive(),
     /** Share of each Riot rate limit the collector may use; the rest stays free for users' syncs. */
     rateLimitShare: z.number().gt(0).max(1),
     /** /health calls the collector stale after this many hours without a new game. */

@@ -64,6 +64,7 @@
     "buildBandTimelineShare": 1,
     "buildBandShare": 0.3,
     "rateLimitShare": 0.8,
+    "activeUserDays": 30,
     "maxStoredMatches": 50000,
     "staleAfterHours": 6
   }
