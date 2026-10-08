@@ -2,7 +2,7 @@ import { formatMetric, metricLabel, readMetric, renderReason, type ExplainConfig
 import type { UserMatch } from "@ldc/shared";
 import type { FocusView, PostGameView } from "../shared/view";
 
-const capital = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
+import { capital } from "./reason-view";
 
 export interface FocusViewDeps {
   explain: ExplainConfig;

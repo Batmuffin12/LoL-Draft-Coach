@@ -371,8 +371,12 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
     this.emit("profile", { ...profile, rankHistory: p.rankHistory });
     // The server's log, plus records still in the outbox (so a card doesn't vanish while unsent).
-    this.advice = this.pending.reduce(mergeAdvice, p.advice);
-    this.emit("advice", this.advice);
+    // Re-sent on every poll: only a change rebuilds the post-game card.
+    const advice = this.pending.reduce(mergeAdvice, p.advice);
+    if (JSON.stringify(advice) !== JSON.stringify(this.advice)) {
+      this.advice = advice;
+      this.emit("advice", this.advice);
+    }
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
     else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });
     else this.emit("status", readyStatus(profile.games));

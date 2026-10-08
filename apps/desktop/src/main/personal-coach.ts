@@ -44,7 +44,7 @@ import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
-import { reasonView } from "./reason-view";
+import { capital, reasonView } from "./reason-view";
 import { banNumbers, draftMatchups } from "./stats-view";
 import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
@@ -296,20 +296,34 @@ export class PersonalCoach extends Coach {
     await this.p.profiles?.refresh();
   }
 
+  /** A champion from Data Dragon (undefined when it isn't loaded or unknown). */
+  private readonly championLookup = (id: number) => {
+    try {
+      return this.deps.ddragon.champion(id);
+    } catch {
+      return undefined;
+    }
+  };
+
+  /** "Mid", "Jungle": the role's label from config, capitalised. */
+  private readonly positionLabel = (role: string) => {
+    const label = roleLabels(this.config.explain.templates)[role] ?? role;
+    return capital(label);
+  };
+
+  /** What the focus and month report were last computed from (they change only with these). */
+  private growthInputs: unknown[] = [];
+
   /** Your growth focus: on your main role (and champion), from your games and the band's references. */
   private updateFocus(): void {
     if (!this.profile) return;
+    const inputs = [this.profile, this.metaIndex?.snapshot, this.config, this.band];
+    if (inputs.every((x, i) => x === this.growthInputs[i])) return;
+    this.growthInputs = inputs;
     const { engine, explain } = this.config;
     const role = mainRole(this.profile.games);
     this.growth = role ? pickFocus(this.profile.matches, role, engine, this.metaIndex?.snapshot.references[role]) : null;
-    const lookup = (id: number) => {
-      try {
-        return this.deps.ddragon.champion(id)?.name ?? `#${id}`;
-      } catch {
-        return `#${id}`;
-      }
-    };
-    const labels = roleLabels(explain.templates);
+    const lookup = (id: number) => this.championLookup(id)?.name ?? `#${id}`;
     const view = this.growth
       ? focusView(this.growth, {
           explain,
@@ -317,7 +331,7 @@ export class PersonalCoach extends Coach {
           checkGames: engine.growth.checkGames,
           bandName: this.metaIndex ? (this.config.bands.bands.find((b) => b.id === this.band)?.name ?? null) : null,
           championName: lookup,
-          positionLabel: (r) => (labels[r] ?? r).replace(/^./, (c) => c.toUpperCase()),
+          positionLabel: this.positionLabel,
         })
       : null;
     this.update({ focus: view });
@@ -333,19 +347,12 @@ export class PersonalCoach extends Coach {
       rankHistory: this.profile.rankHistory,
       references: (role) => this.metaIndex?.snapshot.references[role],
     });
-    const lookup = (id: number) => {
-      try {
-        return this.deps.ddragon.champion(id);
-      } catch {
-        return undefined;
-      }
-    };
-    const labels = roleLabels(explain.templates);
+    const lookup = this.championLookup;
     this.update({
       month: monthView(report, {
         explain,
         champion: (id) => champView(id, lookup),
-        positionLabel: (r) => (labels[r] ?? r).replace(/^./, (c) => c.toUpperCase()),
+        positionLabel: this.positionLabel,
         growth: this.growth,
       }),
     });
@@ -355,13 +362,7 @@ export class PersonalCoach extends Coach {
   private updateLastGame(): void {
     const latest = this.advice[0];
     if (!latest) return this.update({ lastGame: null });
-    const lookup = (id: number) => {
-      try {
-        return this.deps.ddragon.champion(id);
-      } catch {
-        return undefined;
-      }
-    };
+    const lookup = this.championLookup;
     const view = postGameView(latest, this.profile?.matches ?? [], {
       templates: this.config.explain.templates,
       minDeltaWin: this.config.engine.rating.explain.minDeltaWin,
@@ -502,13 +503,7 @@ export class PersonalCoach extends Coach {
 
   private updateRoleAdvice(): void {
     if (!this.profile) return;
-    const lookup = (id: number) => {
-      try {
-        return this.deps.ddragon.champion(id);
-      } catch {
-        return undefined;
-      }
-    };
+    const lookup = this.championLookup;
     const newChamps: NewChampRoleView[] = [];
     const roles = adviseRoles(
       this.profile.games,
@@ -654,13 +649,7 @@ export class PersonalCoach extends Coach {
     };
     // Live meta (engine v2) when the band's snapshot is loaded; the player's own data otherwise.
     const live = this.metaIndex ? { ...input, index: this.metaIndex, band: this.band } : null;
-    const lookup = (id: number) => {
-      try {
-        return this.deps.ddragon.champion(id);
-      } catch {
-        return undefined;
-      }
-    };
+    const lookup = this.championLookup;
     const { templates } = this.config.explain;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
     const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);

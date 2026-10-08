@@ -1,5 +1,6 @@
 import { formatMetric, metricLabel, renderReason, type ExplainConfig, type GrowthFocus, type MonthlyReport } from "@ldc/engine";
 import type { ChampView, MonthView } from "../shared/view";
+import { capital } from "./reason-view";
 
 export interface MonthViewDeps {
   explain: ExplainConfig;
@@ -8,7 +9,6 @@ export interface MonthViewDeps {
   growth: GrowthFocus | null;
 }
 
-const capital = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
 /** "GOLD" + "IV" → "Gold IV" (League-V4 strings, only re-cased). */
 const rankText = (r: { tier: string; rank: string | null }) => [capital(r.tier.toLowerCase()), r.rank].filter(Boolean).join(" ");
 const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
