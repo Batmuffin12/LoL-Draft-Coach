@@ -101,8 +101,6 @@ export const EngineConfigSchema = z.object({
      * a support is judged on vision, a jungler on early farm and ganks. Overrides `metrics` for that role.
      */
     roles: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
-    /** Goals fair in any role, for a role you have too few games in (compared with that role's typical). */
-    general: z.array(z.string().min(1)).min(1).default(["-earlyDeaths"]),
   }),
   /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
   earlyDeathsMinute: z.number().positive().default(14),
