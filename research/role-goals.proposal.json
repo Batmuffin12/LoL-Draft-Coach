@@ -1,0 +1,546 @@
+{
+  "version": 1,
+  "date": "2026-10-08",
+  "notes": "Research proposal (research/ROLE-GOALS.md). Ranks are priors from a 400-game pilot (bands 2-3) plus published and coaching sources; re-check with metricImportance on production data per role and band. Targets come from the player's band, never from this file. Phase: early = by ~14 min; habit = player-controlled; whole-game = follows the result.",
+  "roles": {
+    "top": [
+      {
+        "metric": "challenges.laneMinionsFirst10Minutes",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 1,
+        "label": "lane cs at 10 min",
+        "why": "Lane minions are your main source of gold and experience, and the top role quest rewards farming your own lane.",
+        "tips": [
+          "Last-hit first, trade second: a lost wave costs more than a won trade.",
+          "Recall after crashing a wave into their tower, not mid-wave.",
+          "Use Teleport early to get back to lane fast and save the next wave."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://www.scitepress.org/Papers/2022/108959/108959.pdf",
+          "https://www.mdpi.com/2076-3417/15/10/5241",
+          "https://www.sheepesports.com/articles/league-of-legends-introduces-role-quests-in-2026-all-rewards/en",
+          "https://games.gg/league-of-legends/guides/league-of-legends-top-lane-guide/"
+        ]
+      },
+      {
+        "metric": "earlyDeaths",
+        "direction": "lower",
+        "phase": "early",
+        "rank": 2,
+        "label": "deaths before 14 min",
+        "why": "Top is the most isolated lane, so an early death hands over gold, plates and waves before the game is decided.",
+        "tips": [
+          "Ward river or tri-brush before you push past the middle of the lane.",
+          "If you can't see the enemy jungler, assume they're near your lane.",
+          "Recall before you're too low to fight one more trade."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://games.gg/league-of-legends/guides/league-of-legends-top-lane-guide/",
+          "https://wecoach.gg/blog/article/best-league-of-legends-top-lane-guide"
+        ]
+      },
+      {
+        "metric": "laneGoldDiffAt14",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 3,
+        "label": "gold lead on your lane opponent at 14 min",
+        "why": "Gold difference in the early game is one of the few stats that predicts the winner, and it shows how your lane went.",
+        "tips": [
+          "Trade when your wave is bigger than theirs.",
+          "Count plates: every plate is gold your opponent doesn't get."
+        ],
+        "computed": "new",
+        "sources": [
+          "https://www.mdpi.com/2076-3417/15/10/5241",
+          "https://dignitas.gg/articles/how-to-measure-the-best-stats-for-performance-in-league-of-legends"
+        ]
+      },
+      {
+        "metric": "challenges.turretPlatesTaken",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 4,
+        "label": "turret plates",
+        "why": "Plates turn a lane lead into gold and map pressure before they fall, though teammates share the credit.",
+        "tips": [
+          "After a kill or their recall, hit the tower before you back.",
+          "Void Grubs speed up tower damage: join grubs when your wave is pushed."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://doaj.org/article/dc43dcec52764f6fbd06ce940fd9ae72",
+          "https://dignitas.gg/articles/how-to-measure-the-best-stats-for-performance-in-league-of-legends"
+        ]
+      },
+      {
+        "metric": "challenges.controlWardsPlaced",
+        "direction": "higher",
+        "phase": "habit",
+        "rank": 5,
+        "label": "control wards placed",
+        "why": "A control ward is a cheap habit that guards your lane from ganks whatever the result of the game.",
+        "tips": [
+          "Buy one control ward on your first back and put it in river or tri-brush."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://mobalytics.gg/blog/lol-warding-guide/",
+          "https://blog.loltheory.gg/vision-score-lol/"
+        ]
+      }
+    ],
+    "jungle": [
+      {
+        "metric": "challenges.jungleCsBefore10Minutes",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 1,
+        "label": "jungle cs at 10 min",
+        "why": "Camps are the jungler's main income, and steady farm keeps you on level for ganks and objectives.",
+        "tips": [
+          "Finish your full clear before ganking unless a lane is clearly gankable.",
+          "Never walk past a camp that's up: take it on the way.",
+          "If a gank fails, go straight back to farm."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://www.dodge.gg/en-US/lol/news/jungle-guide-2026",
+          "https://wecoach.gg/blog/article/how-to-play-jungle-in-league-of-legends",
+          "https://mobalytics.gg/blog/lol-how-to-climb-low-elo-jungler/"
+        ]
+      },
+      {
+        "metric": "challenges.killsOnLanersEarlyJungleAsJungler",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 2,
+        "label": "gank kills before 10 min",
+        "why": "Early ganks deny the enemy gold, which is where the best junglers pull ahead of others.",
+        "tips": [
+          "Gank when two hold: enemy pushed, no flash, no ward, your laner has CC.",
+          "Come from behind the enemy, not up the lane.",
+          "Gank at level 3, level 6 or right after your first item."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://arxiv.org/html/2403.04873v1",
+          "https://www.dodge.gg/en-US/lol/news/jungle-guide-2026",
+          "https://games.gg/league-of-legends/guides/league-of-legends-jungle-guide/"
+        ]
+      },
+      {
+        "metric": "earlyDeaths",
+        "direction": "lower",
+        "phase": "early",
+        "rank": 3,
+        "label": "deaths before 14 min",
+        "why": "An early death costs the jungler farm, camp timers and control of the next objective.",
+        "tips": [
+          "Track the enemy jungler: if you saw them top, path bot.",
+          "Don't invade without lane priority from the nearby laners."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://www.dodge.gg/en-US/lol/news/jungle-guide-2026",
+          "https://games.gg/league-of-legends/guides/league-of-legends-jungle-guide/"
+        ]
+      },
+      {
+        "metric": "earlyEpicMonsterTakedowns",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 4,
+        "label": "early dragons, grubs and herald",
+        "why": "Objectives drive win chances, and counting only the early ones keeps the measure from just following the result.",
+        "tips": [
+          "Ward the next objective a minute before it spawns.",
+          "Start dragon or grubs only when your nearby lanes can move first.",
+          "Keep Smite up for the objective."
+        ],
+        "computed": "new",
+        "sources": [
+          "https://doaj.org/article/dc43dcec52764f6fbd06ce940fd9ae72",
+          "https://arxiv.org/pdf/2309.02449",
+          "https://www.dodge.gg/en-US/lol/news/jungle-guide-2026"
+        ]
+      },
+      {
+        "metric": "challenges.wardTakedowns",
+        "direction": "higher",
+        "phase": "habit",
+        "rank": 5,
+        "label": "enemy wards cleared",
+        "why": "Clearing wards hides your pathing and ganks, and it is a habit you control whatever the score.",
+        "tips": [
+          "Swap to sweeper once your early ganks are done.",
+          "Sweep the objective area before a fight."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://wiki.leagueoflegends.com/en-us/Vision_score",
+          "https://blog.loltheory.gg/vision-score-lol/"
+        ]
+      },
+      {
+        "metric": "challenges.controlWardsPlaced",
+        "direction": "higher",
+        "phase": "habit",
+        "rank": 6,
+        "label": "control wards placed",
+        "why": "Control wards hold vision at objectives, where the jungler decides fights.",
+        "tips": [
+          "Put a control ward on your side of the next objective."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://mobalytics.gg/blog/lol-warding-guide/"
+        ]
+      }
+    ],
+    "middle": [
+      {
+        "metric": "challenges.laneMinionsFirst10Minutes",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 1,
+        "label": "lane cs at 10 min",
+        "why": "Farm is a mid laner's base for every roam and fight, and it rises clearly with rank.",
+        "tips": [
+          "Shove the wave before you roam so you lose no minions.",
+          "Use the cannon wave timing to recall."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://www.scitepress.org/Papers/2022/108959/108959.pdf",
+          "https://blog.loltheory.gg/roaming-lol/",
+          "https://www.sheepesports.com/articles/league-of-legends-introduces-role-quests-in-2026-all-rewards/en"
+        ]
+      },
+      {
+        "metric": "earlyDeaths",
+        "direction": "lower",
+        "phase": "early",
+        "rank": 2,
+        "label": "deaths before 14 min",
+        "why": "Mid is in reach of both junglers, and dying there gives the enemy mid free roams.",
+        "tips": [
+          "Keep a ward on one side of mid and play toward it.",
+          "When their jungler is missing, stop pushing past half the lane."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://mobalytics.gg/blog/lol-4-tips-to-impact-the-map-as-the-mid-laner/"
+        ]
+      },
+      {
+        "metric": "challenges.takedownsFirstXMinutes",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 3,
+        "label": "takedowns before 10 min",
+        "why": "Early kills and assists capture the roams and skirmishes that make a mid laner matter on the map.",
+        "tips": [
+          "Roam right after you push or kill your laner, never mid-wave.",
+          "Roam to lanes with CC or kill pressure; skip lanes that can't follow."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://mobalytics.gg/blog/lol-4-tips-to-impact-the-map-as-the-mid-laner/",
+          "https://blog.loltheory.gg/roaming-lol/"
+        ]
+      },
+      {
+        "metric": "laneGoldDiffAt14",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 4,
+        "label": "gold lead on your lane opponent at 14 min",
+        "why": "Gold difference in the early game is one of the few stats that predicts the winner, and it shows how your lane went.",
+        "tips": [
+          "Trade when your wave is bigger than theirs.",
+          "Push first, then roam, so your opponent loses farm following you."
+        ],
+        "computed": "new",
+        "sources": [
+          "https://www.mdpi.com/2076-3417/15/10/5241",
+          "https://dignitas.gg/articles/how-to-measure-the-best-stats-for-performance-in-league-of-legends"
+        ]
+      },
+      {
+        "metric": "challenges.turretPlatesTaken",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 5,
+        "label": "turret plates",
+        "why": "Plates turn a lane lead into gold before they fall, though teammates share the credit.",
+        "tips": [
+          "After a kill or their recall, hit the tower before you back."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://doaj.org/article/dc43dcec52764f6fbd06ce940fd9ae72"
+        ]
+      },
+      {
+        "metric": "challenges.controlWardsPlaced",
+        "direction": "higher",
+        "phase": "habit",
+        "rank": 6,
+        "label": "control wards placed",
+        "why": "One control ward near mid makes ganks visible and is a habit you control.",
+        "tips": [
+          "Keep one control ward in a mid-lane side brush or river."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://mobalytics.gg/blog/lol-warding-guide/"
+        ]
+      }
+    ],
+    "bottom": [
+      {
+        "metric": "challenges.laneMinionsFirst10Minutes",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 1,
+        "label": "lane cs at 10 min",
+        "why": "A bot laner's power comes from farm, and the bot role quest pays out for lane minions.",
+        "tips": [
+          "Under tower: let the tower hit melee minions twice, then last-hit.",
+          "Crash the wave before you recall."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://games.gg/league-of-legends/guides/league-of-legends-adc-guide/",
+          "https://mobalytics.gg/blog/lol-how-to-climb-in-low-elo-adc/",
+          "https://www.sheepesports.com/articles/league-of-legends-introduces-role-quests-in-2026-all-rewards/en"
+        ]
+      },
+      {
+        "metric": "earlyDeaths",
+        "direction": "lower",
+        "phase": "early",
+        "rank": 2,
+        "label": "deaths before 14 min",
+        "why": "Bot lane gets ganked most, and an early death also hands the enemy a free dragon.",
+        "tips": [
+          "Don't trade when their wave is bigger: minion aggro hurts.",
+          "Stand behind your minions against hooks and skillshots."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://games.gg/league-of-legends/guides/league-of-legends-adc-guide/",
+          "https://mobalytics.gg/blog/lol-how-to-climb-in-low-elo-adc/"
+        ]
+      },
+      {
+        "metric": "laneCsDiffAt10",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 3,
+        "label": "cs lead on your lane opponent at 10 min",
+        "why": "Comparing your farm with your lane opponent's shows whether you won the lane, not just whether it was easy.",
+        "tips": [
+          "Hit them when they walk up to last-hit while your support zones."
+        ],
+        "computed": "new",
+        "sources": [
+          "https://dignitas.gg/articles/how-to-measure-the-best-stats-for-performance-in-league-of-legends"
+        ]
+      },
+      {
+        "metric": "challenges.turretPlatesTaken",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 4,
+        "label": "turret plates",
+        "why": "Plates turn a bot lead into gold before they fall, though teammates share the credit.",
+        "tips": [
+          "After a won fight or a dragon, hit plates before you back."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://doaj.org/article/dc43dcec52764f6fbd06ce940fd9ae72"
+        ]
+      },
+      {
+        "metric": "challenges.takedownsFirstXMinutes",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 5,
+        "label": "takedowns before 10 min",
+        "why": "Early two-versus-two kills snowball bot lane and the dragon side of the map.",
+        "tips": [
+          "Fight when your support's engage and your level spike line up."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://arxiv.org/pdf/2309.02449"
+        ]
+      }
+    ],
+    "utility": [
+      {
+        "metric": "challenges.controlWardsPlaced",
+        "direction": "higher",
+        "phase": "habit",
+        "rank": 1,
+        "label": "control wards placed",
+        "why": "Control wards are the support's clearest habit: higher ranks place more, and it doesn't depend on winning.",
+        "tips": [
+          "Buy a control ward on every back.",
+          "Place it where you'll fight next: dragon pit edge or river bush.",
+          "A control ward in your inventory gives no vision: place it."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://wecoach.gg/blog/article/all-you-need-to-know-about-support-coaching-in-league-of-legends",
+          "https://mobalytics.gg/blog/lol-warding-guide/",
+          "https://blog.loltheory.gg/vision-score-lol/"
+        ]
+      },
+      {
+        "metric": "wardsPlacedBefore14",
+        "direction": "higher",
+        "phase": "early",
+        "rank": 2,
+        "label": "wards placed before 14 min",
+        "why": "Early wards measure vision before the result shows, avoiding the winning-team bias of end-of-game vision score.",
+        "tips": [
+          "Use your support item's wards right away.",
+          "Ward river before the enemy jungler's first gank."
+        ],
+        "computed": "new",
+        "sources": [
+          "https://gdlt.sdu.dk/wp-content/uploads/2022/06/White-Paper_Dispersing-the-fog-of-war_-A-new-approach-to-ward-evaluation-in-MOBAs-.pdf",
+          "https://www.dodge.gg/en-US/lol/news/jungle-guide-2026"
+        ]
+      },
+      {
+        "metric": "challenges.wardTakedowns",
+        "direction": "higher",
+        "phase": "habit",
+        "rank": 3,
+        "label": "enemy wards cleared",
+        "why": "Clearing enemy vision is a habit you control, and it denies the enemy the information to fight you.",
+        "tips": [
+          "Swap to sweeper once your support item's quest is done.",
+          "Sweep before dragon, not during it."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://wiki.leagueoflegends.com/en-us/Vision_score",
+          "https://blog.loltheory.gg/vision-score-lol/"
+        ]
+      },
+      {
+        "metric": "earlyDeaths",
+        "direction": "lower",
+        "phase": "early",
+        "rank": 4,
+        "label": "deaths before 14 min",
+        "why": "Supports often die early while warding or roaming alone, which leaves the bot laner exposed.",
+        "tips": [
+          "Ward from your side of the river, not deep and alone.",
+          "Roam only when your bot laner can stay safe without you."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://www.mobafire.com/league-of-legends/blog/ch33syb0y8/15-tips-for-supports",
+          "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-16-notes"
+        ]
+      },
+      {
+        "metric": "challenges.visionScorePerMinute",
+        "direction": "higher",
+        "phase": "whole-game",
+        "rank": 5,
+        "label": "vision score per minute",
+        "why": "The familiar vision number, but it favours the winning team and rewards activity over quality, so it comes last.",
+        "tips": [
+          "Wards in unwarded spots score more than wards next to others."
+        ],
+        "computed": "existing",
+        "sources": [
+          "https://wiki.leagueoflegends.com/en-us/Vision_score",
+          "https://gdlt.sdu.dk/wp-content/uploads/2022/06/White-Paper_Dispersing-the-fog-of-war_-A-new-approach-to-ward-evaluation-in-MOBAs-.pdf",
+          "https://dignitas.gg/articles/how-to-measure-the-best-stats-for-performance-in-league-of-legends"
+        ]
+      }
+    ]
+  },
+  "newMetrics": [
+    {
+      "metric": "laneCsDiffAt10",
+      "computation": "frames[10].participantFrames[me].(minionsKilled + jungleMinionsKilled) minus the same for the enemy participant with the same teamPosition; skip without frame 10 or a unique opponent",
+      "roles": ["top", "middle", "bottom"]
+    },
+    {
+      "metric": "laneGoldDiffAt14",
+      "computation": "frames[14].participantFrames[me].totalGold minus the enemy participant's with the same teamPosition; skip without frame 14 or a unique opponent",
+      "roles": ["top", "middle", "bottom"]
+    },
+    {
+      "metric": "wardsPlacedBefore14",
+      "computation": "timeline WARD_PLACED events with creatorId == me, timestamp < 840000 and wardType in YELLOW_TRINKET, SIGHT_WARD, CONTROL_WARD, BLUE_TRINKET",
+      "roles": ["utility", "jungle"]
+    },
+    {
+      "metric": "earlyEpicMonsterTakedowns",
+      "computation": "timeline ELITE_MONSTER_KILL events with timestamp < 840000, monsterType in DRAGON, HORDE, RIFTHERALD, killerTeamId == my team, and killerId == me or me in assistingParticipantIds (verify that field is filled; fallback: my position in the nearest frame within 2000 units of the event position)",
+      "roles": ["jungle", "utility"]
+    },
+    {
+      "metric": "wardsKilledBefore14",
+      "computation": "timeline WARD_KILL events with killerId == me and timestamp < 840000",
+      "roles": ["utility", "jungle"]
+    },
+    {
+      "metric": "jungleCsAt4",
+      "computation": "frames[4].participantFrames[me].jungleMinionsKilled (descriptive: whether the first full clear finished)",
+      "roles": ["jungle"]
+    },
+    {
+      "metric": "firstBackSec",
+      "computation": "timestamp of my first ITEM_PURCHASED after 90000 ms that is not within 60 s after a CHAMPION_KILL with victimId == me; approximate (no recall event); descriptive, direction unclear",
+      "roles": ["top", "middle", "bottom", "utility"]
+    },
+    {
+      "metric": "firstBackGold",
+      "computation": "sum of Data Dragon gold.total of my ITEM_PURCHASED events within 20 s of firstBackSec, minus ITEM_UNDO; descriptive, direction unclear",
+      "roles": ["top", "middle", "bottom", "utility"]
+    },
+    {
+      "metric": "jungleLanePresenceBefore10",
+      "computation": "count of frames 3..10 where my position is within 2000 units of an allied laner's position (minute granularity, coarse); descriptive",
+      "roles": ["jungle"]
+    },
+    {
+      "metric": "supportAwayFromBotBefore14",
+      "computation": "count of frames 3..14 where my position is more than 3000 units from my bot laner's position; context only (patch 26.16 penalises heavy early support roaming)",
+      "roles": ["utility"]
+    }
+  ],
+  "avoid": [
+    { "metric": "challenges.earlyLaningPhaseGoldExpAdvantage", "reason": "0/1 flag, no spread for a target" },
+    { "metric": "challenges.laningPhaseGoldExpAdvantage", "reason": "0/1 flag, no spread for a target" },
+    { "metric": "challenges.maxCsAdvantageOnLaneOpponent", "reason": "maximum over the whole game, never negative" },
+    { "metric": "challenges.visionScoreAdvantageLaneOpponent", "reason": "unbounded ratio, whole-game" },
+    { "metric": "challenges.moreEnemyJungleThanOpponent", "reason": "values look broken in 2026 data" },
+    { "metric": "challenges.initialCrabCount", "reason": "almost no spread" },
+    { "metric": "challenges.killsOnOtherLanesEarlyJungleAsLaner", "reason": "mostly 0" },
+    { "metric": "challenges.getTakedownsInAllLanesEarlyJungleAsLaner", "reason": "almost always 0" },
+    { "metric": "challenges.enemyJungleMonsterKills", "reason": "whole-game, follows the result" },
+    { "metric": "challenges.killParticipation", "reason": "does not separate wins in any role" },
+    { "metric": "challenges.dragonTakedowns", "reason": "whole-game, follows the result" },
+    { "metric": "challenges.turretTakedowns", "reason": "whole-game, follows the result" },
+    { "metric": "challenges.goldPerMinute", "reason": "whole-game, follows the result" },
+    { "metric": "challenges.damagePerMinute", "reason": "whole-game and champion-driven" },
+    { "metric": "deathsPerMinute", "reason": "whole-game, follows the result; use earlyDeaths" },
+    { "metric": "challenges.enemyChampionImmobilizations", "reason": "set by the champion's kit" }
+  ]
+}
