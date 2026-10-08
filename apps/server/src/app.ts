@@ -25,7 +25,7 @@ export interface AppDeps {
   /** True once Riot has rejected the key (e.g. an expired development key). */
   riotKeyRejected?: () => boolean;
   /** Runs user syncs; null when the server has no Riot key. */
-  sync?: Pick<SyncScheduler, "request" | "state" | "forget"> | null;
+  sync?: (Pick<SyncScheduler, "request" | "state" | "forget"> & Partial<Pick<SyncScheduler, "backfill">>) | null;
   now?: () => number;
   /** Registration attempts allowed per client per minute. */
   registerPerMinute?: number;
@@ -152,6 +152,8 @@ export function createApp(deps: AppDeps): Hono<Env> {
       const alreadyRunning = deps.meta.running;
       const { stale } = collectorFreshness(deps);
       deps.meta.run().catch((err: unknown) => console.error("meta run failed:", err));
+      // Same wake-up: continue loading long user histories (their calls go first in the rate limiter).
+      void deps.sync?.backfill?.().catch((err: unknown) => console.error("backfill failed:", err));
       // The run starts either way; a stale collector answers 503 so the cron run fails visibly in
       // Railway (the spec's "alert when the collector stops receiving data").
       if (stale) return c.json({ error: "collector_stale", message: "No new collected game for too long; see /health.", started: !alreadyRunning, running: true }, 503);

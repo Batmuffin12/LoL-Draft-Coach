@@ -107,7 +107,7 @@ describe("syncUser", () => {
     seed(riot, "PUUID-OFEK", 3);
 
     const r = await syncUser(db, riot, user, settings(), NOW);
-    expect(r).toEqual({ newMatches: 3, totalMatches: 3, band: 3 });
+    expect(r).toEqual({ newMatches: 3, totalMatches: 3, band: 3, remaining: 0 });
 
     const links = db.select().from(schema.userMatches).all();
     expect(links.map((l) => l.participantIndex)).toEqual([2, 2, 2]);
@@ -249,6 +249,57 @@ describe("syncUser", () => {
     expect(stored.filter((m) => (m.summary as { timeline?: unknown }).timeline !== undefined).map((m) => m.matchId)).toEqual(["EUW1_1000"]);
   });
 
+  it("loads a long history over several syncs within a call budget, newest first, then only new games", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    let user = await newUser(db, "Ofek#EUW", "PUUID-OFEK");
+    seed(riot, "PUUID-OFEK", 250);
+    const budget = (calls: number): SyncSettings => ({ history: { matchCount: 1000, queues: [420], timelineCount: 0, callsPerSync: calls }, bands: config.bands });
+    const reload = () => db.select().from(schema.users).where(eq(schema.users.id, user.id)).get()!;
+
+    const first = await syncUser(db, riot, user, budget(100), NOW);
+    expect(first).toMatchObject({ newMatches: 100, totalMatches: 100, remaining: 150 });
+    expect(reload().historyBacklog).toBe(150);
+    const newest = db.select().from(schema.userMatches).all().map((l) => l.matchId);
+    expect(newest).toContain("EUW1_1000"); // the newest games come first
+
+    user = reload();
+    expect(await syncUser(db, riot, user, budget(200), NOW)).toMatchObject({ newMatches: 150, totalMatches: 250, remaining: 0 });
+    expect(reload().historyBacklog).toBe(0);
+
+    // Complete: the next sync lists ids only until a page is all stored (1 ids call, not 3).
+    user = reload();
+    seed(riot, "PUUID-OFEK", 2, -2);
+    riot.calls.length = 0;
+    expect(await syncUser(db, riot, user, budget(200), NOW)).toMatchObject({ newMatches: 2, remaining: 0 });
+    expect(riot.calls.filter((c) => c.startsWith("ids:"))).toHaveLength(2);
+  });
+
+  it("adds a timeline to stored games that have none (or one from before CS, wards and monsters were kept)", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-OFEK");
+    seed(riot, "PUUID-OFEK", 2);
+    await syncUser(db, riot, user, settings(5, [420], 0), NOW); // stored without timelines
+    const asked: string[] = [];
+    const withTimelines: SyncRiot = {
+      ...riot,
+      async timeline(id) {
+        asked.push(id);
+        const match = riot.store.get(id)!;
+        return TimelineSchema.parse({
+          metadata: { matchId: id },
+          info: { participants: match.info.participants.map((q, i) => ({ participantId: i + 1, puuid: q.puuid })), frames: [{ timestamp: 0, participantFrames: {}, events: [] }] },
+        });
+      },
+    };
+    const r = await syncUser(db, withTimelines, user, settings(5, [420], 5), NOW);
+    expect(r).toMatchObject({ newMatches: 0, remaining: 0 });
+    expect(asked.sort()).toEqual(["EUW1_999", "EUW1_1000"].sort());
+    const stored = db.select().from(schema.matches).all();
+    expect(stored.every((m) => (m.summary as { timeline?: { monsters?: unknown } }).timeline?.monsters !== undefined)).toBe(true);
+  });
+
   it("skips matches where the user isn't found", async () => {
     const db = openDb(":memory:");
     const riot = fakeRiot();
@@ -298,6 +349,20 @@ describe("SyncScheduler", () => {
     expect(r1).toBe(r2);
     expect(riot.calls.filter((c) => c.startsWith("match:"))).toHaveLength(2);
     expect(s.state(user.id)).toMatchObject({ state: "done", result: { newMatches: 2 } });
+  });
+
+  it("the hourly backfill continues every history still loading, with its bigger budget, and skips complete ones", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const loading = await newUser(db, "A#EUW", "PA");
+    const complete = await newUser(db, "B#EUW", "PB");
+    seed(riot, "PA", 30);
+    db.update(schema.users).set({ historyBacklog: 0 }).where(eq(schema.users.id, complete.id)).run();
+    const history = { matchCount: 1000, queues: [420], timelineCount: 0, callsPerSync: 5, backfillCallsPerWake: 20 };
+    const s = new SyncScheduler(db, riot, { history, bands: config.bands }, { tickMs: 1e9, staleAfterMs: 1, activeWithinMs: 1e9, now: () => NOW, log: () => {} });
+    await s.backfill();
+    expect(s.state(loading.id)).toMatchObject({ state: "done", result: { newMatches: 20, remaining: 10 } });
+    expect(s.state(complete.id)).toEqual({ state: "idle" });
   });
 
   it("records errors and stops a background pass when the Riot key is rejected", async () => {

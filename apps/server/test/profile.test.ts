@@ -131,7 +131,7 @@ describe("sync on demand (no background timer)", () => {
     const db = openDb(":memory:");
     let now = NOW;
     const requests: number[] = [];
-    const sync = { request: async (id: number) => (requests.push(id), { newMatches: 0, totalMatches: 0, band: 2 }), state: () => ({ state: "idle" as const }), forget: () => {} };
+    const sync = { request: async (id: number) => (requests.push(id), { newMatches: 0, totalMatches: 0, band: 2, remaining: 0 }), state: () => ({ state: "idle" as const }), forget: () => {} };
     const account = { accountByRiotId: async (gameName: string, tagLine: string) => ({ puuid: "PO", gameName, tagLine }) };
     const app = createApp({ db, version: "test", riot: account, sync, syncWhenStaleMs: 30 * 60_000, now: () => now, registerPerMinute: 100 });
     const code = createInvite(db, { ttlDays: 1, now: NOW }).code;

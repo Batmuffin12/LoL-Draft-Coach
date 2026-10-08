@@ -400,6 +400,14 @@ export const AppConfigSchema = z.object({
     queues: z.array(z.number().int()).min(1),
     /** Your newest games that also get their timeline (one more Riot call each): when you die, your gold at 15. */
     timelineCount: z.number().int().min(0).optional(),
+    /**
+     * Riot calls one sync may spend on games (a match and its timeline are one each): newest games
+     * first, then older ones and missing timelines. The rest of a long history fills in over the
+     * next syncs and hourly wake-ups. Absent: no limit.
+     */
+    callsPerSync: z.number().int().positive().optional(),
+    /** The same, for each user still loading their history during the hourly wake-up (it fills a long history in a few hours). */
+    backfillCallsPerWake: z.number().int().positive().optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */

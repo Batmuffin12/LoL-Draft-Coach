@@ -138,6 +138,8 @@ export function publicUser(u: User) {
     band: u.band,
     createdAt: u.createdAt,
     lastSyncAt: u.lastSyncAt,
+    /** Games of your history still loading in the background (0: complete; null: first sync not done). */
+    historyBacklog: u.historyBacklog ?? null,
   };
 }
 

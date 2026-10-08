@@ -22,6 +22,8 @@ export const users = sqliteTable("users", {
   lastSeenAt: integer("last_seen_at"),
   /** The user's own League-V4 entries (queue, tier, division, wins, losses). */
   ranked: text("ranked", { mode: "json" }).$type<RankedEntry[]>(),
+  /** Games (and timelines) of the user's history still to load; 0 = complete, null = never synced. */
+  historyBacklog: integer("history_backlog"),
 });
 
 export interface RankedEntry {
