@@ -11,7 +11,9 @@
  *   pnpm local:prod          this branch's panel against the production server (your account, your
  *                            games, the live meta), with this branch's config and wording
  *                            (LDC_BUNDLED_CONFIG); its own profile in .local/desktop-prod
- *   pnpm local:prod invite   a one-time production invite to register that profile (ADMIN_TOKEN)
+ *                            first run: makes a production invite (ADMIN_TOKEN) and the panel
+ *                            registers itself once the League client is logged in
+ *   pnpm local:prod invite   just print a one-day production invite
  * Server-side changes (how snapshots are built) show there only after a deploy.
  */
 import { spawn } from "node:child_process";
@@ -39,6 +41,25 @@ const run = (cmd, cwd, env) => {
   const child = spawn(cmd, { cwd, env, stdio: "inherit", shell: true });
   child.on("exit", (code) => process.exit(code ?? 0));
 };
+
+/** A one-day invite from the production server (needs .env's ADMIN_TOKEN to be production's). */
+async function prodInvite() {
+  const token = process.env.ADMIN_TOKEN ?? dotenv.ADMIN_TOKEN;
+  if (!token) {
+    console.error("ADMIN_TOKEN isn't set in .env: it must be the production server's admin token.");
+    process.exit(1);
+  }
+  const res = await fetch(`${PROD_URL}/admin/invites`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ note: "local:prod", days: 1 }),
+  });
+  if (!res.ok) {
+    console.error(`The production server refused the invite (HTTP ${res.status}).${res.status === 401 ? " .env's ADMIN_TOKEN differs from production's." : ""}`);
+    process.exit(1);
+  }
+  return (await res.json()).code;
+}
 
 if (!existsSync(envFile)) console.warn(`No .env at ${envFile}: only the local settings are used.`);
 
@@ -88,21 +109,7 @@ if (mode === "server") {
   }
   run("pnpm desktop", root, env);
 } else if (mode === "prod" && process.argv[3] === "invite") {
-  const token = process.env.ADMIN_TOKEN ?? dotenv.ADMIN_TOKEN;
-  if (!token) {
-    console.error("ADMIN_TOKEN isn't set in .env: it must be the production server's admin token.");
-    process.exit(1);
-  }
-  const res = await fetch(`${PROD_URL}/admin/invites`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ note: "local:prod", days: 1 }),
-  });
-  if (!res.ok) {
-    console.error(`The production server refused (HTTP ${res.status}).${res.status === 401 ? " .env's ADMIN_TOKEN differs from production's." : ""}`);
-    process.exit(1);
-  }
-  const { code } = await res.json();
+  const code = await prodInvite();
   console.log(`Invite for ${PROD_URL} (valid 1 day): ${code}\nRegister with it in the panel from \`pnpm local:prod\` (your Riot ID: the same account and games).`);
 } else if (mode === "prod") {
   const env = {
@@ -115,7 +122,11 @@ if (mode === "server") {
   };
   console.log("This branch's panel on production data (close the window to stop):");
   show(env, ["SERVER_URL", "LDC_USER_DATA_DIR", "LDC_BUNDLED_CONFIG"]);
-  if (!existsSync(join(env.LDC_USER_DATA_DIR, "account.json"))) console.log("  First time: get an invite with `pnpm local:prod invite` and register in the panel.");
+  if (!existsSync(join(env.LDC_USER_DATA_DIR, "account.json"))) {
+    // First run: register automatically once the League client is logged in (it gives the Riot ID).
+    env.LDC_AUTO_REGISTER = await prodInvite();
+    console.log("  First run: the panel registers on its own once the League client is open and logged in.");
+  }
   run("pnpm desktop", root, env);
 } else {
   console.error("Usage: node scripts/local.mjs server|desktop|prod [invite]");

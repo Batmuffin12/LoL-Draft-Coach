@@ -243,6 +243,17 @@ async function main(): Promise<void> {
     });
     ipcMain.handle(IPC.signOut, () => server.signOut());
     ipcMain.handle(IPC.deleteData, () => server.deleteData());
+    // Dev aid: LDC_AUTO_REGISTER=<invite> registers with SERVER_URL once the League client is
+    // logged in (it gives the Riot ID), retrying every few seconds (`pnpm local:prod` sets it).
+    const invite = !app.isPackaged ? process.env.LDC_AUTO_REGISTER : undefined;
+    if (invite && env.serverUrl) {
+      let tries = 0;
+      const timer = setInterval(() => {
+        const state = server.account.state;
+        if (state === "registered" || ++tries > 120) return clearInterval(timer);
+        if (state === "unregistered" || state === "error") void server.register(env.serverUrl!, invite);
+      }, 5_000);
+    }
   }
 
   win = createWindow();
