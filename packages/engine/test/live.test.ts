@@ -313,8 +313,15 @@ describe("adviseLivePicks", () => {
     expect(adviseLivePicks(input(draft([201]))).confidence).toMatch(/clear|close/);
   });
 
+  it("calls a lead clear only when it is large against the sampling noise of both picks", () => {
+    const cfg = { ...config, rating: { ...config.rating, explain: { ...config.rating.explain, clearGapWin: 0, clearMaxPersonalLossWin: 1, clearZ: 0.84 } } };
+    const at = (gamesScale: number) => adviseLivePicks(input(draft([201]), { config: cfg, index: index(snapshot({ gamesScale })) })).confidence;
+    expect(at(0.1)).toBe("close"); // ~40 games a champion: the lead is within the noise
+    expect(at(50)).toBe("clear"); // the same rates from 50 times the games
+  });
+
   it("never calls a pick clear when it is new to you (no games: the personal term takes win chance off)", () => {
-    const explain = (maxLoss: number) => ({ ...config, rating: { ...config.rating, explain: { ...config.rating.explain, clearGapWin: 0, clearMaxPersonalLossWin: maxLoss } } });
+    const explain = (maxLoss: number) => ({ ...config, rating: { ...config.rating, explain: { ...config.rating.explain, clearGapWin: 0, clearZ: 0, clearMaxPersonalLossWin: maxLoss } } });
     const noHistory = { comfort: computeComfort([], [], NOW, config.comfort, "middle") };
     const advice = adviseLivePicks(input(draft([201]), { ...noHistory, config: explain(1) }));
     expect(advice.picks[0]!.terms!.find((t) => t.name === "personal")!.deltaWin).toBeLessThan(-0.02);

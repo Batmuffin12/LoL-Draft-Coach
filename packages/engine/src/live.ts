@@ -68,6 +68,29 @@ function context(input: LiveInput): DraftContext {
   };
 }
 
+/** Rating points per natural log-odds unit. */
+const POINTS_PER_LOGIT = 400 / Math.LN10;
+
+/**
+ * Sampling variance (rating points²) of the measured terms of one pick: a win rate from n games
+ * smoothed with k prior games has a log-odds variance of about 4 / (n + k) near 50%. The personal
+ * and team terms aren't sampled from the meta, so they add none.
+ */
+function termVariance(terms: Term[], cfg: RatingConfig): number {
+  return terms.reduce((s, t) => {
+    if (t.name === "personal" || t.name === "team" || t.rating === 0) return s;
+    const k = t.name === "meta" ? cfg.priorGames.meta : cfg.priorGames.pair;
+    return s + (POINTS_PER_LOGIT ** 2 * 4) / (Math.max(0, t.games) + k);
+  }, 0);
+}
+
+/** #1's lead over #2 in standard errors of their measured terms (Infinity without noise). */
+function leadZ(top: Term[], next: Term[], cfg: RatingConfig): number {
+  const lead = top.reduce((s, t) => s + t.rating, 0) - next.reduce((s, t) => s + t.rating, 0);
+  const sd = Math.sqrt(termVariance(top, cfg) + termVariance(next, cfg));
+  return sd > 0 ? lead / sd : Infinity;
+}
+
 /** Converts a weighted rating to the 0..1 bar the panel shows (0.5 = no effect). */
 const bar = (points: number, cfg: RatingConfig) => clamp01(0.5 + deltaWin(points) / (2 * cfg.explain.barScaleWin));
 
@@ -332,7 +355,9 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
   const metaGames = top.pick.terms?.find((t) => t.name === "meta")?.games ?? 0;
   const personal = top.pick.terms?.find((t) => t.name === "personal")?.deltaWin ?? 0;
   const runnerUp = all[1];
-  const clearGap = !runnerUp || top.pick.score - runnerUp.pick.score >= cfg.explain.clearGapWin;
+  const clearGap =
+    !runnerUp ||
+    (top.pick.score - runnerUp.pick.score >= cfg.explain.clearGapWin && leadZ(top.pick.terms ?? [], runnerUp.pick.terms ?? [], cfg) >= cfg.explain.clearZ);
   const confidence: Confidence =
     metaGames < cfg.minGames.meta ? "thin" : clearGap && personal >= -cfg.explain.clearMaxPersonalLossWin ? "clear" : "close";
 
