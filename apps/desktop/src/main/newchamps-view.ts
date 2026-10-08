@@ -56,6 +56,11 @@ export function learnView(p: LearningPlan, role: string, championId: number, dep
   if (p.job && t[`newchamp.job.${p.job}`]) lines.push(say({ id: `newchamp.job.${p.job}`, slots: {} }));
   if (t[`newchamp.role.${role}`]) lines.push(say({ id: `newchamp.role.${role}`, slots: {} }));
   for (const s of p.spikes) lines.push(say(spikeReason(s, "learn", championId)));
+  if (p.timing) {
+    const { games, you, typical, slow } = p.timing;
+    const id = typical === null ? "newchamp.learn.timing.only" : slow ? "newchamp.learn.timing.slow" : "newchamp.learn.timing";
+    lines.push(say({ id, slots: { games, you: you.toFixed(1), typical: typical === null ? "" : typical.toFixed(1) } }));
+  }
   if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
   if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
   if (p.hard.length) lines.push(say({ id: "newchamp.learn.hard", slots: { champions: list(p.hard) } }));

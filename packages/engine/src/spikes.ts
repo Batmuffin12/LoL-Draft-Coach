@@ -1,4 +1,4 @@
-import type { ChampionId, Position, Reason } from "@ldc/shared";
+import { ITEM_BOUGHT, type ChampionId, type Position, type Reason, type UserMatch } from "@ldc/shared";
 import type { EngineConfig } from "./config";
 import type { MetaIndex } from "./meta-index";
 
@@ -51,4 +51,44 @@ export function spikeReason(s: PowerSpike, who: "you" | "enemy" | "learn", champ
   return s.itemId !== null
     ? { id: `spike.${who}.item`, slots: { champion, item: s.itemId, slot: s.at, minute } }
     : { id: `spike.${who}.slot`, slots: { champion, slot: s.at, minute } };
+}
+
+/** How fast you finish your first completed item on a champion, against what's typical. */
+export interface ItemTiming {
+  /** Your games on it in the role that have a timeline (and a completed item). */
+  games: number;
+  /** Your mean minute of the first completed item. */
+  you: number;
+  /** The band's mean minute for its first completed item (its build), when known. */
+  typical: number | null;
+  /** You finish it at least `slowMinutes` later than typical. */
+  slow: boolean;
+}
+
+/**
+ * Your first-item timing on a champion in a role, from your own games' timelines (your newest
+ * games have one), against the band's build. Null below `minGames`. Pure.
+ */
+export function firstItemTiming(
+  matches: UserMatch[],
+  championId: ChampionId,
+  role: Position,
+  index: MetaIndex | null,
+  completed: ReadonlySet<number>,
+  minGames: number,
+  slowMinutes = Infinity,
+): ItemTiming | null {
+  const minutes = matches.flatMap((m) => {
+    const p = m.match.participants[m.me];
+    const t = m.match.timeline;
+    if (!t || p?.championId !== championId || p.position !== role) return [];
+    const first = t.items.find(([who, , kind, id]) => who === m.me && kind === ITEM_BOUGHT && completed.has(id));
+    return first ? [first[1] / 60] : [];
+  });
+  if (minutes.length < minGames) return null;
+  const slot1 = (index?.build(championId, role)?.items ?? []).filter((i) => i.slot === 1 && i.n > 0);
+  const n = slot1.reduce((s, i) => s + i.n, 0);
+  const you = minutes.reduce((a, b) => a + b, 0) / minutes.length;
+  const typical = n > 0 ? slot1.reduce((s, i) => s + i.minute * i.n, 0) / n : null;
+  return { games: minutes.length, you, typical, slow: typical !== null && you - typical >= slowMinutes };
 }

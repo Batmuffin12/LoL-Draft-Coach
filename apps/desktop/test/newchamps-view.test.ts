@@ -19,8 +19,9 @@ const PLAN: LearningPlan = {
   ],
   curve: { late: true, early: 0.47, lateRate: 0.53 },
   spikes: [{ kind: "item", at: 1, minute: 11.2, gold: 120, z: 3.1, games: 400, itemId: 3031 }],
+  timing: { games: 3, you: 13.42, typical: 11.1, slow: true },
 };
-const FIRST: LearningPlan = { ...PLAN, stage: "practice", ease: 3, settleGames: 30, record: { games: 0, wins: 0 }, focus: { ...PLAN.focus!, source: "basic", value: null, recent: [] }, good: [], hard: [], curve: null, spikes: [] };
+const FIRST: LearningPlan = { ...PLAN, stage: "practice", ease: 3, settleGames: 30, record: { games: 0, wins: 0 }, focus: { ...PLAN.focus!, source: "basic", value: null, recent: [] }, good: [], hard: [], curve: null, spikes: [], timing: null };
 const deps = {
   explain: config.explain,
   champion: (id: number) => (NAMES[id] ? { id, name: NAMES[id]!, iconUrl: null } : null),
@@ -81,6 +82,7 @@ describe("new champions view", () => {
           "Its job: hit spells from range before the fight starts; stay behind your frontline",
           "Mid: learn its trading pattern (short trades or all-in) and when it can leave lane to help",
           "Its spike: Infinity Edge (item 1, ~11 min). Fight once it's done; farm safely before",
+          "Your first item on it: 13.4 min (3 games), typical 11.1 min: farm and back on time to reach it sooner",
           "Wins more of long games (53% vs 47% in short ones): farm safely and fight later",
           "Easier first games into Orianna (+3.1%)",
           "Avoid or ban while learning: Zed (−4.2%), LeBlanc (−2.0%)",

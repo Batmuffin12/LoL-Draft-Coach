@@ -110,6 +110,9 @@ export const EngineConfigSchema = z.object({
     minGold: z.number().min(0),
     /** Spikes shown per champion. */
     max: z.number().int().min(1),
+    /** Your first-item timing on a champion: shown from this many of your games with a timeline; "slow" from this many minutes over typical. */
+    timingMinGames: z.number().int().min(1),
+    timingSlowMinutes: z.number().min(0),
   }),
   plan: z.object({
     /** A lane within this change in win chance (0..1) either way is "even". */

@@ -196,7 +196,7 @@
     ]
   },
   "earlyDeathsMinute": 14,
-  "spikes": { "minCorrelation": 0.5, "minAgreement": 0.8, "minZ": 2, "minGold": 50, "max": 2 },
+  "spikes": { "minCorrelation": 0.5, "minAgreement": 0.8, "minZ": 2, "minGold": 50, "max": 2, "timingMinGames": 2, "timingSlowMinutes": 1.5 },
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
   "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },

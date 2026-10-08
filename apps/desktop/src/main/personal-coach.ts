@@ -515,6 +515,15 @@ export class PersonalCoach extends Coach {
     }
   }
 
+  /** Completed items from Data Dragon with the engine's item rules (undefined while it isn't loaded). */
+  private completedItemSet(): ReadonlySet<number> | undefined {
+    try {
+      return completedItems(this.deps.ddragon.data.itemInfo, this.config.engine.loadout.items);
+    } catch {
+      return undefined;
+    }
+  }
+
   private updateRoleAdvice(): void {
     if (!this.profile) return;
     const lookup = this.championLookup;
@@ -572,6 +581,7 @@ export class PersonalCoach extends Coach {
                 index: this.metaIndex,
                 champion: lookup(id),
                 goal: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
+                completed: this.completedItemSet(),
                 config: this.config.engine,
               }),
           }),

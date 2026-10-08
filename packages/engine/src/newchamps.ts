@@ -5,7 +5,7 @@ import type { LearningProgress, PoolNeed, RolePool } from "./pool";
 import type { ChampionAttributes, MasteryEntry } from "./types";
 import { readMetric } from "./playstyle";
 import { deltaWin } from "./rating";
-import { powerSpikes, type PowerSpike } from "./spikes";
+import { firstItemTiming, powerSpikes, type ItemTiming, type PowerSpike } from "./spikes";
 
 export type NewChampsConfig = EngineConfig["newChamps"];
 
@@ -219,6 +219,8 @@ export interface LearningPlan {
   curve: { late: boolean; early: number; lateRate: number } | null;
   /** Its measured power spikes in the role (empty until the snapshot's spikes pass their check). */
   spikes: PowerSpike[];
+  /** Your first-item timing on it against typical, from your games with a timeline (null with too few). */
+  timing: ItemTiming | null;
 }
 
 export interface LearningPlanInput {
@@ -231,6 +233,8 @@ export interface LearningPlanInput {
   /** Your growth goal, used when it's in this role. */
   goal: { role: Position; metric: string; lowerIsBetter: boolean; target: number } | null;
   config: Pick<EngineConfig, "rating" | "plan" | "growth" | "newChamps" | "spikes">;
+  /** Completed items (Data Dragon with the item rules), for your first-item timing; without it there is none. */
+  completed?: ReadonlySet<number>;
   /** Opponents listed per side. */
   count?: number;
 }
@@ -330,5 +334,6 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
       ? { late: pc.late.winRate > pc.early.winRate, early: pc.early.winRate, lateRate: pc.late.winRate }
       : null;
   const spikes = index ? powerSpikes(index, id, role, config.spikes) : [];
-  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, spikes };
+  const timing = input.completed ? firstItemTiming(input.matches, id, role, index, input.completed, config.spikes.timingMinGames, config.spikes.timingSlowMinutes) : null;
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, spikes, timing };
 }
