@@ -40,6 +40,9 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
     ...state.notices.map((text) => ({ tone: "warn" as const, text })),
     ...(profile.state === "loading" ? [{ tone: "info" as const, text: `Loading your match history: ${profile.done} of ${profile.total}` }] : []),
     ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message }] : []),
+    ...(profile.state === "ready" && profile.backlog
+      ? [{ tone: "info" as const, text: `Loading your older games in the background: ${profile.backlog} to go. Your stats get more accurate as they arrive.` }]
+      : []),
     ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
     ...(extra ? [{ tone: "info" as const, text: extra }] : []),
   ];

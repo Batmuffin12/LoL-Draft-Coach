@@ -511,6 +511,12 @@ export interface CoachStatus {
   profile:
     | { state: "idle" }
     | { state: "loading"; done: number; total: number }
-    | { state: "ready"; games: number; role: Position | null }
+    | {
+        state: "ready";
+        games: number;
+        role: Position | null;
+        /** Server mode: older games still loading in the background (absent or 0: the history is complete). */
+        backlog?: number;
+      }
     | { state: "error"; message: string };
 }

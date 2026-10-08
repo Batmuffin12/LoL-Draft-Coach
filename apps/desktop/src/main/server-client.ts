@@ -7,6 +7,8 @@ const PublicUserSchema = z.looseObject({
   riotId: z.string(),
   band: z.number().nullable(),
   lastSyncAt: z.number().nullable(),
+  // Games of a long history still loading in the background (servers before 0.7.4 don't send it).
+  historyBacklog: z.number().nullable().optional(),
 });
 
 const SyncStateSchema = z.union([

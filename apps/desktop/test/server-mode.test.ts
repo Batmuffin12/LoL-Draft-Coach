@@ -22,10 +22,10 @@ const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
 const box: SecretBox = { encrypt: (s) => `x:${[...s].reverse().join("")}`, decrypt: (s) => [...s.slice(2)].reverse().join("") };
 
 /** The real server API in-process, backed by the fake Riot API (every Riot ID resolves to the test player). */
-function startServer() {
+function startServer(history = config.app.history) {
   const db = openDb(":memory:");
   const riot = new RiotApi({ apiKey: "test", keyType: "development", platform: "euw1", region: "europe", fetch: fakeRiotFetch().fetchFn });
-  const sync = new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands }, {
+  const sync = new SyncScheduler(db, riot, { history, bands: config.bands }, {
     tickMs: 1e9,
     staleAfterMs: 1e9,
     activeWithinMs: 1e9,
@@ -89,6 +89,17 @@ describe("ServerProfileSource against the real server API", () => {
     again.s.on("profile", (p) => (againGames = p.games.length));
     await again.s.load({ gameName: "me", tagLine: "euw" }, { bandFromApi: true });
     expect(againGames).toBe(23);
+  });
+
+  it("says how many older games are still loading when the history is longer than one sync", async () => {
+    const server = startServer({ ...config.app.history, timelineCount: 0, callsPerSync: 10 });
+    const { s } = source(server);
+    const statuses: { state: string; backlog?: number }[] = [];
+    s.on("status", (st) => statuses.push(st as { state: string; backlog?: number }));
+    await s.init();
+    await s.load({ gameName: "Me", tagLine: "EUW" }, { bandFromApi: false });
+    await s.register(BASE, server.invite());
+    expect(statuses.at(-1)).toMatchObject({ state: "ready", games: 10, backlog: 13 });
   });
 
   it("refuses to load someone else's profile when another account is logged into the client", async () => {
