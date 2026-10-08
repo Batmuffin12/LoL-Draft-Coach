@@ -250,6 +250,7 @@
       "minDeltaWin": 0.005,
       "maxReasons": 4,
       "clearGapWin": 0.015,
+      "clearMaxPersonalLossWin": 0.02,
       "powerCurveGap": 0.05,
       "laneGoldGap": 300,
       "barScaleWin": 0.08

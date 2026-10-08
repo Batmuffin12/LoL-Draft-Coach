@@ -113,7 +113,7 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
         <BuildPath starting={l.starting} boots={l.boots} />
         {importMessage && <span className="caption text">{importMessage}</span>}
       </Section>
-      <Section title="Core build" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">{l.items.some((s) => s.top.winAdded !== null) ? "pick rate · win added" : "pick rate"}</span> : null}>
+      <Section title="Core build" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">{l.items.some((s) => s.top.winAdded !== null) ? "pick rate · ★ helps most" : "pick rate"}</span> : null}>
         {slots.length > 0 ? <ItemMatrix slots={slots} /> : <span className="caption">Not enough purchases to rank items yet.</span>}
         {caption && (
           <span className="caption clamp2" title={caption}>

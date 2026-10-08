@@ -328,10 +328,13 @@ export function adviseLivePicks(input: LiveInput): PickAdvice {
   if (!top) return { picks, whyNot: null, confidence: null };
 
   // Thin when the meta has too few games of the champion in this role; else clear or close by the predicted gap.
+  // A pick that is new (or weak) for you is never "clear": your experience is the biggest single factor.
   const metaGames = top.pick.terms?.find((t) => t.name === "meta")?.games ?? 0;
+  const personal = top.pick.terms?.find((t) => t.name === "personal")?.deltaWin ?? 0;
   const runnerUp = all[1];
+  const clearGap = !runnerUp || top.pick.score - runnerUp.pick.score >= cfg.explain.clearGapWin;
   const confidence: Confidence =
-    metaGames < cfg.minGames.meta ? "thin" : !runnerUp || top.pick.score - runnerUp.pick.score >= cfg.explain.clearGapWin ? "clear" : "close";
+    metaGames < cfg.minGames.meta ? "thin" : clearGap && personal >= -cfg.explain.clearMaxPersonalLossWin ? "clear" : "close";
 
   let whyNot: Reason | null = null;
   const usual = usualPick({ ...input, attributes: new Map([...input.attributes, ...input.index.attributes]) });

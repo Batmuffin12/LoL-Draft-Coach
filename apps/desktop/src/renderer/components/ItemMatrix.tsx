@@ -1,5 +1,5 @@
 import type { IconView } from "../../shared/view";
-import { cx, rate, signedPctOrDash, tone } from "../format";
+import { cx, rate, signedPctOrDash } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 export interface MatrixOption {
@@ -17,7 +17,11 @@ export interface MatrixSlot {
 }
 
 
-/** Items by slot as columns: the recommended one on top (gold ring), the next option under it, each with pick % and win added. */
+/**
+ * Items by slot as columns: the recommended one on top (gold ring), the next option under it. One
+ * number per cell (how often it's bought); a star marks the option that helps most in its slot
+ * (its win added is on hover).
+ */
 export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: number }) {
   const depth = Math.min(rows, Math.max(0, ...slots.map((s) => s.options.length)));
   const numbers = slots.some((s) => s.options.some((o) => o.share !== null));
@@ -35,13 +39,22 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
       {Array.from({ length: depth }, (_, r) => [
         ...slots.map((s) => {
           const o = s.options[r];
+          const best = Math.max(...s.options.slice(0, depth).map((x) => x.winAdded ?? -Infinity));
           if (!o)
             return (
               <span key={`${s.slot}-${r}`} className="cell empty">
                 {r === 1 ? "No other common pick" : ""}
               </span>
             );
-          const tip = [o.item.name, o.share === null ? null : `Bought by ${rate(o.share)} of players · ${signedPctOrDash(o.winAdded)} win added`, ...(o.item.reasons ?? [])].filter(Boolean).join("\n");
+          const helpsMost = o.winAdded !== null && o.winAdded > 0 && o.winAdded === best;
+          const tip = [
+            o.item.name,
+            o.share === null ? null : `Bought by ${rate(o.share)} of players`,
+            o.winAdded === null ? null : `Players who bought it won ${signedPctOrDash(o.winAdded)} points vs what their game state predicted`,
+            ...(o.item.reasons ?? []),
+          ]
+            .filter(Boolean)
+            .join("\n");
           return (
             <span key={`${s.slot}-${r}`} className={cx("cell", r === 0 && "top")} title={tip}>
               <ChampIcon champ={o.item} kind="game" size={r === 0 ? 32 : 22} lit={r === 0} title="" />
@@ -49,7 +62,7 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
               {numbers && (
                 <span className="nums">
                   <b>{rate(o.share)}</b>
-                  {o.winAdded !== null && <span className={tone(o.winAdded) === "neg" ? "neg" : "pos"}>{` ${signedPctOrDash(o.winAdded)}`}</span>}
+                  {helpsMost && <span className="pos" aria-label="helps most">{" ★"}</span>}
                 </span>
               )}
             </span>

@@ -207,6 +207,8 @@ export const EngineConfigSchema = z.object({
       maxReasons: z.number().int().min(1),
       /** Predicted win-chance gap (0..1) between #1 and #2 for a "clear pick". */
       clearGapWin: unit,
+      /** Never a "clear pick" when your own games take more than this (0..1) off its win chance (new or weak for you). */
+      clearMaxPersonalLossWin: unit,
       /** A champion's power curve is mentioned when long- and short-game win rates differ by this much (0..1). */
       powerCurveGap: unit,
       /** Mentioned when the champion is this much gold ahead of (or behind) its lane opponent at 15 minutes on average. */

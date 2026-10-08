@@ -310,6 +310,15 @@ describe("adviseLivePicks", () => {
     expect(adviseLivePicks(input(draft([201]), { index: index(snapshot({ gamesScale: 0.02 })) })).confidence).toBe("thin");
     expect(adviseLivePicks(input(draft([201]))).confidence).toMatch(/clear|close/);
   });
+
+  it("never calls a pick clear when it is new to you (no games: the personal term takes win chance off)", () => {
+    const explain = (maxLoss: number) => ({ ...config, rating: { ...config.rating, explain: { ...config.rating.explain, clearGapWin: 0, clearMaxPersonalLossWin: maxLoss } } });
+    const noHistory = { comfort: computeComfort([], [], NOW, config.comfort, "middle") };
+    const advice = adviseLivePicks(input(draft([201]), { ...noHistory, config: explain(1) }));
+    expect(advice.picks[0]!.terms!.find((t) => t.name === "personal")!.deltaWin).toBeLessThan(-0.02);
+    expect(advice.confidence).toBe("clear");
+    expect(adviseLivePicks(input(draft([201]), { ...noHistory, config: explain(0.02) })).confidence).toBe("close");
+  });
 });
 
 describe("assessPick", () => {

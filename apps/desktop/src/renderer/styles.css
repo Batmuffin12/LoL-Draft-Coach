@@ -180,8 +180,8 @@ p { margin: 0; }
 .table .thead, .table .trow { display: grid; align-items: center; column-gap: 6px; }
 .table.picks .thead, .table.picks .trow { grid-template-columns: minmax(0, 1fr) 46px 58px 46px 46px; column-gap: 4px; }
 .table.picks .trow .c-num { font-size: var(--fs-body); }
-.table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 46px 50px 44px 42px; column-gap: 5px; }
-.table.matchups .thead, .table.matchups .trow { grid-template-columns: minmax(0, 1fr) 60px 58px 50px; }
+.table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 90px 50px; column-gap: 8px; }
+.table.matchups .thead, .table.matchups .trow { grid-template-columns: minmax(0, 1fr) 60px 70px 50px; }
 .table.pool .thead, .table.pool .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 50px; }
 .table .thead { white-space: nowrap; padding: 0 6px 4px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
 .table .thead .c-num, .table .thead .c-win { text-align: right; font-size: var(--fs-label); color: var(--muted); }

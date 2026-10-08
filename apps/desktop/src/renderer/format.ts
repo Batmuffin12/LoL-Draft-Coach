@@ -84,11 +84,15 @@ export function initials(name: string): string {
   return one.slice(0, 2).replace(/^./, (c) => c.toUpperCase());
 }
 
-/** The pick table's term columns, in points of win chance: lane (lane + counter), you (personal), team (team + synergy); meta for the tooltip. Null: no such term. */
+/**
+ * The pick table's term columns, in points of win chance: lane (your lane opponent only, the same
+ * number the matchup reason gives), you (personal), team (the rest of the draft: team needs,
+ * duos with allies, and counters to their other picks); meta for the tooltip. Null: no such term.
+ */
 export function pickColumns(terms: Term[]): { lane: number | null; you: number | null; team: number | null; meta: number | null } {
   const out: { lane: number | null; you: number | null; team: number | null; meta: number | null } = { lane: null, you: null, team: null, meta: null };
   for (const t of terms) {
-    const k = t.name === "lane" || t.name === "counter" ? "lane" : t.name === "personal" ? "you" : t.name === "team" || t.name === "synergy" ? "team" : "meta";
+    const k = t.name === "lane" ? "lane" : t.name === "personal" ? "you" : t.name === "team" || t.name === "synergy" || t.name === "counter" ? "team" : "meta";
     out[k] = (out[k] ?? 0) + t.deltaWin;
   }
   return out;

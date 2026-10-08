@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { PickView } from "../../shared/view";
-import { cx, pct, pickColumns, pickReasons, signedPctOrDash, tone, winTone } from "../format";
+import { cx, pct, pickColumns, pickReasons, signedPctOrDash, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { OffMetaChip } from "./Chip";
 
@@ -11,9 +11,9 @@ export interface PickTableProps {
 }
 
 const COLS = [
-  { key: "lane", label: "Matchup", title: "Into their laner and the rest of their team" },
+  { key: "lane", label: "Matchup", title: "Into their laner" },
   { key: "you", label: "You", title: "Your own games on it" },
-  { key: "team", label: "Team", title: "What your team needs, and duos with your allies" },
+  { key: "team", label: "Draft", title: "What your team needs, duos with your allies, and how it does into their other picks" },
 ] as const;
 
 /** Suggested picks as one table with fixed columns; the selected row's reasons under it. Row 1 is selected first. */
@@ -28,8 +28,8 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
     <div className="table picks" role="table">
       <div className="thead" role="row">
         <span className="c-champ">Champion</span>
-        <span className="c-win" title="Predicted win chance in this draft">
-          Win %
+        <span className="c-win" title="Your predicted win chance in this draft">
+          Chance
         </span>
         {COLS.map((c) => (
           <span key={c.key} className="c-num" title={c.title}>
@@ -47,7 +47,8 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
               <span className="nm">{p.champion.name}</span>
               {p.offMeta && <OffMetaChip />}
             </span>
-            <span className={cx("c-win", winTone(p.expectedWin))}>{p.expectedWin === null ? "—" : pct(p.expectedWin)}</span>
+            {/* No good/bad colour: the chance compares your options in this draft, and #1 is the best one even below 50%. */}
+            <span className="c-win">{p.expectedWin === null ? "—" : pct(p.expectedWin)}</span>
             {COLS.map((c) => (
               <span key={c.key} className={cx("c-num", tone(cols[c.key]))}>
                 {signedPctOrDash(cols[c.key])}
@@ -56,7 +57,7 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
           </button>
         );
       })}
-      <div className="legend">Win % in this draft. Matchup, You and Team: what each adds to it or takes away.</div>
+      <div className="legend">Chance: your predicted win chance in this draft. The other columns: what each part adds or takes away.</div>
       {cur && (
         <div className="detail">
           <ul className="reasons">
