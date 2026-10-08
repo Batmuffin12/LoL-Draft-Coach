@@ -1,5 +1,5 @@
 import type { MatchupRowView } from "../../shared/view";
-import { cx, games, positionLabel, rate, signedPctOrDash, tone, winTone } from "../format";
+import { cx, games, positionLabel, rate, signedPctOrDash, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** Within this (points of win chance either way) a pair plays as expected: "Even". */
@@ -42,7 +42,7 @@ export function MatchupTable({ rows, title }: { rows: MatchupRowView[]; title: s
               <span className="why">{`${positionLabel(m.role)}${m.lane ? " · your lane" : ""}`}</span>
             </span>
           </span>
-          <span className={cx("c-num big", winTone(m.winRate))}>{m.games ? rate(m.winRate, 1) : "—"}</span>
+          <span className="c-num big">{m.games ? rate(m.winRate, 1) : "—"}</span>
           <span className={cx("c-num", tone(m.delta, VERDICT_DEAD_ZONE))} title={m.games ? `${signedPctOrDash(m.delta)} vs what both champions' usual win rates predict` : undefined}>
             {m.games ? verdict(m.delta) : "—"}
           </span>
