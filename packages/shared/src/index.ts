@@ -280,6 +280,15 @@ export interface MatchTimeline {
    * killer is -1 when no champion got the kill. For power spikes and "when you die" (absent before 2026-10-08).
    */
   kills?: [number, number, number, number][];
+  /** CS (lane minions + jungle monsters) per participant at each frame (absent before 2026-10-08). */
+  cs?: number[][];
+  /** Wards placed, in time order: [second, placer] (trinkets, sight and control wards; absent before 2026-10-08). */
+  wards?: [number, number][];
+  /**
+   * Epic monsters taken (dragons, grubs, herald, baron...), in time order: [second, killer, assists
+   * bitmask, killer team id]; killer is -1 without a champion (absent before 2026-10-08).
+   */
+  monsters?: [number, number, number, number][];
 }
 
 /** A match from a user's own history, with which participant they were. */

@@ -122,7 +122,7 @@ describe("collector", () => {
     expect(text).not.toContain("SECRET");
     expect(text).not.toContain("Name0");
     expect(rows[0]!.summary.participants[0]!.challenges).toEqual({ killParticipation: 0.5 });
-    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [] });
+    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [], wards: [], monsters: [] });
     // Players' identifiers are never stored anywhere.
     const dump = JSON.stringify(db.$client.prepare("SELECT * FROM collector_cursors").all());
     expect(dump).not.toContain("P-");

@@ -133,7 +133,18 @@ export const TimelineSchema = z.looseObject({
     frames: z.array(
       z.looseObject({
         timestamp: z.number(),
-        participantFrames: z.record(z.string(), z.looseObject({ participantId: z.number().int(), totalGold: z.number().default(0), level: z.number().int().optional() })).default({}),
+        participantFrames: z
+          .record(
+            z.string(),
+            z.looseObject({
+              participantId: z.number().int(),
+              totalGold: z.number().default(0),
+              level: z.number().int().optional(),
+              minionsKilled: z.number().int().optional(),
+              jungleMinionsKilled: z.number().int().optional(),
+            }),
+          )
+          .default({}),
         events: z
           .array(
             z.looseObject({
@@ -150,6 +161,11 @@ export const TimelineSchema = z.looseObject({
               afterId: z.number().int().optional(),
               skillSlot: z.number().int().optional(),
               levelUpType: z.string().optional(),
+              /** WARD_PLACED: who placed it and its type. */
+              creatorId: z.number().int().optional(),
+              wardType: z.string().optional(),
+              /** ELITE_MONSTER_KILL: the team that took it (killerId and assistingParticipantIds as above). */
+              killerTeamId: z.number().int().optional(),
             }),
           )
           .default([]),
