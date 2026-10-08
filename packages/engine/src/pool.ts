@@ -73,6 +73,8 @@ export function analyzePool(input: {
   intendedPositions: Map<ChampionId, Position[]>;
   now: number;
   config: EngineConfig;
+  /** The band's champions in the role and their games (meta), to skip needs the role rarely fills. */
+  rolePicks?: { championId: ChampionId; games: number }[];
 }): RolePool {
   const { role, comfort, attributes, now, config } = input;
   const cfg = config.pool;
@@ -123,8 +125,17 @@ export function analyzePool(input: {
       const p = m.match.participants[m.me];
       return p && p.position === role && !p.win;
     });
+    const total = input.rolePicks?.reduce((s, c) => s + c.games, 0) ?? 0;
+    const roleFills = (need: PoolNeed) => {
+      if (!input.rolePicks || total <= 0) return true;
+      const filled = input.rolePicks.reduce((s, c) => {
+        const a = attributes.get(c.championId);
+        return s + (a && covers(a, need, cfg.coverage) ? c.games : 0);
+      }, 0);
+      return filled / total >= cfg.minRoleNeedShare;
+    };
     for (const need of NEEDS) {
-      if (reliable.some((a) => covers(a, need, cfg.coverage))) continue;
+      if (reliable.some((a) => covers(a, need, cfg.coverage)) || !roleFills(need)) continue;
       const lossesLacking = losses.filter((m) => {
         const me = m.match.participants[m.me]!;
         const team = m.match.participants.filter((p) => p.teamId === me.teamId);

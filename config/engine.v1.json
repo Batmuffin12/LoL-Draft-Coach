@@ -250,6 +250,7 @@
       "engage": 0.65
     },
     "minLossShare": 0.2,
+    "minRoleNeedShare": 0.15,
     "minLossesForEvidence": 5
   },
   "rating": {

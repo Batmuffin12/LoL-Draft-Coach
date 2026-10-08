@@ -193,6 +193,11 @@ export const EngineConfigSchema = z.object({
     coverage: z.object({ damageShare: unit, frontline: unit, engage: unit }),
     /** A hole is shown only when the team lacked it in at least this share of the player's losses in the role... */
     minLossShare: unit,
+    /**
+     * A need counts as a hole only when champions that fill it play at least this share of the role's
+     * games in your rank (bot lane rarely brings magic damage: no "no magic-damage pick" there).
+     */
+    minRoleNeedShare: unit.default(0.15),
     /** ...unless there are fewer losses than this to judge by (then it's shown without evidence). */
     minLossesForEvidence: z.number().int().min(1),
   }),

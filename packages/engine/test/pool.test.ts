@@ -106,6 +106,14 @@ describe("champion pool", () => {
     expect(analyze().holes.some((h) => h.need === "magic")).toBe(true);
   });
 
+  it("skips a need the role rarely fills in your rank (a bot lane without magic damage is normal)", () => {
+    // OLD is the only mage: when mages play 5% of the role's games, no magic hole; at 50%, there is one.
+    const rare = analyze({ rolePicks: [{ championId: OLD, games: 5 }, { championId: MAIN, games: 95 }] });
+    expect(rare.holes.some((h) => h.need === "magic")).toBe(false);
+    const common = analyze({ rolePicks: [{ championId: OLD, games: 50 }, { championId: MAIN, games: 50 }] });
+    expect(common.holes.some((h) => h.need === "magic")).toBe(true);
+  });
+
   it("judges nothing without measured attributes", () => {
     expect(analyze({ attributes: new Map() }).holes).toEqual([]);
   });

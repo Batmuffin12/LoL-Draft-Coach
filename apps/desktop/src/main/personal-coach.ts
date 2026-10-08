@@ -534,6 +534,7 @@ export class PersonalCoach extends Coach {
             intendedPositions: this.intendedPositions,
             now: Date.now(),
             config: this.config.engine,
+            ...(this.metaIndex ? { rolePicks: this.metaIndex.championsIn(r.role) } : {}),
           })
         : null;
       if (pool && this.metaIndex) {
