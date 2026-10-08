@@ -30,6 +30,8 @@ For every player-game with a timeline, take the minute `t` their k-th completed 
 
 The pattern makes sense: snowballing champions (assassins, skirmishers, lane bullies) spike on their first item, while tanks and scalers don't. But at 20–90 games per champion this is borderline (with ~150 champion-roles, a few z ≈ 2.4 can be chance). **Rough data needed:** ~300–400 timeline games per champion-role for a +100 gold swing to be clear. That's about 4–5× today's sample per band, or ~1.5× if spikes are pooled across bands. A spike belongs to the champion more than to a rank, so pooling is sensible.
 
+**Split-half check (M8, same 975 games, `pnpm --filter @ldc/server spikes`):** measured on two halves of the games, the first-three-item swings of 87 champion-role events correlate at only **0.09**, and 8 of 114 events reach z ≥ 2, about what chance gives. So the table above is mostly noise at this size; the pattern only *looked* right. Nothing is shown in the app until the check passes on production data (target: correlation ≥ 0.5 and ≥ 80% same direction at z ≥ 2). Production collects ~7k games a day with timelines (kills and levels too) from the v0.7.0 deploy on.
+
 ### Better signals with small data additions
 
 | Add to `summarizeTimeline` | Unlocks | Cost |

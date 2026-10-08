@@ -180,3 +180,57 @@ export class SpikeAggregator {
 }
 
 const round = (v: number, digits: number) => Math.round(v * 10 ** digits) / 10 ** digits;
+
+export interface SpikeCheck {
+  /** Champion-role events measured in both halves. */
+  pairs: number;
+  /** Pearson correlation of the unshrunk gold swing between the halves (null below 3 pairs). */
+  goldCorrelation: number | null;
+  /** Of the events at |goldZ| ≥ `z` in one half, the share with the same sign in the other (both directions). */
+  signAgreement: number | null;
+  strongPairs: number;
+}
+
+/**
+ * Are the spikes real or noise? Measures them on two halves of the games (by match, so the
+ * halves don't share a game) and compares: a real effect shows up in both halves. Pure.
+ */
+export function checkSpikes(matches: Iterable<MatchSummary>, opts: SpikeOptions, z = 2): SpikeCheck {
+  // Each half has half the games: half the minimum, so the check covers the same champions.
+  const raw = { ...opts, config: { ...opts.config, priorGames: 0, minGames: Math.max(1, Math.ceil(opts.config.minGames / 2)) } };
+  const halves = [new SpikeAggregator(raw), new SpikeAggregator(raw)] as const;
+  let k = 0;
+  for (const m of matches) halves[k++ % 2]!.add(m);
+  const index = (a: SpikeAggregator) => new Map(a.finish().flatMap((c) => c.spikes.map((s) => [`${c.championId}|${c.role}|${s.kind}:${s.at}`, s] as const)));
+  const [a, b] = halves.map(index) as [Map<string, SpikeStat>, Map<string, SpikeStat>];
+  const pairs = [...a].flatMap(([key, s]) => {
+    const t = b.get(key);
+    return t ? [[s, t] as const] : [];
+  });
+  let goldCorrelation: number | null = null;
+  if (pairs.length >= 3) {
+    const xs = pairs.map(([s]) => s.gold);
+    const ys = pairs.map(([, t]) => t.gold);
+    const mx = xs.reduce((p, q) => p + q, 0) / xs.length;
+    const my = ys.reduce((p, q) => p + q, 0) / ys.length;
+    let sxy = 0;
+    let sxx = 0;
+    let syy = 0;
+    for (let i = 0; i < xs.length; i++) {
+      sxy += (xs[i]! - mx) * (ys[i]! - my);
+      sxx += (xs[i]! - mx) ** 2;
+      syy += (ys[i]! - my) ** 2;
+    }
+    goldCorrelation = sxx > 0 && syy > 0 ? round(sxy / Math.sqrt(sxx * syy), 3) : null;
+  }
+  const strong = pairs.flatMap(([s, t]) => [
+    ...(Math.abs(s.goldZ) >= z ? [Math.sign(s.gold) === Math.sign(t.gold)] : []),
+    ...(Math.abs(t.goldZ) >= z ? [Math.sign(t.gold) === Math.sign(s.gold)] : []),
+  ]);
+  return {
+    pairs: pairs.length,
+    goldCorrelation,
+    signAgreement: strong.length ? round(strong.filter(Boolean).length / strong.length, 3) : null,
+    strongPairs: strong.length,
+  };
+}
