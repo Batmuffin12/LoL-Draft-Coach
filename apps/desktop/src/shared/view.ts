@@ -394,6 +394,8 @@ export interface ViewState {
   meta: MetaView | null;
   /** Role the picks are for, if known. */
   pickRole: string | null;
+  /** Their team in short during champ select ("80% physical damage", "Nautilus is their engage"); empty until two are picked. */
+  enemyNotes: string[];
   /** Your lane opponent in champ select (champion null: not picked yet), or null without a role. */
   laneOpponent: { role: string; champion: ChampView | null } | null;
   /** Your roles ranked by recent results, for the lobby. */
@@ -429,6 +431,7 @@ export function emptyViewState(): ViewState {
     hoverPick: null,
     meta: null,
     pickRole: null,
+    enemyNotes: [],
     laneOpponent: null,
     roles: [],
     playstyle: [],

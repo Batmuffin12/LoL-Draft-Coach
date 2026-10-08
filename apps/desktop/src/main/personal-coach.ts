@@ -23,6 +23,7 @@ import {
   monthlyReport,
   sessionCheck,
   gamePlan,
+  enemyTeamNotes,
   type GrowthFocus,
   completedItems,
   completedBoots,
@@ -672,7 +673,7 @@ export class PersonalCoach extends Coach {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
       const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [] });
       return;
     }
     const { engine } = this.config;
@@ -695,6 +696,9 @@ export class PersonalCoach extends Coach {
     const { templates } = this.config.explain;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
     const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);
+
+    // Their team in short (damage type, main engage), once two are picked.
+    const enemyNotes = live ? enemyTeamNotes(live).map(say) : [];
 
     // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
     const locked = lockedPick(this.draft);
@@ -746,7 +750,7 @@ export class PersonalCoach extends Coach {
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
       this.recorder.locked(adviceOption(assessed ?? { championId: locked }), { role, band: this.band, queueId: this.queueId, now: Date.now() });
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, myPick: card(locked, false) });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, enemyNotes, myPick: card(locked, false) });
       this.keptPick = this.view.myPick;
       return;
     }
@@ -785,7 +789,7 @@ export class PersonalCoach extends Coach {
     const pending = me ? me.championId || me.pickIntentId : 0;
     const hoverCard = live && pending > 0 ? card(pending, true) : null;
     if (!hoverCard?.loadout) this.shownLoadout = null;
-    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane });
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane });
+    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane, enemyNotes });
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane, enemyNotes });
   }
 }

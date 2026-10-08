@@ -7,6 +7,7 @@ import {
   assessPick,
   assignRoles,
   computeComfort,
+  enemyTeamNotes,
   gamePlan,
   deltaWin,
   MetaIndex,
@@ -427,6 +428,13 @@ describe("gamePlan", () => {
     expect(plan).toMatch(/Their damage is about \d+% physical/);
     expect(plan).toMatch(/#201 is their main engage/);
     expect(text(gamePlan(input(draft([201]), { index: index(s) }), 101))).toMatch(/^Lane: hard into #201/);
+  });
+
+  it("sums up their team in champ select once two are picked", () => {
+    const s = snapshot();
+    s.attributes = [attr(201, { physicalShare: 0.9, magicShare: 0.1, engage: 0.95 }), attr(301, { physicalShare: 0.8, magicShare: 0.2 })];
+    expect(text(enemyTeamNotes(input(draft([201, 301]), { index: index(s) })))).toMatch(/^d+% physical damage | #201 is their engage$/);
+    expect(enemyTeamNotes(input(draft([201]), { index: index(s) }))).toEqual([]);
   });
 
   it("says nothing it can't measure", () => {

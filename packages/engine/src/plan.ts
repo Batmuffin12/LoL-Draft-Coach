@@ -77,3 +77,25 @@ export function gamePlan(input: LiveInput, championId: ChampionId): Reason[] {
   if (theirs.engager !== null) out.push(reason("plan.engage", { enemy: theirs.engager }));
   return out;
 }
+
+/**
+ * Their team in short, during champ select (once at least `minEnemies` are picked): its damage
+ * type when one side dominates, and its main engage. Measured aggregates only. Pure.
+ */
+export function enemyTeamNotes(input: LiveInput, minEnemies = 2): Reason[] {
+  const { index, role, config } = input;
+  const attrs = new Map([...input.attributes, ...index.attributes]);
+  const { enemies } = placeDraft(input.draft, index, role);
+  if (enemies.length < minEnemies) return [];
+  const theirs = shape(
+    enemies.map((e) => e.championId),
+    attrs,
+    config.plan,
+    config.rating.minGames.meta,
+  );
+  const out: Reason[] = [];
+  if (theirs.physical !== null && theirs.physical >= config.plan.damageShare) out.push(reason("draft.damage.physical", { share: theirs.physical }));
+  else if (theirs.magic !== null && theirs.magic >= config.plan.damageShare) out.push(reason("draft.damage.magic", { share: theirs.magic }));
+  if (theirs.engager !== null) out.push(reason("draft.engage", { enemy: theirs.engager }));
+  return out;
+}

@@ -105,6 +105,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
         </Section>
       ) : (
         <Section title="Suggested picks" aside={state.picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
+          {state.enemyNotes.length > 0 && <p className="caption enemy-notes">{`Their team: ${state.enemyNotes.join(" · ")}`}</p>}
           {state.picks.length > 0 ? (
             <PickTable picks={state.picks.slice(0, PICK_ROWS)} whyNot={state.pickAdvice.whyNot} />
           ) : (
