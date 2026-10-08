@@ -495,7 +495,7 @@ export class BuildAggregator {
       });
 
       const lifts: SituationalLift[] = [];
-      const { priorGames: k, minGames, minLift, maxPerBuild } = cfg.lift;
+      const { priorGames: k, minGames, minLift, maxPerBuild, minZ } = cfg.lift;
       for (const [key, c] of b.takes) {
         const [kind, id] = key < 0 ? (["item", -key] as const) : (["rune", key] as const);
         for (const tr of ENEMY_TRAITS) {
@@ -506,7 +506,10 @@ export class BuildAggregator {
           const high = (cHigh + k * base) / (nHigh + k);
           const low = (cLow + k * base) / (nLow + k);
           const lift = low > 0 ? high / low : 0;
-          if (lift >= minLift) lifts.push({ kind, id: Number(id), trait: tr, lift: round(lift, 2), high: round(high), low: round(low), n: nLow + nHigh });
+          // Raw rates and their pooled standard error: a real difference, not a few games.
+          const se = Math.sqrt(base * (1 - base) * (1 / nHigh + 1 / nLow));
+          const z = se > 0 ? (cHigh / nHigh - cLow / nLow) / se : 0;
+          if (lift >= minLift && z >= minZ) lifts.push({ kind, id: Number(id), trait: tr, lift: round(lift, 2), high: round(high), low: round(low), n: nLow + nHigh });
         }
       }
       lifts.sort((x, y) => y.lift - x.lift);

@@ -57,7 +57,14 @@ export const MetaConfigSchema = z.object({
     /** Expected win per state bin: bucket edges (minutes, team gold difference) and smoothing toward 50%. */
     stateBins: z.object({ minutes: z.array(z.number()).min(1), goldDiff: z.array(z.number()).min(1), priorGames: z.number().min(0) }),
     /** Situational lift: smoothing, and what is published (games on each side, minimum lift, most per champion-role). */
-    lift: z.object({ priorGames: z.number().min(0), minGames: z.number().int().min(1), minLift: z.number().min(1), maxPerBuild: z.number().int().min(0) }),
+    lift: z.object({
+      priorGames: z.number().min(0),
+      minGames: z.number().int().min(1),
+      minLift: z.number().min(1),
+      maxPerBuild: z.number().int().min(0),
+      /** Two-proportion z-score the difference must reach, so a few games can't make a big ratio (6 vs 3 games). */
+      minZ: z.number().min(0).default(2),
+    }),
     /** Rune pages and items into a lane opponent are kept when the matchup has this many games. */
     minMatchupGames: z.number().int().min(1),
     /** Items published per build slot (the most bought). */

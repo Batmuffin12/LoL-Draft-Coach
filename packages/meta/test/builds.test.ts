@@ -159,6 +159,18 @@ describe("BuildAggregator", () => {
     expect(b.lifts.some((l) => l.id === 3001)).toBe(false);
   });
 
+  it("needs a real difference for a lift, not a big ratio from a few games", () => {
+    const run = (minZ: number) => {
+      const agg = make({ lift: { ...cfg.lift, minZ } });
+      for (let i = 0; i < 10; i++) agg.add(game(`p${i}`, { win: true, items: [3001] }));
+      // The rune in 3 of 10 games against magic teams and none otherwise: a big ratio, but z ≈ 1.9.
+      for (let i = 0; i < 10; i++) agg.add(game(`m${i}`, { win: true, items: [3001], magicEnemies: true, mageRune: i < 3 }));
+      return champ1(agg).lifts.some((l) => l.kind === "rune" && l.id === 8437 && l.trait === "magic");
+    };
+    expect(run(0)).toBe(true);
+    expect(run(2)).toBe(false);
+  });
+
   it("keeps a rune page into a lane opponent once the matchup is common enough", () => {
     const agg = make({ minMatchupGames: 3 });
     for (let i = 0; i < 3; i++) agg.add(game(`x${i}`, { win: true, items: [], magicEnemies: true, mageRune: true }));
