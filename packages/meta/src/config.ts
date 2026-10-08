@@ -110,6 +110,20 @@ export const MetaConfigSchema = z.object({
     rateLimitShare: z.number().gt(0).max(1),
     /** /health calls the collector stale after this many hours without a new game. */
     staleAfterHours: z.number().positive(),
+    /**
+     * A temporary boost to gather data faster (power spikes need ~6-10x the games): while
+     * enabled and fewer than `untilMatches` collected games are stored, runs use these limits
+     * instead. It switches itself off at that size; `enabled: false` switches it off at once.
+     */
+    boost: z
+      .object({
+        enabled: z.boolean(),
+        untilMatches: z.number().int().min(1),
+        budgetSeconds: z.number().positive(),
+        maxMatchesPerRun: z.number().int().min(1),
+        rateLimitShare: z.number().gt(0).max(1),
+      })
+      .optional(),
   }),
 });
 export type MetaConfig = z.infer<typeof MetaConfigSchema>;

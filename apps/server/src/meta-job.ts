@@ -187,9 +187,13 @@ export interface MetaRunResult {
   error: string | null;
   pruned: number;
   snapshots: PublishedSnapshot[];
+  /** The run used the temporary boost (meta.collector.boost). */
+  boosted: boolean;
 }
 
 export interface MetaJobOptions {
+  /** Sets the rate limiter's collector share for a run (the boost uses more of the key). */
+  collectorShare?: (share: number) => void;
   /** Data Dragon items for the current patch (to tell completed items); null when unavailable. */
   items?: () => Promise<ReadonlyMap<number, ItemInfo> | null>;
   now?: () => number;
@@ -247,6 +251,15 @@ export class MetaJob {
     const startedAt = this.now();
     const runId = this.db.insert(collectorRuns).values({ startedAt }).returning({ id: collectorRuns.id }).get().id;
     const bands = activeBands(this.db, bandConfig, startedAt - meta.collector.activeUserDays * DAY_MS);
+    // The temporary boost: until enough games are stored, use more of the key and the hour.
+    const boost = meta.collector.boost;
+    const stored = boost?.enabled
+      ? (this.db.$client.prepare("SELECT count(*) AS n FROM matches WHERE source = 'collector'").get() as { n: number }).n
+      : 0;
+    const boosted = !!boost?.enabled && stored < boost.untilMatches;
+    const collector = boosted ? { ...meta.collector, budgetSeconds: boost!.budgetSeconds, maxMatchesPerRun: boost!.maxMatchesPerRun } : meta.collector;
+    this.opts.collectorShare?.(boosted ? boost!.rateLimitShare : meta.collector.rateLimitShare);
+    if (boost?.enabled) this.log(boosted ? `collector: boosted run (${stored} of ${boost.untilMatches} games stored)` : `collector: boost done (${stored} games stored)`);
     const buildBands = buildBandsFor(bands, bandConfig);
     let collected: CollectResult | null = null;
     let error: string | null = null;
@@ -259,10 +272,10 @@ export class MetaJob {
           bands,
           buildBands,
           bandConfig,
-          collector: meta.collector,
+          collector,
           keepChallenges: challengeFields(engine),
           now: this.now,
-          deadline: startedAt + meta.collector.budgetSeconds * 1000,
+          deadline: startedAt + collector.budgetSeconds * 1000,
           since: startedAt - Math.min(meta.collector.lookbackDays, meta.aggregation.windowDays) * DAY_MS,
           minDurationSec: meta.aggregation.minDurationSec,
           earlyDeathsSec: engine.earlyDeathsMinute * 60,
@@ -303,6 +316,6 @@ export class MetaJob {
         snapshots.map((s) => `band ${s.band}: ${s.matches} matches ${Math.round(s.sizeBytes / 1024)} KB`).join("; ") +
         (error ? ` (${error})` : ""),
     );
-    return { startedAt, finishedAt, collected, error, pruned, snapshots };
+    return { startedAt, finishedAt, collected, error, pruned, snapshots, boosted };
   }
 }

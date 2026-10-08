@@ -286,6 +286,24 @@ describe("meta job", () => {
     expect(r.snapshots).toHaveLength(1);
   });
 
+  it("boosts collection until enough games are stored, then switches itself off; enabled: false switches it off", async () => {
+    const boost = { enabled: true, untilMatches: 1, budgetSeconds: 3200, maxMatchesPerRun: 1600, rateLimitShare: 1 };
+    const run = async (b: typeof boost, seedGames: number) => {
+      const db = openDb(":memory:");
+      const { summarizeMatch } = await import("@ldc/riot-api");
+      for (let i = 0; i < seedGames; i++) {
+        db.insert(schema.matches).values({ matchId: `S${i}`, queueId: 420, gameVersion: "16.19.1", endedAt: NOW - MIN, durationSec: 1800, summary: summarizeMatch(rawMatch(`S${i}`, NOW - MIN)), source: "collector", storedAt: NOW, band: 2 }).run();
+      }
+      const shares: number[] = [];
+      const s = { ...settings, meta: { ...config.meta, collector: { ...config.meta.collector, boost: b } } };
+      const r = await new MetaJob(db, { ...fakeRiot(), keyProblem: new Error("x") }, s, { now: () => NOW, log: () => {}, collectorShare: (x) => shares.push(x) }).run();
+      return { boosted: r.boosted, shares };
+    };
+    expect(await run(boost, 0)).toEqual({ boosted: true, shares: [1] });
+    expect(await run(boost, 1)).toEqual({ boosted: false, shares: [config.meta.collector.rateLimitShare] });
+    expect(await run({ ...boost, enabled: false }, 0)).toEqual({ boosted: false, shares: [config.meta.collector.rateLimitShare] });
+  });
+
   it("closes a run the server never finished (a redeploy mid-run) before the next one", async () => {
     const db = openDb(":memory:");
     db.insert(schema.collectorRuns).values({ startedAt: NOW - 3_600_000 }).run();

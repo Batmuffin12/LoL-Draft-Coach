@@ -68,6 +68,7 @@
     "rateLimitShare": 0.8,
     "activeUserDays": 30,
     "maxStoredMatches": 50000,
-    "staleAfterHours": 6
+    "staleAfterHours": 6,
+    "boost": { "enabled": true, "untilMatches": 60000, "budgetSeconds": 3200, "maxMatchesPerRun": 1600, "rateLimitShare": 1 }
   }
 }

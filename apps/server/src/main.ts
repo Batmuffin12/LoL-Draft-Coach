@@ -19,14 +19,15 @@ const MINUTE = 60_000;
 const env = readServerEnv(process.env);
 const config = loadServerConfig(findConfigDir(process.cwd()));
 const db = openDb(env.DATABASE_PATH);
+// The collector leaves part of each limit free, so a user's sync never waits behind it (a boosted run may use all of it).
+const limiter = new RateLimiter({ collectorShare: config.meta.collector.rateLimitShare });
 const riot = env.RIOT_API_KEY
   ? new RiotApi({
       apiKey: env.RIOT_API_KEY,
       keyType: env.RIOT_KEY_TYPE,
       platform: env.RIOT_PLATFORM,
       region: env.RIOT_REGION,
-      // The collector leaves part of each limit free, so a user's sync never waits behind it.
-      limiter: new RateLimiter({ collectorShare: config.meta.collector.rateLimitShare }),
+      limiter,
     })
   : null;
 const sync = riot
@@ -44,7 +45,7 @@ const items = async () => {
   await ddragon.load();
   return ddragon.data.itemInfo;
 };
-const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine }, { items });
+const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine }, { items, collectorShare: (share) => limiter.setCollectorShare(share) });
 const app = createApp({
   db,
   version: VERSION,
