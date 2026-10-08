@@ -21,7 +21,7 @@ export function FocusCard({ focus: f }: { focus: FocusView }) {
         <span className="f-arrow" aria-hidden="true">
           →
         </span>
-        <span className="f-target" title="Your next step: halfway to the average">
+        <span className="f-target" title={f.goalHint}>
           <span className="label gold">Goal</span>
           <b>{f.goalText}</b>
         </span>

@@ -24,7 +24,7 @@ const deps = {
 describe("focus view", () => {
   it("formats the focus with its numbers and why it was chosen, from config wording", () => {
     const v = focusView(growth, deps)!;
-    expect(v).toMatchObject({ label: "CS per minute", title: "More CS per minute", goalText: "6.8 or more", on: "Ahri · Mid", youText: "6.1", targetText: "6.8", typicalText: "7.6", recent: [true, false, false] });
+    expect(v).toMatchObject({ label: "CS per minute", title: "More CS per minute", goalText: "6.8 or more", goalHint: expect.stringMatching(/^Your next step: \d+% of the way to the average$/), on: "Ahri · Mid", youText: "6.1", targetText: "6.8", typicalText: "7.6", recent: [true, false, false] });
     expect(v.why).toBe("Why this: in Gold to Platinum, mid players who beat the average here win more (win rate +8 points).");
     expect(v.met).toEqual(["Deaths per minute: 0.4 → 0.3, goal met"]);
     expect(focusView({ ...growth, focus: null }, deps)).toBeNull();

@@ -319,6 +319,8 @@ export interface FocusView {
   title: string;
   /** "6.8 or more", "7.7 or fewer". */
   goalText: string;
+  /** How the goal is set, from the configured step: "Your next step: 50% of the way to the average". */
+  goalHint: string;
   /** "Ahri · Mid", or the role alone without a main champion. */
   on: string;
   you: number;
