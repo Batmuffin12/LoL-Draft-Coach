@@ -57,10 +57,10 @@
       "IV"
     ],
     "matchesPerPlayer": 5,
-    "budgetSeconds": 1800,
-    "maxMatchesPerRun": 900,
+    "budgetSeconds": 2400,
+    "maxMatchesPerRun": 1100,
     "lookbackDays": 10,
-    "timelineShare": 0.5,
+    "timelineShare": 1,
     "buildBandTimelineShare": 1,
     "buildBandShare": 0.3,
     "rateLimitShare": 0.8,

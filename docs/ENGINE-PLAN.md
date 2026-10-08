@@ -46,7 +46,7 @@ Per *specific* item (Kraken vs BotRK on Yi) only once a champion-item pair has e
 - **Game plan tab after lock-in:** your spike and the enemy laner's spike, as a timeline: "you spike at item 1 (~11:00), Darius at level 6 and item 1".
 - **Build tab:** a mark on the spike item.
 - **Personal:** your own first-item time on the champion (user sync already fetches timelines for your 30 newest games) vs your rank's typical time: "you finish it at 13:40, players in your rank at 11:00". This is a measurable goal, so it can feed the growth / "This game" focus.
-- **In game (M8): passive only.** The panel may show "your spike: item 1 ✓" when the player looks at it, but **no pushed power-spike notifications and no commands** ("X hit level 6" alerts are prohibited by the Overwolf/Riot compliance rules quoted in the review §6.8). Add this to SPEC before M8.
+- **In game (M9): passive only.** The panel may show "your spike: item 1 ✓" when the player looks at it, but **no pushed power-spike notifications and no commands** ("X hit level 6" alerts are prohibited by the Overwolf/Riot compliance rules quoted in the review §6.8). Add this to SPEC before M9.
 
 Compliance otherwise holds: champion-level aggregates from anonymous collected rows, no player identifiers, nothing hand-typed.
 
@@ -55,7 +55,7 @@ Compliance otherwise holds: champion-level aggregates from anonymous collected r
 | # | Step | Why | Effort | Done when |
 | --- | --- | --- | --- | --- |
 | 1 | **Ship v0.7.0** (owner tries M7, merge, tag) | Don't mix engine work into an unreleased milestone | — | Tagged |
-| 2 | **Timeline data:** kill events + level per minute in `MatchTimeline` (shared type, `summarizeTimeline`, Zod, sim); `meta.v1.json` timeline share back toward 1 in band 2 once the collector's budget allows (review §3) | Every spike and "when you die" feature needs it | S–M | New rows carry kills and levels; `/health` timeline count/run |
+| 2 | **Timeline data (done 2026-10-08, ships with v0.7.0):** kill events + level per minute in `MatchTimeline` (shared type, `summarizeTimeline`, Zod, sim); `meta.v1.json` timeline share back toward 1 in band 2 once the collector's budget allows (review §3) | Every spike and "when you die" feature needs it | S–M | New rows carry kills and levels; `/health` timeline count/run |
 | 3 | **`SpikeAggregator` in `packages/meta`** (pure): per champion-role, pooled across bands: item-slot spikes (gold swing and fights won, time-matched), level spikes, typical completion minute, n and a shrunk estimate (empirical-Bayes toward the role average). Snapshot field `spikes`; server schema; desktop check | The measurement | M | Unit tests on sim timelines with a planted spike |
 | 4 | **Validate spikes before showing them:** split-half check (estimates from odd days predict even days), list the top/bottom 20 for the owner to sanity-check, show only above a z threshold and n minimum (config) | Avoid showing noise as fact | S | Split-half correlation reported in research |
 | 5 | **Show spikes:** engine `powerSpikes()` + explain wording; New tab line, game plan tab, Build tab mark | The feature | M | Screenshots via sim scenarios at 440 × 720 |
@@ -68,8 +68,8 @@ Compliance otherwise holds: champion-level aggregates from anonymous collected r
 
 Steps 2–6 are the power-spike feature (one milestone-sized chunk, roughly a week). Steps 7–10 are the scoring upgrade and each waits on its backtest. Re-run `pnpm --filter @ldc/server backtest` on a fresh production copy (docs/CLOUD.md) before and after each scoring change.
 
-## Open questions for the owner
+## Owner decisions (2026-10-08)
 
-1. Do power spikes go in their own milestone after v0.7.0 (recommended: they feed M8's in-game panel), or as part of M8?
-2. Pool spikes across rank bands (more data, recommended) or per band (more specific, needs ~3× the data)?
-3. OK to raise the collector's timeline share in band 2 again? It costs a few $/month in run time (docs/CLOUD.md).
+1. **Power spikes are their own milestone: M8 (v0.8.0)**, after v0.7.0; in game and polish moves to M9 (SPEC roadmap updated).
+2. **Spikes pool all rank bands.**
+3. **Timelines on every Gold–Plat game: approved.** Done on `milestone-7-grow` so production collects spike data from the v0.7.0 deploy on: `timelineShare` 1, run budget 2400 s (docs/CLOUD.md), and timelines keep champion kills and levels per minute (step 2 of the plan). Older stored rows have neither; the aggregator must skip them.

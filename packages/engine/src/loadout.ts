@@ -14,7 +14,7 @@ export interface LoadoutInput {
   attributes: ReadonlyMap<ChampionId, ChampionAttributes>;
   traitCuts: Record<EnemyTrait, number>;
   config: LoadoutConfig;
-  /** Items you already own (M8, live); empty before the game. */
+  /** Items you already own (M9, live); empty before the game. */
   owned?: number[];
   /** The champion's builds in all roles added together, used when your role's build has too few games. */
   pooled?: ChampionBuild | null;
