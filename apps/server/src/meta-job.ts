@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
-import { BandAggregator, BuildAggregator, ExpectedWinFitter, type MetaConfig } from "@ldc/meta";
+import { BandAggregator, BuildAggregator, ExpectedWinFitter, SpikeMeasure, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
-import type { ExpectedWinTable, ItemInfo, MatchSummary, RankBandId } from "@ldc/shared";
+import type { ChampionSpikes, ExpectedWinTable, ItemInfo, MatchSummary, RankBandId, SpikeCheck } from "@ldc/shared";
 import { collect, pruneCollected, type CollectorRiot, type CollectResult } from "./collector";
 import type { Db } from "./db";
 import { collectorRuns, metaSnapshots, users } from "./db/schema";
@@ -137,31 +137,15 @@ export async function publishSnapshot(
   band: RankBandId,
   settings: MetaSettings,
   now: number,
-  extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null } = {},
+  extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null; spikes?: SpikesResult | null } = {},
 ): Promise<PublishedSnapshot> {
-  const since = now - settings.meta.aggregation.windowDays * DAY_MS;
-  // Newest first, in chunks (keyset on ended_at, match_id), yielding to the event loop between them.
-  const rows: Rows = async function* (bands) {
-    const stmt = db.$client.prepare(
-      `SELECT summary, band, ended_at AS endedAt, match_id AS id FROM matches
-       WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND match_id < ?))
-       ORDER BY ended_at DESC, match_id DESC LIMIT ?`,
-    );
-    let at = Number.MAX_SAFE_INTEGER;
-    let id = "";
-    for (;;) {
-      const chunk = stmt.all(...bands, since, at, at, id, CHUNK_ROWS) as { summary: string; band: number; endedAt: number; id: string }[];
-      yield* chunk;
-      if (chunk.length < CHUNK_ROWS) return;
-      ({ endedAt: at, id } = chunk[chunk.length - 1]!);
-      await new Promise((resolve) => setImmediate(resolve));
-    }
-  };
+  const rows = storedRows(db, now - settings.meta.aggregation.windowDays * DAY_MS);
   const bands = [band, ...(extra.buildBands ?? [])];
   const first = await bandPass(rows, band, bands, settings, now);
   const builds = JSON.stringify(await buildPass(rows, bands, settings, now, first, first.expected, extra.items ?? null));
-  // The two parts are JSON objects with distinct keys: join them into one snapshot object.
-  const json = `${first.baseJson.slice(0, -1)},${builds.slice(1)}`;
+  // The parts are JSON objects with distinct keys: join them into one snapshot object.
+  const spikes = extra.spikes ? `,${JSON.stringify({ spikes: extra.spikes.spikes, spikeCheck: extra.spikes.check }).slice(1, -1)}` : "";
+  const json = `${first.baseJson.slice(0, -1)},${builds.slice(1, -1)}${spikes}}`;
   const snapshot = first.summary;
   const body = gzipSync(json);
   const etag = `"${createHash("sha256").update(json).digest("hex").slice(0, 32)}"`;
@@ -177,6 +161,51 @@ export async function publishSnapshot(
   };
   db.insert(metaSnapshots).values(row).onConflictDoUpdate({ target: metaSnapshots.band, set: row }).run();
   return { band, matches: snapshot.matches, patch: snapshot.patch, sizeBytes: body.length, etag };
+}
+
+export interface SpikesResult {
+  spikes: ChampionSpikes[];
+  check: SpikeCheck;
+}
+
+/**
+ * Power spikes from the timelines of every collected band (docs/ENGINE-PLAN.md: pooled), with
+ * their split-half check. One pass per run; every band's snapshot carries the same result.
+ */
+export async function measureSpikes(db: Db, bands: RankBandId[], settings: MetaSettings, now: number, items: ReadonlyMap<number, ItemInfo> | null): Promise<SpikesResult> {
+  const { aggregation, spikes } = settings.meta;
+  const measure = new SpikeMeasure({
+    now,
+    config: spikes,
+    minDurationSec: aggregation.minDurationSec,
+    windowDays: aggregation.windowDays,
+    completed: items ? completedItems(items, settings.engine.loadout.items) : new Set(),
+  });
+  for await (const row of storedRows(db, now - aggregation.windowDays * DAY_MS)(bands)) {
+    // Most of the cost is parsing: skip rows without a timeline unread.
+    if (row.summary.includes('"timeline"')) measure.add(JSON.parse(row.summary) as MatchSummary);
+  }
+  return measure.finish();
+}
+
+/** Stored matches of some bands inside the window, newest first, in chunks (keyset on ended_at, match_id), yielding to the event loop between them. */
+function storedRows(db: Db, since: number): Rows {
+  return async function* (bands) {
+    const stmt = db.$client.prepare(
+      `SELECT summary, band, ended_at AS endedAt, match_id AS id FROM matches
+       WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND match_id < ?))
+       ORDER BY ended_at DESC, match_id DESC LIMIT ?`,
+    );
+    let at = Number.MAX_SAFE_INTEGER;
+    let id = "";
+    for (;;) {
+      const chunk = stmt.all(...bands, since, at, at, id, CHUNK_ROWS) as { summary: string; band: number; endedAt: number; id: string }[];
+      yield* chunk;
+      if (chunk.length < CHUNK_ROWS) return;
+      ({ endedAt: at, id } = chunk[chunk.length - 1]!);
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  };
 }
 
 export interface MetaRunResult {
@@ -287,9 +316,11 @@ export class MetaJob {
       this.log(`meta: no item data, builds without items (${(err as Error).message})`);
       return null;
     });
+    // Spikes pool every collected band (build-only bands too): measured once, carried by every snapshot.
+    const spikes = await measureSpikes(this.db, [...bands, ...buildBands], this.settings, this.now(), items);
     for (const band of bands) {
       const above = buildBandsFor([band], bandConfig);
-      snapshots.push(await publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items }));
+      snapshots.push(await publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items, spikes }));
     }
 
     const finishedAt = this.now();

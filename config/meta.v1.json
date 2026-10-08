@@ -27,7 +27,8 @@
     "windowMinutes": 3,
     "itemSlots": 3,
     "minGames": 60,
-    "priorGames": 100
+    "priorGames": 100,
+    "checkZ": 2
   },
   "builds": {
     "minGames": 3,

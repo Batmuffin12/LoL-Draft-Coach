@@ -483,6 +483,10 @@ export interface MetaSnapshot {
   /** Band-average enemy-team trait values: above it, a trait counts as high. */
   traitCuts?: Record<EnemyTrait, number>;
   expectedWin?: ExpectedWinTable;
+  /** Power spikes per champion-role, measured on every band's timelines (the same in every band's snapshot). Absent in older snapshots. */
+  spikes?: ChampionSpikes[];
+  /** Whether the spikes repeat on two halves of the games: the app shows them only when this passes. */
+  spikeCheck?: SpikeCheck;
   /**
    * Playstyle references: per role and metric, evenly spaced quantiles (min … max) of
    * the metric over all collected players in that role, and its importance: the win-rate gap
@@ -504,4 +508,44 @@ export interface CoachStatus {
     | { state: "loading"; done: number; total: number }
     | { state: "ready"; games: number; role: Position | null }
     | { state: "error"; message: string };
+}
+
+/**
+ * One measured power spike: how much faster a champion gains on its lane opponent right after
+ * the event (its k-th completed item, or reaching a level) than right before it, beyond what its
+ * role usually gains at the same event.
+ */
+export interface SpikeStat {
+  kind: "item" | "level";
+  /** The item slot (1 = first completed item) or the level. */
+  at: number;
+  /** Games behind the gold measure. */
+  n: number;
+  /** Mean minute the event happens. */
+  minute: number;
+  /** Gold-lead swing over the lane opponent (after window minus before window) beyond the role's, shrunk toward 0. */
+  gold: number;
+  /** The unshrunk swing in standard errors (sign = direction). */
+  goldZ: number;
+  /** The same for fights won (takedowns minus deaths), from timelines with kill events. */
+  fights?: number;
+  fightsZ?: number;
+  fightsN?: number;
+}
+
+export interface ChampionSpikes {
+  championId: ChampionId;
+  role: Position;
+  spikes: SpikeStat[];
+}
+
+/** Spikes measured on two halves of the games, compared. */
+export interface SpikeCheck {
+  /** Champion-role events measured in both halves. */
+  pairs: number;
+  /** Pearson correlation of the unshrunk gold swing between the halves (null below 3 pairs). */
+  goldCorrelation: number | null;
+  /** Of the events at |goldZ| ≥ the check's z in one half, the share with the same sign in the other. */
+  signAgreement: number | null;
+  strongPairs: number;
 }

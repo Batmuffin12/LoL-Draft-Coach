@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ITEM_BOUGHT, type MatchSummary } from "@ldc/shared";
-import { checkSpikes, parseMetaConfig, SpikeAggregator } from "../src/index";
+import { parseMetaConfig, SpikeAggregator, SpikeMeasure } from "../src/index";
 
 const config = parseMetaConfig(JSON.parse(readFileSync(new URL("../../../config/meta.v1.json", import.meta.url), "utf8")));
 const NOW = Date.UTC(2026, 9, 8);
@@ -87,7 +87,10 @@ describe("SpikeAggregator", () => {
   it("checks that spikes repeat on the other half of the games", () => {
     const games = Array.from({ length: 40 }, (_, s) => [game(1, true, s), game(2, false, s), game(3, s % 4 < 2, s)]).flat();
     const opts = { now: NOW, config: { ...config.spikes, minGames: 5 }, minDurationSec: 0, windowDays: 30, completed: new Set([ITEM]) };
-    const c = checkSpikes(games, opts);
+    const measure = new SpikeMeasure(opts);
+    for (const g of games) measure.add(g);
+    const { spikes, check: c } = measure.finish();
+    expect(spikes.map((x) => x.championId)).toEqual([1, 2, 3, 9]);
     expect(c.pairs).toBe(4); // champions 1, 2, 3 and their opponent 9, first item each (no levels stored)
     expect(c.goldCorrelation).toBeGreaterThan(0.9);
     expect(c.signAgreement).toBe(1);

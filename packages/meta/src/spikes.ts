@@ -1,4 +1,4 @@
-import type { ChampionId, MatchSummary, MatchTimeline, Position } from "@ldc/shared";
+import type { ChampionId, ChampionSpikes, MatchSummary, MatchTimeline, Position, SpikeCheck, SpikeStat } from "@ldc/shared";
 import { completedPurchases } from "./builds";
 import type { MetaConfig } from "./config";
 
@@ -6,34 +6,6 @@ export type SpikeConfig = MetaConfig["spikes"];
 
 /** A spike moment: the k-th completed item (1-based), or reaching a champion level. */
 export type SpikeEvent = { kind: "item"; slot: number } | { kind: "level"; level: number };
-
-/**
- * One measured spike: how much faster a champion gains on its lane opponent right after the
- * event than right before it, beyond what its role usually gains at the same event.
- */
-export interface SpikeStat {
-  kind: "item" | "level";
-  /** The item slot (1 = first completed item) or the level. */
-  at: number;
-  /** Games behind the gold measure. */
-  n: number;
-  /** Mean minute the event happens. */
-  minute: number;
-  /** Gold-lead swing over the lane opponent (after window minus before window) beyond the role's, shrunk toward 0. */
-  gold: number;
-  /** The unshrunk swing in standard errors (sign = direction). */
-  goldZ: number;
-  /** The same for fights won (takedowns minus deaths), from timelines with kill events. */
-  fights?: number;
-  fightsZ?: number;
-  fightsN?: number;
-}
-
-export interface ChampionSpikes {
-  championId: ChampionId;
-  role: Position;
-  spikes: SpikeStat[];
-}
 
 export interface SpikeOptions {
   now: number;
@@ -181,28 +153,42 @@ export class SpikeAggregator {
 
 const round = (v: number, digits: number) => Math.round(v * 10 ** digits) / 10 ** digits;
 
-export interface SpikeCheck {
-  /** Champion-role events measured in both halves. */
-  pairs: number;
-  /** Pearson correlation of the unshrunk gold swing between the halves (null below 3 pairs). */
-  goldCorrelation: number | null;
-  /** Of the events at |goldZ| ≥ `z` in one half, the share with the same sign in the other (both directions). */
-  signAgreement: number | null;
-  strongPairs: number;
+/**
+ * Spikes with their own check: the spikes of all the games, and the same measured on two
+ * halves of them (alternate matches, so no game is in both) to see whether they repeat: a real
+ * effect shows up in both halves. Feed it matches in any order. Pure.
+ */
+export class SpikeMeasure {
+  private readonly all: SpikeAggregator;
+  private readonly halves: [SpikeAggregator, SpikeAggregator];
+  private k = 0;
+
+  constructor(private readonly opts: SpikeOptions) {
+    this.all = new SpikeAggregator(opts);
+    // Each half has half the games: half the minimum, so the check covers the same champions; unshrunk.
+    const raw = { ...opts, config: { ...opts.config, priorGames: 0, minGames: Math.max(1, Math.ceil(opts.config.minGames / 2)) } };
+    this.halves = [new SpikeAggregator(raw), new SpikeAggregator(raw)];
+  }
+
+  add(m: MatchSummary): boolean {
+    if (!this.all.add(m)) return false;
+    this.halves[this.k++ % 2]!.add(m);
+    return true;
+  }
+
+  get matches(): number {
+    return this.all.matches;
+  }
+
+  finish(): { spikes: ChampionSpikes[]; check: SpikeCheck } {
+    return { spikes: this.all.finish(), check: compareSpikeHalves(this.halves[0].finish(), this.halves[1].finish(), this.opts.config.checkZ) };
+  }
 }
 
-/**
- * Are the spikes real or noise? Measures them on two halves of the games (by match, so the
- * halves don't share a game) and compares: a real effect shows up in both halves. Pure.
- */
-export function checkSpikes(matches: Iterable<MatchSummary>, opts: SpikeOptions, z = 2): SpikeCheck {
-  // Each half has half the games: half the minimum, so the check covers the same champions.
-  const raw = { ...opts, config: { ...opts.config, priorGames: 0, minGames: Math.max(1, Math.ceil(opts.config.minGames / 2)) } };
-  const halves = [new SpikeAggregator(raw), new SpikeAggregator(raw)] as const;
-  let k = 0;
-  for (const m of matches) halves[k++ % 2]!.add(m);
-  const index = (a: SpikeAggregator) => new Map(a.finish().flatMap((c) => c.spikes.map((s) => [`${c.championId}|${c.role}|${s.kind}:${s.at}`, s] as const)));
-  const [a, b] = halves.map(index) as [Map<string, SpikeStat>, Map<string, SpikeStat>];
+/** Spikes measured on two halves of the games, compared (see SpikeMeasure). */
+export function compareSpikeHalves(first: ChampionSpikes[], second: ChampionSpikes[], z: number): SpikeCheck {
+  const index = (cs: ChampionSpikes[]) => new Map(cs.flatMap((c) => c.spikes.map((s) => [`${c.championId}|${c.role}|${s.kind}:${s.at}`, s] as const)));
+  const [a, b] = [index(first), index(second)];
   const pairs = [...a].flatMap(([key, s]) => {
     const t = b.get(key);
     return t ? [[s, t] as const] : [];

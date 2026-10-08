@@ -45,6 +45,8 @@ export const MetaConfigSchema = z.object({
     minGames: z.number().int().min(1),
     /** Shrinks a champion's swing toward its role's: games worth of "no spike". */
     priorGames: z.number().min(0),
+    /** The split-half check counts spikes at |z| ≥ checkZ as strong. */
+    checkZ: z.number().min(0),
   }),
   /** Builds per champion-role (band plus the band above), from end-of-game data and timelines. */
   builds: z.object({

@@ -112,6 +112,17 @@ export const MetaSnapshotSchema = z.looseObject({
     }),
   ),
   references: z.record(z.string(), z.record(z.string(), z.looseObject({ n: z.number(), quantiles: z.array(z.number()) }))),
+  // Power spikes (all bands pooled) and their split-half check; absent in snapshots made before M8.
+  spikes: z
+    .array(
+      z.looseObject({
+        championId: z.number(),
+        role: z.string(),
+        spikes: z.array(z.looseObject({ kind: z.enum(["item", "level"]), at: z.number(), n: z.number(), minute: z.number(), gold: z.number(), goldZ: z.number() })),
+      }),
+    )
+    .optional(),
+  spikeCheck: z.looseObject({ pairs: z.number(), goldCorrelation: z.number().nullable(), signAgreement: z.number().nullable(), strongPairs: z.number() }).optional(),
   // Builds (loadout): the fields every build carries; absent in snapshots made before builds.
   builds: z
     .array(
