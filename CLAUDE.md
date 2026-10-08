@@ -68,7 +68,7 @@ pnpm local:desktop                # the panel against it (server mode, own profi
 pnpm --filter @ldc/desktop dist:win      # Windows installer (LDC_SERVER_URL, LDC_UPDATE_URL: see docs/DEPLOY.md)
 ```
 
-Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_META_FILE=snapshot.json` (development builds: coach from that meta snapshot instead of the server, e.g. a simulator scenario's), `LDC_PROFILE_FILE=history.json` (development builds: your history from a saved `{ matches, masteries }` file, no Riot key needed), `LDC_SCREENSHOT=path.png` (+ `LDC_SCREENSHOT_DELAY_MS`, `LDC_SCREENSHOT_CLICK=Build` to open a tab first) saves a screenshot of the panel and quits (it logs how far the scrolling area overflows).
+Dev aids: `LDC_USER_DATA_DIR` (throwaway app profile), `LDC_META_FILE=snapshot.json` (development builds: coach from that meta snapshot instead of the server, e.g. a simulator scenario's), `LDC_PROFILE_FILE=history.json` (development builds: your history from a saved `{ matches, masteries }` file, no Riot key needed), `LDC_SCREENSHOT=path.png` (+ `LDC_SCREENSHOT_DELAY_MS`, `LDC_SCREENSHOT_CLICK=Build` to open a tab first) saves a screenshot of the panel and quits (it logs how far the scrolling area overflows); add `LDC_VIEW_DUMP=state.json` to also save everything the panel shows, to check the numbers.
 
 Testing the desktop against live meta data locally (the dev app otherwise runs in direct mode, which has no meta):
 1. Collect real games into a local DB (gitignored): `pnpm --filter @ldc/server collect --seconds 600` (writes `apps/server/data/ldc.sqlite`; ~30 games/min on a dev key).

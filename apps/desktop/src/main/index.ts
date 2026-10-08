@@ -116,8 +116,11 @@ function devMetaFile(): MetaSnapshot | null {
   return snapshot;
 }
 
-/** Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits. */
-function scheduleScreenshot(): void {
+/**
+ * Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits;
+ * LDC_VIEW_DUMP=path.json also saves everything the panel shows (its state), to check the numbers.
+ */
+function scheduleScreenshot(coach: Coach): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
@@ -139,6 +142,8 @@ function scheduleScreenshot(): void {
     console.log(`LDC_SCREENSHOT: scroll overflow ${overflow}px`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
+    const dump = process.env.LDC_VIEW_DUMP;
+    if (dump) await writeFile(dump, JSON.stringify(coach.state, null, 2));
     app.quit();
   }, Number(process.env.LDC_SCREENSHOT_DELAY_MS ?? 8_000));
 }
@@ -250,7 +255,7 @@ async function main(): Promise<void> {
   await coach.start();
   startAutoUpdate((m) => coach.announce(m));
   void startDocking(coach);
-  scheduleScreenshot();
+  scheduleScreenshot(coach);
 
   app.on("window-all-closed", () => {
     coach.stop();
