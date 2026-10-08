@@ -5,6 +5,7 @@ import type { LearningProgress, PoolNeed, RolePool } from "./pool";
 import type { ChampionAttributes, MasteryEntry } from "./types";
 import { readMetric } from "./playstyle";
 import { deltaWin } from "./rating";
+import { powerSpikes, type PowerSpike } from "./spikes";
 
 export type NewChampsConfig = EngineConfig["newChamps"];
 
@@ -216,6 +217,8 @@ export interface LearningPlan {
   hard: LearningMatchup[];
   /** Whether it wins more of long or short games (beyond `scalingGap`), when its power curve is measured. */
   curve: { late: boolean; early: number; lateRate: number } | null;
+  /** Its measured power spikes in the role (empty until the snapshot's spikes pass their check). */
+  spikes: PowerSpike[];
 }
 
 export interface LearningPlanInput {
@@ -227,7 +230,7 @@ export interface LearningPlanInput {
   champion: Pick<ChampionInfo, "info" | "tags"> | undefined;
   /** Your growth goal, used when it's in this role. */
   goal: { role: Position; metric: string; lowerIsBetter: boolean; target: number } | null;
-  config: Pick<EngineConfig, "rating" | "plan" | "growth" | "newChamps">;
+  config: Pick<EngineConfig, "rating" | "plan" | "growth" | "newChamps" | "spikes">;
   /** Opponents listed per side. */
   count?: number;
 }
@@ -326,5 +329,6 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
     pc && pc.early.games >= minCurve && pc.late.games >= minCurve && Math.abs(pc.late.winRate - pc.early.winRate) >= config.plan.scalingGap
       ? { late: pc.late.winRate > pc.early.winRate, early: pc.early.winRate, lateRate: pc.late.winRate }
       : null;
-  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve };
+  const spikes = index ? powerSpikes(index, id, role, config.spikes) : [];
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, spikes };
 }

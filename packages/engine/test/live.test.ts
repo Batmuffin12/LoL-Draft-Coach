@@ -439,6 +439,24 @@ describe("gamePlan", () => {
     expect(text(gamePlan(input(draft([201]), { index: index(s) }), 101))).toMatch(/^Lane: hard into #201/);
   });
 
+  it("says when you and your lane opponent spike, only once the spikes passed their check, and only clear ones", () => {
+    const s = snapshot();
+    const stat = (kind: "item" | "level", at: number, gold: number, goldZ: number, minute: number) => ({ kind, at, n: 400, minute, gold, goldZ });
+    s.spikes = [
+      { championId: 102, role: "middle", spikes: [stat("item", 1, 120, 3.2, 11.3), stat("item", 2, 30, 2.5, 15), stat("level", 6, 90, 1.2, 8)] },
+      { championId: 201, role: "middle", spikes: [stat("level", 6, 140, 4, 7.6)] },
+    ];
+    s.spikeCheck = { pairs: 300, goldCorrelation: 0.7, signAgreement: 0.9, strongPairs: 80 };
+    const plan = text(gamePlan(input(draft([201]), { index: index(s) }), 102));
+    // Item 2 is below minGold and level 6 below minZ: only item 1 is yours.
+    expect(plan).toContain("Your spike: your item 1 (~11 min). Fight once it's done; farm safely before");
+    expect(plan).toContain("#201 spikes at level 6 (~8 min): respect it then");
+    expect(plan).not.toMatch(/item 2|level 6 \(~8 min\)\. Look/);
+
+    s.spikeCheck = { ...s.spikeCheck, goldCorrelation: 0.2 };
+    expect(text(gamePlan(input(draft([201]), { index: index(s) }), 102))).not.toMatch(/spike/);
+  });
+
   it("sums up their team in champ select once two are picked", () => {
     const s = snapshot();
     s.attributes = [attr(201, { physicalShare: 0.9, magicShare: 0.1, engage: 0.95 }), attr(301, { physicalShare: 0.8, magicShare: 0.2 })];

@@ -1,4 +1,4 @@
-import { formatMetric, metricLabel, renderReason, type ExplainConfig, type LearningMatchup, type LearningPlan, type NewChampAdvice } from "@ldc/engine";
+import { formatMetric, metricLabel, renderReason, spikeReason, type ExplainConfig, type LearningMatchup, type LearningPlan, type NewChampAdvice } from "@ldc/engine";
 import type { Reason } from "@ldc/shared";
 import type { ChampView, LearnView, NewChampRoleView } from "../shared/view";
 import { capital } from "./reason-view";
@@ -7,6 +7,8 @@ export interface NewChampsViewDeps {
   explain: ExplainConfig;
   champion: (id: number) => ChampView | null;
   championName: (id: number) => string;
+  /** Item names for spike lines ("#id" when unknown). */
+  itemName?: (id: number) => string;
   /** "Try it in 3 to 5 Normal Draft games." */
   planGames: [number, number];
   /** "Play it in blocks of 2 to 3 games." */
@@ -24,10 +26,10 @@ const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
  * what to do at this stage, the champion's job, the role's cue, when it's strong, its matchups,
  * how long to give it and your record on it.
  */
-export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "blockGames">): LearnView {
+export function learnView(p: LearningPlan, role: string, championId: number, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "itemName" | "blockGames">): LearnView {
   const { explain } = deps;
   const t = explain.templates;
-  const say = (r: Reason) => renderReason(r, t, deps.championName);
+  const say = (r: Reason) => renderReason(r, t, deps.championName, deps.itemName ? { item: deps.itemName } : {});
   const pct = (v: number) => {
     const s = (v * 100).toFixed(1);
     return v > 0 ? `+${s}%` : `${s.replace("-", "−")}%`;
@@ -53,6 +55,7 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
   if (p.stage === "practice" && p.ease === 3) lines.push(say({ id: "newchamp.stage.practice.hard", slots: {} }));
   if (p.job && t[`newchamp.job.${p.job}`]) lines.push(say({ id: `newchamp.job.${p.job}`, slots: {} }));
   if (t[`newchamp.role.${role}`]) lines.push(say({ id: `newchamp.role.${role}`, slots: {} }));
+  for (const s of p.spikes) lines.push(say(spikeReason(s, "learn", championId)));
   if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
   if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
   if (p.hard.length) lines.push(say({ id: "newchamp.learn.hard", slots: { champions: list(p.hard) } }));
@@ -68,7 +71,7 @@ export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewCh
   const top = a.picks[0];
   const learnOf = (id: number) => {
     const p = deps.plan(id);
-    return p ? learnView(p, a.role, deps) : null;
+    return p ? learnView(p, a.role, id, deps) : null;
   };
   let plan: string | null = null;
   let planLearn: LearnView | null = null;

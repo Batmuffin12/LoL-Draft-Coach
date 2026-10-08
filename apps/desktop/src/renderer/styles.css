@@ -265,6 +265,7 @@ p { margin: 0; }
 .matrix { display: grid; row-gap: 4px; column-gap: 10px; }
 .matrix .mh { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; padding: 0 2px 2px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .matrix .mh .m { font-size: var(--fs-micro); color: var(--muted); }
+.matrix .mh .label.spike { color: var(--gold); text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
 .matrix .cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 2px; border-radius: var(--radius-sm); text-align: center; min-width: 0; }
 .matrix .cell.top { background: var(--card); }
 .matrix .cell.empty { justify-content: center; border: 1px dashed var(--line); font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); opacity: 0.8; }

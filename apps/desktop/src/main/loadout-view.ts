@@ -14,6 +14,8 @@ export interface LoadoutViewDeps {
   perk?: (id: number) => { name: string; iconUrl: string | null } | undefined;
   /** The stat shard rows as the client lists them (offense, flex, defense), when known. */
   shardRows?: number[][];
+  /** Item slots that are a measured power spike for the champion (shown only when the spikes passed their check). */
+  spikeSlots?: number[];
 }
 
 /** A rune path whole, from Data Dragon's runesReforged; `skipKeystones` for the secondary path. Null when the path is unknown. */
@@ -110,5 +112,6 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
     items: l.items.map((s) => ({ slot: s.slot, minute: s.minute > 0 ? s.minute : null, top: option(s.top), alternatives: s.alternatives.map(option) })),
     commonPath: !l.items.length && l.core ? { items: l.core.value.map(item), reason: first(l.core.reasons) } : null,
     canImport: deps.canImport,
+    spikeSlots: deps.spikeSlots ?? [],
   };
 }

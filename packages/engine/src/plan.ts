@@ -4,6 +4,7 @@ import { reason } from "./explain";
 import type { LiveInput } from "./live";
 import { placeDraft } from "./draft-roles";
 import { deltaWin } from "./rating";
+import { powerSpikes, spikeReason } from "./spikes";
 
 export type PlanConfig = EngineConfig["plan"];
 
@@ -55,6 +56,12 @@ export function gamePlan(input: LiveInput, championId: ChampionId): Reason[] {
       const word = Math.abs(delta) < cfg.evenWin ? "even" : delta > 0 ? "favoured" : "hard";
       out.push(reason(`plan.lane.${word}`, { enemy: laneEnemy.championId, delta, games: d.n }));
     }
+  }
+
+  // When you and your lane opponent spike (measured, shown only when the snapshot's check passes).
+  if (role) {
+    for (const s of powerSpikes(index, championId, role, config.spikes)) out.push(spikeReason(s, "you", championId));
+    if (laneEnemy) for (const s of powerSpikes(index, laneEnemy.championId, laneEnemy.role, config.spikes)) out.push(spikeReason(s, "enemy", laneEnemy.championId));
   }
 
   // Which team wins longer games (measured power curves of both teams).

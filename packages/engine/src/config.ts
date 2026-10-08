@@ -100,6 +100,17 @@ export const EngineConfigSchema = z.object({
   /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
   earlyDeathsMinute: z.number().positive().default(14),
   /** The game plan after lock-in: when its lines are said (all from measured snapshot data). */
+  /** Power spikes shown from the snapshot (docs/ENGINE-PLAN.md). */
+  spikes: z.object({
+    /** The snapshot's split-half check must reach this correlation and same-direction share, or no spike is shown. */
+    minCorrelation: z.number(),
+    minAgreement: unit,
+    /** A spike needs this many standard errors and this much extra gold lead (shrunk) to be shown. */
+    minZ: z.number().min(0),
+    minGold: z.number().min(0),
+    /** Spikes shown per champion. */
+    max: z.number().int().min(1),
+  }),
   plan: z.object({
     /** A lane within this change in win chance (0..1) either way is "even". */
     evenWin: unit,

@@ -20,16 +20,20 @@ export interface MatrixSlot {
 /**
  * Items by slot as columns: the recommended one on top (gold ring), the next option under it. One
  * number per cell (how often it's bought); a star marks the option that helps most in its slot
- * (its win added is on hover).
+ * (its win added is on hover). A measured power spike is marked on its slot.
  */
-export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: number }) {
+export function ItemMatrix({ slots, rows = 2, spikes = [] }: { slots: MatrixSlot[]; rows?: number; spikes?: number[] }) {
   const depth = Math.min(rows, Math.max(0, ...slots.map((s) => s.options.length)));
   const numbers = slots.some((s) => s.options.some((o) => o.share !== null));
   return (
     <div className="matrix" style={{ gridTemplateColumns: `repeat(${Math.max(slots.length, 3)}, minmax(0, 1fr))` }}>
       {slots.map((s) => (
         <span key={`h${s.slot}`} className="mh">
-          <span className="label">{`Item ${s.slot}`}</span>
+          {spikes.includes(s.slot) ? (
+            <span className="label spike" title="Power spike: players on this champion gain clearly more on their lane opponent right after this item than before it">{`Item ${s.slot}`}</span>
+          ) : (
+            <span className="label">{`Item ${s.slot}`}</span>
+          )}
           {s.minute !== null && <span className="m">{Math.round(s.minute)} min</span>}
         </span>
       ))}

@@ -20,6 +20,7 @@ import {
   draftLoadout,
   pickFocus,
   learningPlan,
+  powerSpikes,
   recommendNewChampions,
   monthlyReport,
   sessionCheck,
@@ -505,6 +506,15 @@ export class PersonalCoach extends Coach {
     this.update({ playstyle: views });
   }
 
+  /** An item's name from Data Dragon ("#id" while it isn't loaded). */
+  private itemName(id: number): string {
+    try {
+      return this.deps.ddragon.data.itemInfo.get(id)?.name ?? `#${id}`;
+    } catch {
+      return `#${id}`;
+    }
+  }
+
   private updateRoleAdvice(): void {
     if (!this.profile) return;
     const lookup = this.championLookup;
@@ -551,6 +561,7 @@ export class PersonalCoach extends Coach {
             explain,
             champion: (id) => champView(id, lookup),
             championName: (id) => lookup(id)?.name ?? `#${id}`,
+            itemName: (id) => this.itemName(id),
             planGames: this.config.engine.newChamps.planGames,
             blockGames: this.config.engine.newChamps.learn.blockGames,
             plan: (id) =>
@@ -661,7 +672,7 @@ export class PersonalCoach extends Coach {
     const lookup = this.championLookup;
     const { templates } = this.config.explain;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
-    const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf);
+    const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf, { item: (id) => this.itemName(id) });
 
     // Their team in short (damage type, main engage), once two are picked.
     const enemyNotes = live ? enemyTeamNotes(live).map(say) : [];
@@ -704,6 +715,7 @@ export class PersonalCoach extends Coach {
               canImport: this.canImport,
               perk: (id) => this.perks.get(id),
               shardRows: this.shardRows,
+              spikeSlots: live && role ? powerSpikes(live.index, championId, role, engine.spikes).filter((s) => s.kind === "item").map((s) => s.at) : [],
             })
           : null,
         importMessage: this.importMessage,
