@@ -5,6 +5,7 @@ import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
 import { Button } from "../components/Button";
+import { ChampIcon } from "../components/ChampIcon";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
 import { PostGameCard } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
@@ -151,22 +152,36 @@ function NewChamps({ state }: { state: ViewState }) {
     <>
       {list.map((r, i) => {
         const title = `New for ${positionLabel(r.role).toLowerCase()}`;
-        const summary = r.learning ?? r.picks.map((p) => p.champion.name).join(", ");
+        const summary = r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", ");
         if (!roles.isOpen(i)) return <ClosedRole key={r.role} title={title} summary={summary} onOpen={() => roles.open(i)} />;
+        const l = r.learning;
         return (
           <Section key={r.role} title={title} gold={i === 0} aside={<span className="micro">strong in your rank</span>}>
-            {r.learning ? (
-              <p className="caption">{r.learning}</p>
-            ) : (
-              <>
+            {l && (
+              <div className="plan learning">
+                <div className="learning-head">
+                  {l.champion && <ChampIcon champ={l.champion} size={28} />}
+                  <span className="label gold">{l.title}</span>
+                  {l.progress && <span className="micro">{l.progress}</span>}
+                </div>
+                {l.plan && <span>{l.plan}</span>}
+              </div>
+            )}
+            {l && r.picks.length > 0 && (
+              <span className="label" title={l.why}>
+                {l.after} <span className="micro">· {l.why}</span>
+              </span>
+            )}
+            {r.picks.length > 0 && (
+              <div className={l ? "after-learning" : undefined}>
                 <NewChampTable rows={r.picks} />
-                {r.plan && (
-                  <div className="plan">
-                    <span className="label gold">First games plan</span>
-                    <span>{r.plan}</span>
-                  </div>
-                )}
-              </>
+              </div>
+            )}
+            {r.plan && (
+              <div className="plan">
+                <span className="label gold">First games plan</span>
+                <span>{r.plan}</span>
+              </div>
             )}
           </Section>
         );

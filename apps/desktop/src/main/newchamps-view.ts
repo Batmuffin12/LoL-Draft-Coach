@@ -22,14 +22,30 @@ const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
 export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewChampRoleView {
   const say = (r: Reason) => renderReason(r, deps.explain.templates, deps.championName);
   const top = a.picks[0];
+  const focus = deps.focus ? say({ id: "newchamp.plan.focus", slots: { metric: deps.focus } }) : null;
   let plan: string | null = null;
-  if (top) {
+  let learning: NewChampRoleView["learning"] = null;
+  if (a.learning) {
+    const { championId, progress: p } = a.learning;
+    const core = deps.coreItems(championId);
+    const lines = [core.length ? say({ id: "newchamp.learning.plan", slots: { core: core.join(", then ") } }) : null, focus].filter((s): s is string => !!s);
+    learning = {
+      title: say({ id: "newchamp.learning", slots: { champion: championId } }),
+      champion: deps.champion(championId),
+      progress: p
+        ? say({ id: p.daysLeft === 1 ? "newchamp.learning.progress.oneDay" : "newchamp.learning.progress", slots: { games: Math.min(p.games, p.maxGames), max: p.maxGames, days: p.daysLeft } })
+        : null,
+      plan: lines.length ? lines.join(" ") : null,
+      after: say({ id: "newchamp.after", slots: { champion: championId } }),
+      why: say({ id: "newchamp.after.why", slots: {} }),
+    };
+  } else if (top) {
     const core = deps.coreItems(top.championId);
     const [from, to] = deps.planGames;
     plan = core.length
       ? say({ id: "newchamp.plan", slots: { champion: top.championId, from, to, core: core.join(", then ") } })
       : say({ id: "newchamp.plan.nocore", slots: { champion: top.championId, from, to } });
-    if (deps.focus) plan += ` ${say({ id: "newchamp.plan.focus", slots: { metric: deps.focus } })}`;
+    if (focus) plan += ` ${focus}`;
   }
   return {
     role: a.role,
@@ -51,7 +67,7 @@ export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewCh
         },
       ];
     }),
-    learning: a.learning !== null ? say({ id: "newchamp.learning", slots: { champion: a.learning } }) : null,
+    learning,
     plan,
   };
 }

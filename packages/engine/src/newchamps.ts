@@ -1,7 +1,7 @@
 import type { ChampionId, ChampionInfo, Position, Reason } from "@ldc/shared";
 import type { EngineConfig } from "./config";
 import type { MetaIndex } from "./meta-index";
-import type { PoolNeed, RolePool } from "./pool";
+import type { LearningProgress, PoolNeed, RolePool } from "./pool";
 import type { ChampionAttributes, MasteryEntry } from "./types";
 
 export type NewChampsConfig = EngineConfig["newChamps"];
@@ -28,8 +28,11 @@ export interface NewChampion {
 export interface NewChampAdvice {
   role: Position;
   picks: NewChampion[];
-  /** A champion you're already learning in this role: no new suggestions until it's settled. */
-  learning: ChampionId | null;
+  /**
+   * A champion you're already learning in this role. One new champion per role at a time:
+   * the picks are then "after it", for when it has settled.
+   */
+  learning: { championId: ChampionId; progress: LearningProgress | null } | null;
 }
 
 export interface NewChampInput {
@@ -92,8 +95,8 @@ const covers = (a: ChampionAttributes | undefined, need: PoolNeed, cov: NewChamp
  */
 export function recommendNewChampions(input: NewChampInput): NewChampAdvice {
   const { role, pool, index, config: cfg } = input;
-  const learning = pool.champions.find((c) => c.tier === "learning")?.championId ?? null;
-  if (learning !== null) return { role, picks: [], learning };
+  const current = pool.champions.find((c) => c.tier === "learning");
+  const learning = current ? { championId: current.championId, progress: current.progress ?? null } : null;
 
   const mastery = new Map(input.masteries.map((m) => [m.championId, m.points]));
   const core = pool.champions.filter((c) => c.tier === "main" || c.tier === "comfortable");
@@ -123,7 +126,7 @@ export function recommendNewChampions(input: NewChampInput): NewChampAdvice {
     const id = s.championId;
     if (s.n < cfg.minGames || index.pickRate(id, role) < cfg.minPickRate) continue;
     if ((input.playedInRole.get(id) ?? 0) >= cfg.maxGames || (mastery.get(id) ?? 0) >= cfg.maxMastery) continue;
-    if (core.some((c) => c.championId === id)) continue;
+    if (core.some((c) => c.championId === id) || id === learning?.championId) continue;
     const t = centred(id);
     const info = input.champions(id)?.info;
     if (!t || !info) continue;
@@ -159,5 +162,5 @@ export function recommendNewChampions(input: NewChampInput): NewChampAdvice {
     out.push({ championId: id, fit, parts, like: overlapCos >= cfg.likeMin ? like : null, winRate, games: s.n, ease: easeLevel, owned, covers: filled, reasons });
   }
   out.sort((a, b) => b.fit - a.fit || a.championId - b.championId);
-  return { role, picks: out.slice(0, cfg.topN), learning: null };
+  return { role, picks: out.slice(0, cfg.topN), learning };
 }

@@ -60,8 +60,11 @@ describe("recommendNewChampions", () => {
     expect(tank.reasons.map(say)).toContain("Adds the frontline your mid pool lacks");
   });
 
-  it("waits while you're learning a champion in the role", () => {
-    const r = recommendNewChampions(input({ pool: pool({ champions: [...pool().champions, { championId: 2, tier: "learning", games: 2, winRate: null, comfort: 0.2 }] }) }));
-    expect(r).toEqual({ role: "middle", picks: [], learning: 2 });
+  it("while you're learning a champion in the role: reports it and suggests the next ones without it", () => {
+    const progress = { games: 2, maxGames: 7, daysLeft: 12 };
+    const r = recommendNewChampions(input({ pool: pool({ champions: [...pool().champions, { championId: 2, tier: "learning", games: 2, winRate: null, comfort: 0.2, progress }] }) }));
+    expect(r.learning).toEqual({ championId: 2, progress });
+    expect(r.picks.length).toBeGreaterThan(0);
+    expect(r.picks.map((p) => p.championId)).not.toContain(2);
   });
 });

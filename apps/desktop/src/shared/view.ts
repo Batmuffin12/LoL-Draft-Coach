@@ -293,9 +293,21 @@ export interface NewChampView {
 export interface NewChampRoleView {
   role: string;
   picks: NewChampView[];
-  /** "Learning Xin Zhao: one new champion per role at a time", when you're already learning one. */
-  learning: string | null;
-  /** The first-games plan for the top suggestion. */
+  /** The champion you're already learning in the role: the picks are then for after it. */
+  learning: {
+    /** "Learning Lillia". */
+    title: string;
+    champion: ChampView | null;
+    /** "3 of 7 games · 12 days left". */
+    progress: string | null;
+    /** "Next games: Liandry's Torment, then Rylai's Crystal Scepter. Keep your focus on deaths." */
+    plan: string | null;
+    /** "After Lillia", the head over the picks. */
+    after: string;
+    /** "one new champion per role at a time". */
+    why: string;
+  } | null;
+  /** The first-games plan for the top suggestion (none while learning another). */
   plan: string | null;
 }
 

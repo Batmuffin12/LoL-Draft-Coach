@@ -40,9 +40,24 @@ describe("new champions view", () => {
     expect(v.learning).toBeNull();
   });
 
-  it("says when you're already learning a champion in the role", () => {
-    const v = newChampsView({ role: "middle", picks: [], learning: 245 }, { ...deps, focus: null });
-    expect(v.learning).toBe("Learning Ekko: one new champion per role at a time");
+  it("while you're learning one: its progress and plan first, the picks are for after it", () => {
+    const v = newChampsView(
+      { role: "middle", picks: [pick(245)], learning: { championId: 99, progress: { games: 3, maxGames: 7, daysLeft: 12 } } },
+      deps,
+    );
+    expect(v.learning).toMatchObject({
+      title: "Learning Lux",
+      progress: "3 of 7 games · 12 days left",
+      plan: "Next games: Luden's Companion, then Shadowflame. Keep your focus on CS per minute.",
+      after: "After Lux",
+      why: "one new champion per role at a time",
+    });
+    expect(v.picks.map((p) => p.champion.name)).toEqual(["Ekko"]);
     expect(v.plan).toBeNull();
+  });
+
+  it("says 1 day left, and caps the games at the learning limit", () => {
+    const v = newChampsView({ role: "middle", picks: [], learning: { championId: 245, progress: { games: 9, maxGames: 7, daysLeft: 1 } } }, { ...deps, focus: null });
+    expect(v.learning).toMatchObject({ progress: "7 of 7 games · 1 day left", plan: null });
   });
 });
