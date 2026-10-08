@@ -6,7 +6,7 @@
  */
 import { dirname, join } from "node:path";
 import { DataDragon } from "@ldc/ddragon";
-import { RiotApi } from "@ldc/riot-api";
+import { RateLimiter, RiotApi } from "@ldc/riot-api";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
 import { readServerEnv } from "./env";
@@ -32,7 +32,13 @@ const collector = {
   ...(maxMatches ? { maxMatchesPerRun: maxMatches } : {}),
 };
 const db = openDb(env.DATABASE_PATH);
-const riot = new RiotApi({ apiKey: env.RIOT_API_KEY, keyType: env.RIOT_KEY_TYPE, platform: env.RIOT_PLATFORM, region: env.RIOT_REGION });
+const riot = new RiotApi({
+  apiKey: env.RIOT_API_KEY,
+  keyType: env.RIOT_KEY_TYPE,
+  platform: env.RIOT_PLATFORM,
+  region: env.RIOT_REGION,
+  limiter: new RateLimiter({ collectorShare: config.meta.collector.rateLimitShare }),
+});
 const ddragon = new DataDragon({ cacheDir: join(dirname(env.DATABASE_PATH), "ddragon") });
 const items = async () => {
   await ddragon.load();

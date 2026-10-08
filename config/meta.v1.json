@@ -63,6 +63,7 @@
     "timelineShare": 0.5,
     "buildBandTimelineShare": 1,
     "buildBandShare": 0.3,
+    "rateLimitShare": 0.8,
     "maxStoredMatches": 50000,
     "staleAfterHours": 6
   }
