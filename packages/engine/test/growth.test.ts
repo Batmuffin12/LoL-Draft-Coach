@@ -76,6 +76,14 @@ describe("pickFocus", () => {
     expect(focusAfterLastGame([], null, general, refs)).toBeNull();
   });
 
+  it("takes typical from your rank even when its data has no importance (older servers), and importance from your games", () => {
+    const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60));
+    const f = pickFocus(matches, "middle", cfg, { csPerMinute: { n: 100, quantiles: [5, 7, 9, 10, 11] } })!;
+    expect(f.reference).toBe("band");
+    expect(f.focus).toMatchObject({ metric: "csPerMinute", typical: 9 });
+    expect(f.focus!.importance).toBeGreaterThan(0);
+  });
+
   it("chooses only from growth.metrics when set (early-game metrics and habits, not totals that follow the result)", () => {
     const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60, 9));
     expect(pickFocus(matches, "middle", cfg)!.focus?.metric).toBe("csPerMinute");
