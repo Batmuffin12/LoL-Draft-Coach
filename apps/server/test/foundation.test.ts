@@ -4,6 +4,8 @@ import { createApp } from "../src/app";
 import { openDb, schema } from "../src/db";
 import { migrate, MIGRATIONS } from "../src/db/migrations";
 import { readServerEnv, ServerEnvError } from "../src/env";
+import { SERVER_VERSION } from "../src/version";
+import { readFileSync } from "node:fs";
 
 describe("server env", () => {
   it("applies defaults for a blank environment", () => {
@@ -100,5 +102,13 @@ describe("GET /health", () => {
     const res = await createApp({ db: openDb(":memory:"), version: "test", riot: null }).request("/nope");
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
+  });
+});
+
+describe("server version", () => {
+  it("comes from package.json and matches the repo's single version", () => {
+    const read = (path: string) => (JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8")) as { version: string }).version;
+    expect(SERVER_VERSION).toBe(read("../package.json"));
+    expect(SERVER_VERSION).toBe(read("../../../package.json"));
   });
 });
