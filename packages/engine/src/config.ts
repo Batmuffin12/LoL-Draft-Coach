@@ -77,6 +77,106 @@ export const EngineConfigSchema = z.object({
     minReferenceSamples: z.number().int().min(1),
     axes: z.record(z.string(), z.object({ metrics: z.array(z.string().regex(/^-?[\w.]+$/)).min(1) })),
   }),
+  /** Growth focus (DESIGN §7): one measurable thing at a time, with a target and progress. */
+  growth: z.object({
+    /** Your most recent games in the role that count. */
+    window: z.number().int().min(2),
+    /** The last games that measure progress; the target is set from the games before them. */
+    checkGames: z.number().int().min(1),
+    /** The target is this share of the way from your baseline to typical. */
+    targetStep: z.number().positive().max(1),
+    /** Games needed in the role (and on a champion to focus on it alone). */
+    minGames: z.number().int().min(1),
+    /** A metric must separate wins from losses by at least this much win rate to be a focus. */
+    minImportance: z.number().min(0),
+    /**
+     * The metrics a focus is chosen from ("-" = lower is better): ones measured before the game is
+     * decided (first 10–14 minutes) or habits (control wards). Whole-game totals like deaths mostly
+     * follow the result (the losing team dies more), so they would always look most important.
+     * Absent: every playstyle metric.
+     */
+    metrics: z.array(z.string().min(1)).min(1).optional(),
+    /**
+     * Per role (Riot position), the metrics that matter for it, most important first (research/ROLE-GOALS.md):
+     * a support is judged on vision, a jungler on early farm and ganks. Overrides `metrics` for that role.
+     */
+    roles: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
+    /** Goals fair in any role, for a role you have too few games in (compared with that role's typical). */
+    general: z.array(z.string().min(1)).min(1).default(["-earlyDeaths"]),
+  }),
+  /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
+  earlyDeathsMinute: z.number().positive().default(14),
+  /** The game plan after lock-in: when its lines are said (all from measured snapshot data). */
+  plan: z.object({
+    /** A lane within this change in win chance (0..1) either way is "even". */
+    evenWin: unit,
+    /** The teams' mean (long − short game win rate) must differ by this much to say who scales. */
+    scalingGap: unit,
+    /** Their damage is called physical or magic from this share. */
+    damageShare: unit,
+    /** Their engage champion is named from this crowd-control percentile. */
+    engageMin: unit,
+  }),
+  /**
+   * Session check (the October 2026 review): after a losing streak or a long session, suggest a
+   * short break, with your own record after such streaks. Your games only.
+   */
+  session: z.object({
+    /** Games that end within this many minutes of each other (and of now) are one session. */
+    gapMinutes: z.number().positive(),
+    /** Losses in a row in this session that bring up the check. */
+    lossStreak: z.number().int().min(1),
+    /** Games in one session that bring up the check. */
+    longSession: z.number().int().min(2),
+    /** Games after such a streak needed before your own record is quoted. */
+    minGames: z.number().int().min(1),
+  }),
+  /** Monthly report (DESIGN §7, F8). */
+  report: z.object({
+    /** The period, in days, compared with the same length of time before it. */
+    days: z.number().int().min(1),
+    maxChampions: z.number().int().min(1),
+    /** Games on a champion before the period needed to show its change. */
+    minPriorGames: z.number().int().min(1),
+  }),
+  /** New-champion recommender (DESIGN §6). */
+  newChamps: z.object({
+    /** Champions you played fewer games of in the role (and with less mastery) count as new. */
+    maxGames: z.number().int().min(0),
+    maxMastery: z.number().min(0),
+    /** Meta in the role: at least this many games and this pick rate in your band. */
+    minGames: z.number().int().min(1),
+    minPickRate: unit,
+    /** Smoothing toward the role's average win rate, and the win-rate difference that counts as fully strong. */
+    priorGames: z.number().min(0),
+    metaScale: z.number().positive(),
+    /** Riot difficulty (0–10): up to easyMax is easy, from hardMin hard. */
+    easyMax: z.number(),
+    hardMin: z.number(),
+    /** Similarity (−1…1) to say "plays like your X", and above which a champion counts as a clone. */
+    likeMin: z.number(),
+    cloneCut: z.number().max(0.99),
+    topN: z.number().int().min(1),
+    /** "Try it in 3 to 5 Normal Draft games." */
+    planGames: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    weights: z.object({ similarity: z.number(), gap: z.number(), meta: z.number(), ease: z.number(), overlap: z.number() }),
+    /** Learning a champion (research/LEARNING.md). */
+    learn: z.object({
+      /** Games on it below this are the "first games" (learn the kit, ignore the result). */
+      firstGames: z.number().int().min(1),
+      /** About how many games players keep improving fast on a new champion, by ease. */
+      settleGames: z.object({ easy: z.number().int().min(1), medium: z.number().int().min(1), hard: z.number().int().min(1) }),
+      /** "Play it in blocks of 2 to 3 games." */
+      blockGames: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+      /** Games on it before a drop against your usual can be measured, and your other games in the role for the usual. */
+      focusMinGames: z.number().int().min(1),
+      usualMinGames: z.number().int().min(1),
+      /** A drop (in standard deviations of your usual) that makes a metric the focus. */
+      dropMin: z.number().min(0),
+      /** Per role, the growth metric to hold at your usual while learning ("-" = lower is better). */
+      basics: z.record(z.string(), z.string()),
+    }),
+  }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */
   pool: z.object({
     /** Main: at least coreGames in the role and comfort >= coreMin. */
@@ -164,6 +264,13 @@ export const EngineConfigSchema = z.object({
       maxReasons: z.number().int().min(1),
       /** Predicted win-chance gap (0..1) between #1 and #2 for a "clear pick". */
       clearGapWin: unit,
+      /**
+       * A "clear pick" also needs #1's lead over #2 to be this many standard errors of the sampling
+       * noise in their meta, lane, counter and synergy numbers (0.84 ≈ 80% sure #1 is really ahead).
+       */
+      clearZ: z.number().min(0).default(0.84),
+      /** Never a "clear pick" when your own games take more than this (0..1) off its win chance (new or weak for you). */
+      clearMaxPersonalLossWin: unit,
       /** A champion's power curve is mentioned when long- and short-game win rates differ by this much (0..1). */
       powerCurveGap: unit,
       /** Mentioned when the champion is this much gold ahead of (or behind) its lane opponent at 15 minutes on average. */
@@ -279,6 +386,8 @@ export const AppConfigSchema = z.object({
   history: z.object({
     matchCount: z.number().int().positive().max(1000),
     queues: z.array(z.number().int()).min(1),
+    /** Your newest games that also get their timeline (one more Riot call each): when you die, your gold at 15. */
+    timelineCount: z.number().int().min(0).optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */

@@ -51,6 +51,9 @@ importers:
       '@ldc/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@ldc/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -206,6 +209,22 @@ importers:
       zod:
         specifier: ^4.6.5
         version: 4.6.5
+
+  packages/sim:
+    dependencies:
+      '@ldc/lcu':
+        specifier: workspace:*
+        version: link:../lcu
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@ldc/engine':
+        specifier: workspace:*
+        version: link:../engine
+      tsx:
+        specifier: ^4
+        version: 4.23.15
 
 packages:
 

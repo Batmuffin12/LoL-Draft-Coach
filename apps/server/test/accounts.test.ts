@@ -74,6 +74,43 @@ describe("registration", () => {
     expect(JSON.stringify(db.select().from(schema.invites).all())).not.toContain(code);
   });
 
+  it("keeps the same user when they register again after an API key change (new PUUID)", async () => {
+    const { db, invite } = setup();
+    const first = await registerUser(db, fakeRiot(), { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    const newKey: AccountLookup = {
+      accountByRiotId: async (gameName, tagLine) => ({ puuid: "PUUID-NEWKEY", gameName, tagLine }),
+      // The old PUUID was encrypted by the previous key: Riot answers 400.
+      masteriesByPuuid: async (puuid) => {
+        if (puuid === "PUUID-OFEK") throw new RiotApiError(400, "mastery");
+        return [];
+      },
+      matchIdsByPuuid: async () => [],
+    };
+    const again = await registerUser(db, newKey, { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    expect(again.user.id).toBe(first.user.id);
+    expect(db.select().from(schema.users).all().map((u) => u.puuid)).toEqual(["PUUID-NEWKEY"]);
+  });
+
+  it("gives a new user to a different player who now has an old user's Riot ID", async () => {
+    const { db, invite } = setup();
+    const first = await registerUser(db, fakeRiot(), { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    const stranger: AccountLookup = {
+      accountByRiotId: async (gameName, tagLine) => ({ puuid: "PUUID-STRANGER", gameName, tagLine }),
+      masteriesByPuuid: async () => [], // the old user's PUUID still works: a different player
+      matchIdsByPuuid: async () => [],
+    };
+    const other = await registerUser(db, stranger, { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    expect(other.user.id).not.toBe(first.user.id);
+    expect(db.select().from(schema.users).all().map((u) => u.puuid)).toEqual(["PUUID-OFEK", "PUUID-STRANGER"]);
+  });
+
+  it("without identity checks, never takes over an old user by Riot ID", async () => {
+    const { db, invite } = setup();
+    const first = await registerUser(db, fakeRiot(), { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);
+    const lookupOnly: AccountLookup = { accountByRiotId: async (gameName, tagLine) => ({ puuid: "PUUID-NEWKEY", gameName, tagLine }) };
+    expect((await registerUser(db, lookupOnly, { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW)).user.id).not.toBe(first.user.id);
+  });
+
   it("accepts the code in lower case with spaces", async () => {
     const { invite, register } = setup();
     const code = invite().toLowerCase().replaceAll("-", " ");

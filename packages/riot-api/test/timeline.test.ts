@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ITEM_BOUGHT, ITEM_SOLD } from "@ldc/shared";
-import { MatchSchema, TimelineSchema, summarizeTimeline } from "../src/index";
+import { deathsBefore, MatchSchema, TimelineSchema, summarizeTimeline, withEarlyDeaths } from "../src/index";
 
 const match = MatchSchema.parse({
   metadata: { matchId: "EUW1_1" },
@@ -74,7 +74,45 @@ describe("summarizeTimeline", () => {
     expect(t.skills).toEqual([[1, 2], []]);
   });
 
+  it("keeps champion kills lined up with the match: second, killer, victim, assists bitmask", () => {
+    expect(t.kills).toEqual([[830, 1, 0, 0]]);
+    const withAssist = structuredClone(raw);
+    withAssist.info.frames[1]!.events.push({ type: "CHAMPION_KILL", timestamp: 900000, killerId: 0, victimId: 1, assistingParticipantIds: [2] } as never);
+    expect(summarizeTimeline(TimelineSchema.parse(withAssist), match).kills).toEqual([
+      [830, 1, 0, 0],
+      [900, -1, 1, 0b01],
+    ]);
+  });
+
+  it("keeps levels per minute only when every participant has them", () => {
+    expect(t.levels).toBeUndefined();
+    const leveled = structuredClone(raw);
+    leveled.info.frames.forEach((f, k) => Object.values(f.participantFrames).forEach((pf) => Object.assign(pf, { level: k + 1 })));
+    expect(summarizeTimeline(TimelineSchema.parse(leveled), match).levels).toEqual([
+      [1, 2],
+      [1, 2],
+    ]);
+  });
+
   it("never keeps PUUIDs", () => {
     expect(JSON.stringify(t)).not.toContain("SECRET");
+  });
+});
+
+describe("deathsBefore", () => {
+  const timeline = TimelineSchema.parse(raw);
+
+  it("counts each participant's deaths before the minute, lined up with the match", () => {
+    // Participant 2 (SECRET-B, match index 0) died at 13:50.
+    expect(deathsBefore(timeline, match, 14 * 60)).toEqual([1, 0]);
+    expect(deathsBefore(timeline, match, 13 * 60)).toEqual([0, 0]);
+  });
+
+  it("stamps the counts on the summary's participants", () => {
+    const s = withEarlyDeaths({ participants: [{ championId: 2 }, { championId: 1 }] }, [1, 0]);
+    expect(s.participants).toEqual([
+      { championId: 2, earlyDeaths: 1 },
+      { championId: 1, earlyDeaths: 0 },
+    ]);
   });
 });

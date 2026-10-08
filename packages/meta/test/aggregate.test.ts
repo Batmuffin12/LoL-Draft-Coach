@@ -140,7 +140,20 @@ describe("aggregateBand", () => {
     });
     const s = aggregateBand({ ...base, matches: games, config: { ...cfg, referenceMaxSamples: 2 }, metrics: ["challenges.killParticipation"] });
     // Two newest top players: both from match M0 (age 0), value 1.
-    expect(s.references.top!["challenges.killParticipation"]).toEqual({ n: 2, quantiles: [1, 1, 1, 1, 1] });
+    expect(s.references.top!["challenges.killParticipation"]).toMatchObject({ n: 2, quantiles: [1, 1, 1, 1, 1] });
+  });
+
+  it("measures how strongly each metric separates wins from losses per role (importance)", () => {
+    // In every game the winning top laner had the higher kill participation.
+    const games = [0, 1, 2, 3].map((i) => {
+      const m = match(`M${i}`, BLUE, RED, i % 2 === 0);
+      const [winner, loser] = i % 2 === 0 ? [0, 5] : [5, 0];
+      m.participants[winner]!.challenges = { killParticipation: 0.6 + i / 100 };
+      m.participants[loser]!.challenges = { killParticipation: 0.3 + i / 100 };
+      return m;
+    });
+    const s = aggregateBand({ ...base, matches: games, config: { ...cfg, minReferenceSamples: 1 }, metrics: ["challenges.killParticipation"] });
+    expect(s.references.top!["challenges.killParticipation"]!.importance).toBe(1);
   });
 
   it("counts bans once per game, recency-weighted, over only the games that carried ban data", () => {

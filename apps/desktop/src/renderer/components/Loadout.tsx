@@ -8,7 +8,7 @@ import { RunePage } from "./RunePage";
 import { Section } from "./Section";
 import { SkillGrid, Stat } from "./SkillGrid";
 
-export type LoadoutTab = "runes" | "build" | "matchups";
+export type LoadoutTab = "plan" | "runes" | "build" | "matchups";
 
 export interface LoadoutProps {
   loadout: LoadoutView;
@@ -53,7 +53,7 @@ function ItemRow({ label, items, note }: { label: string; items: LoadoutItemView
 
 /** Runes on their full trees with the page's numbers and import; then spells and the skill grid. */
 export function RunesTab({ loadout: l, onImport, busy, importMessage }: LoadoutProps) {
-  const label = l.page && l.spells ? "Import runes & spells" : l.page ? "Import runes" : "Import spells";
+  const label = "Import";
   const button = l.canImport && (l.page || l.spells) ? <ImportButton kind="runes" label={label} busy={busy} onImport={onImport} /> : null;
   const message = importMessage && <span className="caption text">{importMessage}</span>;
   const p = l.page;
@@ -82,7 +82,7 @@ export function RunesTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
         </Section>
       )}
       {(l.spells || l.skills) && (
-        <Section title="Spells & skills" aside={p ? null : button}>
+        <Section title="Summoner spells & skill order" aside={p ? null : button}>
           <SkillGrid spells={l.spells} skills={l.skills} />
           {!p && message}
         </Section>
@@ -99,18 +99,21 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
     ? l.items.slice(0, MATRIX_SLOTS).map((s) => ({ slot: s.slot, minute: s.minute, options: [s.top, ...s.alternatives].map((o) => ({ item: o, share: o.share, winAdded: o.winAdded })) }))
     : (l.commonPath?.items.slice(0, MATRIX_SLOTS).map((item, i) => ({ slot: i + 1, minute: null, options: [{ item, share: null, winAdded: null }] })) ?? []);
   // The most telling reason: a top item bought for this draft (a reason before its numbers line), else the first item's.
-  const telling = l.items.find((s) => s.top.reasons.length > 1)?.top ?? l.items[0]?.top;
+  // Only a reason the cells don't already show: a top item bought for this draft.
+  const telling = l.items.find((s) => s.top.reasons.length > 1)?.top;
   // Each item once: what the matrix or the Later pool already show isn't repeated under "Vs this team".
   const shown = new Set([...slots.flatMap((s) => s.options.map((o) => o.item.id)), ...l.laterPool.map((i) => i.id)]);
   const vsTeam = l.situational.filter((i) => !shown.has(i.id));
-  const caption = telling?.reasons[0] ? `${telling.name}: ${lower(telling.reasons[0])}` : (l.commonPath?.reason ?? null);
+  // With thin data the caption would only repeat the pick rate already in the cells.
+  const thin = !l.items.some((s) => s.top.winAdded !== null);
+  const caption = thin && l.laterPool.length ? null : telling?.reasons[0] ? `${telling.name}: ${lower(telling.reasons[0])}` : (l.commonPath?.reason ?? null);
   return (
     <>
-      <Section title="Start & boots" aside={button}>
+      <Section title="Starter items & boots" aside={button}>
         <BuildPath starting={l.starting} boots={l.boots} />
         {importMessage && <span className="caption text">{importMessage}</span>}
       </Section>
-      <Section title="Items by slot" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">{l.items.some((s) => s.top.winAdded !== null) ? "pick % · win added" : "pick %"}</span> : null}>
+      <Section title="Core build" aside={slots.length > 0 && l.items.length > 0 ? <span className="micro">{l.items.some((s) => s.top.winAdded !== null) ? "pick rate · ★ helps most" : "pick rate"}</span> : null}>
         {slots.length > 0 ? <ItemMatrix slots={slots} /> : <span className="caption">Not enough purchases to rank items yet.</span>}
         {caption && (
           <span className="caption clamp2" title={caption}>
@@ -122,7 +125,7 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
             <span className="label" title={l.laterNote ?? undefined}>
               Later: pick by situation
             </span>
-            {l.laterPool.map((i) => (
+            {l.laterPool.slice(0, 3).map((i) => (
               <div key={i.id} className="later-row" title={tip(i)}>
                 <ChampIcon champ={i} kind="game" size={22} title="" />
                 <span className="caption one-line">
@@ -141,6 +144,23 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
 }
 
 /** Your champion against their team (your lane first), then with your team. */
+/** How this game is likely to go, in a few lines (champions and measured aggregates only). */
+export function PlanTab({ pick }: { pick: MyPickView }) {
+  return (
+    <Section title="Game plan">
+      {pick.plan.length ? (
+        <ul className="reasons">
+          {pick.plan.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="caption">The plan needs the live meta for your rank and your lane opponent's pick.</p>
+      )}
+    </Section>
+  );
+}
+
 export function MatchupsTab({ pick }: { pick: MyPickView }) {
   const m = pick.matchups;
   if (!m) {

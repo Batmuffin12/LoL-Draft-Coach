@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { MyPickView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
-import { BuildTab, MatchupsTab, RunesTab, type LoadoutTab } from "../components/Loadout";
+import { BuildTab, MatchupsTab, PlanTab, RunesTab, type LoadoutTab } from "../components/Loadout";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { WinChance } from "../components/WinChance";
@@ -37,6 +37,7 @@ export function LoadoutSource({ pick }: { pick: MyPickView }) {
 export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }) {
   const { busy, run } = useImport();
   if (tab === "matchups") return <MatchupsTab pick={pick} />;
+  if (tab === "plan") return <PlanTab pick={pick} />;
   if (!pick.loadout) {
     return (
       <Section title="Loadout">
@@ -64,14 +65,15 @@ function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: stri
 }
 
 export const LOADOUT_TABS: { value: LoadoutTab; label: string }[] = [
+  { value: "plan", label: "Plan" },
   { value: "runes", label: "Runes" },
   { value: "build", label: "Build" },
   { value: "matchups", label: "Matchups" },
 ];
 
-/** Locked in (and after champ select until the game ends): Runes · Build · Matchups, Runes first. */
+/** Locked in (and after champ select until the game ends): Plan · Runes · Build · Matchups; the plan first when there is one. */
 export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: MyPickView; note?: ReactNode }) {
-  const [tab, setTab] = useState<LoadoutTab>("runes");
+  const [tab, setTab] = useState<LoadoutTab>(pick.plan.length ? "plan" : "runes");
   return (
     <Window
       header={<Header state={state} />}

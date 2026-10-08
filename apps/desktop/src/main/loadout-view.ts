@@ -68,7 +68,10 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
 
   const ids = deps.bands.bands.map((b) => b.id).sort((a, b) => a - b);
   const sourceBands = [deps.band, ids[ids.indexOf(deps.band) + 1]].filter((b): b is number => b !== undefined);
-  const source = sourceBands.map((b) => deps.bands.bands.find((x) => x.id === b)?.name ?? String(b)).join(" + ");
+  const bandNames = sourceBands.map((b) => deps.bands.bands.find((x) => x.id === b)?.name ?? String(b));
+  // Neighbouring bands read as one range: "Gold to Platinum" + "Emerald to Diamond" → "Gold to Diamond".
+  const ranges = bandNames.map((n) => /^(.+) to (.+)$/.exec(n));
+  const source = bandNames.length > 1 && ranges.every(Boolean) ? `${ranges[0]![1]} to ${ranges.at(-1)![2]}` : bandNames.join(" + ");
 
   return {
     games: l.games,

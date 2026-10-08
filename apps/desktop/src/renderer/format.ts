@@ -16,6 +16,16 @@ export function rate(x: number | null | undefined, digits = 0): string {
   return x == null ? "—" : `${(x * 100).toFixed(digits)}%`;
 }
 
+/** A change in win chance as players read it: 0.021 → "+2.1%", −0.004 → "−0.4%". */
+export function signedPct(x: number): string {
+  return `${signed(x)}%`;
+}
+
+/** signedPct, or "—" when there is no number. */
+export function signedPctOrDash(x: number | null | undefined): string {
+  return x == null ? "—" : signedPct(x);
+}
+
 /** Signed points, or "—" when there is no number. */
 export function signedOrDash(x: number | null | undefined): string {
   return x == null ? "—" : signed(x);
@@ -74,11 +84,15 @@ export function initials(name: string): string {
   return one.slice(0, 2).replace(/^./, (c) => c.toUpperCase());
 }
 
-/** The pick table's term columns, in points of win chance: lane (lane + counter), you (personal), team (team + synergy); meta for the tooltip. Null: no such term. */
+/**
+ * The pick table's term columns, in points of win chance: lane (your lane opponent only, the same
+ * number the matchup reason gives), you (personal), team (the rest of the draft: team needs,
+ * duos with allies, and counters to their other picks); meta for the tooltip. Null: no such term.
+ */
 export function pickColumns(terms: Term[]): { lane: number | null; you: number | null; team: number | null; meta: number | null } {
   const out: { lane: number | null; you: number | null; team: number | null; meta: number | null } = { lane: null, you: null, team: null, meta: null };
   for (const t of terms) {
-    const k = t.name === "lane" || t.name === "counter" ? "lane" : t.name === "personal" ? "you" : t.name === "team" || t.name === "synergy" ? "team" : "meta";
+    const k = t.name === "lane" ? "lane" : t.name === "personal" ? "you" : t.name === "team" || t.name === "synergy" || t.name === "counter" ? "team" : "meta";
     out[k] = (out[k] ?? 0) + t.deltaWin;
   }
   return out;

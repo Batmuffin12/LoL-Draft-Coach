@@ -8,6 +8,7 @@ import {
   CurrentSummonerSchema,
   GameflowPhaseSchema,
   GameflowSessionSchema,
+  OwnedChampionsSchema,
   PickableChampionIdsSchema,
   PerksSchema,
   PerkStylesSchema,
@@ -31,6 +32,7 @@ export const LCU_PATHS = {
   recommendedPositions: "/lol-perks/v1/recommended-champion-positions",
   perks: "/lol-perks/v1/perks",
   perkStyles: "/lol-perks/v1/styles",
+  ownedChampions: "/lol-champions/v1/owned-champions-minimal",
 } as const;
 
 export interface ConnectorEvents {
@@ -174,6 +176,15 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   async getPickableChampionIds(): Promise<number[]> {
     const data = await this.requireHttp().get(LCU_PATHS.pickableChampionIds);
     return data == null ? [] : parseLcu(PickableChampionIdsSchema, LCU_PATHS.pickableChampionIds, data);
+  }
+
+  /** Champions the local player owns (free-to-play rotations aren't owned). */
+  async getOwnedChampionIds(): Promise<number[]> {
+    const data = await this.requireHttp().get(LCU_PATHS.ownedChampions);
+    if (data == null) return [];
+    return parseLcu(OwnedChampionsSchema, LCU_PATHS.ownedChampions, data)
+      .filter((c) => c.ownership?.owned === true)
+      .map((c) => c.id);
   }
 
   async getGameflowSession(): Promise<GameflowSession | null> {

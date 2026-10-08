@@ -8,8 +8,10 @@ export const ExplainConfigSchema = z.object({
   templates: z.record(z.string(), z.string()),
   /** Display names of playstyle axes. */
   axes: z.record(z.string(), z.string()).default({}),
-  /** Display names and number formats of playstyle metrics. */
-  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "integer"]) })).default({}),
+  /** Display names and number formats of playstyle metrics; `count`: counted per game (deaths, plates), so one game's value reads as a whole number. */
+  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
+  /** What to keep in mind for a growth goal, by "role:metric" (research/ROLE-GOALS.md). */
+  tips: z.record(z.string(), z.array(z.string())).default({}),
   settings: z.object({
     /** Score gap (0..1) between #1 and #2 at or above which #1 is a "clear pick". */
     clearGap: z.number().min(0).max(1),
@@ -55,14 +57,15 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
     if (fmt === "pct1" && typeof v === "number") return (v * 100).toFixed(1);
     if (fmt === "signedPct1" && typeof v === "number") {
       const s = (v * 100).toFixed(1);
-      return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s;
+      return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s.replace("-", "−");
     }
     if (fmt === "champion" && typeof v === "number") return championName(v);
     if (fmt === "item" && typeof v === "number") return names.item?.(v) ?? `#${v}`;
     if (fmt === "rune" && typeof v === "number") return names.rune?.(v) ?? `#${v}`;
     // Positions as players know them: Riot's "utility" is "support" (templates "role.<id>"; "a / b" lists too).
     if (typeof v === "string") return v.split(" / ").map((x) => templates[`role.${x}`] ?? x).join(" / ");
-    return String(v);
+    // Game counts and other whole numbers read like the build sites: 1,240.
+    return typeof v === "number" && Number.isInteger(v) && Math.abs(v) >= 1000 ? v.toLocaleString("en-US") : String(v);
   });
 }
 
@@ -89,6 +92,8 @@ export function formatMetric(value: number, metric: string, cfg: ExplainConfig):
   const f = cfg.metrics[metric]?.format ?? "decimal";
   if (f === "percent") return `${Math.round(value * 100)}%`;
   if (f === "integer") return String(Math.round(value));
+  // Small rates (deaths per minute) need two decimals to show a change.
+  if (f === "decimal2") return value.toFixed(2);
   return value.toFixed(1);
 }
 

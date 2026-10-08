@@ -30,11 +30,11 @@ describe("table formats", () => {
 });
 
 describe("pickColumns", () => {
-  it("adds lane + counter, team + synergy, and keeps personal and meta apart", () => {
+  it("keeps the lane alone (as its reason says), adds team + synergy + counter, and keeps personal and meta apart", () => {
     const c = pickColumns([term("lane", 0.021), term("counter", 0.004), term("personal", 0.014), term("team", 0.009), term("synergy", -0.002), term("meta", -0.004)]);
-    expect(c.lane).toBeCloseTo(0.025);
+    expect(c.lane).toBeCloseTo(0.021);
     expect(c.you).toBeCloseTo(0.014);
-    expect(c.team).toBeCloseTo(0.007);
+    expect(c.team).toBeCloseTo(0.011);
     expect(c.meta).toBeCloseTo(-0.004);
     expect(pickColumns([term("meta", 0.01)])).toMatchObject({ lane: null, you: null, team: null });
   });

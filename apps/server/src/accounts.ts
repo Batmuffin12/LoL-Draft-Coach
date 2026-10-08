@@ -1,16 +1,20 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { RiotApi } from "@ldc/riot-api";
 import { newInviteCode, newToken, normalizeInviteCode, sha256 } from "./auth";
 import type { Db } from "./db";
 import { invites, users } from "./db/schema";
+import { isSamePlayer, type IdentityRiot } from "./identity";
 import { deleteOrphanUserMatches } from "./sync";
 
 const DAY_MS = 86_400_000;
 
 export type User = typeof users.$inferSelect;
 
-/** What registration needs from the Riot API adapter. */
-export type AccountLookup = Pick<RiotApi, "accountByRiotId">;
+/**
+ * What registration needs from the Riot API adapter. Without the identity calls, a returning
+ * player under a new PUUID gets a new user instead of their old one.
+ */
+export type AccountLookup = Pick<RiotApi, "accountByRiotId"> & Partial<IdentityRiot>;
 
 export class AccountError extends Error {
   constructor(
@@ -64,6 +68,21 @@ export async function registerUser(
   const account = await riot.accountByRiotId(gameName, tagLine);
   if (!account) throw new AccountError("riot_id_not_found", `No Riot account called ${gameName}#${tagLine} was found.`);
 
+  // After an API key change the same player comes back with a new PUUID: their old user (same
+  // Riot ID) is reused only when it is provably the same player (Riot IDs change hands).
+  let returning: User | undefined;
+  if (!db.select().from(users).where(eq(users.puuid, account.puuid)).get()) {
+    const byRiotId = db
+      .select()
+      .from(users)
+      .where(and(eq(users.gameName, account.gameName ?? gameName), eq(users.tagLine, account.tagLine ?? tagLine)))
+      .get();
+    if (byRiotId && riot.masteriesByPuuid && riot.matchIdsByPuuid) {
+      const identity = { masteriesByPuuid: riot.masteriesByPuuid.bind(riot), matchIdsByPuuid: riot.matchIdsByPuuid.bind(riot) };
+      if (await isSamePlayer(db, identity, byRiotId, account.puuid)) returning = byRiotId;
+    }
+  }
+
   const token = newToken();
   const tokenHash = sha256(token);
   const user = db.transaction((tx) => {
@@ -72,11 +91,13 @@ export async function registerUser(
     if (!fresh || fresh.usedAt !== null) {
       throw new AccountError("invite_invalid", "This invite code is wrong, already used or expired. Ask for a new one.");
     }
-    const existing = tx.select().from(users).where(eq(users.puuid, account.puuid)).get();
+    const existing =
+      tx.select().from(users).where(eq(users.puuid, account.puuid)).get() ??
+      (returning ? tx.select().from(users).where(eq(users.id, returning.id)).get() : undefined);
     const saved = existing
       ? tx
           .update(users)
-          .set({ tokenHash, gameName: account.gameName ?? gameName, tagLine: account.tagLine ?? tagLine })
+          .set({ puuid: account.puuid, tokenHash, gameName: account.gameName ?? gameName, tagLine: account.tagLine ?? tagLine })
           .where(eq(users.id, existing.id))
           .returning()
           .get()

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { PickView } from "../../shared/view";
-import { cx, pct, pickColumns, pickReasons, signedOrDash, tone, winTone } from "../format";
+import { cx, pct, pickColumns, pickReasons, signedPctOrDash, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { OffMetaChip } from "./Chip";
 
@@ -11,9 +11,9 @@ export interface PickTableProps {
 }
 
 const COLS = [
-  { key: "lane", label: "Lane", title: "Into their laner and the rest of their team (lane + counters), points of win chance" },
-  { key: "you", label: "You", title: "Your own games on it, points of win chance" },
-  { key: "team", label: "Team", title: "What your team needs, and duos, points of win chance" },
+  { key: "lane", label: "Matchup", title: "Into their laner" },
+  { key: "you", label: "You", title: "Your own games on it" },
+  { key: "team", label: "Draft", title: "What your team needs, duos with your allies, and how it does into their other picks" },
 ] as const;
 
 /** Suggested picks as one table with fixed columns; the selected row's reasons under it. Row 1 is selected first. */
@@ -28,8 +28,8 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
     <div className="table picks" role="table">
       <div className="thead" role="row">
         <span className="c-champ">Champion</span>
-        <span className="c-win" title="Predicted win chance in this draft">
-          Win
+        <span className="c-win" title="Your predicted win chance in this draft">
+          Chance
         </span>
         {COLS.map((c) => (
           <span key={c.key} className="c-num" title={c.title}>
@@ -39,22 +39,25 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
       </div>
       {picks.map((p, i) => {
         const cols = pickColumns(p.terms);
+        const tip = cols.meta === null ? p.champion.name : `${p.champion.name}\nStrength in your rank: ${signedPctOrDash(cols.meta)}`;
         return (
           <button key={p.champion.id} type="button" className={cx("trow", i === at && "sel")} onClick={() => setSel(i)} aria-pressed={i === at}>
-            <span className="c-champ" title={`${p.champion.name}${cols.meta === null ? "" : `\nMeta in your rank: ${signedOrDash(cols.meta)}`}`}>
+            <span className="c-champ" title={tip}>
               <ChampIcon champ={p.champion} size={34} framed={i === 0} title="" />
               <span className="nm">{p.champion.name}</span>
               {p.offMeta && <OffMetaChip />}
             </span>
-            <span className={cx("c-win", winTone(p.expectedWin))}>{p.expectedWin === null ? "—" : pct(p.expectedWin)}</span>
+            {/* No good/bad colour: the chance compares your options in this draft, and #1 is the best one even below 50%. */}
+            <span className="c-win">{p.expectedWin === null ? "—" : pct(p.expectedWin)}</span>
             {COLS.map((c) => (
               <span key={c.key} className={cx("c-num", tone(cols[c.key]))}>
-                {signedOrDash(cols[c.key])}
+                {signedPctOrDash(cols[c.key])}
               </span>
             ))}
           </button>
         );
       })}
+      <div className="legend">Chance: your predicted win chance in this draft. The other columns: what each part adds or takes away.</div>
       {cur && (
         <div className="detail">
           <ul className="reasons">

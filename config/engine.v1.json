@@ -117,8 +117,7 @@
           "challenges.maxCsAdvantageOnLaneOpponent",
           "challenges.turretPlatesTaken",
           "challenges.killsOnLanersEarlyJungleAsJungler",
-          "challenges.initialCrabCount",
-          "challenges.enemyJungleMonsterKills"
+              "challenges.enemyJungleMonsterKills"
         ]
       },
       "fighting": {
@@ -148,7 +147,8 @@
       "riskControl": {
         "metrics": [
           "-deathsPerMinute",
-          "-challenges.deathsByEnemyChamps"
+          "-challenges.deathsByEnemyChamps",
+          "-earlyDeaths"
         ]
       },
       "objectives": {
@@ -176,6 +176,66 @@
       }
     }
   },
+  "growth": {
+    "window": 20,
+    "checkGames": 10,
+    "targetStep": 0.5,
+    "minGames": 8,
+    "minImportance": 0.02,
+    "metrics": [
+      "-earlyDeaths",
+      "challenges.laneMinionsFirst10Minutes",
+      "challenges.jungleCsBefore10Minutes",
+      "challenges.takedownsFirstXMinutes",
+      "challenges.turretPlatesTaken",
+      "challenges.initialCrabCount",
+      "challenges.killsOnLanersEarlyJungleAsJungler",
+      "challenges.controlWardsPlaced",
+      "challenges.visionScorePerMinute"
+    ],
+    "general": ["-earlyDeaths"],
+    "roles": {
+      "top": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
+      "jungle": ["challenges.jungleCsBefore10Minutes", "challenges.killsOnLanersEarlyJungleAsJungler", "-earlyDeaths", "challenges.wardTakedowns", "challenges.controlWardsPlaced"],
+      "middle": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.takedownsFirstXMinutes", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
+      "bottom": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.turretPlatesTaken", "challenges.takedownsFirstXMinutes"],
+      "utility": ["challenges.controlWardsPlaced", "challenges.wardTakedowns", "-earlyDeaths", "challenges.visionScorePerMinute"]
+    }
+  },
+  "earlyDeathsMinute": 14,
+  "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
+  "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
+  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },
+  "newChamps": {
+    "maxGames": 3,
+    "maxMastery": 30000,
+    "minGames": 200,
+    "minPickRate": 0.01,
+    "priorGames": 200,
+    "metaScale": 0.03,
+    "easyMax": 3,
+    "hardMin": 7,
+    "likeMin": 0.4,
+    "cloneCut": 0.92,
+    "topN": 3,
+    "planGames": [3, 5],
+    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 },
+    "learn": {
+      "firstGames": 3,
+      "settleGames": { "easy": 15, "medium": 20, "hard": 30 },
+      "blockGames": [2, 3],
+      "focusMinGames": 2,
+      "usualMinGames": 5,
+      "dropMin": 0.3,
+      "basics": {
+        "top": "-earlyDeaths",
+        "jungle": "challenges.jungleCsBefore10Minutes",
+        "middle": "-earlyDeaths",
+        "bottom": "challenges.laneMinionsFirst10Minutes",
+        "utility": "challenges.visionScorePerMinute"
+      }
+    }
+  },
   "pool": {
     "coreMin": 0.55,
     "coreGames": 8,
@@ -200,7 +260,7 @@
       "3": { "meta": 1, "lane": 1.1, "counter": 1.1, "synergy": 1, "team": 1.1, "personal": 1 },
       "4": { "meta": 1, "lane": 1.2, "counter": 1.2, "synergy": 1.1, "team": 1.2, "personal": 0.9 }
     },
-    "priorGames": { "meta": 150, "pair": 60 },
+    "priorGames": { "meta": 150, "pair": 400 },
     "minGames": { "meta": 30, "pair": 15 },
     "counterWeight": 0.4,
     "synergyWeight": 0.5,
@@ -233,6 +293,8 @@
       "minDeltaWin": 0.005,
       "maxReasons": 4,
       "clearGapWin": 0.015,
+      "clearMaxPersonalLossWin": 0.02,
+      "clearZ": 0.84,
       "powerCurveGap": 0.05,
       "laneGoldGap": 300,
       "barScaleWin": 0.08

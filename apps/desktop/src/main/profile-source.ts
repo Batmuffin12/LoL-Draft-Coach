@@ -1,7 +1,8 @@
 import { EventEmitter } from "node:events";
 import { bandFromRankedEntries, mainRole, type AppConfig, type PlayerGame, type RankBandConfig } from "@ldc/engine";
 import { RiotKeyError, type RiotApi } from "@ldc/riot-api";
-import type { CoachStatus, RankBandId, UserMatch } from "@ldc/shared";
+import type { AdviceRecord, CoachStatus, RankBandId, UserMatch } from "@ldc/shared";
+import { mergeAdvice, type AdviceStore } from "./advice-store";
 import type { AccountView } from "../shared/view";
 import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
@@ -24,6 +25,8 @@ export interface ProfileSourceEvents {
   band: [RankBandId];
   /** Server mode only: registration state for the panel. */
   account: [AccountView];
+  /** The advice log: what the coach showed in your recent games, newest first. */
+  advice: [AdviceRecord[]];
 }
 
 /** Where the player's own history comes from: our server (default) or the Riot API directly (dev only). */
@@ -32,6 +35,8 @@ export interface ProfileSource extends EventEmitter<ProfileSourceEvents> {
   load(identity: Identity, opts: { bandFromApi: boolean }): Promise<void>;
   /** A game just ended: fetch the new games. */
   refresh(): Promise<void>;
+  /** Keeps what the coach showed for a game that has ended (the advice log). */
+  recordAdvice(record: AdviceRecord): Promise<void>;
   /** Server mode: the current registration state. */
   readonly account?: AccountView;
 }
@@ -56,9 +61,15 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
       history: AppConfig["history"];
       bands: RankBandConfig;
       storeFor: (puuid: string) => MatchStore;
+      /** The local advice log (none: advice isn't kept). */
+      advice?: AdviceStore;
     },
   ) {
     super();
+  }
+
+  async recordAdvice(record: AdviceRecord): Promise<void> {
+    if (this.deps.advice) this.emit("advice", await this.deps.advice.add(record));
   }
 
   async load(identity: Identity, opts: { bandFromApi: boolean }): Promise<void> {
@@ -93,6 +104,7 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
     try {
       if (bandFromApi) this.emit("band", bandFromRankedEntries(await riot.leagueEntriesByPuuid(puuid), this.deps.bands));
       this.emit("status", { state: "loading", done: 0, total: this.deps.history.matchCount });
+      if (this.deps.advice) this.emit("advice", await this.deps.advice.list());
       const profile = await loadProfile({
         riot,
         puuid,
@@ -114,6 +126,37 @@ export class DirectProfileSource extends EventEmitter<ProfileSourceEvents> imple
   }
 }
 
+/**
+ * Dev aid (LDC_PROFILE_FILE, development builds only): your history from a saved file
+ * ({ matches, masteries }), so the panel and screenshots work without a Riot key.
+ */
+export class FileProfileSource extends EventEmitter<ProfileSourceEvents> implements ProfileSource {
+  constructor(
+    private readonly deps: {
+      read: () => Promise<{ matches: UserMatch[]; masteries: PersonalProfile["masteries"] }>;
+      advice?: AdviceStore;
+    },
+  ) {
+    super();
+  }
+
+  async load(): Promise<void> {
+    if (this.deps.advice) this.emit("advice", await this.deps.advice.list());
+    const { matches, masteries } = await this.deps.read();
+    const profile = profileFromMatches(matches, masteries);
+    this.emit("profile", profile);
+    this.emit("status", readyStatus(profile.games));
+  }
+
+  async refresh(): Promise<void> {
+    await this.load();
+  }
+
+  async recordAdvice(record: AdviceRecord): Promise<void> {
+    if (this.deps.advice) this.emit("advice", await this.deps.advice.add(record));
+  }
+}
+
 export interface ServerProfileSourceDeps {
   accounts: AccountStore;
   /** Prefilled in the registration form (from SERVER_URL or the app config). */
@@ -123,6 +166,8 @@ export interface ServerProfileSourceDeps {
   pollMs?: number;
   /** Wait function for wake-up retries (tests pass a no-op). */
   sleep?: (ms: number) => Promise<void>;
+  /** Advice records not yet confirmed by the server, kept across restarts (none: posted once). */
+  outbox?: AdviceStore;
 }
 
 /**
@@ -136,6 +181,10 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private client: ServerClient | null = null;
   private registeredAs: string | null = null;
   private matches = new Map<string, UserMatch>();
+  private advice: AdviceRecord[] = [];
+  /** Records waiting for the server, also shown until it has them. */
+  private pending: AdviceRecord[] = [];
+  private flushing = false;
   private polling = false;
   private stopped = false;
   private view: AccountView;
@@ -165,6 +214,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
 
   /** Reads the stored registration (if any). Call once at startup. */
   async init(): Promise<void> {
+    if (this.deps.outbox) this.pending = await this.deps.outbox.list();
     const a = await this.deps.accounts.load();
     if (!a) return this.setAccount({ state: "unregistered" });
     this.client = new ServerClient(a.serverUrl, a.token, this.deps.fetch, this.deps.sleep);
@@ -200,6 +250,47 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     }
   }
 
+  async recordAdvice(record: AdviceRecord): Promise<void> {
+    if (!this.client || this.view.state !== "registered") return;
+    // Kept in the outbox first (the server may be asleep or down), and shown at once.
+    this.pending = this.deps.outbox ? await this.deps.outbox.add(record) : mergeAdvice(this.pending, record);
+    this.advice = mergeAdvice(this.advice, record);
+    this.emit("advice", this.advice);
+    await this.flushOutbox();
+  }
+
+  /**
+   * Posts the records the server hasn't confirmed, oldest first. A network or server error
+   * keeps them for the next try (after the next profile fetch); a record the server refuses
+   * as invalid (HTTP 400) is dropped, since sending it again can't succeed.
+   */
+  private async flushOutbox(): Promise<void> {
+    if (!this.client || this.flushing || !this.pending.length) return;
+    this.flushing = true;
+    const done: number[] = [];
+    try {
+      for (const record of [...this.pending].reverse()) {
+        try {
+          await this.client.postAdvice(record);
+          done.push(record.gameId);
+        } catch (err) {
+          if (err instanceof ServerError && err.status === 400) {
+            done.push(record.gameId);
+            continue;
+          }
+          this.onServerError(err);
+          break;
+        }
+      }
+    } finally {
+      if (done.length) {
+        const drop = new Set(done);
+        this.pending = this.deps.outbox ? await this.deps.outbox.remove(drop) : this.pending.filter((a) => !drop.has(a.gameId));
+      }
+      this.flushing = false;
+    }
+  }
+
   /** Registers the player logged into the client, using an invite code. */
   async register(serverUrlInput: string, inviteCode: string): Promise<void> {
     if (!this.identity) {
@@ -230,8 +321,12 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.client = null;
     this.registeredAs = null;
     this.matches.clear();
+    this.advice = [];
+    // Unsent records belong to this registration: never post them under another one.
+    this.pending = this.deps.outbox ? await this.deps.outbox.remove(this.pending.map((r) => r.gameId)) : [];
     this.setAccount({ state: "unregistered", riotId: null, serverUrl: null, message: null });
     this.emit("profile", profileFromMatches([], []));
+    this.emit("advice", []);
     this.emit("status", { state: "idle" });
   }
 
@@ -251,6 +346,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       const newest = Math.max(0, ...[...this.matches.values()].map((m) => m.match.endedAt));
       const p = await this.client.profile(this.matches.size ? newest : undefined);
       this.apply(p);
+      await this.flushOutbox();
       if (p.sync.state === "running") await this.waitForSync();
     } catch (err) {
       this.onServerError(err);
@@ -273,7 +369,14 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       })),
     );
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
-    this.emit("profile", profile);
+    this.emit("profile", { ...profile, rankHistory: p.rankHistory });
+    // The server's log, plus records still in the outbox (so a card doesn't vanish while unsent).
+    // Re-sent on every poll: only a change rebuilds the post-game card.
+    const advice = this.pending.reduce(mergeAdvice, p.advice);
+    if (JSON.stringify(advice) !== JSON.stringify(this.advice)) {
+      this.advice = advice;
+      this.emit("advice", this.advice);
+    }
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
     else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });
     else this.emit("status", readyStatus(profile.games));

@@ -1,5 +1,5 @@
 import { blob, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import type { MatchSummary } from "@ldc/shared";
+import type { AdviceRecord, MatchSummary } from "@ldc/shared";
 
 /**
  * Drizzle table definitions for typed queries. The tables themselves are created by
@@ -110,6 +110,39 @@ export const userMasteries = sqliteTable("user_masteries", {
   data: text("data", { mode: "json" }).$type<StoredMastery[]>().notNull(),
   updatedAt: integer("updated_at").notNull(),
 });
+
+/**
+ * What the coach showed when a user locked in a champion, one row per game: the user's own
+ * pick and the picks suggested to them (champion ids and numbers only). Deleted with the user.
+ * The result comes from the user's own Match-V5 game (user_matches), joined by game id.
+ */
+export const adviceLog = sqliteTable("advice_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  gameId: integer("game_id").notNull(),
+  lockedAt: integer("locked_at").notNull(),
+  championId: integer("champion_id").notNull(),
+  advice: text("advice", { mode: "json" }).$type<AdviceRecord>().notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+/** The user's own rank per day and queue (League-V4, at each sync), for the monthly report's rank trend. */
+export const rankHistory = sqliteTable(
+  "rank_history",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** UTC date, "YYYY-MM-DD". */
+    day: text("day").notNull(),
+    queueType: text("queue_type").notNull(),
+    tier: text("tier").notNull(),
+    rank: text("rank"),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day, t.queueType] })],
+);
 
 /** One-time invite codes created by the owner. */
 export const invites = sqliteTable("invites", {

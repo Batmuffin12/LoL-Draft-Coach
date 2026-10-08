@@ -65,6 +65,10 @@ export interface ChampionInfo {
   key: string;
   name: string;
   iconUrl: string;
+  /** Riot's 0–10 ratings from Data Dragon (absent if Riot drops them). */
+  info?: { attack: number; defense: number; magic: number; difficulty: number };
+  /** Riot's class tags ("Mage", "Assassin"…), as Data Dragon lists them. */
+  tags?: string[];
 }
 
 /** An item from Data Dragon, reduced to what builds and item ranking need. */
@@ -123,8 +127,9 @@ export interface Reason {
   slots: Record<string, string | number>;
 }
 
-/** The parts of a rating-based (engine v2) score. */
-export type TermName = "meta" | "lane" | "counter" | "synergy" | "team" | "personal";
+/** The parts of a rating-based (engine v2) score (also what the server accepts in the advice log). */
+export const TERM_NAMES = ["meta", "lane", "counter", "synergy", "team", "personal"] as const;
+export type TermName = (typeof TERM_NAMES)[number];
 
 /** One part of a pick's predicted win chance, in rating points (log-odds × 400 / ln 10). */
 export interface Term {
@@ -171,6 +176,31 @@ export interface PickAdvice {
   confidence: PickConfidence | null;
 }
 
+/** A champion as the coach saw it in one draft: its predicted win chance and the parts of it. */
+export interface AdviceOption {
+  championId: ChampionId;
+  expectedWin: number | null;
+  terms: Term[];
+}
+
+/**
+ * What the coach showed when you locked in (the advice log). The player's own data only:
+ * your pick and the picks suggested to you, never another player.
+ */
+export interface AdviceRecord {
+  /** The League game id (from the client's gameflow session), to find the game in your Match-V5 history. */
+  gameId: number;
+  queueId: number | null;
+  role: Position | null;
+  band: RankBandId;
+  /** Epoch ms when you locked in. */
+  lockedAt: number;
+  /** The champion you locked in. */
+  pick: AdviceOption;
+  /** The picks suggested when you locked in, best first. */
+  shown: AdviceOption[];
+}
+
 /**
  * One participant of a stored match, reduced to what coaching needs. Never carries a
  * PUUID, name or any other identifier: who the user was is stored separately as an index.
@@ -205,6 +235,8 @@ export interface ParticipantSummary {
   perks: { primaryStyle: number; subStyle: number; runes: number[]; statPerks: number[] } | null;
   /** Numeric Match-V5 `challenges` metrics, as Riot names them; any may be missing. */
   challenges: Record<string, number>;
+  /** Deaths to champions before the configured minute (engine `earlyDeathsMinute`), from the timeline; absent without one. */
+  earlyDeaths?: number;
 }
 
 /** A stored match: game facts and the ten anonymised participants. */
@@ -241,6 +273,13 @@ export interface MatchTimeline {
   items: [number, number, number, number][];
   /** Skill slots (1 = Q … 4 = R) per participant, in level-up order (normal level-ups only). */
   skills: number[][];
+  /** Champion level per participant at each frame (absent in timelines stored before 2026-10-08). */
+  levels?: number[][];
+  /**
+   * Champion kills in time order: [second, killer, victim, assists bitmask (bit i = participant i)];
+   * killer is -1 when no champion got the kill. For power spikes and "when you die" (absent before 2026-10-08).
+   */
+  kills?: [number, number, number, number][];
 }
 
 /** A match from a user's own history, with which participant they were. */
@@ -446,9 +485,10 @@ export interface MetaSnapshot {
   expectedWin?: ExpectedWinTable;
   /**
    * Playstyle references: per role and metric, evenly spaced quantiles (min … max) of
-   * the metric over all collected players in that role.
+   * the metric over all collected players in that role, and its importance: the win-rate gap
+   * between the top and bottom halves (growth focus; absent in older snapshots).
    */
-  references: Record<Position, Record<string, { n: number; quantiles: number[] }>>;
+  references: Record<Position, Record<string, { n: number; quantiles: number[]; importance?: number }>>;
 }
 
 /** Status shown in the panel. */

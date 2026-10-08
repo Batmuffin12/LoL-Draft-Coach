@@ -165,6 +165,8 @@ export interface MyPickView {
   hovering?: boolean;
   /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
   matchups: { against: MatchupRowView[]; with: MatchupRowView[] } | null;
+  /** How this game is likely to go: lane in a word, who scales, their damage and engage, your record vs your lane opponent. */
+  plan: string[];
 }
 
 /** A suggested ban (ban phase, live meta only). */
@@ -184,6 +186,15 @@ export interface BanView {
 export type MetaView =
   | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
   | { state: "error"; message: string };
+
+export interface SessionView {
+  /** "2 losses in a row. A short break before the next game usually helps." */
+  text: string;
+  /** Your own record after such streaks, when you have enough games to quote it. */
+  record: string | null;
+  /** When the session counts as over (epoch ms): the panel hides the suggestion then. */
+  until: number;
+}
 
 /** A champion in the player's pool for a role. */
 export interface PoolChampView {
@@ -257,6 +268,127 @@ export interface PickAdviceView {
   minGames?: { meta: number; pair: number };
 }
 
+/** The monthly report: trends over your games in the last month, never a verdict on one game. */
+export interface MonthView {
+  /** "Sep 7 – Oct 6". */
+  period: string;
+  games: number;
+  /** "Trends over 64 games. One game moves these numbers very little." */
+  footer: string;
+  /** The summary tiles: games, win rate, rank, focus. */
+  strip: { label: string; value: string; sub?: string; tone?: "pos" | "neg" }[];
+  /** The role whose style trends are shown ("Mid"), or null. */
+  role: string | null;
+  axes: { label: string; from: number | null; to: number }[];
+  champions: { champion: ChampView; games: number; winRate: number; change: number | null }[];
+  /** Focus targets met, then the current focus. */
+  focus: { met: string[]; current: string | null };
+}
+
+/** A champion to learn next in a role. */
+export interface NewChampView {
+  champion: ChampView;
+  /** Your main or comfortable champion it's most like. */
+  like: ChampView | null;
+  winRate: number;
+  games: number;
+  ease: 1 | 2 | 3;
+  /** "Easy", "Med", "Hard". */
+  easeLabel: string;
+  /** False: you don't own it yet; null: unknown (no client). */
+  owned: boolean | null;
+  reasons: string[];
+}
+
+/** New champions for one of your roles. */
+export interface NewChampRoleView {
+  role: string;
+  picks: NewChampView[];
+  /** The champion you're already learning in the role: the picks are then for after it. */
+  learning: {
+    /** "Learning Lillia". */
+    title: string;
+    champion: ChampView | null;
+    /** "3 of 7 games · 12 days left". */
+    progress: string | null;
+    learn: LearnView;
+    /** "After Lillia", the head over the picks. */
+    after: string;
+    /** "one new champion per role at a time". */
+    why: string;
+  } | null;
+  /** The first-games plan for the top suggestion (none while learning another). */
+  plan: string | null;
+  /** How to learn the top suggestion (none while learning another). */
+  planLearn: LearnView | null;
+}
+
+/** How to learn a champion: where you are with it, one thing to watch next game, and what to know. */
+export interface LearnView {
+  /** "First games". */
+  stage: string;
+  /** The one thing to watch next game, and whether your last games on it reached it (oldest first). */
+  focus: { text: string; recent: boolean[] } | null;
+  /** What to do at this stage, its job, the role's cue, when it's strong, matchups, how long to give it, your record. */
+  lines: string[];
+}
+
+/** One measurable focus on your main champion and role, with a target and your last games against it. */
+export interface FocusView {
+  /** The metric as players say it, capitalised ("CS per minute"). */
+  label: string;
+  /** The goal as a sentence: "More CS per minute", "Fewer deaths to champions". */
+  title: string;
+  /** "6.8 or more", "7.7 or fewer". */
+  goalText: string;
+  /** How the goal is set, from the configured step: "Your next step: 50% of the way to the average". */
+  goalHint: string;
+  /** "Ahri · Mid", or the role alone without a main champion. */
+  on: string;
+  you: number;
+  target: number;
+  typical: number;
+  /** The same three, formatted for the metric ("6.2", "54%"). */
+  youText: string;
+  targetText: string;
+  typicalText: string;
+  /** "Typical mid player in your rank: 6.0", or "... in your games" when your rank's data was too thin. */
+  typicalLine: string;
+  lowerIsBetter: boolean;
+  checkGames: number;
+  /** Your last games, oldest first: whether each reached the target. */
+  recent: boolean[];
+  /** Why this metric (how much it separates wins from losses where you play). */
+  why: string;
+  /** What to keep in mind to reach it, for the role (short, actionable). */
+  tips: string[];
+  /** Targets you already reached ("Deaths per minute: 0.5 → 0.4, target met"). */
+  met: string[];
+}
+
+/** The last game against the advice the coach gave (the post-game card). The player's own data only. */
+export interface PostGameView {
+  champion: ChampView;
+  role: string | null;
+  /** When you locked in, and when the game ended (null until it's in your history). */
+  lockedAt: number;
+  endedAt: number | null;
+  minutes: number | null;
+  /** Null until the game is in your history (the server syncs it after the game). */
+  result: "win" | "loss" | null;
+  /** The picks suggested when you locked in, best first; `took` marks yours. */
+  shown: { champion: ChampView; expectedWin: number | null; took: boolean }[];
+  /** "Took the #1 pick", "Took suggestion #2" or "Your own pick". */
+  verdict: string;
+  followed: boolean;
+  /** The term that mattered most (an edge, or a cost): describes the draft, never grades the game. */
+  lines: ReasonView[];
+  /** "Predicted 54% for Ahri when you locked in", or null without live meta. */
+  prediction: string | null;
+  /** Your focus metric in this game against its target (null without a focus, or before the game is in your history). */
+  focus: { label: string; value: string; target: string; met: boolean } | null;
+}
+
 export interface ViewState {
   account: AccountView | null;
   status: CoachStatus;
@@ -275,12 +407,24 @@ export interface ViewState {
   meta: MetaView | null;
   /** Role the picks are for, if known. */
   pickRole: string | null;
+  /** Their team in short during champ select ("80% physical damage", "Nautilus is their engage"); empty until two are picked. */
+  enemyNotes: string[];
   /** Your lane opponent in champ select (champion null: not picked yet), or null without a role. */
   laneOpponent: { role: string; champion: ChampView | null } | null;
   /** Your roles ranked by recent results, for the lobby. */
   roles: RoleView[];
   /** Your playstyle per role with enough games (most played first). */
   playstyle: PlaystyleView[];
+  /** Your most recent game with logged advice, or null. */
+  lastGame: PostGameView | null;
+  /** Your growth focus, or null without enough games. */
+  focus: FocusView | null;
+  /** New champions per role (needs the band's live meta), roles in the lobby's order. */
+  newChamps: NewChampRoleView[];
+  /** The monthly report, or null without games in the last month. */
+  month: MonthView | null;
+  /** A break suggestion after a losing streak or a long session (your games only), until the session is over. */
+  session: SessionView | null;
   notices: string[];
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
@@ -300,9 +444,15 @@ export function emptyViewState(): ViewState {
     hoverPick: null,
     meta: null,
     pickRole: null,
+    enemyNotes: [],
     laneOpponent: null,
     roles: [],
     playstyle: [],
+    lastGame: null,
+    focus: null,
+    newChamps: [],
+    month: null,
+    session: null,
     notices: [],
     docked: true,
     roleLabels: {},

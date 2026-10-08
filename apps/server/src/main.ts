@@ -5,7 +5,7 @@
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
 import { DataDragon } from "@ldc/ddragon";
-import { RiotApi } from "@ldc/riot-api";
+import { RateLimiter, RiotApi } from "@ldc/riot-api";
 import { createApp } from "./app";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
@@ -20,10 +20,17 @@ const env = readServerEnv(process.env);
 const config = loadServerConfig(findConfigDir(process.cwd()));
 const db = openDb(env.DATABASE_PATH);
 const riot = env.RIOT_API_KEY
-  ? new RiotApi({ apiKey: env.RIOT_API_KEY, keyType: env.RIOT_KEY_TYPE, platform: env.RIOT_PLATFORM, region: env.RIOT_REGION })
+  ? new RiotApi({
+      apiKey: env.RIOT_API_KEY,
+      keyType: env.RIOT_KEY_TYPE,
+      platform: env.RIOT_PLATFORM,
+      region: env.RIOT_REGION,
+      // The collector leaves part of each limit free, so a user's sync never waits behind it.
+      limiter: new RateLimiter({ collectorShare: config.meta.collector.rateLimitShare }),
+    })
   : null;
 const sync = riot
-  ? new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands }, {
+  ? new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands, earlyDeathsMinute: config.engine.earlyDeathsMinute }, {
       tickMs: Math.max(1, env.SYNC_INTERVAL_MINUTES) * MINUTE,
       // Refresh a user's games when older than SYNC_STALE_MINUTES while they've used the app in the last 14 days.
       staleAfterMs: env.SYNC_STALE_MINUTES * MINUTE,
@@ -61,6 +68,8 @@ const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
 
 const shutdown = () => {
   sync?.stop();
+  // A run cut short by a redeploy is marked as such (the next run would close it too).
+  if (meta.running) meta.closeOpenRuns();
   server.close();
   db.$client.close();
   process.exit(0);

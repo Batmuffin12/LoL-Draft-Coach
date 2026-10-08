@@ -21,7 +21,7 @@ export default defineRailway(() => {
   });
 
   const server = service("ldc-server", {
-    source: github("Batmuffin12/LoL-Draft-Coach", { branch: "main", checkSuites: false }),
+    source: github("Batmuffin12/LoL-Draft-Coach", { branch: "main", checkSuites: true }), // deploy only after CI passes
     build: {
       builder: "RAILPACK",
       buildCommand: "pnpm --filter @ldc/server build",

@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { ChampionRoleStat, DraftState, MetaSnapshot, PairStat, Reason } from "@ldc/shared";
+import type { ChampionAttributes, ChampionRoleStat, DraftState, MetaSnapshot, PairStat, Reason } from "@ldc/shared";
 import {
   adviseLivePicks,
   assessPick,
   assignRoles,
   computeComfort,
+  enemyTeamNotes,
+  gamePlan,
   deltaWin,
   MetaIndex,
   parseEngineConfig,
@@ -24,7 +26,9 @@ import {
 
 const CONFIG_DIR = join(__dirname, "..", "..", "..", "config");
 const readJson = (f: string) => JSON.parse(readFileSync(join(CONFIG_DIR, f), "utf8"));
-const config = parseEngineConfig(readJson("engine.v1.json"));
+// The fixture games are sized for a pair prior of 60: pinned, so tuning the shipped prior (backtest) doesn't change what these tests check.
+const shipped = parseEngineConfig(readJson("engine.v1.json"));
+const config = { ...shipped, rating: { ...shipped.rating, priorGames: { ...shipped.rating.priorGames, pair: 60 } } };
 const explain = parseExplainConfig(readJson("explain.v1.json"));
 const say = (r: Reason | null) => (r ? renderReason(r, explain.templates, (id) => `#${id}`) : "");
 const text = (reasons: Reason[]) => reasons.map(say).join(" | ");
@@ -201,15 +205,15 @@ describe("adviseLivePicks", () => {
     expect(say(into201.whyNot)).toMatch(/Picked over your #101: a better lane into #201 \(\+\d+\.\d%\)/);
     // The main's bad matchup shows as a caveat.
     const main = into201.picks.find((p) => p.championId === 101);
-    if (main) expect(text(main.reasons)).toMatch(/But -\d+\.\d% into #201/);
+    if (main) expect(text(main.reasons)).toMatch(/But −\d+\.\d% into #201/);
   });
 
   it("rates blind picks by their likely opponents: risky with a common counter, safe without", () => {
     const advice = adviseLivePicks(input(draft()));
     const r101 = advice.picks.find((p) => p.championId === 101);
     const r102 = advice.picks.find((p) => p.championId === 102);
-    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: -\d+\.\d% into #(201|202)/);
-    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: -\d+\.\d% into #202/);
+    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: −\d+\.\d% into #(201|202)/);
+    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: −\d+\.\d% into #202/);
   });
 
   it("suggests a strong champion the player hasn't played, with the learning cost, only if pickable", () => {
@@ -310,6 +314,22 @@ describe("adviseLivePicks", () => {
     expect(adviseLivePicks(input(draft([201]), { index: index(snapshot({ gamesScale: 0.02 })) })).confidence).toBe("thin");
     expect(adviseLivePicks(input(draft([201]))).confidence).toMatch(/clear|close/);
   });
+
+  it("calls a lead clear only when it is large against the sampling noise of both picks", () => {
+    const cfg = { ...config, rating: { ...config.rating, explain: { ...config.rating.explain, clearGapWin: 0, clearMaxPersonalLossWin: 1, clearZ: 0.84 } } };
+    const at = (gamesScale: number) => adviseLivePicks(input(draft([201]), { config: cfg, index: index(snapshot({ gamesScale })) })).confidence;
+    expect(at(0.1)).toBe("close"); // ~40 games a champion: the lead is within the noise
+    expect(at(50)).toBe("clear"); // the same rates from 50 times the games
+  });
+
+  it("never calls a pick clear when it is new to you (no games: the personal term takes win chance off)", () => {
+    const explain = (maxLoss: number) => ({ ...config, rating: { ...config.rating, explain: { ...config.rating.explain, clearGapWin: 0, clearZ: 0, clearMaxPersonalLossWin: maxLoss } } });
+    const noHistory = { comfort: computeComfort([], [], NOW, config.comfort, "middle") };
+    const advice = adviseLivePicks(input(draft([201]), { ...noHistory, config: explain(1) }));
+    expect(advice.picks[0]!.terms!.find((t) => t.name === "personal")!.deltaWin).toBeLessThan(-0.02);
+    expect(advice.confidence).toBe("clear");
+    expect(adviseLivePicks(input(draft([201]), { ...noHistory, config: explain(0.02) })).confidence).toBe("close");
+  });
 });
 
 describe("assessPick", () => {
@@ -327,7 +347,7 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft([], 301)));
     const ids = bans.map((b) => b.championId);
     expect(ids[0]).toBe(202);
-    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: -\d+\.\d% \(200 games\); picked in 40% of mid games/);
+    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: −\d+\.\d% \(200 games\); picked in 40% of mid games/);
     expect(ids).not.toContain(301); // an ally is hovering it
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
@@ -355,7 +375,7 @@ describe("suggestBans", () => {
     expect(hover.some((b) => general.includes(b.championId))).toBe(false);
     if (!general.includes(203)) {
       expect(hover[0]!.championId).toBe(203);
-      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: -\d+\.\d% \(200 games\)/);
+      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: −\d+\.\d% \(200 games\)/);
     }
     expect(suggestHoverBans(inp, top, general)).toHaveLength(config.rating.bans.hoverTopNWhenSuggested);
   });
@@ -386,5 +406,47 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft(), { index: index(snapshot({ gamesScale: 0.02 })) }));
     expect(bans.length).toBeGreaterThan(0);
     expect(text(bans[0]!.reasons)).toMatch(/Picked in \d+% of \w+ games in your rank \(not enough games yet/);
+  });
+});
+
+describe("gamePlan", () => {
+  const attr = (championId: number, over: Partial<ChampionAttributes>): ChampionAttributes => ({
+    championId,
+    samples: 100,
+    physicalShare: 0.5,
+    magicShare: 0.5,
+    trueShare: 0,
+    frontline: 0.5,
+    engage: 0.5,
+    roleShares: { top: 0, jungle: 0, middle: 1, bottom: 0, utility: 0 },
+    roleSamples: 100,
+    ...over,
+  });
+  const curve = (early: number, late: number) => ({ early: { games: 200, winRate: early }, late: { games: 200, winRate: late } });
+
+  it("says the lane in a word, who scales, their damage type and their engage, from measured data", () => {
+    const s = snapshot();
+    s.attributes = [
+      attr(102, { powerCurve: curve(0.45, 0.58) }),
+      attr(201, { physicalShare: 0.9, magicShare: 0.1, engage: 0.95, powerCurve: curve(0.56, 0.47) }),
+      attr(301, { physicalShare: 0.8, magicShare: 0.2, powerCurve: curve(0.55, 0.48) }),
+    ];
+    const plan = text(gamePlan(input(draft([201, 301]), { index: index(s) }), 102));
+    expect(plan).toMatch(/^Lane: favoured into #201 \(\+\d+\.\d% vs what both usually win, 300 games\)/);
+    expect(plan).toMatch(/Your team wins long games more often than theirs/);
+    expect(plan).toMatch(/Their damage is about \d+% physical/);
+    expect(plan).toMatch(/#201 is their main engage/);
+    expect(text(gamePlan(input(draft([201]), { index: index(s) }), 101))).toMatch(/^Lane: hard into #201/);
+  });
+
+  it("sums up their team in champ select once two are picked", () => {
+    const s = snapshot();
+    s.attributes = [attr(201, { physicalShare: 0.9, magicShare: 0.1, engage: 0.95 }), attr(301, { physicalShare: 0.8, magicShare: 0.2 })];
+    expect(text(enemyTeamNotes(input(draft([201, 301]), { index: index(s) })))).toMatch(/^d+% physical damage | #201 is their engage$/);
+    expect(enemyTeamNotes(input(draft([201]), { index: index(s) }))).toEqual([]);
+  });
+
+  it("says nothing it can't measure", () => {
+    expect(gamePlan(input(draft([]), {}), 103)).toEqual([]);
   });
 });

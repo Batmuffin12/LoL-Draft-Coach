@@ -83,12 +83,20 @@ export const MetaConfigSchema = z.object({
     /** Upper bounds for one wake-up: wall time, and new matches fetched. */
     budgetSeconds: z.number().positive(),
     maxMatchesPerRun: z.number().int().min(1),
-    /** Share of new matches that also get their timeline (one more call each: fewer games per hour, but builds and item purchases). */
+    /** Only games that ended in the last this many days are listed (older games are mostly a past patch and weigh little). */
+    lookbackDays: z.number().positive(),
+    /** Share of new matches in the win-rate bands that also get their timeline (one more call each: fewer games per hour, but builds and item purchases). */
     timelineShare: z.number().min(0).max(1),
+    /** The same for the bands collected for builds only (builds need timelines). */
+    buildBandTimelineShare: z.number().min(0).max(1),
     /** Share of the match budget for the band above each active band (builds only). */
     buildBandShare: z.number().min(0).max(1),
     /** Collected matches kept per band (newest first); older ones are pruned to bound disk and memory. */
     maxStoredMatches: z.number().int().min(1),
+    /** Users seen in the app within this many days decide which bands are collected. */
+    activeUserDays: z.number().positive(),
+    /** Share of each Riot rate limit the collector may use; the rest stays free for users' syncs. */
+    rateLimitShare: z.number().gt(0).max(1),
     /** /health calls the collector stale after this many hours without a new game. */
     staleAfterHours: z.number().positive(),
   }),

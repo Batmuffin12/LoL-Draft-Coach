@@ -16,6 +16,16 @@ export interface PoolChampion {
   winRate: number | null;
   /** Comfort score 0..1 for this role. */
   comfort: number;
+  /** Learning champions only: how far along (games of all roles) and when it settles. */
+  progress?: LearningProgress;
+}
+
+export interface LearningProgress {
+  games: number;
+  /** It stays "learning" up to this many games. */
+  maxGames: number;
+  /** Days left in the learning window. */
+  daysLeft: number;
 }
 
 export interface PoolHole {
@@ -83,7 +93,11 @@ export function analyzePool(input: {
     const m = mastery.get(c.championId);
     if (fit && games >= cfg.coreGames && c.score >= cfg.coreMin) champions.push({ ...entry, tier: "main" });
     else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames)
-      champions.push({ ...entry, tier: "learning" });
+      champions.push({
+        ...entry,
+        tier: "learning",
+        progress: { games: c.games, maxGames: cfg.learningMaxGames, daysLeft: Math.max(1, Math.ceil(cfg.learningWindowDays - (now - first) / DAY_MS)) },
+      });
     else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
     else if (
       // Rusty: lots of mastery, not played for a while, and a real role fit here (not just the player's own games).

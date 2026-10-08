@@ -5,3 +5,4 @@ export { openDb, type Db } from "./db";
 export { SyncScheduler } from "./sync-scheduler";
 export type { SyncRiot, SyncSettings } from "./sync";
 export { findConfigDir, loadServerConfig } from "./config";
+export { publishSnapshot } from "./meta-job";

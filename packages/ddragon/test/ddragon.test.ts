@@ -11,7 +11,7 @@ function fakeCdn() {
     champion: {
       version: v,
       data: {
-        Alpha: { id: "Alpha", key: "1", name: `Alpha ${v}`, image: { full: "Alpha.png" }, extra: true },
+        Alpha: { id: "Alpha", key: "1", name: `Alpha ${v}`, image: { full: "Alpha.png" }, info: { attack: 7, defense: 4, magic: 2, difficulty: 6 }, tags: ["Fighter", "Assassin"], extra: true },
         Beta: { id: "Beta", key: "2", name: "Beta", image: { full: "Beta.png" } },
       },
     },
@@ -58,7 +58,7 @@ describe("DataDragon", () => {
     const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn, baseUrl: "https://cdn.test" });
     expect(await dd.load()).toBe(true);
     expect(dd.data.version).toBe("1.2.1");
-    expect(dd.champion(1)).toEqual({ id: 1, key: "Alpha", name: "Alpha 1.2.1", iconUrl: "https://cdn.test/cdn/1.2.1/img/champion/Alpha.png" });
+    expect(dd.champion(1)).toEqual({ id: 1, key: "Alpha", name: "Alpha 1.2.1", iconUrl: "https://cdn.test/cdn/1.2.1/img/champion/Alpha.png", info: { attack: 7, defense: 4, magic: 2, difficulty: 6 }, tags: ["Fighter", "Assassin"] });
     expect(dd.data.champions.size).toBe(2);
     expect(dd.data.summonerSpells.data.SummonerFlash?.name).toBe("Flash");
   });

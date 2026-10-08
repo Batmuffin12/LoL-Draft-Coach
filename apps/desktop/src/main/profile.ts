@@ -1,4 +1,4 @@
-import { attributeSamples, playerGame, type AttributeSample, type MasteryEntry, type PlayerGame } from "@ldc/engine";
+import { attributeSamples, playerGame, type AttributeSample, type MasteryEntry, type PlayerGame, type RankPoint } from "@ldc/engine";
 import type { UserMatch } from "@ldc/shared";
 import type { RiotApi } from "@ldc/riot-api";
 import type { AppConfig } from "./config";
@@ -15,6 +15,8 @@ export interface PersonalProfile {
   /** Derived from `matches`: every participant as an attribute sample. */
   samples: AttributeSample[];
   masteries: MasteryEntry[];
+  /** Your rank per day (server mode; the monthly report's rank trend). */
+  rankHistory?: RankPoint[];
 }
 
 /** Sorts Match-V5 ids newest first by their numeric part (e.g. EUW1_7123456789). */

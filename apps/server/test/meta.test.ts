@@ -122,7 +122,7 @@ describe("collector", () => {
     expect(text).not.toContain("SECRET");
     expect(text).not.toContain("Name0");
     expect(rows[0]!.summary.participants[0]!.challenges).toEqual({ killParticipation: 0.5 });
-    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []) });
+    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [] });
     // Players' identifiers are never stored anywhere.
     const dump = JSON.stringify(db.$client.prepare("SELECT * FROM collector_cursors").all());
     expect(dump).not.toContain("P-");
@@ -158,6 +158,21 @@ describe("collector", () => {
     expect(r.timelines).toBe(0);
     expect(riot.calls.some((c) => c.startsWith("timeline:"))).toBe(false);
     expect(collected(db).every((m) => m.summary.timeline === undefined)).toBe(true);
+  });
+
+  it("always fetches timelines in the build-only band, and never for remakes", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const opts = { ...options({ maxMatchesPerRun: 10, buildBandShare: 0.3, timelineShare: 0.5, buildBandTimelineShare: 1 }), buildBands: [3 as const], random: () => 0.7 };
+    await collect(db, riot, opts);
+    const rows = collected(db);
+    expect(rows.filter((m) => m.band === 3).every((m) => m.summary.timeline !== undefined)).toBe(true);
+    expect(rows.filter((m) => m.band === 2).every((m) => m.summary.timeline === undefined)).toBe(true);
+
+    const db2 = openDb(":memory:");
+    const riot2 = fakeRiot();
+    await collect(db2, riot2, { ...options({ maxMatchesPerRun: 4, timelineShare: 1 }), minDurationSec: 3600 });
+    expect(riot2.calls.some((c) => c.startsWith("timeline:"))).toBe(false);
   });
 
   it("gives the band above its share of the budget, for builds", async () => {
@@ -237,6 +252,11 @@ describe("meta job", () => {
     addUser(db, "a", 2);
     addUser(db, "b", 2);
     expect(activeBands(db, config.bands)).toEqual([2]);
+    const away = addUser(db, "c", 3);
+    db.update(schema.users).set({ lastSeenAt: NOW - 90 * 86_400_000 }).where(eq(schema.users.id, away.id)).run();
+    expect(activeBands(db, config.bands)).toEqual([2, 3]);
+    expect(activeBands(db, config.bands, NOW - 30 * 86_400_000)).toEqual([2]);
+    db.delete(schema.users).where(eq(schema.users.id, away.id)).run();
     // Item 1055 counts as a completed item in this catalog.
     const items = async () => new Map([[1055, { id: 1055, name: "X", iconUrl: "", gold: 3000, into: [], from: [], tags: [], maps: ["11"], purchasable: true, requiredChampion: null, stats: {} }]]);
     const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {}, random: () => 0, items });
@@ -264,6 +284,16 @@ describe("meta job", () => {
     const r = await new MetaJob(db, { ...fakeRiot(), keyProblem: new Error("x") }, settings, { now: () => NOW, log: () => {} }).run();
     expect(r.error).toMatch(/rejected/);
     expect(r.snapshots).toHaveLength(1);
+  });
+
+  it("closes a run the server never finished (a redeploy mid-run) before the next one", async () => {
+    const db = openDb(":memory:");
+    db.insert(schema.collectorRuns).values({ startedAt: NOW - 3_600_000 }).run();
+    const job = new MetaJob(db, fakeRiot(), settings, { now: () => NOW, log: () => {} });
+    await job.run();
+    const runs = db.select().from(schema.collectorRuns).all();
+    expect(runs[0]).toMatchObject({ finishedAt: NOW, error: expect.stringMatching(/interrupted/) });
+    expect(runs[1]).toMatchObject({ finishedAt: NOW, error: null });
   });
 
   it("runs one wake-up at a time", async () => {
@@ -296,6 +326,16 @@ describe("meta routes", () => {
   }
   const auth = (t: string) => ({ authorization: `Bearer ${t}` });
 
+  it("aggregates every game across read chunks, even when many end at the same time", async () => {
+    const { db } = setup();
+    const { summarizeMatch } = await import("@ldc/riot-api");
+    const insert = db.$client.prepare("INSERT INTO matches (match_id, queue_id, game_version, ended_at, duration_sec, summary, source, stored_at, band) VALUES (?, 420, '16.19.1', ?, 1800, ?, 'collector', ?, 2)");
+    db.$client.transaction(() => {
+      for (let i = 0; i < 1203; i++) insert.run(`m${i}`, NOW - MIN, JSON.stringify(summarizeMatch(rawMatch(`m${i}`, NOW - MIN))), NOW);
+    })();
+    expect((await publishSnapshot(db, 2, settings, NOW)).matches).toBe(1203);
+  });
+
   it("serves the band snapshot to registered users only, gzipped with an ETag", async () => {
     const { db, app } = setup();
     expect((await app.request("/meta/2")).status).toBe(401);
@@ -304,7 +344,7 @@ describe("meta routes", () => {
     db.insert(schema.matches)
       .values({ matchId: "m", queueId: 420, gameVersion: "16.19.1", endedAt: NOW - MIN, durationSec: 1800, summary: (await import("@ldc/riot-api")).summarizeMatch(rawMatch("m", NOW - MIN)), source: "collector", storedAt: NOW, band: 2 })
       .run();
-    publishSnapshot(db, 2, settings, NOW);
+    await publishSnapshot(db, 2, settings, NOW);
 
     const res = await app.request("/meta/2", { headers: { ...auth("tok"), "accept-encoding": "gzip" } });
     expect(res.status).toBe(200);
@@ -345,10 +385,16 @@ describe("meta routes", () => {
     expect((await app.request("/admin/collect", { method: "POST" })).status).toBe(404);
     expect((await app.request("/admin/collect", { method: "POST", headers: auth("tok") })).status).toBe(404);
     const res = await app.request("/admin/collect", { method: "POST", headers: auth(ADMIN) });
-    expect(res.status).toBe(202);
-    expect(await res.json()).toEqual({ started: true, running: true });
+    // Nothing collected yet counts as stale: the run starts, and the cron sees a failure (503).
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "collector_stale", started: true, running: true });
     await job.run();
     expect(job.lastRun()?.finishedAt).toBe(NOW);
+    // Fresh data now: a normal 202.
+    const again = await app.request("/admin/collect", { method: "POST", headers: auth(ADMIN) });
+    expect(again.status).toBe(202);
+    expect(await again.json()).toEqual({ started: true, running: true });
+    await job.run();
   });
 
   it("serves the scoring config with an ETag", async () => {

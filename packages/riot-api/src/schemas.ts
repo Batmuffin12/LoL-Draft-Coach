@@ -133,13 +133,17 @@ export const TimelineSchema = z.looseObject({
     frames: z.array(
       z.looseObject({
         timestamp: z.number(),
-        participantFrames: z.record(z.string(), z.looseObject({ participantId: z.number().int(), totalGold: z.number().default(0) })).default({}),
+        participantFrames: z.record(z.string(), z.looseObject({ participantId: z.number().int(), totalGold: z.number().default(0), level: z.number().int().optional() })).default({}),
         events: z
           .array(
             z.looseObject({
               type: z.string(),
               timestamp: z.number(),
               participantId: z.number().int().optional(),
+              /** CHAMPION_KILL: who died, who killed (0 = not a champion) and who assisted. */
+              victimId: z.number().int().optional(),
+              killerId: z.number().int().optional(),
+              assistingParticipantIds: z.array(z.number().int()).optional(),
               itemId: z.number().int().optional(),
               /** ITEM_UNDO: the item the undo took back (beforeId) or gave back (afterId). */
               beforeId: z.number().int().optional(),

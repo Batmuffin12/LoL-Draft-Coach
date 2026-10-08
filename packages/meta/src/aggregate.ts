@@ -1,4 +1,4 @@
-import { addAttributeSample, attributesFromTotals, halfLifeWeight, readMetric, type AttributeTotals } from "@ldc/engine";
+import { addAttributeSample, attributesFromTotals, halfLifeWeight, metricImportance, readMetric, type AttributeTotals } from "@ldc/engine";
 import type { ChampionAttributes, ChampionId, ChampionRoleStat, MatchSummary, MetaSnapshot, PairStat, ParticipantSummary, Position, RankBandId, TrendingChampion } from "@ldc/shared";
 import type { AggregationConfig } from "./config";
 
@@ -134,6 +134,8 @@ export class BandAggregator {
   private readonly duos = new PairCounter();
   private readonly attributes = new Map<ChampionId, AttributeTotals>();
   private readonly metricValues = new Map<Position, Map<string, number[]>>();
+  /** Whether each sampled player won, parallel to metricValues (for importance). */
+  private readonly metricWins = new Map<Position, Map<string, boolean[]>>();
   private readonly metrics: string[];
   private readonly patches = new Set<string | null>();
   private count = 0;
@@ -249,6 +251,8 @@ export class BandAggregator {
 
       let byMetric = this.metricValues.get(p.position);
       if (!byMetric) this.metricValues.set(p.position, (byMetric = new Map()));
+      let winsByMetric = this.metricWins.get(p.position);
+      if (!winsByMetric) this.metricWins.set(p.position, (winsByMetric = new Map()));
       for (const metric of this.metrics) {
         let list = byMetric.get(metric);
         if (list && list.length >= cfg.referenceMaxSamples) continue;
@@ -256,6 +260,9 @@ export class BandAggregator {
         if (v === null) continue;
         if (!list) byMetric.set(metric, (list = []));
         list.push(v);
+        let wins = winsByMetric.get(metric);
+        if (!wins) winsByMetric.set(metric, (wins = []));
+        wins.push(p.win);
       }
     }
     return true;
@@ -314,10 +321,16 @@ export class BandAggregator {
     const cfg = this.opts.config;
     const references: MetaSnapshot["references"] = {};
     for (const [role, byMetric] of this.metricValues) {
-      const out: Record<string, { n: number; quantiles: number[] }> = {};
+      const out: Record<string, { n: number; quantiles: number[]; importance: number }> = {};
       for (const [metric, values] of byMetric) {
         if (values.length < cfg.minReferenceSamples) continue;
-        out[metric] = { n: values.length, quantiles: quantiles([...values].sort((a, b) => a - b), cfg.referenceQuantiles) };
+        const wins = this.metricWins.get(role)?.get(metric) ?? [];
+        out[metric] = {
+          n: values.length,
+          quantiles: quantiles([...values].sort((a, b) => a - b), cfg.referenceQuantiles),
+          // How strongly the metric separates wins from losses in this role (growth focus).
+          importance: round(metricImportance(values.map((value, i) => ({ value, win: wins[i] ?? false })))),
+        };
       }
       if (Object.keys(out).length) references[role] = out;
     }

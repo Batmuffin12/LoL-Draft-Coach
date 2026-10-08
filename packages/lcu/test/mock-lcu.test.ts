@@ -106,6 +106,21 @@ describe("LcuConnector replaying a fixture", () => {
     expect((await connector.getPickableChampionIds()).length).toBeGreaterThan(0);
     expect((await connector.getGameflowSession())?.gameData?.queue?.id).toBeTypeOf("number");
     expect(await connector.getRankedStats()).toBeNull(); // not in the fixture → 404
+    expect(await connector.getOwnedChampionIds()).toEqual([]); // not in the fixture → 404
+  });
+
+  it("reads the champions you own, leaving out free rotations", async () => {
+    const creds = await startMock("synthetic-draft-pick", {
+      "/lol-champions/v1/owned-champions-minimal": [
+        { id: 103, ownership: { owned: true, rental: { rented: false } }, freeToPlay: false },
+        { id: 238, ownership: { owned: false }, freeToPlay: true },
+        { id: 245 },
+      ],
+    });
+    connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });
+    connector.start();
+    await waitFor(() => connector!.status === "connected");
+    expect(await connector.getOwnedChampionIds()).toEqual([103]);
   });
 });
 

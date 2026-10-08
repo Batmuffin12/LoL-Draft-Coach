@@ -2,7 +2,9 @@
  * One rate limiter for every Riot API call. Limits are never hardcoded: they are
  * learned from Riot's X-App-Rate-Limit / X-Method-Rate-Limit headers (and their
  * -Count companions). Until a scope's limits are known, it allows one request in
- * flight. User requests always go before collector requests. A 429 blocks the
+ * flight. User requests always go before collector requests, and collector requests may
+ * use only `collectorShare` of each limit, so a user's sync never waits for a window the
+ * collector filled. A 429 blocks the
  * scope named by X-Rate-Limit-Type for Retry-After seconds, then the call is retried.
  */
 
@@ -38,12 +40,14 @@ export class Scope {
   inFlight = 0;
   blockedUntil = 0;
 
-  /** Milliseconds until a request may start in this scope (0 = now). */
-  waitMs(now: number): number {
+  /** Milliseconds until a request may start in this scope (0 = now), using `share` of each limit. */
+  waitMs(now: number, share = 1): number {
     if (this.blockedUntil > now) return this.blockedUntil - now;
     if (this.limits.length === 0) return this.inFlight > 0 ? Infinity : 0; // learning: one at a time
     let wait = 0;
-    for (const { max, windowMs } of this.limits) {
+    for (const limit of this.limits) {
+      const { windowMs } = limit;
+      const max = Math.max(1, Math.floor(limit.max * share));
       const inWindow = this.log.filter((t) => t > now - windowMs);
       // In-flight requests are already in the log.
       if (inWindow.length >= max) wait = Math.max(wait, inWindow[inWindow.length - max]! + windowMs - now);
@@ -82,6 +86,8 @@ export interface LimiterOptions {
   maxRetries?: number;
   /** Backoff when a 429 arrives without Retry-After (doubles per retry). */
   fallbackBackoffMs?: number;
+  /** Share of each limit collector requests may use (default 1: all of it). */
+  collectorShare?: number;
 }
 
 interface QueueItem {
@@ -101,11 +107,13 @@ export class RateLimiter {
   private readonly now: () => number;
   private readonly maxRetries: number;
   private readonly fallbackBackoffMs: number;
+  private readonly collectorShare: number;
 
   constructor(opts: LimiterOptions = {}) {
     this.now = opts.now ?? Date.now;
     this.maxRetries = opts.maxRetries ?? 3;
     this.fallbackBackoffMs = opts.fallbackBackoffMs ?? 1_000;
+    this.collectorShare = opts.collectorShare ?? 1;
   }
 
   scope(key: string): Scope {
@@ -145,14 +153,16 @@ export class RateLimiter {
       const app = this.scope(item.opts.appScope);
       const method = this.scope(item.opts.methodScope);
       if (reservedApps.has(item.opts.appScope)) continue;
-      const wait = Math.max(app.waitMs(now), method.waitMs(now));
+      const share = item.opts.priority === "collector" ? this.collectorShare : 1;
+      const appWait = app.waitMs(now, share);
+      const wait = Math.max(appWait, method.waitMs(now, share));
       if (wait === 0) {
         this.queue.splice(this.queue.indexOf(item), 1);
         app.record(now);
         method.record(now);
         void this.run(item, app, method);
       } else {
-        if (app.waitMs(now) > 0) reservedApps.add(item.opts.appScope);
+        if (appWait > 0 && share === 1) reservedApps.add(item.opts.appScope);
         minWait = Math.min(minWait, wait);
       }
     }

@@ -100,6 +100,46 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 4,
+    name: "advice log: what the coach showed when each user locked in",
+    sql: `
+      CREATE TABLE advice_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        game_id INTEGER NOT NULL,
+        locked_at INTEGER NOT NULL,
+        champion_id INTEGER NOT NULL,
+        advice TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        UNIQUE (user_id, game_id)
+      );
+      CREATE INDEX advice_log_by_time ON advice_log(user_id, locked_at);
+    `,
+  },
+  {
+    version: 5,
+    name: "rank history: the user's own rank per day, for the monthly report",
+    sql: `
+      CREATE TABLE rank_history (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        queue_type TEXT NOT NULL,
+        tier TEXT NOT NULL,
+        rank TEXT,
+        PRIMARY KEY (user_id, day, queue_type)
+      );
+    `,
+  },
+  {
+    version: 6,
+    name: "indexes for queries that filter matches by source (the summary JSON makes full scans expensive)",
+    sql: `
+      CREATE INDEX matches_source_stored ON matches(source, stored_at);
+      CREATE INDEX matches_band_source_ended ON matches(band, source, ended_at);
+      CREATE INDEX user_matches_by_match ON user_matches(match_id);
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

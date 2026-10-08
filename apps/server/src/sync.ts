@@ -1,19 +1,46 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc/engine";
-import { participantIndex, summarizeMatch, type RiotApi } from "@ldc/riot-api";
+import { deathsBefore, participantIndex, RiotKeyError, summarizeMatch, summarizeTimeline, withEarlyDeaths, type Mastery, type RiotApi } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
-import { matches, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
+import { isForeignPuuidError, isSamePlayer } from "./identity";
+import { matches, rankHistory, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
 
 /** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
 export const MATCH_IDS_PAGE = 100;
 
 /** What syncing needs from the Riot API adapter. */
-export type SyncRiot = Pick<RiotApi, "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match">;
+export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match"> & Partial<Pick<RiotApi, "timeline">>;
+
+/**
+ * The user's masteries and their PUUID for the server's current key. PUUIDs are encrypted
+ * per API key, so a stored one stops working when the key changes (e.g. development to
+ * personal key) and Riot answers HTTP 400. Then the user is looked up again by Riot ID
+ * and, once that account is confirmed to be the same player, the new PUUID is stored.
+ */
+async function masteriesWithCurrentPuuid(db: Db, riot: SyncRiot, user: User): Promise<{ puuid: string; masteries: Mastery[] }> {
+  try {
+    return { puuid: user.puuid, masteries: await riot.masteriesByPuuid(user.puuid) };
+  } catch (err) {
+    if (!isForeignPuuidError(err)) throw err;
+    const account = await riot.accountByRiotId(user.gameName, user.tagLine);
+    if (!account || account.puuid === user.puuid) throw err;
+    if (!(await isSamePlayer(db, riot, user, account.puuid, { storedPuuidForeign: true }))) {
+      throw new Error(`${user.gameName}#${user.tagLine} now belongs to a different Riot account; the user must register again.`);
+    }
+    if (db.select({ id: users.id }).from(users).where(eq(users.puuid, account.puuid)).get()) {
+      throw new Error(`${user.gameName}#${user.tagLine} is registered again as another user; this older user can be deleted.`);
+    }
+    db.update(users).set({ puuid: account.puuid }).where(eq(users.id, user.id)).run();
+    return { puuid: account.puuid, masteries: await riot.masteriesByPuuid(account.puuid) };
+  }
+}
 
 export interface SyncSettings {
   history: AppConfig["history"];
   bands: RankBandConfig;
+  /** Engine `earlyDeathsMinute`: deaths before it are stamped on your games that have a timeline. */
+  earlyDeathsMinute?: number;
 }
 
 export interface SyncResult {
@@ -44,14 +71,16 @@ export async function syncUser(
 ): Promise<SyncResult> {
   const { history } = settings;
 
-  const masteries: StoredMastery[] = (await riot.masteriesByPuuid(user.puuid)).map((m) => ({
+  const current = await masteriesWithCurrentPuuid(db, riot, user);
+  const { puuid } = current;
+  const masteries: StoredMastery[] = current.masteries.map((m) => ({
     championId: m.championId,
     level: m.championLevel,
     points: m.championPoints,
     ...(m.lastPlayTime !== undefined ? { lastPlayTime: m.lastPlayTime } : {}),
     ...(m.milestoneGrades ? { grades: m.milestoneGrades } : {}),
   }));
-  const ranked = (await riot.leagueEntriesByPuuid(user.puuid)).map((e) => ({
+  const ranked = (await riot.leagueEntriesByPuuid(puuid)).map((e) => ({
     queueType: e.queueType,
     tier: e.tier,
     ...(e.rank !== undefined ? { rank: e.rank } : {}),
@@ -63,7 +92,7 @@ export async function syncUser(
   const idPages: string[][] = [];
   for (const queue of history.queues) {
     for (let start = 0; start < history.matchCount; start += MATCH_IDS_PAGE) {
-      const page = await riot.matchIdsByPuuid(user.puuid, { queue, start, count: Math.min(MATCH_IDS_PAGE, history.matchCount - start) });
+      const page = await riot.matchIdsByPuuid(puuid, { queue, start, count: Math.min(MATCH_IDS_PAGE, history.matchCount - start) });
       idPages.push(page);
       if (page.length < MATCH_IDS_PAGE) break;
     }
@@ -87,9 +116,20 @@ export async function syncUser(
     // The raw match is needed even when another user already stored it: only the raw
     // payload says which participant this user was (stored summaries carry no PUUIDs).
     const match = await riot.match(id);
-    const index = match ? participantIndex(match, user.puuid) : -1;
+    const index = match ? participantIndex(match, puuid) : -1;
     if (match && index >= 0) {
-      const summary = summarizeMatch(match);
+      let summary = summarizeMatch(match);
+      // Your newest games also get their timeline (when you die, your gold at 15); a failed one is skipped.
+      if (riot.timeline && wanted.indexOf(id) < (history.timelineCount ?? 0)) {
+        const timeline = await riot.timeline(id).catch((err: unknown) => {
+          if (err instanceof RiotKeyError) throw err;
+          return null;
+        });
+        if (timeline) {
+          summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+          if (settings.earlyDeathsMinute) summary = withEarlyDeaths(summary, deathsBefore(timeline, match, settings.earlyDeathsMinute * 60));
+        }
+      }
       db.transaction((tx) => {
         tx.insert(matches)
           .values({
@@ -120,6 +160,14 @@ export async function syncUser(
       .onConflictDoUpdate({ target: userMasteries.userId, set: { data: masteries, updatedAt: now } })
       .run();
     tx.update(users).set({ band, ranked, lastSyncAt: now }).where(eq(users.id, user.id)).run();
+    // The rank today (the last sync of the day wins), for the monthly report's rank trend.
+    const day = new Date(now).toISOString().slice(0, 10);
+    for (const r of ranked) {
+      tx.insert(rankHistory)
+        .values({ userId: user.id, day, queueType: r.queueType, tier: r.tier, rank: r.rank ?? null })
+        .onConflictDoUpdate({ target: [rankHistory.userId, rankHistory.day, rankHistory.queueType], set: { tier: r.tier, rank: r.rank ?? null } })
+        .run();
+    }
   });
   pruneUserHistory(db, user.id, history.matchCount);
 

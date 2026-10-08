@@ -33,6 +33,7 @@ function fakeRiot(): SyncRiot {
   ]);
   const ids: Record<string, string[]> = { PO: ["EUW1_3", "EUW1_2"], PF: ["EUW1_2", "EUW1_1"] };
   return {
+    accountByRiotId: async () => null,
     masteriesByPuuid: async () => [{ championId: 100, championLevel: 5, championPoints: 30_000 }],
     leagueEntriesByPuuid: async () => [{ queueType: "RANKED_SOLO_5x5", tier: "GOLD" }],
     matchIdsByPuuid: async (puuid, q = {}) => (ids[puuid] ?? []).slice(q.start ?? 0, (q.start ?? 0) + (q.count ?? 20)),
@@ -44,7 +45,7 @@ function setup() {
   const db = openDb(":memory:");
   const riot = fakeRiot();
   const account = { accountByRiotId: async (gameName: string, tagLine: string) => ({ puuid: gameName === "Ofek" ? "PO" : "PF", gameName, tagLine }) };
-  const sync = new SyncScheduler(db, riot, { history: { matchCount: 10, queues: [420] }, bands }, {
+  const sync = new SyncScheduler(db, riot, { history: { matchCount: 10, queues: [420], timelineCount: 0 }, bands }, {
     tickMs: 1e9, staleAfterMs: 1, activeWithinMs: 1e9, now: () => NOW, log: () => {},
   });
   const app = createApp({ db, version: "test", riot: account, sync, now: () => NOW, registerPerMinute: 100 });
@@ -147,5 +148,57 @@ describe("sync on demand (no background timer)", () => {
     now = NOW + 31 * 60_000;
     await get(); // stale
     expect(requests).toEqual([1, 1]);
+  });
+});
+
+describe("POST /advice (advice log)", () => {
+  const advice = (gameId: number, pick = 103, lockedAt = NOW - HOUR) => ({
+    gameId,
+    queueId: 420,
+    role: "middle",
+    band: 2,
+    lockedAt,
+    pick: { championId: pick, expectedWin: 0.54, terms: [{ name: "lane", rating: 0.08, deltaWin: 0.021, games: 1240 }] },
+    shown: [{ championId: 103, expectedWin: 0.54, terms: [] }, { championId: 245, expectedWin: 0.52, terms: [] }],
+  });
+  const post = (app: ReturnType<typeof setup>["app"], token: string, body: unknown) =>
+    app.request("/advice", { method: "POST", body: JSON.stringify(body), headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
+
+  it("stores your advice per game (a repeat replaces it) and returns it with your profile, newest first", async () => {
+    const { app, register, get } = setup();
+    const token = await register("Ofek#EUW");
+    expect((await post(app, token, advice(3, 103, NOW - 2 * HOUR))).status).toBe(204);
+    expect((await post(app, token, advice(4, 99, NOW - HOUR))).status).toBe(204);
+    expect((await post(app, token, advice(3, 245, NOW - 2 * HOUR))).status).toBe(204);
+    const body = (await (await get("/me/profile", token)).json()) as { advice: { gameId: number; pick: { championId: number } }[] };
+    expect(body.advice.map((a) => [a.gameId, a.pick.championId])).toEqual([[4, 99], [3, 245]]);
+  });
+
+  it("keeps each player's advice to themselves and deletes it with DELETE /me", async () => {
+    const { app, register, get } = setup();
+    const ofek = await register("Ofek#EUW");
+    const friend = await register("Friend#EUW");
+    await post(app, ofek, advice(3));
+    expect(((await (await get("/me/profile", friend)).json()) as { advice: unknown[] }).advice).toEqual([]);
+    expect((await get("/me", ofek, "DELETE")).status).toBe(204);
+    expect((await post(app, ofek, advice(3))).status).toBe(401);
+  });
+
+  it("rejects bodies that aren't one advice record, and requests without a token", async () => {
+    const { app, register } = setup();
+    const token = await register("Ofek#EUW");
+    expect((await post(app, token, { gameId: 3 })).status).toBe(400);
+    expect((await post(app, token, { ...advice(3), shown: Array.from({ length: 11 }, () => advice(3).pick) })).status).toBe(400);
+    const res = await app.request("/advice", { method: "POST", body: JSON.stringify(advice(3)), headers: { "content-type": "application/json" } });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("rank history", () => {
+  it("keeps your rank per day from each sync and returns it with your profile", async () => {
+    const { register, get } = setup();
+    const token = await register("Ofek#EUW");
+    const body = (await (await get("/me/profile", token)).json()) as { rankHistory: unknown[] };
+    expect(body.rankHistory).toEqual([{ day: new Date(NOW).toISOString().slice(0, 10), queueType: "RANKED_SOLO_5x5", tier: "GOLD", rank: null }]);
   });
 });

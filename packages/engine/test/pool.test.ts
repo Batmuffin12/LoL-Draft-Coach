@@ -74,6 +74,13 @@ describe("champion pool", () => {
     expect(tierOf(MAIN)).toBe("main");
     expect(tierOf(SECOND)).toBe("comfortable");
     expect(tierOf(NEW)).toBe("learning");
+    // First played 5 days ago, 2 games: the rest of the window and the game limit from config.
+    expect(pool.champions.find((c) => c.championId === NEW)?.progress).toEqual({
+      games: 2,
+      maxGames: cfg.pool.learningMaxGames,
+      daysLeft: cfg.pool.learningWindowDays - 5,
+    });
+    expect(pool.champions.find((c) => c.championId === MAIN)?.progress).toBeUndefined();
     expect(tierOf(OLD)).toBe("rusty");
     expect(pool.champions.map((c) => c.tier)).toEqual(["main", "comfortable", "learning", "rusty"]);
     expect(pool.champions[0]).toMatchObject({ games: 20, winRate: 0.5 });

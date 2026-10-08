@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MatchSummary, MetaSnapshot, UserMatch } from "@ldc/shared";
+import type { AdviceRecord, MatchSummary, MetaSnapshot, UserMatch } from "@ldc/shared";
 
 /** Loose: checks the fields the app uses, tolerates new ones. */
 const PublicUserSchema = z.looseObject({
@@ -17,6 +17,22 @@ const SyncStateSchema = z.union([
 ]);
 export type ServerSyncState = z.infer<typeof SyncStateSchema>;
 
+const AdviceOptionSchema = z.looseObject({
+  championId: z.number(),
+  expectedWin: z.number().nullable(),
+  terms: z.array(z.looseObject({ name: z.string(), rating: z.number(), deltaWin: z.number(), games: z.number() })),
+});
+/** What the coach showed when you locked in (the advice log), as the server stores it. */
+export const AdviceRecordSchema = z.looseObject({
+  gameId: z.number(),
+  queueId: z.number().nullable(),
+  role: z.string().nullable(),
+  band: z.number(),
+  lockedAt: z.number(),
+  pick: AdviceOptionSchema,
+  shown: z.array(AdviceOptionSchema),
+});
+
 const ProfileSchema = z.looseObject({
   user: PublicUserSchema,
   ranked: z.array(z.looseObject({ queueType: z.string(), tier: z.string() })),
@@ -32,6 +48,10 @@ const ProfileSchema = z.looseObject({
   // Match summaries are produced by our own server from validated Riot data; check the envelope only.
   matches: z.array(z.looseObject({ match: z.looseObject({ matchId: z.string(), endedAt: z.number() }), me: z.number().int() })),
   matchIds: z.array(z.string()),
+  // The advice log (servers before 0.7 don't send it).
+  advice: z.array(AdviceRecordSchema).default([]),
+  // Your rank per day (servers before 0.7 don't send it).
+  rankHistory: z.array(z.looseObject({ day: z.string(), queueType: z.string(), tier: z.string(), rank: z.string().nullable() })).default([]),
   sync: SyncStateSchema,
 });
 type Parsed = z.infer<typeof ProfileSchema>;
@@ -41,6 +61,8 @@ export interface ServerProfile {
   masteries: Parsed["masteries"];
   matches: UserMatch[];
   matchIds: string[];
+  advice: AdviceRecord[];
+  rankHistory: { day: string; queueType: string; tier: string; rank: string | null }[];
   sync: ServerSyncState;
 }
 
@@ -90,6 +112,20 @@ export const MetaSnapshotSchema = z.looseObject({
     }),
   ),
   references: z.record(z.string(), z.record(z.string(), z.looseObject({ n: z.number(), quantiles: z.array(z.number()) }))),
+  // Builds (loadout): the fields every build carries; absent in snapshots made before builds.
+  builds: z
+    .array(
+      z.looseObject({
+        championId: z.number(),
+        role: z.string(),
+        n: z.number(),
+        games: z.number(),
+        wins: z.number(),
+        pages: z.array(z.looseObject({ runes: z.array(z.number()), n: z.number() })),
+        items: z.array(z.looseObject({ itemId: z.number(), slot: z.number(), n: z.number() })),
+      }),
+    )
+    .optional(),
 });
 
 const ErrorBodySchema = z.looseObject({ error: z.string(), message: z.string().optional() });
@@ -225,6 +261,11 @@ export class ServerClient {
     if (res.status === 304) return { notModified: true };
     const config = await this.parse(res, z.unknown());
     return { notModified: false, config, etag: res.headers.get("etag") };
+  }
+
+  /** Sends what the coach showed for one game (after it ended). */
+  async postAdvice(record: AdviceRecord): Promise<void> {
+    await this.request("POST", "/advice", z.undefined(), record);
   }
 
   async deleteMe(): Promise<void> {

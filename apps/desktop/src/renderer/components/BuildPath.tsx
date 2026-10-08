@@ -12,7 +12,7 @@ export function BuildPath({ starting, boots }: { starting: Starting | null; boot
   return (
     <div className="path2">
       <div className="stage" title={[starting?.items.map((i) => i.name).join(", "), starting?.reason].filter(Boolean).join("\n") || undefined}>
-        <span className="label lbl">Start</span>
+        <span className="label lbl">Starter</span>
         {starting ? (
           <>
             <div className="icons">
@@ -20,7 +20,7 @@ export function BuildPath({ starting, boots }: { starting: Starting | null; boot
                 <ChampIcon key={it.id} champ={it} kind="game" size={30} count={starting.counts[i]} title="" />
               ))}
             </div>
-            <Stat winRate={starting.winRate} n={starting.games} />
+            <Stat short winRate={starting.winRate} n={starting.games} title={`${starting.games} games`} />
           </>
         ) : (
           <span className="caption">No common start yet.</span>
@@ -36,7 +36,7 @@ export function BuildPath({ starting, boots }: { starting: Starting | null; boot
               ))}
             </div>
             <span className="stat">
-              <b>{rate(boots.top.share)}</b> pick
+              <b>{rate(boots.top.share)}</b> pick rate
             </span>
           </>
         ) : (

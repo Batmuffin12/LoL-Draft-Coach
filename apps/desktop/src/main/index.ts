@@ -3,21 +3,24 @@
  * ow-electron (Overwolf's Electron build) later without code changes here.
  */
 import { readFileSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
+import type { MetaSnapshot, UserMatch } from "@ldc/shared";
 import { IPC, type ViewState } from "../shared/view";
 import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
 import { AccountStore } from "./account-store";
+import { AdviceStore } from "./advice-store";
 import { ConfigSource } from "./config-source";
 import { MetaSource } from "./meta-source";
+import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach } from "./personal-coach";
-import { DirectProfileSource, profileMode, ServerProfileSource } from "./profile-source";
+import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
@@ -104,16 +107,27 @@ function overrideCredentials(): LcuCredentials | null {
   return m ? { port: Number(m[1]), password: m[2]!, protocol: "https" } : null;
 }
 
+/** Dev aid: LDC_META_FILE=snapshot.json (from `pnpm --filter @ldc/sim mock`) replaces the live meta. Development builds only. */
+function devMetaFile(): MetaSnapshot | null {
+  const file = process.env.LDC_META_FILE;
+  if (!file || app.isPackaged) return null;
+  const snapshot = MetaSnapshotSchema.parse(JSON.parse(readFileSync(file, "utf8"))) as MetaSnapshot;
+  console.log(`LDC_META_FILE: using the meta snapshot in ${file} (${snapshot.matches} matches)`);
+  return snapshot;
+}
+
 /** Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits. */
 function scheduleScreenshot(): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
-    // LDC_SCREENSHOT_CLICK=Build: click the first button with that text first (e.g. to open a tab).
-    const click = process.env.LDC_SCREENSHOT_CLICK;
-    if (click) {
+    // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
+    // "Style>This month" clicks one after the other.
+    for (const click of (process.env.LDC_SCREENSHOT_CLICK ?? "").split(">").filter(Boolean)) {
       await win?.webContents
-        .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === ${JSON.stringify(click)}); b?.click(); return !!b; })()`)
+        .executeJavaScript(
+          `(() => { const t = ${JSON.stringify(click)}; const all = [...document.querySelectorAll("button")]; const b = all.find((x) => x.textContent.trim() === t) ?? all.find((x) => x.textContent.trim().startsWith(t)); b?.click(); return !!b; })()`,
+        )
         .then((found: boolean) => console.log(`LDC_SCREENSHOT: clicked "${click}": ${found}`))
         .catch(() => null);
       await new Promise((r) => setTimeout(r, 400));
@@ -146,8 +160,16 @@ async function main(): Promise<void> {
   const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
   const mode = profileMode({ packaged: app.isPackaged, riotApiKey: env.riotApiKey, serverUrl: env.serverUrl });
-  let profiles: DirectProfileSource | ServerProfileSource | null = null;
-  if (mode === "direct" && env.riotApiKey) {
+  let profiles: DirectProfileSource | ServerProfileSource | FileProfileSource | null = null;
+  const profileFile = !app.isPackaged ? process.env.LDC_PROFILE_FILE : undefined;
+  if (profileFile) {
+    // Dev aid: your history from a saved file, no Riot key needed.
+    profiles = new FileProfileSource({
+      read: async () => JSON.parse(await readFile(profileFile, "utf8")) as { matches: UserMatch[]; masteries: [] },
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
+    });
+    console.log(`LDC_PROFILE_FILE: using the saved history in ${profileFile}`);
+  } else if (mode === "direct" && env.riotApiKey) {
     // Development only: the key from the local .env, used here in the main process and
     // never sent to the renderer. Packaged builds always use the coach server.
     const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
@@ -158,6 +180,7 @@ async function main(): Promise<void> {
       history: config.app.history,
       bands: config.bands,
       storeFor: (puuid) => new MatchStore(matchesDir, puuid),
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
     });
   } else {
     const box = {
@@ -169,14 +192,17 @@ async function main(): Promise<void> {
     profiles = new ServerProfileSource({
       accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
       defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
+      outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
     });
     await profiles.init();
   }
   // Live meta snapshots come from the coach server (none in dev-only direct mode).
   const serverProfiles = profiles instanceof ServerProfileSource ? profiles : null;
-  const meta = serverProfiles
-    ? new MetaSource({ client: () => serverProfiles.serverClient, cacheDir: join(app.getPath("userData"), "meta") })
-    : null;
+  const fixedMeta = devMetaFile();
+  const meta =
+    serverProfiles || fixedMeta
+      ? new MetaSource({ client: () => serverProfiles?.serverClient ?? null, cacheDir: join(app.getPath("userData"), "meta"), fixed: fixedMeta ?? undefined })
+      : null;
   const coach = new PersonalCoach({
     connector,
     ddragon,

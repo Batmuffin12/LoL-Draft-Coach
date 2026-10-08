@@ -33,8 +33,8 @@ describe("header parsing", () => {
 
 describe("RateLimiter", () => {
   /** Runs `n` requests and records the fake time each one started. */
-  function harness(responder: (i: number) => Response) {
-    const limiter = new RateLimiter();
+  function harness(responder: (i: number) => Response, opts: ConstructorParameters<typeof RateLimiter>[0] = {}) {
+    const limiter = new RateLimiter(opts);
     const started: { label: string; at: number }[] = [];
     let i = 0;
     const call = (label: string, priority: Priority = "user", method = "m1") =>
@@ -75,6 +75,24 @@ describe("RateLimiter", () => {
     await Promise.all(jobs);
     // c1 was already running when u1 arrived; u1 must be next.
     expect(started.map((s) => s.label)).toEqual(["c1", "u1", "c2", "c3"]);
+  });
+
+  it("lets the collector use only its share of each limit, keeping the rest for users", async () => {
+    const { started, call } = harness(() => new Response("{}", { headers: headers("4:1", "100:1") }), { collectorShare: 0.5 });
+    const first = call("c1", "collector");
+    await vi.runAllTimersAsync();
+    await first;
+    // Limits are known now (4 per second): the collector may start 2 in this window, users all 4.
+    const jobs = [call("c2", "collector"), call("c3", "collector")];
+    await vi.advanceTimersByTimeAsync(10);
+    const user = [call("u1"), call("u2")];
+    await vi.runAllTimersAsync();
+    await Promise.all([...jobs, ...user]);
+    const at = Object.fromEntries(started.map((x) => [x.label, x.at]));
+    expect(at.c2).toBe(0);
+    expect(at.c3).toBeGreaterThanOrEqual(1000);
+    expect(at.u1).toBeLessThan(1000);
+    expect(at.u2).toBeLessThan(1000);
   });
 
   it("waits Retry-After on 429 and retries", async () => {

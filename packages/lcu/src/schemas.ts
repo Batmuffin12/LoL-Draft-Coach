@@ -50,6 +50,8 @@ export const GameflowSessionSchema = z.looseObject({
   gameData: z
     .looseObject({
       queue: z.looseObject({ id: z.number().int() }).optional(),
+      /** The game's id (once it starts): the local player's own game, to find it in their Match-V5 history. */
+      gameId: z.number().int().optional(),
     })
     .optional(),
 });
@@ -114,3 +116,11 @@ export function parseLcu<T extends z.ZodType>(schema: T, endpoint: string, data:
   if (!result.success) throw new LcuSchemaError(endpoint, z.prettifyError(result.error));
   return result.data;
 }
+
+/** The local player's champions (owned-champions-minimal): only the id and whether it's owned are read. */
+export const OwnedChampionsSchema = z.array(
+  z.looseObject({
+    id: z.number().int(),
+    ownership: z.looseObject({ owned: z.boolean().default(false) }).optional(),
+  }),
+);

@@ -163,7 +163,7 @@ describe("boots on their own row", () => {
     const l = buildLoadout(input({ build: b, boots }));
     expect(l.boots?.top.itemId).toBe(3020);
     expect(l.boots?.alternatives.map((x) => x.itemId)).toEqual([3047]);
-    expect(say(l.boots!.top.reasons[0]!)).toBe("0.0% win added; 81% of boots bought (250 games)");
+    expect(say(l.boots!.top.reasons[0]!)).toBe("81% of boots bought (250 games); 0.0 points vs what the game state predicted");
     expect(l.items.map((s) => s.top.itemId)).toEqual([6692, 3814]);
   });
 

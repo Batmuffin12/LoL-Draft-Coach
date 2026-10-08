@@ -101,10 +101,11 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} />
       ) : banning ? (
         <Section title="Suggested bans">
-          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">Ban suggestions need the live meta for your rank.</p>}
+          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{state.meta?.state === "ready" ? "Ban suggestions appear once your match history has loaded." : "Ban suggestions need the live meta for your rank."}</p>}
         </Section>
       ) : (
         <Section title="Suggested picks" aside={state.picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
+          {state.enemyNotes.length > 0 && <p className="caption enemy-notes">{`Their team: ${state.enemyNotes.join(" · ")}`}</p>}
           {state.picks.length > 0 ? (
             <PickTable picks={state.picks.slice(0, PICK_ROWS)} whyNot={state.pickAdvice.whyNot} />
           ) : (

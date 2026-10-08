@@ -78,6 +78,18 @@ function fakeClient(responses: (() => Awaited<ReturnType<ServerClient["meta"]>>)
 }
 
 describe("MetaSource", () => {
+  it("uses a fixed snapshot (LDC_META_FILE) for any band without asking a server", async () => {
+    const { client, calls } = fakeClient([]);
+    const source = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-fixed-"), fixed: snapshot() });
+    const statuses: MetaStatus[] = [];
+    source.on("status", (st) => statuses.push(st));
+    await source.refresh(3, { force: true });
+    expect(source.snapshot?.band).toBe(3);
+    expect(source.snapshot?.champions).toHaveLength(4);
+    expect(calls).toEqual([]);
+    expect(statuses.at(-1)).toMatchObject({ state: "ready", band: 3, offline: false });
+  });
+
   it("downloads the band's snapshot, caches it, and revalidates with the ETag", async () => {
     const dir = tmp("ldc-meta-");
     const { client, calls } = fakeClient([() => ({ notModified: false, snapshot: snapshot(), etag: '"v1"' }), () => ({ notModified: true })]);
@@ -237,8 +249,8 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(loadout.page?.reason).toBe("Most successful common page: 53.3% win rate (300 games, 75% take it)");
     expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
     expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
-    expect(loadout.items[0]!.top.reasons[0]).toBe("+1.2% win added as item 1, where 66% buy it (200 games)");
-    expect(loadout.source).toBe("Gold to Platinum + Emerald to Diamond");
+    expect(loadout.items[0]!.top.reasons[0]).toBe("66% buy it as item 1; it helps +1.2 points (200 games)");
+    expect(loadout.source).toBe("Gold to Diamond");
     expect(loadout.thinNote).toBeNull(); // 400 games: enough
 
     // Import happens only when asked (the buttons), and writes only the rune page and the item set.

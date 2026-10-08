@@ -43,6 +43,9 @@ const ChampionFileSchema = z.looseObject({
       key: z.string().regex(/^\d+$/),
       name: z.string(),
       image: z.looseObject({ full: z.string() }),
+      /** Riot's 0–10 ratings and class tags (used for champion similarity; optional, so a change can't break loading). */
+      info: z.looseObject({ attack: z.number(), defense: z.number(), magic: z.number(), difficulty: z.number() }).optional(),
+      tags: z.array(z.string()).default([]),
     }),
   ),
 });
@@ -238,6 +241,8 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
         key: c.id,
         name: c.name,
         iconUrl: `${this.base}/cdn/${version}/img/champion/${c.image.full}`,
+        ...(c.info ? { info: { attack: c.info.attack, defense: c.info.defense, magic: c.info.magic, difficulty: c.info.difficulty } } : {}),
+        tags: c.tags,
       });
     }
     const cdn = `${this.base}/cdn/${version}/img`;
