@@ -406,6 +406,7 @@ p { margin: 0; }
 .table.newchamps .thead, .table.newchamps .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 70px; }
 .table.newchamps .trow { min-height: 0; padding: 3px 6px; }
 .table.newchamps .like { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: var(--fs-micro); color: var(--muted); }
+.table.newchamps .nm { font-size: var(--fs-body); line-height: var(--lh-body); overflow-wrap: normal; word-break: normal; }
 .table .c-num.ease { font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .table .c-num.ease.easy { color: var(--positive); }
 .table .c-num.ease.hard { color: var(--negative); }
