@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { RiotApiError, RiotKeyError, MatchSchema, type Match } from "@ldc/riot-api";
+import { RiotApiError, RiotKeyError, MatchSchema, TimelineSchema, type Match } from "@ldc/riot-api";
 import { createInvite, deleteUser, registerUser, type User } from "../src/accounts";
 import { openDb, schema, type Db } from "../src/db";
 import { pruneUserHistory, sortMatchIdsNewestFirst, syncUser, usersDueForSync, type SyncRiot, type SyncSettings } from "../src/sync";
@@ -9,7 +9,7 @@ import { findConfigDir, loadServerConfig } from "../src/config";
 
 const NOW = 1_800_000_000_000;
 const config = loadServerConfig(findConfigDir(process.cwd()));
-const settings = (matchCount = 5, queues = [420]): SyncSettings => ({ history: { matchCount, queues }, bands: config.bands });
+const settings = (matchCount = 5, queues = [420], timelineCount = 0): SyncSettings => ({ history: { matchCount, queues, timelineCount }, bands: config.bands });
 
 /** A Match-V5 payload where `puuids[i]` plays champion 100+i. */
 function rawMatch(id: string, puuids: string[], endedAt: number): Match {
@@ -221,6 +221,32 @@ describe("syncUser", () => {
     const user = await newUser(db, "Ofek#EUW", "PUUID-DEVKEY");
     riot.foreign.add("PUUID-DEVKEY");
     await expect(syncUser(db, riot, user, settings(), NOW)).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("adds the timeline to your newest games only (timelineCount)", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-OFEK");
+    seed(riot, "PUUID-OFEK", 3);
+    const asked: string[] = [];
+    const withTimelines: SyncRiot = {
+      ...riot,
+      async timeline(id) {
+        asked.push(id);
+        const match = riot.store.get(id)!;
+        return TimelineSchema.parse({
+          metadata: { matchId: id },
+          info: {
+            participants: match.info.participants.map((q, i) => ({ participantId: i + 1, puuid: q.puuid })),
+            frames: [{ timestamp: 0, participantFrames: {}, events: [] }],
+          },
+        });
+      },
+    };
+    await syncUser(db, withTimelines, user, settings(5, [420], 1), NOW);
+    expect(asked).toEqual(["EUW1_1000"]);
+    const stored = db.select().from(schema.matches).all();
+    expect(stored.filter((m) => (m.summary as { timeline?: unknown }).timeline !== undefined).map((m) => m.matchId)).toEqual(["EUW1_1000"]);
   });
 
   it("skips matches where the user isn't found", async () => {

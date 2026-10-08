@@ -349,6 +349,8 @@ export const AppConfigSchema = z.object({
   history: z.object({
     matchCount: z.number().int().positive().max(1000),
     queues: z.array(z.number().int()).min(1),
+    /** Your newest games that also get their timeline (one more Riot call each): when you die, your gold at 15. */
+    timelineCount: z.number().int().min(0).optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */

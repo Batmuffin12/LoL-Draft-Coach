@@ -45,7 +45,7 @@ function setup() {
   const db = openDb(":memory:");
   const riot = fakeRiot();
   const account = { accountByRiotId: async (gameName: string, tagLine: string) => ({ puuid: gameName === "Ofek" ? "PO" : "PF", gameName, tagLine }) };
-  const sync = new SyncScheduler(db, riot, { history: { matchCount: 10, queues: [420] }, bands }, {
+  const sync = new SyncScheduler(db, riot, { history: { matchCount: 10, queues: [420], timelineCount: 0 }, bands }, {
     tickMs: 1e9, staleAfterMs: 1, activeWithinMs: 1e9, now: () => NOW, log: () => {},
   });
   const app = createApp({ db, version: "test", riot: account, sync, now: () => NOW, registerPerMinute: 100 });

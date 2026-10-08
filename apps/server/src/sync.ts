@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc/engine";
-import { participantIndex, summarizeMatch, type Mastery, type RiotApi } from "@ldc/riot-api";
+import { participantIndex, RiotKeyError, summarizeMatch, summarizeTimeline, type Mastery, type RiotApi } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
 import { isForeignPuuidError, isSamePlayer } from "./identity";
@@ -10,7 +10,7 @@ import { matches, rankHistory, userMasteries, userMatches, users, type StoredMas
 export const MATCH_IDS_PAGE = 100;
 
 /** What syncing needs from the Riot API adapter. */
-export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match">;
+export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match"> & Partial<Pick<RiotApi, "timeline">>;
 
 /**
  * The user's masteries and their PUUID for the server's current key. PUUIDs are encrypted
@@ -116,7 +116,15 @@ export async function syncUser(
     const match = await riot.match(id);
     const index = match ? participantIndex(match, puuid) : -1;
     if (match && index >= 0) {
-      const summary = summarizeMatch(match);
+      let summary = summarizeMatch(match);
+      // Your newest games also get their timeline (when you die, your gold at 15); a failed one is skipped.
+      if (riot.timeline && wanted.indexOf(id) < (history.timelineCount ?? 0)) {
+        const timeline = await riot.timeline(id).catch((err: unknown) => {
+          if (err instanceof RiotKeyError) throw err;
+          return null;
+        });
+        if (timeline) summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+      }
       db.transaction((tx) => {
         tx.insert(matches)
           .values({

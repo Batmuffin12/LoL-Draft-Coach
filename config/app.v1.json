@@ -3,6 +3,7 @@
   "description": "App settings. Queue ids are Riot queue ids (see https://static.developer.riotgames.com/docs/lol/queues.json).",
   "history": {
     "matchCount": 200,
+    "timelineCount": 30,
     "queues": [
       420,
       440,
