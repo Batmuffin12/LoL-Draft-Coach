@@ -16,7 +16,8 @@
     "infra:apply": "node scripts/railway-iac.mjs apply",
     "riot:key": "node scripts/riot-key.mjs",
     "local:server": "node scripts/local.mjs server",
-    "local:desktop": "node scripts/local.mjs desktop"
+    "local:desktop": "node scripts/local.mjs desktop",
+    "local:prod": "node scripts/local.mjs prod"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

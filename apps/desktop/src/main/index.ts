@@ -217,7 +217,11 @@ async function main(): Promise<void> {
     meta,
   });
   // Scoring config from the server (tuning without a release); the bundled copy until then.
-  if (serverProfiles) {
+  // Dev aid: LDC_BUNDLED_CONFIG=1 keeps this branch's config and wording against any server
+  // (`pnpm local:prod`: the branch's panel on production data).
+  const bundledConfig = !app.isPackaged && process.env.LDC_BUNDLED_CONFIG === "1";
+  if (bundledConfig) console.log("LDC_BUNDLED_CONFIG: using this build's config, not the server's");
+  if (serverProfiles && !bundledConfig) {
     const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
     remoteConfig.on("config", (c) => coach.setConfig(c));
     await remoteConfig.loadCached();
