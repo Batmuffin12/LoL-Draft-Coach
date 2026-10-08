@@ -264,7 +264,7 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
 
   const read = (games: UserMatch[], metric: string) =>
     games.flatMap((m) => {
-      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
       return v === null ? [] : [v];
     });
   const focusOn = (metric: string, lowerIsBetter: boolean, source: LearningFocus["source"], target: number | null): LearningFocus | null => {

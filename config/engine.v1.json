@@ -187,9 +187,9 @@
       "challenges.visionScorePerMinute"
     ],
     "roles": {
-      "top": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
+      "top": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "laneGoldDiffAt14", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
       "jungle": ["challenges.jungleCsBefore10Minutes", "challenges.killsOnLanersEarlyJungleAsJungler", "-earlyDeaths", "challenges.wardTakedowns", "challenges.controlWardsPlaced"],
-      "middle": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.takedownsFirstXMinutes", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
+      "middle": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.takedownsFirstXMinutes", "laneGoldDiffAt14", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
       "bottom": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.turretPlatesTaken", "challenges.takedownsFirstXMinutes"],
       "utility": ["challenges.controlWardsPlaced", "challenges.wardTakedowns", "-earlyDeaths", "challenges.visionScorePerMinute"]
     }

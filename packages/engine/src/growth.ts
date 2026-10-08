@@ -127,7 +127,7 @@ export function pickFocus(
         m.match.participants
           .filter((p, i) => i !== m.me && p.position === role)
           .flatMap((p) => {
-            const value = readMetric(p, m.match.durationSec, metric);
+            const value = readMetric(p, m.match.durationSec, metric, m.match);
             return value === null ? [] : [{ value, win: p.win }];
           }),
       );
@@ -160,7 +160,7 @@ export function pickFocus(
     if (!(spread > 0) || s * importance < g.minImportance) continue;
 
     const valuesOf = (ms: UserMatch[]) => ms.flatMap((m) => {
-      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
       return v === null ? [] : [v];
     });
     const base = valuesOf(baseGames);

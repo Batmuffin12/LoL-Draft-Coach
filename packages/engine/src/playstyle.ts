@@ -1,4 +1,4 @@
-import type { ParticipantSummary, Position, UserMatch } from "@ldc/shared";
+import type { MatchSummary, ParticipantSummary, Position, UserMatch } from "@ldc/shared";
 import { halfLifeWeight } from "./comfort";
 import type { EngineConfig } from "./config";
 
@@ -8,8 +8,10 @@ export type PlaystyleConfig = EngineConfig["playstyle"];
  * Reads one metric from a participant. Names are Riot's: "challenges.<field>" reads a
  * Match-V5 challenges value; a few per-minute values are derived from the summary.
  * Returns null when the game doesn't carry the metric (fields vary by patch and role).
+ * With the match, metrics from its timeline: "laneGoldDiffAt14" (gold minus the lane opponent's
+ * at minute 14; null without a timeline or a single opponent in the same position).
  */
-export function readMetric(p: ParticipantSummary, durationSec: number, metric: string): number | null {
+export function readMetric(p: ParticipantSummary, durationSec: number, metric: string, match?: Pick<MatchSummary, "participants" | "timeline">): number | null {
   const minutes = Math.max(1, durationSec / 60);
   if (metric.startsWith("challenges.")) {
     const v = p.challenges[metric.slice("challenges.".length)];
@@ -30,9 +32,23 @@ export function readMetric(p: ParticipantSummary, durationSec: number, metric: s
       return p.visionScore / minutes;
     case "earlyDeaths":
       return p.earlyDeaths ?? null;
+    case "laneGoldDiffAt14":
+      return laneGoldDiff(p, match, 14);
     default:
       return null;
   }
+}
+
+/** Gold minus the lane opponent's (the one enemy in the same position) at `minute`, from the timeline. */
+function laneGoldDiff(p: ParticipantSummary, match: Pick<MatchSummary, "participants" | "timeline"> | undefined, minute: number): number | null {
+  const gold = match?.timeline?.gold;
+  if (!gold || !p.position) return null;
+  const me = match.participants.indexOf(p);
+  const opponents = match.participants.flatMap((o, i) => (o.teamId !== p.teamId && o.position === p.position ? [i] : []));
+  if (me < 0 || opponents.length !== 1) return null;
+  const mine = gold[me]?.[minute];
+  const theirs = gold[opponents[0]!]?.[minute];
+  return mine === undefined || theirs === undefined ? null : mine - theirs;
 }
 
 /** Share of `sorted` below v, counting ties as half (0..1). */
@@ -131,7 +147,7 @@ export function computePlaystyle(
   if (!role || mine.length < cfg.minGamesPerRole) return null;
 
   const refs = matches.flatMap((m) =>
-    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec })),
+    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec, match: m.match })),
   );
   const band = Object.fromEntries(Object.entries(bandReferences ?? {}).filter(([, r]) => r.n >= cfg.minReferenceSamples && r.quantiles.length > 1));
   const useBand = Object.keys(band).length > 0;
@@ -141,7 +157,7 @@ export function computePlaystyle(
   const refValues = (metric: string) => {
     let v = referenceSorted.get(metric);
     if (!v) {
-      v = refs.map((r) => readMetric(r.p, r.durationSec, metric)).filter((x): x is number => x !== null).sort((a, b) => a - b);
+      v = refs.map((r) => readMetric(r.p, r.durationSec, metric, r.match)).filter((x): x is number => x !== null).sort((a, b) => a - b);
       referenceSorted.set(metric, v);
     }
     return v;
@@ -164,7 +180,7 @@ export function computePlaystyle(
       let pctSum = 0;
       let n = 0;
       for (const m of mine) {
-        const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+        const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
         if (v === null) continue;
         const w = halfLifeWeight(now - m.match.endedAt, cfg.halfLifeDays);
         const pct = lowerIsBetter ? 1 - pctOf(v) : pctOf(v);

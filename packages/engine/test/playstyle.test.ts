@@ -43,6 +43,21 @@ describe("playstyle", () => {
     expect(readMetric(x, 1800, "unknownMetric")).toBeNull();
   });
 
+  it("reads the gold lead on your lane opponent at 14 min from the timeline", () => {
+    const me = p("middle", { teamId: 100 });
+    const ally = p("jungle", { teamId: 100 });
+    const opp = p("middle", { teamId: 200 });
+    const frames = (at14: number) => Array.from({ length: 16 }, (_, i) => (i === 14 ? at14 : i * 300));
+    const match = { participants: [me, ally, opp], timeline: { gold: [frames(5600), frames(5000), frames(5100)], items: [], skills: [] } };
+    expect(readMetric(me, 1800, "laneGoldDiffAt14", match)).toBe(500);
+    expect(readMetric(opp, 1800, "laneGoldDiffAt14", match)).toBe(-500);
+    expect(readMetric(me, 1800, "laneGoldDiffAt14")).toBeNull(); // no match
+    expect(readMetric(me, 1800, "laneGoldDiffAt14", { participants: match.participants })).toBeNull(); // no timeline
+    expect(readMetric(ally, 1800, "laneGoldDiffAt14", match)).toBeNull(); // no opponent in the position
+    const short = { ...match, timeline: { ...match.timeline, gold: match.timeline.gold.map((g) => g.slice(0, 10)) } };
+    expect(readMetric(me, 1800, "laneGoldDiffAt14", short)).toBeNull(); // ended before minute 14
+  });
+
   it("computes percentiles with ties counted as half", () => {
     expect(empiricalPercentile(5, [1, 2, 3, 4])).toBe(1);
     expect(empiricalPercentile(0, [1, 2, 3, 4])).toBe(0);

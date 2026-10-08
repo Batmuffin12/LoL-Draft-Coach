@@ -252,6 +252,10 @@
     "playmaking": "Playmaking (CC)"
   },
   "metrics": {
+    "laneGoldDiffAt14": {
+      "label": "gold lead on your lane opponent at 14 min",
+      "format": "integer"
+    },
     "earlyDeaths": {
       "label": "deaths before 14 min",
       "format": "decimal",
@@ -494,6 +498,14 @@
     ],
     "utility:challenges.visionScorePerMinute": [
       "Wards in unwarded spots score more than wards next to others."
+    ],
+    "top:laneGoldDiffAt14": [
+      "Trade when your wave is bigger than theirs.",
+      "Count plates: every plate is gold your opponent doesn't get."
+    ],
+    "middle:laneGoldDiffAt14": [
+      "Trade when your wave is bigger than theirs.",
+      "Push first, then roam, so your opponent loses farm following you."
     ]
   }
 }

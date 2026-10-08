@@ -256,7 +256,7 @@ export class BandAggregator {
       for (const metric of this.metrics) {
         let list = byMetric.get(metric);
         if (list && list.length >= cfg.referenceMaxSamples) continue;
-        const v = readMetric(p, m.durationSec, metric);
+        const v = readMetric(p, m.durationSec, metric, m);
         if (v === null) continue;
         if (!list) byMetric.set(metric, (list = []));
         list.push(v);
