@@ -13,6 +13,8 @@
  *                            (LDC_BUNDLED_CONFIG); its own profile in .local/desktop-prod
  *                            first run: makes a production invite (ADMIN_TOKEN) and the panel
  *                            registers itself once the League client is logged in
+ *   pnpm local:prod <name>   the same with its own profile (.local/desktop-prod-<name>), for another League
+ *                            account: log into the client with it first
  *   pnpm local:prod invite   just print a one-day production invite
  * Server-side changes (how snapshots are built) show there only after a deploy.
  */
@@ -112,11 +114,14 @@ if (mode === "server") {
   const code = await prodInvite();
   console.log(`Invite for ${PROD_URL} (valid 1 day): ${code}\nRegister with it in the panel from \`pnpm local:prod\` (your Riot ID: the same account and games).`);
 } else if (mode === "prod") {
+  // `pnpm local:prod subnoraa`: a separate test profile per League account (log into the client
+  // with that account; the panel always uses the account logged into the client).
+  const account = process.argv[3]?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const env = {
     ...process.env,
     ...dotenv,
     SERVER_URL: PROD_URL,
-    LDC_USER_DATA_DIR: process.env.LDC_LOCAL_PROFILE ?? join(root, ".local", "desktop-prod"),
+    LDC_USER_DATA_DIR: process.env.LDC_LOCAL_PROFILE ?? join(root, ".local", account ? `desktop-prod-${account}` : "desktop-prod"),
     // This branch's config and wording, not production's.
     LDC_BUNDLED_CONFIG: "1",
   };
@@ -125,7 +130,7 @@ if (mode === "server") {
   if (!existsSync(join(env.LDC_USER_DATA_DIR, "account.json"))) {
     // First run: register automatically once the League client is logged in (it gives the Riot ID).
     env.LDC_AUTO_REGISTER = await prodInvite();
-    console.log("  First run: the panel registers on its own once the League client is open and logged in.");
+    console.log(`  First run: the panel registers on its own once the League client is open and logged in${account ? ` (as ${process.argv[3]})` : ""}.`);
   }
   run("pnpm desktop", root, env);
 } else {

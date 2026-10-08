@@ -65,7 +65,7 @@ pnpm --filter @ldc/server collect --seconds 120   # one collector wake-up agains
 pnpm --filter @ldc/server backtest                # check engine v2's predictions on held-out collected games (DATABASE_PATH)
 pnpm local:server                 # this branch's server on :8788 with the local DB (apps/server/data); reads .env, adds the local settings, prints them
 pnpm local:desktop                # the panel against it (server mode, own profile in .local/desktop-profile); run in a second terminal
-pnpm local:prod                   # this branch's panel on production data (your account, games, live meta) with this branch's config; first time: pnpm local:prod invite
+pnpm local:prod                   # this branch's panel on production data (your account, games, live meta) with this branch's config; it registers itself on the first run; `pnpm local:prod <name>` keeps a separate profile for another League account (log into the client with it)
 pnpm --filter @ldc/desktop dist:win      # Windows installer (LDC_SERVER_URL, LDC_UPDATE_URL: see docs/DEPLOY.md)
 ```
 
