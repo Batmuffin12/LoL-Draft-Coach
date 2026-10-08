@@ -19,7 +19,7 @@ import {
   assessPick,
   draftLoadout,
   pickFocus,
-  focusRoles,
+  focusAfterLastGame,
   learningPlan,
   recommendNewChampions,
   monthlyReport,
@@ -286,8 +286,8 @@ export class PersonalCoach extends Coach {
 
   /**
    * Your growth focus: on the role of your last game (each role has its own goals: vision for a
-   * support, early farm and ganks for a jungler), else your main role; from your games and the
-   * band's references.
+   * support, early farm and ganks for a jungler); with too few games there, goals fair in any role.
+   * From your games and the band's references.
    */
   private updateFocus(): void {
     if (!this.profile) return;
@@ -295,9 +295,7 @@ export class PersonalCoach extends Coach {
     if (inputs.every((x, i) => x === this.growthInputs[i])) return;
     this.growthInputs = inputs;
     const { engine, explain } = this.config;
-    const pick = (role: Position) => pickFocus(this.profile!.matches, role, engine, this.metaIndex?.snapshot.references[role]);
-    const roles = focusRoles(this.profile.matches, mainRole(this.profile.games));
-    this.growth = roles.map(pick).find((g) => g?.focus) ?? null;
+    this.growth = focusAfterLastGame(this.profile.matches, mainRole(this.profile.games), engine, (role) => this.metaIndex?.snapshot.references[role]);
     const lookup = (id: number) => this.championLookup(id)?.name ?? `#${id}`;
     const view = this.growth
       ? focusView(this.growth, {

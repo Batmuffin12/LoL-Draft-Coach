@@ -61,6 +61,11 @@ export interface GrowthFocus {
   met: FocusMetric[];
   /** Where the typical values and importance came from. */
   reference: "band" | "games";
+  /**
+   * "role": from your games in the role and its own goals. "general": too few games in the role, so
+   * from your games in every role and goals fair in any role (`growth.general`), against the role's typical.
+   */
+  scope: "role" | "general";
 }
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -78,9 +83,14 @@ export function pickFocus(
   role: Position,
   cfg: { growth: GrowthConfig; playstyle: PlaystyleConfig },
   bandReferences?: Record<string, GrowthReference>,
+  scope: GrowthFocus["scope"] = "role",
 ): GrowthFocus | null {
   const g = cfg.growth;
-  const inRole = [...matches].sort((a, b) => b.match.endedAt - a.match.endedAt).filter((m) => m.match.participants[m.me]?.position === role).slice(0, g.window);
+  const general = scope === "general";
+  const inRole = [...matches]
+    .sort((a, b) => b.match.endedAt - a.match.endedAt)
+    .filter((m) => (general ? !!m.match.participants[m.me]?.position : m.match.participants[m.me]?.position === role))
+    .slice(0, g.window);
   if (!role || inRole.length < g.minGames) return null;
 
   const counts = new Map<ChampionId, number>();
@@ -89,13 +99,13 @@ export function pickFocus(
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   const [mainId, mainGames] = [...counts].sort((a, b) => b[1] - a[1])[0]!;
-  const championId = mainGames >= g.minGames ? mainId : null;
+  const championId = !general && mainGames >= g.minGames ? mainId : null;
   const games = championId === null ? inRole : inRole.filter((m) => m.match.participants[m.me]!.championId === championId);
   const recentGames = games.slice(0, g.checkGames);
   const older = games.slice(g.checkGames);
   const baseGames = older.length >= Math.ceil(g.checkGames / 2) ? older : games;
 
-  const metrics = [...new Set(g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
+  const metrics = [...new Set(general ? g.general : (g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics)))];
   const useBand = Object.values(bandReferences ?? {}).some((r) => r.importance !== undefined && r.n >= cfg.playstyle.minReferenceSamples);
   const candidates: FocusMetric[] = [];
   for (const raw of metrics) {
@@ -156,15 +166,22 @@ export function pickFocus(
     });
   }
   candidates.sort((a, b) => b.impact - a.impact);
-  return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games" };
+  return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games", scope };
 }
 
 /**
- * The roles to look for a growth goal in, in order: the role of your last game (the goal follows
- * what you just played), then your main role (when the last role has too few games or no goal left).
+ * Your growth goal after a game (pure): from the role of your last game and its own goals; with
+ * too few games in that role, from goals fair in any role over all your games (so a jungle main's
+ * first support game doesn't ask for jungle CS). With no games at all, your main role.
  */
-export function focusRoles(matches: UserMatch[], main: Position | null): Position[] {
+export function focusAfterLastGame(
+  matches: UserMatch[],
+  main: Position | null,
+  cfg: { growth: GrowthConfig; playstyle: PlaystyleConfig },
+  references: (role: Position) => Record<string, GrowthReference> | undefined,
+): GrowthFocus | null {
   const newest = matches.reduce<UserMatch | null>((a, m) => (!a || m.match.endedAt > a.match.endedAt ? m : a), null);
-  const last = newest?.match.participants[newest.me]?.position || null;
-  return [...new Set([last, main].filter((r): r is Position => !!r))];
+  const role = newest?.match.participants[newest.me]?.position || main;
+  if (!role) return null;
+  return pickFocus(matches, role, cfg, references(role)) ?? pickFocus(matches, role, cfg, references(role), "general");
 }

@@ -33,7 +33,10 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
     title: renderReason({ id: `growth.title.${dir}`, slots: { metric: label } }, explain.templates, deps.championName),
     goalText: renderReason({ id: `growth.goal.${dir}`, slots: { target: fmt(f.target) } }, explain.templates, deps.championName),
     goalHint: renderReason({ id: "growth.goalHint", slots: { step: deps.targetStep } }, explain.templates, deps.championName),
-    on: [g.championId !== null ? deps.championName(g.championId) : null, deps.positionLabel(g.role)].filter(Boolean).join(" · "),
+    on:
+      g.scope === "general"
+        ? renderReason({ id: "growth.on.general", slots: { role: deps.positionLabel(g.role) } }, explain.templates, deps.championName)
+        : [g.championId !== null ? deps.championName(g.championId) : null, deps.positionLabel(g.role)].filter(Boolean).join(" · "),
     you: f.you,
     target: f.target,
     typical: f.typical,

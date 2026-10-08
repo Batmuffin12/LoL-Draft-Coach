@@ -9,6 +9,7 @@ const growth: GrowthFocus = {
   role: "middle",
   championId: 103,
   reference: "band",
+  scope: "role",
   focus: { metric: "csPerMinute", lowerIsBetter: false, you: 6.1, baseline: 6, target: 6.8, typical: 7.6, importance: 0.083, impact: 0.4, recent: [true, false, false], done: false },
   met: [{ metric: "deathsPerMinute", lowerIsBetter: true, you: 0.31, baseline: 0.42, target: 0.36, typical: 0.3, importance: -0.1, impact: 0.2, recent: [true], done: true }],
 };
@@ -30,6 +31,7 @@ describe("focus view", () => {
     expect(v.tips).toEqual(config.explain.tips["middle:csPerMinute"] ?? []);
     const support = focusView({ ...growth, role: "utility", focus: { ...growth.focus!, metric: "challenges.controlWardsPlaced" } }, deps)!;
     expect(support.tips.length).toBeGreaterThan(0);
+    expect(focusView({ ...growth, role: "utility", championId: null, scope: "general" }, { ...deps, positionLabel: () => "Support" })!.on).toBe("Support · a goal for any role");
     expect(focusView({ ...growth, focus: null }, deps)).toBeNull();
   });
 

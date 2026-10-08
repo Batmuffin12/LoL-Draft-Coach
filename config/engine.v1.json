@@ -193,6 +193,7 @@
       "challenges.controlWardsPlaced",
       "challenges.visionScorePerMinute"
     ],
+    "general": ["-earlyDeaths"],
     "roles": {
       "top": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
       "jungle": ["challenges.jungleCsBefore10Minutes", "challenges.killsOnLanersEarlyJungleAsJungler", "-earlyDeaths", "challenges.wardTakedowns", "challenges.controlWardsPlaced"],
