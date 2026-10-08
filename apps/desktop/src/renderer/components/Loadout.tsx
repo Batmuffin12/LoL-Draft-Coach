@@ -8,7 +8,7 @@ import { RunePage } from "./RunePage";
 import { Section } from "./Section";
 import { SkillGrid, Stat } from "./SkillGrid";
 
-export type LoadoutTab = "runes" | "build" | "matchups";
+export type LoadoutTab = "plan" | "runes" | "build" | "matchups";
 
 export interface LoadoutProps {
   loadout: LoadoutView;
@@ -144,6 +144,23 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
 }
 
 /** Your champion against their team (your lane first), then with your team. */
+/** How this game is likely to go, in a few lines (champions and measured aggregates only). */
+export function PlanTab({ pick }: { pick: MyPickView }) {
+  return (
+    <Section title="Game plan">
+      {pick.plan.length ? (
+        <ul className="reasons">
+          {pick.plan.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="caption">The plan needs the live meta for your rank and your lane opponent's pick.</p>
+      )}
+    </Section>
+  );
+}
+
 export function MatchupsTab({ pick }: { pick: MyPickView }) {
   const m = pick.matchups;
   if (!m) {

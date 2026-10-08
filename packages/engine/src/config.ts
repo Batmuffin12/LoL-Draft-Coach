@@ -90,6 +90,17 @@ export const EngineConfigSchema = z.object({
     /** A metric must separate wins from losses by at least this much win rate to be a focus. */
     minImportance: z.number().min(0),
   }),
+  /** The game plan after lock-in: when its lines are said (all from measured snapshot data). */
+  plan: z.object({
+    /** A lane within this change in win chance (0..1) either way is "even". */
+    evenWin: unit,
+    /** The teams' mean (long − short game win rate) must differ by this much to say who scales. */
+    scalingGap: unit,
+    /** Their damage is called physical or magic from this share. */
+    damageShare: unit,
+    /** Their engage champion is named from this crowd-control percentile. */
+    engageMin: unit,
+  }),
   /**
    * Session check (the October 2026 review): after a losing streak or a long session, suggest a
    * short break, with your own record after such streaks. Your games only.

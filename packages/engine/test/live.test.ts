@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { ChampionRoleStat, DraftState, MetaSnapshot, PairStat, Reason } from "@ldc/shared";
+import type { ChampionAttributes, ChampionRoleStat, DraftState, MetaSnapshot, PairStat, Reason } from "@ldc/shared";
 import {
   adviseLivePicks,
   assessPick,
   assignRoles,
   computeComfort,
+  gamePlan,
   deltaWin,
   MetaIndex,
   parseEngineConfig,
@@ -395,5 +396,40 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft(), { index: index(snapshot({ gamesScale: 0.02 })) }));
     expect(bans.length).toBeGreaterThan(0);
     expect(text(bans[0]!.reasons)).toMatch(/Picked in \d+% of \w+ games in your rank \(not enough games yet/);
+  });
+});
+
+describe("gamePlan", () => {
+  const attr = (championId: number, over: Partial<ChampionAttributes>): ChampionAttributes => ({
+    championId,
+    samples: 100,
+    physicalShare: 0.5,
+    magicShare: 0.5,
+    trueShare: 0,
+    frontline: 0.5,
+    engage: 0.5,
+    roleShares: { top: 0, jungle: 0, middle: 1, bottom: 0, utility: 0 },
+    roleSamples: 100,
+    ...over,
+  });
+  const curve = (early: number, late: number) => ({ early: { games: 200, winRate: early }, late: { games: 200, winRate: late } });
+
+  it("says the lane in a word, who scales, their damage type and their engage, from measured data", () => {
+    const s = snapshot();
+    s.attributes = [
+      attr(102, { powerCurve: curve(0.45, 0.58) }),
+      attr(201, { physicalShare: 0.9, magicShare: 0.1, engage: 0.95, powerCurve: curve(0.56, 0.47) }),
+      attr(301, { physicalShare: 0.8, magicShare: 0.2, powerCurve: curve(0.55, 0.48) }),
+    ];
+    const plan = text(gamePlan(input(draft([201, 301]), { index: index(s) }), 102));
+    expect(plan).toMatch(/^Lane: favoured into #201 \(\+\d+\.\d% vs what both usually win, 300 games\)/);
+    expect(plan).toMatch(/Your team wins long games more often than theirs/);
+    expect(plan).toMatch(/Their damage is about \d+% physical/);
+    expect(plan).toMatch(/#201 is their main engage/);
+    expect(text(gamePlan(input(draft([201]), { index: index(s) }), 101))).toMatch(/^Lane: hard into #201/);
+  });
+
+  it("says nothing it can't measure", () => {
+    expect(gamePlan(input(draft([]), {}), 103)).toEqual([]);
   });
 });

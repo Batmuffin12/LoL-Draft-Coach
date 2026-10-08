@@ -165,6 +165,8 @@ export interface MyPickView {
   hovering?: boolean;
   /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
   matchups: { against: MatchupRowView[]; with: MatchupRowView[] } | null;
+  /** How this game is likely to go: lane in a word, who scales, their damage and engage, your record vs your lane opponent. */
+  plan: string[];
 }
 
 /** A suggested ban (ban phase, live meta only). */

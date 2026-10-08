@@ -22,6 +22,7 @@ import {
   recommendNewChampions,
   monthlyReport,
   sessionCheck,
+  gamePlan,
   type GrowthFocus,
   completedItems,
   completedBoots,
@@ -34,7 +35,7 @@ import {
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
-import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId } from "@ldc/shared";
+import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
 import type { BanView, MyPickView, NewChampRoleView, PickView, PlaystyleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
@@ -338,6 +339,22 @@ export class PersonalCoach extends Coach {
       : null;
     this.update({ focus: view });
     this.updateMonth();
+  }
+
+  /** Your own games on this champion in this role against your lane opponent's champion (none: nothing to say). */
+  private recordVsLane(profile: PersonalProfile, championId: number, role: Position | null): Reason[] {
+    const enemy = this.draft && role ? laneOpponent(this.draft, role, this.metaIndex) : null;
+    if (!enemy || !role) return [];
+    let wins = 0;
+    let losses = 0;
+    for (const m of profile.matches) {
+      const me = m.match.participants[m.me];
+      if (!me || me.championId !== championId || me.position !== role) continue;
+      if (!m.match.participants.some((p) => p.teamId !== me.teamId && p.position === role && p.championId === enemy)) continue;
+      if (me.win) wins++;
+      else losses++;
+    }
+    return wins + losses ? [{ id: "plan.record", slots: { enemy, wins, losses } }] : [];
   }
 
   /** A break suggestion after a losing streak or a long session, from your own games. */
@@ -722,6 +739,7 @@ export class PersonalCoach extends Coach {
         importMessage: this.importMessage,
         hovering,
         matchups: this.metaIndex && this.draft ? draftMatchups(this.draft, this.metaIndex, championId, role, lookup) : null,
+        plan: [...(live ? gamePlan(live, championId) : []), ...this.recordVsLane(profile, championId, role)].map(say),
       };
     };
 
