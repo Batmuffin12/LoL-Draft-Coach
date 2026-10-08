@@ -8,8 +8,10 @@ export type PlaystyleConfig = EngineConfig["playstyle"];
  * Reads one metric from a participant. Names are Riot's: "challenges.<field>" reads a
  * Match-V5 challenges value; a few per-minute values are derived from the summary.
  * Returns null when the game doesn't carry the metric (fields vary by patch and role).
- * With the match, metrics from its timeline: "laneGoldDiffAt14" (gold minus the lane opponent's
- * at minute 14; null without a timeline or a single opponent in the same position).
+ * With the match, metrics from its timeline (null without the data, e.g. timelines stored before
+ * these were kept): "laneGoldDiffAt14" and "laneCsDiffAt10" (gold or CS minus the lane opponent's,
+ * the one enemy in the same position), "wardsPlacedBefore14", "earlyEpicMonsterTakedowns"
+ * (dragons, grubs and herald before 14 min that you killed or assisted).
  */
 export function readMetric(p: ParticipantSummary, durationSec: number, metric: string, match?: Pick<MatchSummary, "participants" | "timeline">): number | null {
   const minutes = Math.max(1, durationSec / 60);
@@ -33,21 +35,35 @@ export function readMetric(p: ParticipantSummary, durationSec: number, metric: s
     case "earlyDeaths":
       return p.earlyDeaths ?? null;
     case "laneGoldDiffAt14":
-      return laneGoldDiff(p, match, 14);
+      return laneDiff(p, match, match?.timeline?.gold, 14);
+    case "laneCsDiffAt10":
+      return laneDiff(p, match, match?.timeline?.cs, 10);
+    case "wardsPlacedBefore14": {
+      const wards = match?.timeline?.wards;
+      const me = match ? match.participants.indexOf(p) : -1;
+      return wards && me >= 0 ? wards.filter(([sec, placer]) => placer === me && sec < EARLY_SEC).length : null;
+    }
+    case "earlyEpicMonsterTakedowns": {
+      const monsters = match?.timeline?.monsters;
+      const me = match ? match.participants.indexOf(p) : -1;
+      return monsters && me >= 0 ? monsters.filter(([sec, killer, assists]) => sec < EARLY_SEC && (killer === me || (assists & (1 << me)) !== 0)).length : null;
+    }
     default:
       return null;
   }
 }
 
-/** Gold minus the lane opponent's (the one enemy in the same position) at `minute`, from the timeline. */
-function laneGoldDiff(p: ParticipantSummary, match: Pick<MatchSummary, "participants" | "timeline"> | undefined, minute: number): number | null {
-  const gold = match?.timeline?.gold;
-  if (!gold || !p.position) return null;
+/** The early-game cut for timeline counts (14 min, the end of the laning phase as plates fall). */
+const EARLY_SEC = 14 * 60;
+
+/** A per-frame value minus the lane opponent's (the one enemy in the same position) at `minute`. */
+function laneDiff(p: ParticipantSummary, match: Pick<MatchSummary, "participants" | "timeline"> | undefined, frames: number[][] | undefined, minute: number): number | null {
+  if (!match || !frames || !p.position) return null;
   const me = match.participants.indexOf(p);
   const opponents = match.participants.flatMap((o, i) => (o.teamId !== p.teamId && o.position === p.position ? [i] : []));
   if (me < 0 || opponents.length !== 1) return null;
-  const mine = gold[me]?.[minute];
-  const theirs = gold[opponents[0]!]?.[minute];
+  const mine = frames[me]?.[minute];
+  const theirs = frames[opponents[0]!]?.[minute];
   return mine === undefined || theirs === undefined ? null : mine - theirs;
 }
 

@@ -252,6 +252,20 @@
     "playmaking": "Playmaking (CC)"
   },
   "metrics": {
+    "laneCsDiffAt10": {
+      "label": "CS lead on your lane opponent at 10 min",
+      "format": "integer"
+    },
+    "wardsPlacedBefore14": {
+      "label": "wards placed before 14 min",
+      "format": "decimal",
+      "count": true
+    },
+    "earlyEpicMonsterTakedowns": {
+      "label": "early dragons, grubs and herald",
+      "format": "decimal",
+      "count": true
+    },
     "laneGoldDiffAt14": {
       "label": "gold lead on your lane opponent at 14 min",
       "format": "integer"
@@ -506,6 +520,18 @@
     "middle:laneGoldDiffAt14": [
       "Trade when your wave is bigger than theirs.",
       "Push first, then roam, so your opponent loses farm following you."
+    ],
+    "jungle:earlyEpicMonsterTakedowns": [
+      "Ward the next objective a minute before it spawns.",
+      "Start dragon or grubs only when your nearby lanes can move first.",
+      "Keep Smite up for the objective."
+    ],
+    "bottom:laneCsDiffAt10": [
+      "Hit them when they walk up to last-hit while your support zones."
+    ],
+    "utility:wardsPlacedBefore14": [
+      "Use your support item's wards right away.",
+      "Ward river before the enemy jungler's first gank."
     ]
   }
 }

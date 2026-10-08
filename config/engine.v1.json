@@ -188,10 +188,10 @@
     ],
     "roles": {
       "top": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "laneGoldDiffAt14", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
-      "jungle": ["challenges.jungleCsBefore10Minutes", "challenges.killsOnLanersEarlyJungleAsJungler", "-earlyDeaths", "challenges.wardTakedowns", "challenges.controlWardsPlaced"],
+      "jungle": ["challenges.jungleCsBefore10Minutes", "challenges.killsOnLanersEarlyJungleAsJungler", "-earlyDeaths", "earlyEpicMonsterTakedowns", "challenges.wardTakedowns", "challenges.controlWardsPlaced"],
       "middle": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.takedownsFirstXMinutes", "laneGoldDiffAt14", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
-      "bottom": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.turretPlatesTaken", "challenges.takedownsFirstXMinutes"],
-      "utility": ["challenges.controlWardsPlaced", "challenges.wardTakedowns", "-earlyDeaths", "challenges.visionScorePerMinute"]
+      "bottom": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "laneCsDiffAt10", "challenges.turretPlatesTaken", "challenges.takedownsFirstXMinutes"],
+      "utility": ["challenges.controlWardsPlaced", "wardsPlacedBefore14", "challenges.wardTakedowns", "-earlyDeaths", "challenges.visionScorePerMinute"]
     }
   },
   "earlyDeathsMinute": 14,

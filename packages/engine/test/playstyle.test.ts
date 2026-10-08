@@ -58,6 +58,27 @@ describe("playstyle", () => {
     expect(readMetric(me, 1800, "laneGoldDiffAt14", short)).toBeNull(); // ended before minute 14
   });
 
+  it("reads CS lead at 10, wards placed and epic monsters taken before 14 min from the timeline", () => {
+    const me = p("bottom", { teamId: 100 });
+    const opp = p("bottom", { teamId: 200 });
+    const timeline = {
+      gold: [[], []],
+      items: [],
+      skills: [],
+      cs: [Array.from({ length: 12 }, (_, i) => i * 8), Array.from({ length: 12 }, (_, i) => i * 7)],
+      wards: [[60, 0], [500, 0], [900, 0], [120, 1]] as [number, number][],
+      // [second, killer, assists bitmask, team]: one kill, one assist, one too late, one without me.
+      monsters: [[341, 0, 0, 100], [555, 1, 0b01, 200], [900, 0, 0, 100], [600, 1, 0b10, 200]] as [number, number, number, number][],
+    };
+    const match = { participants: [me, opp], timeline };
+    expect(readMetric(me, 1800, "laneCsDiffAt10", match)).toBe(10);
+    expect(readMetric(me, 1800, "wardsPlacedBefore14", match)).toBe(2);
+    expect(readMetric(me, 1800, "earlyEpicMonsterTakedowns", match)).toBe(2);
+    // Timelines stored before these were kept: no reading, not zero.
+    const old = { participants: [me, opp], timeline: { gold: [[], []], items: [], skills: [] } };
+    expect(["laneCsDiffAt10", "wardsPlacedBefore14", "earlyEpicMonsterTakedowns"].map((m) => readMetric(me, 1800, m, old))).toEqual([null, null, null]);
+  });
+
   it("computes percentiles with ties counted as half", () => {
     expect(empiricalPercentile(5, [1, 2, 3, 4])).toBe(1);
     expect(empiricalPercentile(0, [1, 2, 3, 4])).toBe(0);
