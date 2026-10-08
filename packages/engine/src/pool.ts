@@ -94,22 +94,23 @@ export function analyzePool(input: {
     const first = firstPlayed.get(c.championId);
     const m = mastery.get(c.championId);
     if (fit && games >= cfg.coreGames && c.score >= cfg.coreMin) champions.push({ ...entry, tier: "main" });
-    else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames)
+    else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames && (m?.points ?? 0) < cfg.learningMaxMastery)
       champions.push({
         ...entry,
         tier: "learning",
         progress: { games: c.games, maxGames: cfg.learningMaxGames, daysLeft: Math.max(1, Math.ceil(cfg.learningWindowDays - (now - first) / DAY_MS)) },
       });
-    else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
     else if (
-      // Rusty: lots of mastery, not played for a while, and a real role fit here (not just the player's own games).
+      // Rusty: a champion you know (lots of mastery) and that is a real role fit here (not just the
+      // player's own games), either not played for a while or only a few games since coming back to
+      // it (clearing the rust). Checked before "comfortable" so coming back reads as coming back.
       m &&
       m.points >= cfg.dormantMastery &&
-      m.lastPlayTime !== undefined &&
-      now - m.lastPlayTime >= cfg.dormantDays * DAY_MS &&
+      ((m.lastPlayTime !== undefined && now - m.lastPlayTime >= cfg.dormantDays * DAY_MS) || c.games <= cfg.learningMaxGames) &&
       (input.intendedPositions.get(c.championId)?.includes(role) ?? false)
     )
       champions.push({ ...entry, tier: "rusty" });
+    else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
   }
   const order: Record<PoolTier, number> = { main: 0, comfortable: 1, learning: 2, rusty: 3 };
   champions.sort((a, b) => order[a.tier] - order[b.tier] || b.comfort - a.comfort || a.championId - b.championId);

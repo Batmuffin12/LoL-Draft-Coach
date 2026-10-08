@@ -32,9 +32,10 @@
     }
   },
   "comfort": {
-    "smoothingK": 5,
+    "smoothingK": 10,
     "experienceScaleGames": 8,
-    "winRateSpread": 0.15,
+    "winRateSpread": 0.2,
+    "unplayedRoleShare": 0.6,
     "skill": {
       "halfLifeDays": 120,
       "masteryStaleHalfLifeDays": 180,
@@ -234,6 +235,7 @@
     "secondaryMin": 0.4,
     "learningWindowDays": 21,
     "learningMaxGames": 7,
+    "learningMaxMastery": 30000,
     "dormantMastery": 50000,
     "dormantDays": 60,
     "maxPerTier": 4,

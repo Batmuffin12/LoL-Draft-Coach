@@ -38,6 +38,11 @@ export const EngineConfigSchema = z.object({
       mix: z.object({ winRate: weight, experience: weight }),
     }),
     mix: z.object({ skill: weight, form: weight }),
+    /**
+     * Comfort in a role you never played the champion in is this share of it (0..1): knowing Gwen
+     * top doesn't mean knowing Gwen jungle (another way to play her).
+     */
+    unplayedRoleShare: unit.default(0.6),
   }),
   roleAdvice: z.object({
     halfLifeDays: z.number().positive(),
@@ -185,6 +190,8 @@ export const EngineConfigSchema = z.object({
     /** Learning: first played within learningWindowDays and at most learningMaxGames games. */
     learningWindowDays: z.number().positive(),
     learningMaxGames: z.number().int().min(1),
+    /** ...and with mastery under this: a champion you already know is "rusty" when you come back to it, never "learning". */
+    learningMaxMastery: z.number().min(0).default(30000),
     /** Rusty: at least dormantMastery points, unplayed for dormantDays, and a listed role fit. */
     dormantMastery: z.number().min(0),
     dormantDays: z.number().positive(),
