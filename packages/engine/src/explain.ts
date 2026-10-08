@@ -9,7 +9,7 @@ export const ExplainConfigSchema = z.object({
   /** Display names of playstyle axes. */
   axes: z.record(z.string(), z.string()).default({}),
   /** Display names and number formats of playstyle metrics; `count`: counted per game (deaths, plates), so one game's value reads as a whole number. */
-  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "integer"]), count: z.boolean().optional() })).default({}),
+  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
   settings: z.object({
     /** Score gap (0..1) between #1 and #2 at or above which #1 is a "clear pick". */
     clearGap: z.number().min(0).max(1),
@@ -90,6 +90,8 @@ export function formatMetric(value: number, metric: string, cfg: ExplainConfig):
   const f = cfg.metrics[metric]?.format ?? "decimal";
   if (f === "percent") return `${Math.round(value * 100)}%`;
   if (f === "integer") return String(Math.round(value));
+  // Small rates (deaths per minute) need two decimals to show a change.
+  if (f === "decimal2") return value.toFixed(2);
   return value.toFixed(1);
 }
 

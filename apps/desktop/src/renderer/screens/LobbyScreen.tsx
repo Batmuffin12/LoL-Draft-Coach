@@ -180,7 +180,7 @@ function NewChamps({ state }: { state: ViewState }) {
                   <span className="label gold">{l.title}</span>
                   {l.progress && <span className="micro">{l.progress}</span>}
                 </div>
-                {l.plan && <span>{l.plan}</span>}
+                {l.lines.length > 0 && <Lines lines={l.lines} />}
               </div>
             )}
             {l && r.picks.length > 0 && (
@@ -197,12 +197,24 @@ function NewChamps({ state }: { state: ViewState }) {
               <div className="plan">
                 <span className="label gold">First games plan</span>
                 <span>{r.plan}</span>
+                {r.planNotes.length > 0 && <Lines lines={r.planNotes} />}
               </div>
             )}
           </Section>
         );
       })}
     </>
+  );
+}
+
+/** Short facts, one per line. */
+function Lines({ lines }: { lines: string[] }) {
+  return (
+    <ul className="notes">
+      {lines.map((t) => (
+        <li key={t}>{t}</li>
+      ))}
+    </ul>
   );
 }
 

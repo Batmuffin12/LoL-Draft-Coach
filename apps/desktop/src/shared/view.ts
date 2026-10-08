@@ -311,8 +311,8 @@ export interface NewChampRoleView {
     champion: ChampView | null;
     /** "3 of 7 games · 12 days left". */
     progress: string | null;
-    /** "Next games: Liandry's Torment, then Rylai's Crystal Scepter. Keep your focus on deaths." */
-    plan: string | null;
+    /** Your record and goal on it, its best and worst lane matchups, its power curve, then its build. */
+    lines: string[];
     /** "After Lillia", the head over the picks. */
     after: string;
     /** "one new champion per role at a time". */
@@ -320,6 +320,8 @@ export interface NewChampRoleView {
   } | null;
   /** The first-games plan for the top suggestion (none while learning another). */
   plan: string | null;
+  /** What to know about the top suggestion (its matchups and power curve; your games on it). */
+  planNotes: string[];
 }
 
 /** One measurable focus on your main champion and role, with a target and your last games against it. */
@@ -341,7 +343,7 @@ export interface FocusView {
   youText: string;
   targetText: string;
   typicalText: string;
-  /** "Rank average 6.0", or "Average in your games 6.0" when your rank's data was too thin. */
+  /** "Typical mid player in your rank: 6.0", or "... in your games" when your rank's data was too thin. */
   typicalLine: string;
   lowerIsBetter: boolean;
   checkGames: number;

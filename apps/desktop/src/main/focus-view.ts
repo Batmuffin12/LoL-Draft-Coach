@@ -41,7 +41,7 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
     targetText: fmt(f.target),
     typicalText: fmt(f.typical),
     typicalLine: renderReason(
-      { id: g.reference === "band" ? "growth.typical.band" : "growth.typical.games", slots: { value: fmt(f.typical) } },
+      { id: g.reference === "band" ? "growth.typical.band" : "growth.typical.games", slots: { value: fmt(f.typical), role: g.role } },
       explain.templates,
       deps.championName,
     ),
@@ -62,6 +62,8 @@ export function focusInGame(g: GrowthFocus | null, matchId: string | null, match
   const m = matches.find((x) => x.match.matchId === matchId);
   const me = m?.match.participants[m.me];
   if (!m || !me) return null;
+  // The goal is set on one role (and champion): another role's game says nothing about it.
+  if (me.position !== g!.role || (g!.championId !== null && me.championId !== g!.championId)) return null;
   const v = readMetric(me, m.match.durationSec, f.metric);
   if (v === null) return null;
   // One game's count (deaths, kills) reads as a whole number: "8", not the averages' "8.0".

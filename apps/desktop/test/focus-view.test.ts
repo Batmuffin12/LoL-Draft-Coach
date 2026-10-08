@@ -25,8 +25,8 @@ describe("focus view", () => {
   it("formats the focus with its numbers and why it was chosen, from config wording", () => {
     const v = focusView(growth, deps)!;
     expect(v).toMatchObject({ label: "CS per minute", title: "More CS per minute", goalText: "6.8 or more", goalHint: expect.stringMatching(/^Your next step: \d+% of the way to the average$/), on: "Ahri · Mid", youText: "6.1", targetText: "6.8", typicalText: "7.6", recent: [true, false, false] });
-    expect(v.why).toBe("Why this: in Gold to Platinum, mid players who beat the average here win more often (8 more wins in 100 games).");
-    expect(v.met).toEqual(["Deaths per minute: 0.4 → 0.3, goal met"]);
+    expect(v.why).toBe("Why this: in Gold to Platinum, mid players on the better half here win 8 points more of their games than the other half.");
+    expect(v.met).toEqual(["Deaths per minute: 0.42 → 0.31, goal met"]);
     expect(focusView({ ...growth, focus: null }, deps)).toBeNull();
   });
 
@@ -37,6 +37,13 @@ describe("focus view", () => {
     expect(focusInGame(growth, "EUW1_6", [m], config.explain)).toBeNull();
   });
 
+  it("says nothing about the goal for a game in another role or on another champion", () => {
+    const game = (championId: number, position: string): UserMatch => ({ match: { matchId: "EUW1_7", queueId: 420, gameVersion: "16.19", endedAt: 1, durationSec: 1800, participants: [{ championId, position, win: true, cs: 210, deaths: 2, challenges: {} } as unknown as ParticipantSummary] }, me: 0 });
+    expect(focusInGame(growth, "EUW1_7", [game(103, "utility")], config.explain)).toBeNull();
+    expect(focusInGame(growth, "EUW1_7", [game(99, "middle")], config.explain)).toBeNull();
+    expect(focusInGame({ ...growth, championId: null }, "EUW1_7", [game(99, "middle")], config.explain)).not.toBeNull();
+  });
+
   it("shows one game's count as a whole number, and averages with a decimal", () => {
     const deaths: GrowthFocus = { ...growth, focus: { ...growth.focus!, metric: "challenges.deathsByEnemyChamps", lowerIsBetter: true, target: 8 } };
     const me = { championId: 103, position: "middle", win: true, challenges: { deathsByEnemyChamps: 8 } } as unknown as ParticipantSummary;
@@ -45,7 +52,7 @@ describe("focus view", () => {
   });
 
   it("names the average by where it came from: your rank, or your own games when the rank's data is thin", () => {
-    expect(focusView(growth, deps)!.typicalLine).toBe("Rank average 7.6");
-    expect(focusView({ ...growth, reference: "games" }, deps)!.typicalLine).toBe("Average in your games 7.6");
+    expect(focusView(growth, deps)!.typicalLine).toBe("Typical mid player in your rank: 7.6");
+    expect(focusView({ ...growth, reference: "games" }, deps)!.typicalLine).toBe("Typical mid player in your games: 7.6");
   });
 });

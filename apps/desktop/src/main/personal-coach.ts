@@ -19,6 +19,7 @@ import {
   assessPick,
   draftLoadout,
   pickFocus,
+  learningNotes,
   recommendNewChampions,
   monthlyReport,
   sessionCheck,
@@ -559,7 +560,15 @@ export class PersonalCoach extends Coach {
               }
             },
             planGames: this.config.engine.newChamps.planGames,
-            focus: this.growth?.focus ? metricLabel(this.growth.focus.metric, explain) : null,
+            notes: (id) =>
+              learningNotes({
+                championId: id,
+                role: r.role,
+                matches: this.profile!.matches,
+                index: this.metaIndex,
+                focus: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
+                config: this.config.engine,
+              }),
           }),
         );
       }

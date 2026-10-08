@@ -412,6 +412,8 @@ p { margin: 0; }
 /* Learning a champion in the role: its progress first; the next suggestions dimmed under "After …" */
 .plan.learning .learning-head { display: flex; align-items: center; gap: 8px; }
 .plan.learning .learning-head .micro { margin-left: auto; }
+.plan .notes { margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
+.plan .notes li::marker { color: var(--muted); }
 .after-learning { opacity: 0.6; }
 .section:has(> .section-head.closed) { padding-block: 6px; }
 
