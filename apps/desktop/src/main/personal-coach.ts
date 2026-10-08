@@ -21,6 +21,7 @@ import {
   pickFocus,
   recommendNewChampions,
   monthlyReport,
+  sessionCheck,
   type GrowthFocus,
   completedItems,
   completedBoots,
@@ -257,6 +258,7 @@ export class PersonalCoach extends Coach {
     }
     this.p.ddragon.on("patch", () => {
       // Champion names and icons for the lobby and the post-game card.
+      this.growthInputs = [];
       this.updateFocus();
       this.updateRoleAdvice();
       this.updateLastGame();
@@ -336,6 +338,25 @@ export class PersonalCoach extends Coach {
       : null;
     this.update({ focus: view });
     this.updateMonth();
+  }
+
+  /** A break suggestion after a losing streak or a long session, from your own games. */
+  private updateSession(): void {
+    if (!this.profile) return;
+    const { engine, explain } = this.config;
+    const check = sessionCheck(this.profile.matches, Date.now(), engine.session);
+    if (!check) return this.update({ session: null });
+    const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, explain.templates, (id) => `#${id}`);
+    const lastEnded = Math.max(...this.profile.matches.map((m) => m.match.endedAt));
+    this.update({
+      session: {
+        text: check.reason === "losses" ? say("session.losses", { streak: check.lossStreak }) : say("session.long", { games: check.games }),
+        record: check.record
+          ? say("session.record", { streak: check.record.afterStreak, winRate: check.record.winRate, games: check.record.games, overall: check.record.overallWinRate })
+          : null,
+        until: lastEnded + engine.session.gapMinutes * 60_000,
+      },
+    });
   }
 
   /** The monthly report: your last month against the month before, from your own games. */
@@ -454,6 +475,7 @@ export class PersonalCoach extends Coach {
     this.comfortByRole.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateFocus();
+    this.updateSession();
     this.updateRoleAdvice();
     this.updatePlaystyle();
     this.updateLastGame();

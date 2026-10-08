@@ -90,6 +90,20 @@ export const EngineConfigSchema = z.object({
     /** A metric must separate wins from losses by at least this much win rate to be a focus. */
     minImportance: z.number().min(0),
   }),
+  /**
+   * Session check (the October 2026 review): after a losing streak or a long session, suggest a
+   * short break, with your own record after such streaks. Your games only.
+   */
+  session: z.object({
+    /** Games that end within this many minutes of each other (and of now) are one session. */
+    gapMinutes: z.number().positive(),
+    /** Losses in a row in this session that bring up the check. */
+    lossStreak: z.number().int().min(1),
+    /** Games in one session that bring up the check. */
+    longSession: z.number().int().min(2),
+    /** Games after such a streak needed before your own record is quoted. */
+    minGames: z.number().int().min(1),
+  }),
   /** Monthly report (DESIGN §7, F8). */
   report: z.object({
     /** The period, in days, compared with the same length of time before it. */

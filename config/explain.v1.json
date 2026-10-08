@@ -190,6 +190,9 @@
     "growth.title.less": "Fewer {metric}",
     "growth.goal.more": "{target} or more",
     "growth.goal.less": "{target} or fewer",
+    "session.losses": "{streak} losses in a row. A short break before the next game usually helps.",
+    "session.long": "{games} games in this session. A short break before the next one usually helps.",
+    "session.record": "Your record right after {streak} losses in a row: {winRate:pct}% won ({games} games), against {overall:pct}% overall.",
     "growth.goalHint": "Your next step: {step:pct}% of the way to the average"
   },
   "settings": {

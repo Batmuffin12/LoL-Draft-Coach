@@ -185,6 +185,15 @@ export type MetaView =
   | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
   | { state: "error"; message: string };
 
+export interface SessionView {
+  /** "2 losses in a row. A short break before the next game usually helps." */
+  text: string;
+  /** Your own record after such streaks, when you have enough games to quote it. */
+  record: string | null;
+  /** When the session counts as over (epoch ms): the panel hides the suggestion then. */
+  until: number;
+}
+
 /** A champion in the player's pool for a role. */
 export interface PoolChampView {
   champion: ChampView;
@@ -397,6 +406,8 @@ export interface ViewState {
   newChamps: NewChampRoleView[];
   /** The monthly report, or null without games in the last month. */
   month: MonthView | null;
+  /** A break suggestion after a losing streak or a long session (your games only), until the session is over. */
+  session: SessionView | null;
   notices: string[];
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
@@ -423,6 +434,7 @@ export function emptyViewState(): ViewState {
     focus: null,
     newChamps: [],
     month: null,
+    session: null,
     notices: [],
     docked: true,
     roleLabels: {},

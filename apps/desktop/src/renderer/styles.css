@@ -78,6 +78,7 @@ p { margin: 0; }
 .label { font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .label.gold { color: var(--gold); }
 .caption { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
+.caption.block { display: block; margin-top: 2px; }
 .micro { font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
 .heading { font-family: var(--font-display); font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 600; }
 .muted { color: var(--muted); }

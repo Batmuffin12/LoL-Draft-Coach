@@ -78,8 +78,24 @@ function Lobby({ state }: { state: ViewState }) {
       footer={<AccountFooter account={state.account} />}
     >
       <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
+      <SessionNotice state={state} />
       {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} onMonth={() => setShowMonth(true)} /> : tab === "pool" ? <Pool state={state} /> : <NewChamps state={state} />}
     </Window>
+  );
+}
+
+/** A break suggestion after a losing streak or a long session, until the session is over. */
+function SessionNotice({ state }: { state: ViewState }) {
+  const now = useNow(60_000);
+  const s = state.session;
+  if (!s || now > s.until) return null;
+  return (
+    <div className="notices">
+      <Notice tone="info">
+        {s.text}
+        {s.record && <span className="caption block">{s.record}</span>}
+      </Notice>
+    </div>
   );
 }
 
