@@ -256,7 +256,7 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
           return <ClosedRole key={p.role} title={positionLabel(p.role)} summary={summary} onOpen={() => roles.open(i)} />;
         }
         return (
-          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = rank average</span>}>
+          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = typical in your rank</span>}>
             {p.axes.map((a) => (
               <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
             ))}

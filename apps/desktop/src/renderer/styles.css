@@ -450,7 +450,7 @@ p { margin: 0; }
 .table.champform .trow { height: 28px; padding: 0 6px; }
 .trends2 .axis-nm { font-size: var(--fs-micro); line-height: 14px; }
 .monthreport .section { padding-block: 5px; }
-/* Focus, said plainly: now → goal, the rank average beside it */
+/* Focus, said plainly: now → goal, the typical value beside it */
 .focus .f-goal { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 10px; background: var(--card); border-radius: var(--radius-sm); }
 .focus .f-goal > span { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .focus .f-goal b { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }

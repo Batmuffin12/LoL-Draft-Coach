@@ -3,7 +3,7 @@ import { cx } from "../format";
 
 /**
  * One goal on your main champion and role, said plainly: "Fewer deaths to champions",
- * now → goal (with the rank average beside it), your last games against the goal, and why.
+ * now → goal (with the typical value beside it), your last games against the goal, and why.
  */
 export function FocusCard({ focus: f }: { focus: FocusView }) {
   const hit = f.recent.filter(Boolean).length;

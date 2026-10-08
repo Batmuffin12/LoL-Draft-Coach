@@ -80,7 +80,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <StatStrip items={m.strip} />
       </Section>
       {m.axes.length > 0 && (
-        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">month start → now · 50 = rank average</span>}>
+        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">month start → now · 50 = typical in your rank</span>}>
           <TrendTable rows={m.axes} />
         </Section>
       )}
