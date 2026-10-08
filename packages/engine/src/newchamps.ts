@@ -175,11 +175,42 @@ export interface LearningMatchup {
   games: number;
 }
 
-export interface LearningNotes {
+/**
+ * Where you are with a new champion, by your games on it in the role: before the first game
+ * (practise its kit), the first games (learn what each spell does, ignore the result), then
+ * building up (one measured thing per game).
+ */
+export type LearningStage = "practice" | "first" | "building";
+
+/** The one thing to watch in your next game on the champion. */
+export interface LearningFocus {
+  metric: string;
+  lowerIsBetter: boolean;
+  /**
+   * Why this one: it dropped on the champion against your other champions in the role ("drop"),
+   * it's your growth goal in the role ("goal"), or it's the role's basic while learning ("basic").
+   */
+  source: "drop" | "goal" | "basic";
+  /** Your mean on the champion (null before your first game on it). */
+  value: number | null;
+  /** Your mean on your other champions in the role (null with too few games). */
+  usual: number | null;
+  target: number;
+  /** Your last games on it, oldest first: whether each reached the target. */
+  recent: boolean[];
+}
+
+export interface LearningPlan {
+  stage: LearningStage;
+  /** 1 easy, 2 medium, 3 hard (null without Riot's rating). */
+  ease: 1 | 2 | 3 | null;
+  /** About how many games players keep improving fast on a new champion this hard (config). */
+  settleGames: number;
   /** Your games on it in the role. */
   record: { games: number; wins: number };
-  /** Your focus metric on it: mean over those games (null without a focus in this role or a reading). */
-  focus: { metric: string; lowerIsBetter: boolean; value: number; target: number; met: boolean } | null;
+  focus: LearningFocus | null;
+  /** Its class (Data Dragon's first tag), for its job in a game. */
+  job: string | null;
   /** Opponents in the same role it does best and worst into (beyond `evenWin`), at most `count` each. */
   good: LearningMatchup[];
   hard: LearningMatchup[];
@@ -187,42 +218,88 @@ export interface LearningNotes {
   curve: { late: boolean; early: number; lateRate: number } | null;
 }
 
-export interface LearningNotesInput {
+export interface LearningPlanInput {
   championId: ChampionId;
   role: Position;
   matches: UserMatch[];
   index: MetaIndex | null;
-  focus: { role: Position; metric: string; lowerIsBetter: boolean; target: number } | null;
-  config: Pick<EngineConfig, "rating" | "plan">;
+  /** Data Dragon's rating and tags for it. */
+  champion: Pick<ChampionInfo, "info" | "tags"> | undefined;
+  /** Your growth goal, used when it's in this role. */
+  goal: { role: Position; metric: string; lowerIsBetter: boolean; target: number } | null;
+  config: Pick<EngineConfig, "rating" | "plan" | "growth" | "newChamps">;
   /** Opponents listed per side. */
   count?: number;
 }
 
-/**
- * What to know while learning a champion, from your own games on it and the band's data: your
- * record, your focus metric on it, the lane opponents it does best and worst into, and whether
- * it wins more of short or long games. Champions and aggregates only. Pure.
- */
-export function learningNotes(input: LearningNotesInput): LearningNotes {
-  const { championId: id, role, index, config } = input;
-  const count = input.count ?? 2;
-  const mine = input.matches.filter((m) => {
-    const p = m.match.participants[m.me];
-    return p?.championId === id && p.position === role;
-  });
-  const record = { games: mine.length, wins: mine.filter((m) => m.match.participants[m.me]!.win).length };
+const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+const sd = (xs: number[]) => {
+  const m = avg(xs);
+  return Math.sqrt(xs.reduce((s, x) => s + (x - m) ** 2, 0) / xs.length);
+};
+const parseMetric = (raw: string) => (raw.startsWith("-") ? { metric: raw.slice(1), lowerIsBetter: true } : { metric: raw, lowerIsBetter: false });
 
-  let focus: LearningNotes["focus"] = null;
-  const f = input.focus;
-  if (f && f.role === role) {
-    const values = mine.flatMap((m) => {
-      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, f.metric);
+/**
+ * How to learn a champion (coaching practice, research/LEARNING.md): a stage from your games
+ * on it; one thing to watch per game (where you dropped on it against your usual in the role,
+ * else your growth goal there, else the role's basic held at your usual); its job from its
+ * class; the lane opponents to start into and to avoid while learning; when it's strong; and
+ * how many games to give it before judging it. Champions and aggregates only. Pure.
+ */
+export function learningPlan(input: LearningPlanInput): LearningPlan {
+  const { championId: id, role, index, config } = input;
+  const nc = config.newChamps;
+  const learn = nc.learn;
+  const count = input.count ?? 2;
+  const inRole = input.matches.filter((m) => m.match.participants[m.me]?.position === role).sort((a, b) => a.match.endedAt - b.match.endedAt);
+  const mine = inRole.filter((m) => m.match.participants[m.me]!.championId === id);
+  const usualGames = inRole.filter((m) => m.match.participants[m.me]!.championId !== id).slice(-config.growth.window);
+  const record = { games: mine.length, wins: mine.filter((m) => m.match.participants[m.me]!.win).length };
+  const stage: LearningStage = mine.length === 0 ? "practice" : mine.length < learn.firstGames ? "first" : "building";
+
+  const difficulty = input.champion?.info?.difficulty;
+  const ease = difficulty === undefined ? null : difficulty <= nc.easyMax ? 1 : difficulty >= nc.hardMin ? 3 : 2;
+  const settleGames = learn.settleGames[ease === 1 ? "easy" : ease === 3 ? "hard" : "medium"];
+
+  const read = (games: UserMatch[], metric: string) =>
+    games.flatMap((m) => {
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
       return v === null ? [] : [v];
     });
-    if (values.length) {
-      const value = values.reduce((a, b) => a + b, 0) / values.length;
-      focus = { metric: f.metric, lowerIsBetter: f.lowerIsBetter, value, target: f.target, met: f.lowerIsBetter ? value <= f.target : value >= f.target };
+  const focusOn = (metric: string, lowerIsBetter: boolean, source: LearningFocus["source"], target: number | null): LearningFocus | null => {
+    const values = read(mine, metric);
+    const usual = read(usualGames, metric);
+    const usualMean = usual.length >= learn.usualMinGames ? avg(usual) : null;
+    const t = target ?? usualMean;
+    if (t === null) return null;
+    const met = (v: number) => (lowerIsBetter ? v <= t : v >= t);
+    return { metric, lowerIsBetter, source, value: values.length ? avg(values) : null, usual: usualMean, target: t, recent: values.slice(-config.growth.checkGames).map(met) };
+  };
+
+  // What the champion costs you while learning it: the growth metric furthest below your usual, in spreads of your usual.
+  let focus: LearningFocus | null = null;
+  if (mine.length >= learn.focusMinGames) {
+    let best = learn.dropMin;
+    for (const raw of config.growth.metrics ?? []) {
+      const { metric, lowerIsBetter } = parseMetric(raw);
+      const values = read(mine, metric);
+      const usual = read(usualGames, metric);
+      if (values.length < learn.focusMinGames || usual.length < learn.usualMinGames) continue;
+      const spread = sd(usual);
+      if (spread <= 0) continue;
+      const drop = (lowerIsBetter ? avg(values) - avg(usual) : avg(usual) - avg(values)) / spread;
+      if (drop >= best) {
+        best = drop;
+        focus = focusOn(metric, lowerIsBetter, "drop", null);
+      }
     }
+  }
+  const goal = input.goal;
+  if (!focus && goal && goal.role === role) focus = focusOn(goal.metric, goal.lowerIsBetter, "goal", goal.target);
+  const basic = learn.basics[role];
+  if (!focus && basic) {
+    const { metric, lowerIsBetter } = parseMetric(basic);
+    focus = focusOn(metric, lowerIsBetter, "basic", null);
   }
 
   const opponents = index
@@ -249,5 +326,5 @@ export function learningNotes(input: LearningNotesInput): LearningNotes {
     pc && pc.early.games >= minCurve && pc.late.games >= minCurve && Math.abs(pc.late.winRate - pc.early.winRate) >= config.plan.scalingGap
       ? { late: pc.late.winRate > pc.early.winRate, early: pc.early.winRate, lateRate: pc.late.winRate }
       : null;
-  return { record, focus, good, hard, curve };
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve };
 }

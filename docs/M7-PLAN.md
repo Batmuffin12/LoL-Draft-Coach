@@ -58,6 +58,7 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 - **Stage 3 done** (58d08ef): growth focus, stateless (the target comes from your games before the last 10). `growth_snapshots` became `rank_history` (stage 5): axes over time are recomputed from your games, so only the rank needs storing.
 - **Stage 4 done** (27049c9): new-champion recommender (New tab).
 - **Stage 5 done** (481481f): monthly report (Style › This month).
+- **New tab learning plan (2026-10-08, owner request):** researched how coaches teach learning a champion ([research/LEARNING.md](../research/LEARNING.md)); `learningPlan` replaces `learningNotes`: a stage (before the first game / first games / building up), one "This game" focus (what dropped on the champion against your usual in the role, else your goal there, else the role's basic), its job by class, a cue per role, matchups to start into and avoid, and how many games to give it before judging (`newChamps.learn`). Design system not yet synced for the `learn-focus` box.
 - **Next (stage 6): the owner tries it**, then versions 0.7.0, CHANGELOG (an Unreleased section is ready), CLAUDE.md, merge, tag, push. Ways to try it: `pnpm local:server` + `pnpm local:desktop`, or `pnpm --filter @ldc/sim mock full-game` for a whole simulated game, then a real game. Open questions for the owner: the lobby tab placement (decision 2), and whether the focus should stay on your main role when you play another one.
 
 ## Rules that matter for M7

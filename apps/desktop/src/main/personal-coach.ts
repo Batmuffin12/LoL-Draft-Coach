@@ -19,7 +19,7 @@ import {
   assessPick,
   draftLoadout,
   pickFocus,
-  learningNotes,
+  learningPlan,
   recommendNewChampions,
   monthlyReport,
   sessionCheck,
@@ -552,13 +552,15 @@ export class PersonalCoach extends Coach {
             champion: (id) => champView(id, lookup),
             championName: (id) => lookup(id)?.name ?? `#${id}`,
             planGames: this.config.engine.newChamps.planGames,
-            notes: (id) =>
-              learningNotes({
+            blockGames: this.config.engine.newChamps.learn.blockGames,
+            plan: (id) =>
+              learningPlan({
                 championId: id,
                 role: r.role,
                 matches: this.profile!.matches,
                 index: this.metaIndex,
-                focus: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
+                champion: lookup(id),
+                goal: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
                 config: this.config.engine,
               }),
           }),

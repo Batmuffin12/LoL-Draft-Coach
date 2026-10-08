@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import type { ViewState } from "../../shared/view";
+import type { LearnView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
@@ -12,7 +12,7 @@ import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { pct, positionLabel, roleName } from "../format";
+import { cx, pct, positionLabel, roleName } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices } from "./common";
 
@@ -180,7 +180,7 @@ function NewChamps({ state }: { state: ViewState }) {
                   <span className="label gold">{l.title}</span>
                   {l.progress && <span className="micro">{l.progress}</span>}
                 </div>
-                {l.lines.length > 0 && <Lines lines={l.lines} />}
+                <Learn learn={l.learn} />
               </div>
             )}
             {l && r.picks.length > 0 && (
@@ -197,12 +197,37 @@ function NewChamps({ state }: { state: ViewState }) {
               <div className="plan">
                 <span className="label gold">First games plan</span>
                 <span>{r.plan}</span>
-                {r.planNotes.length > 0 && <Lines lines={r.planNotes} />}
+                {r.planLearn && <Learn learn={r.planLearn} />}
               </div>
             )}
           </Section>
         );
       })}
+    </>
+  );
+}
+
+/** How to learn a champion: the one thing to watch next game (with your last games on it) under its stage, then short facts. */
+function Learn({ learn }: { learn: LearnView }) {
+  const f = learn.focus;
+  return (
+    <>
+      {f ? (
+        <div className="learn-focus" title="Filled: you reached it in that game on this champion">
+          <span className="label gold">{learn.stage ? `This game · ${learn.stage}` : "This game"}</span>
+          <span>{f.text}</span>
+          {f.recent.length > 0 && (
+            <span className="games">
+              {f.recent.map((ok, i) => (
+                <span key={i} className={cx("g", ok && "met")} />
+              ))}
+            </span>
+          )}
+        </div>
+      ) : (
+        learn.stage && <span className="label">{learn.stage}</span>
+      )}
+      {learn.lines.length > 0 && <Lines lines={learn.lines} />}
     </>
   );
 }

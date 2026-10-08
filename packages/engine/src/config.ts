@@ -153,6 +153,22 @@ export const EngineConfigSchema = z.object({
     /** "Try it in 3 to 5 Normal Draft games." */
     planGames: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
     weights: z.object({ similarity: z.number(), gap: z.number(), meta: z.number(), ease: z.number(), overlap: z.number() }),
+    /** Learning a champion (research/LEARNING.md). */
+    learn: z.object({
+      /** Games on it below this are the "first games" (learn the kit, ignore the result). */
+      firstGames: z.number().int().min(1),
+      /** About how many games players keep improving fast on a new champion, by ease. */
+      settleGames: z.object({ easy: z.number().int().min(1), medium: z.number().int().min(1), hard: z.number().int().min(1) }),
+      /** "Play it in blocks of 2 to 3 games." */
+      blockGames: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+      /** Games on it before a drop against your usual can be measured, and your other games in the role for the usual. */
+      focusMinGames: z.number().int().min(1),
+      usualMinGames: z.number().int().min(1),
+      /** A drop (in standard deviations of your usual) that makes a metric the focus. */
+      dropMin: z.number().min(0),
+      /** Per role, the growth metric to hold at your usual while learning ("-" = lower is better). */
+      basics: z.record(z.string(), z.string()),
+    }),
   }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */
   pool: z.object({

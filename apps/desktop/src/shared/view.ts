@@ -311,8 +311,7 @@ export interface NewChampRoleView {
     champion: ChampView | null;
     /** "3 of 7 games · 12 days left". */
     progress: string | null;
-    /** Your record and goal on it, its best and worst lane matchups, its power curve. */
-    lines: string[];
+    learn: LearnView;
     /** "After Lillia", the head over the picks. */
     after: string;
     /** "one new champion per role at a time". */
@@ -320,8 +319,18 @@ export interface NewChampRoleView {
   } | null;
   /** The first-games plan for the top suggestion (none while learning another). */
   plan: string | null;
-  /** What to know about the top suggestion (its matchups and power curve; your games on it). */
-  planNotes: string[];
+  /** How to learn the top suggestion (none while learning another). */
+  planLearn: LearnView | null;
+}
+
+/** How to learn a champion: where you are with it, one thing to watch next game, and what to know. */
+export interface LearnView {
+  /** "First games". */
+  stage: string;
+  /** The one thing to watch next game, and whether your last games on it reached it (oldest first). */
+  focus: { text: string; recent: boolean[] } | null;
+  /** What to do at this stage, its job, the role's cue, when it's strong, matchups, how long to give it, your record. */
+  lines: string[];
 }
 
 /** One measurable focus on your main champion and role, with a target and your last games against it. */

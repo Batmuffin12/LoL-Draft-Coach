@@ -415,6 +415,10 @@ p { margin: 0; }
 .plan .notes { margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
 .plan .notes li::marker { color: var(--muted); }
 .after-learning { opacity: 0.6; }
+.learn-focus { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-left: 2px solid var(--gold); background: var(--track); border-radius: var(--radius-sm); }
+.learn-focus .games { display: flex; gap: 3px; }
+.learn-focus .games .g { width: 10px; height: 10px; border-radius: 2px; background: var(--card); border: 1px solid var(--line-strong); }
+.learn-focus .games .g.met { background: var(--gold); border-color: var(--gold); }
 .section:has(> .section-head.closed) { padding-block: 6px; }
 
 /* Monthly report */
