@@ -1,7 +1,6 @@
 import { formatMetric, metricLabel, renderReason, type ExplainConfig, type LearningMatchup, type LearningPlan, type NewChampAdvice } from "@ldc/engine";
 import type { Reason } from "@ldc/shared";
 import type { ChampView, LearnView, NewChampRoleView } from "../shared/view";
-import { capital } from "./reason-view";
 
 export interface NewChampsViewDeps {
   explain: ExplainConfig;
