@@ -17,8 +17,9 @@ export function Header({ state }: { state: ViewState }) {
   if (meta?.state === "ready") {
     const minutes = Math.max(0, Math.round((now - meta.createdAt) / 60_000));
     const age = minutes < 60 ? `${minutes} min` : `${Math.round(minutes / 60)} h`;
-    metaText = `${meta.patch ?? status.patch ?? "Live"} · ${age}${meta.offline ? " · offline" : ""}`;
-    metaTitle = `Live meta for rank band ${meta.band}: ${count(meta.matches)} recent ranked games${meta.offline ? ". The server is unreachable: using the last copy" : ""}`;
+    // The age is in the tooltip: no player acts on it, and the chip stays short.
+    metaText = `${meta.patch ?? status.patch ?? "Live"}${meta.offline ? " · offline" : ""}`;
+    metaTitle = `Live meta for rank band ${meta.band}: ${count(meta.matches)} recent ranked games, updated ${age} ago${meta.offline ? ". The server is unreachable: using the last copy" : ""}`;
   }
   return (
     <StatusHeader

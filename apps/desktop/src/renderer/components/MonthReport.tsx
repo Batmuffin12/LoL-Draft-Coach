@@ -80,7 +80,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <StatStrip items={m.strip} />
       </Section>
       {m.axes.length > 0 && (
-        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()}` : ""}`} aside={<span className="micro">month start → now · 50 = rank average</span>}>
+        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">month start → now · 50 = rank average</span>}>
           <TrendTable rows={m.axes} />
         </Section>
       )}
@@ -95,6 +95,10 @@ export function MonthReport({ month: m }: { month: MonthView }) {
             {m.focus.met.slice(0, 1).map((t) => (
               <li key={t}>{t}</li>
             ))}
+            {/* The tile counts every goal met; the rest are on hover, so the two agree. */}
+            {m.focus.met.length > 1 && (
+              <li className="caption" title={m.focus.met.slice(1).join("\n")}>{`and ${m.focus.met.length - 1} more goal${m.focus.met.length > 2 ? "s" : ""} met`}</li>
+            )}
             {m.focus.current && <li className="why">{m.focus.current}</li>}
           </ul>
         </Section>
