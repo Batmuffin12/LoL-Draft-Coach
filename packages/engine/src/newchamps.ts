@@ -222,6 +222,16 @@ export interface LearningPlan {
    * lost ones (in spreads of the role), at most `count`; with your own mean on it when you have games.
    */
   wins: LearningWin[];
+  /** How it plays, measured: damage split and frontline and crowd control as percentiles of all champions. */
+  profile: { physical: number; magic: number; frontline: number; engage: number } | null;
+  /** Its usual skill order in the role: first three levels and max order (slots 1-3), with the share of games. */
+  skills: { first: number[]; order: number[]; share: number } | null;
+  /** Gold over its lane opponent at 15 minutes, on average (timelines), when measured. */
+  laneGold: { diff: number; games: number } | null;
+  /** Every measured opponent in the role within plan.evenWin: no matchup swings it much. */
+  evenMatchups: number | null;
+  /** Measured, but no real gap between short and long games: as strong early as late. */
+  evenCurve: { early: number; late: number } | null;
 }
 
 export interface LearningWin {
@@ -360,5 +370,14 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
         .slice(0, count)
         .map((x) => x.win)
     : [];
-  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, wins };
+  const attrs = index?.attributes.get(id);
+  const profile = attrs ? { physical: attrs.physicalShare, magic: attrs.magicShare, frontline: attrs.frontline, engage: attrs.engage } : null;
+  const build = index?.build(id, role);
+  const top = build?.skills[0];
+  const skills = top && top.n >= learn.skillMinGames && build ? { first: top.first, order: top.order, share: top.n / Math.max(1, build.timelineN) } : null;
+  const g15 = pc?.goldAt15;
+  const laneGold = g15 && g15.games >= config.rating.minGames.meta ? { diff: g15.diff, games: g15.games } : null;
+  const evenMatchups = opponents.length >= learn.evenMatchupsMin && !good.length && !hard.length ? opponents.length : null;
+  const evenCurve = pc && gap === null && pc.early.games >= config.rating.minGames.meta && pc.late.games >= config.rating.minGames.meta ? { early: pc.early.winRate, late: pc.late.winRate } : null;
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, wins, profile, skills, laneGold, evenMatchups, evenCurve };
 }

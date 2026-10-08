@@ -178,6 +178,12 @@ export const EngineConfigSchema = z.object({
       dropMin: z.number().min(0),
       /** Per role, the growth metric to hold at your usual while learning ("-" = lower is better). */
       basics: z.record(z.string(), z.string()),
+      /** "How it plays": a measured percentile (0..1) at or above `high` is said as high, at or below `low` as low. */
+      profile: z.object({ high: unit, low: unit }).default({ high: 0.66, low: 0.33 }),
+      /** Skill order is shown once this many games back it. */
+      skillMinGames: z.number().int().min(1).default(100),
+      /** "No matchup swings it much" once this many opponents are measured, all within plan.evenWin. */
+      evenMatchupsMin: z.number().int().min(1).default(5),
     }),
   }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */

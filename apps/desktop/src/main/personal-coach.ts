@@ -586,6 +586,7 @@ export class PersonalCoach extends Coach {
             champion: (id) => champView(id, lookup),
             championName: (id) => lookup(id)?.name ?? `#${id}`,
             planGames: this.config.engine.newChamps.planGames,
+            learn: { profile: this.config.engine.newChamps.learn.profile, laneGoldEven: this.config.engine.rating.explain.laneGoldGap },
             blockGames: this.config.engine.newChamps.learn.blockGames,
             plan: (id) =>
               learningPlan({

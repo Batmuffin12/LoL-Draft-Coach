@@ -226,7 +226,10 @@
         "middle": "-earlyDeaths",
         "bottom": "challenges.laneMinionsFirst10Minutes",
         "utility": "challenges.visionScorePerMinute"
-      }
+      },
+      "profile": { "high": 0.66, "low": 0.33 },
+      "skillMinGames": 100,
+      "evenMatchupsMin": 5
     }
   },
   "pool": {

@@ -12,6 +12,8 @@ export interface NewChampsViewDeps {
   blockGames: [number, number];
   /** How to learn a champion in the role (stage, focus, matchups, power curve); null without data. */
   plan: (championId: number) => LearningPlan | null;
+  /** Thresholds for "how it plays" (percentiles) and the gold gap at 15 that counts as even. */
+  learn?: { profile: { high: number; low: number }; laneGoldEven: number };
 }
 
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
@@ -23,7 +25,7 @@ const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
  * only what the data says about this champion: how it wins in your rank (with your numbers on
  * it), when it's strong, its matchups and your record on it. No generic advice.
  */
-export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "blockGames">): LearnView {
+export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "blockGames" | "learn">): LearnView {
   const { explain } = deps;
   const t = explain.templates;
   const say = (r: Reason) => renderReason(r, t, deps.championName);
@@ -49,6 +51,24 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
   }
 
   const lines: string[] = [];
+  const cfgLearn = deps.learn;
+  // How it plays: only what stands out (a damage type that dominates, high or low frontline and crowd control).
+  if (p.profile && cfgLearn) {
+    const { high, low } = cfgLearn.profile;
+    const traits: string[] = [];
+    if (p.profile.physical >= high) traits.push(say({ id: "newchamp.profile.physical", slots: {} }));
+    else if (p.profile.magic >= high) traits.push(say({ id: "newchamp.profile.magic", slots: {} }));
+    else traits.push(say({ id: "newchamp.profile.mixed", slots: {} }));
+    if (p.profile.frontline >= high) traits.push(say({ id: "newchamp.profile.tanky", slots: {} }));
+    else if (p.profile.frontline <= low) traits.push(say({ id: "newchamp.profile.fragile", slots: {} }));
+    if (p.profile.engage >= high) traits.push(say({ id: "newchamp.profile.cc", slots: {} }));
+    else if (p.profile.engage <= low) traits.push(say({ id: "newchamp.profile.nocc", slots: {} }));
+    lines.push(say({ id: "newchamp.learn.profile", slots: { traits: traits.join(", ") } }));
+  }
+  if (p.skills) {
+    const key = (slot: number) => t[`skill.key.${slot}`] ?? String(slot);
+    lines.push(say({ id: "newchamp.learn.skills", slots: { first: p.skills.first.map(key).join(", "), order: p.skills.order.map(key).join(", then "), share: p.skills.share } }));
+  }
   if (p.wins.length) {
     const items = p.wins.map((w) => {
       const fmt = (v: number) => formatMetric(v, w.metric, explain);
@@ -60,8 +80,15 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
     lines.push(say({ id: "newchamp.learn.wins", slots: { items: items.join("; and ") } }));
   }
   if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
+  else if (p.evenCurve) lines.push(say({ id: "newchamp.learn.evenCurve", slots: { early: p.evenCurve.early, late: p.evenCurve.late } }));
   if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
   if (p.hard.length) lines.push(say({ id: "newchamp.learn.hard", slots: { champions: list(p.hard) } }));
+  if (p.evenMatchups) lines.push(say({ id: "newchamp.learn.evenMatchups", slots: { role, count: p.evenMatchups } }));
+  if (p.laneGold && cfgLearn) {
+    const gold = Math.round(Math.abs(p.laneGold.diff));
+    const id = gold < cfgLearn.laneGoldEven ? "newchamp.learn.gold.even" : p.laneGold.diff > 0 ? "newchamp.learn.gold.ahead" : "newchamp.learn.gold.behind";
+    lines.push(say({ id, slots: { gold, role } }));
+  }
   if (p.record.games > 0) lines.push(say({ id: "newchamp.learn.record", slots: { wins: p.record.wins, losses: p.record.games - p.record.wins } }));
   return { stage: say({ id: `newchamp.stage.${p.stage}.label`, slots: {} }), focus, lines };
 }

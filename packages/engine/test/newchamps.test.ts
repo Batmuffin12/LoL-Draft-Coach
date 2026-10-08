@@ -109,6 +109,21 @@ describe("learningPlan", () => {
     expect(plan().wins).toEqual([]); // no measurements in the snapshot
   });
 
+  it("measures how it plays, and notices when nothing swings it", () => {
+    const p = plan();
+    expect(p.profile).toMatchObject({ physical: 0.2, magic: 0.8 });
+    expect(p.evenMatchups).toBeNull(); // its matchups differ (good into 1, hard into 2)
+    expect(p.evenCurve).toBeNull(); // its long-game gap is real (46% vs 55% on 800 games each)
+    const flat: MetaSnapshot = {
+      ...snap,
+      matchups: [1, 2, 3, 5, 7, 8].map((b) => [4, "middle", b, "middle", 1000, 540, 1000] as [number, string, number, string, number, number, number]),
+      attributes: [{ ...snap.attributes[0]!, powerCurve: { early: { games: 800, winRate: 0.53 }, late: { games: 800, winRate: 0.54 } } }],
+    };
+    const even = plan({ index: new MetaIndex(flat, config.rating) });
+    expect(even.evenMatchups).toBeGreaterThanOrEqual(config.newChamps.learn.evenMatchupsMin);
+    expect(even.evenCurve).toEqual({ early: 0.53, late: 0.54 });
+  });
+
   it("gives the stage, its job, ease, how long to give it, your record, and the matchups to start into and avoid", () => {
     const p = plan();
     expect(p).toMatchObject({ stage: "building", ease: 1, settleGames: config.newChamps.learn.settleGames.easy, job: "Mage", record: { games: 3, wins: 1 } });
