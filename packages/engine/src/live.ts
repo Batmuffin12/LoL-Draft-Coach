@@ -1,3 +1,4 @@
+import { TERM_NAMES } from "@ldc/shared";
 import { buildLoadout, type Loadout } from "./loadout";
 import { mergeBuilds, type PersonalBuild } from "./loadout-sources";
 import type { LoadoutConfig } from "./config";
@@ -20,7 +21,7 @@ import { placeDraft, type PlacedChampion } from "./draft-roles";
 import { reason, type Confidence } from "./explain";
 import type { MetaIndex } from "./meta-index";
 import { curveGap } from "./power-curve";
-import { deltaWin, weightedQuantile, winOf } from "./rating";
+import { deltaWin, rating, weightedQuantile, winOf } from "./rating";
 import { roleFit, usualPick, type RecommendInput } from "./recommend";
 import { scoreTeamNeeds, teamProfile } from "./team-needs";
 import type { ComfortStats } from "./types";
@@ -95,8 +96,27 @@ function leadZ(top: Term[], next: Term[], cfg: RatingConfig): number {
 /** Converts a weighted rating to the 0..1 bar the panel shows (0.5 = no effect). */
 const bar = (points: number, cfg: RatingConfig) => clamp01(0.5 + deltaWin(points) / (2 * cfg.explain.barScaleWin));
 
-function personalRating(c: ComfortStats | undefined, cfg: RatingConfig): number {
+/**
+ * Your own effect on a pick, in rating points. With the experience model (config): the cost of
+ * little experience on the champion in this role, plus your skill on it against its win rate in
+ * your rank (strongly shrunk). Without it, the older comfort-score mapping.
+ */
+function personalRating(c: ComfortStats | undefined, cfg: RatingConfig, bandWinRate: number | null): number {
   const p = cfg.personal;
+  if (p.experience) {
+    const e = p.experience;
+    const inRole = c?.gamesInRole ?? 0;
+    const elsewhere = (c?.games ?? 0) - inRole + (c?.masteryPoints ?? 0) / e.pointsPerGame;
+    const n = inRole + e.transfer * Math.max(0, elsewhere);
+    const cost = -e.penalty * Math.exp(-n / e.tauGames);
+    let skill = 0;
+    if (p.skill && c && inRole > 0 && c.winRateInRole !== null && bandWinRate !== null) {
+      const shrunk = (c.winRateInRole * inRole + bandWinRate * p.skill.priorGames) / (inRole + p.skill.priorGames);
+      const points = rating(shrunk) - rating(bandWinRate);
+      skill = Math.max(-p.skill.maxPoints, Math.min(p.skill.maxPoints, points));
+    }
+    return cost + skill;
+  }
   if (!c || (c.games === 0 && c.masteryPoints === 0)) return -p.learningPenalty;
   return Math.max(-p.learningPenalty, p.comfortScale * (Math.min(c.score, p.fullComfort) - p.neutralComfort));
 }
@@ -248,7 +268,9 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   for (const r of teamScore.reasons) note(r, team);
 
   // Personal: the player's comfort, or the cost of learning a new champion.
-  const personal = w.personal * personalRating(comfort, cfg);
+  // Without the champion's rank data, your record is compared with an even 50%.
+  const bandWinRate = metaStat.games > 0 ? metaStat.wins / metaStat.games : 0.5;
+  const personal = w.personal * personalRating(comfort, cfg, bandWinRate);
   const unplayed = !comfort || (comfort.games === 0 && comfort.masteryPoints === 0);
   if (unplayed) note(reason("personal.new", {}), personal);
   else if (personal >= 0) for (const r of comfortReasons(comfort, input.role)) notes.push({ r, weight: Math.abs(deltaWin(personal)), positive: true });
@@ -260,7 +282,9 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   }
 
   const parts: Record<TermName, number> = { meta, lane, counter, synergy, team, personal };
-  const total = meta + lane + counter + synergy + team + personal;
+  // The shown chance (and the ranking) counts only the terms that predict results (config inChance).
+  const counted = new Set<TermName>(cfg.inChance ?? TERM_NAMES);
+  const total = (Object.entries(parts) as [TermName, number][]).reduce((s, [name, points]) => s + (counted.has(name) ? points : 0), 0);
   const expectedWin = winOf(total);
   const terms: Term[] = (
     [

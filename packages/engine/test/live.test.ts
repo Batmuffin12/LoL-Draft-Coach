@@ -28,7 +28,17 @@ const CONFIG_DIR = join(__dirname, "..", "..", "..", "config");
 const readJson = (f: string) => JSON.parse(readFileSync(join(CONFIG_DIR, f), "utf8"));
 // The fixture games are sized for a pair prior of 60: pinned, so tuning the shipped prior (backtest) doesn't change what these tests check.
 const shipped = parseEngineConfig(readJson("engine.v1.json"));
-const config = { ...shipped, rating: { ...shipped.rating, priorGames: { ...shipped.rating.priorGames, pair: 60 } } };
+// Also the older all-terms model (comfort mapping, every term in the chance): these tests check its
+// mechanics; the experience model and the honest chance have their own tests below.
+const config = {
+  ...shipped,
+  rating: {
+    ...shipped.rating,
+    priorGames: { ...shipped.rating.priorGames, pair: 60 },
+    personal: { ...shipped.rating.personal, experience: undefined, skill: undefined },
+    inChance: undefined,
+  },
+};
 const explain = parseExplainConfig(readJson("explain.v1.json"));
 const say = (r: Reason | null) => (r ? renderReason(r, explain.templates, (id) => `#${id}`) : "");
 const text = (reasons: Reason[]) => reasons.map(say).join(" | ");
@@ -450,5 +460,34 @@ describe("gamePlan", () => {
 
   it("says nothing it can't measure", () => {
     expect(gamePlan(input(draft([]), {}), 103)).toEqual([]);
+  });
+});
+
+describe("the experience model and the honest chance (shipped config)", () => {
+  // The shipped config: experience + skill for the personal term, only meta and personal in the chance.
+  const real = { ...shipped, rating: { ...shipped.rating, priorGames: { ...shipped.rating.priorGames, pair: 60 } } };
+  const personalOf = (p: { terms?: { name: string; rating: number }[] }) => p.terms!.find((t) => t.name === "personal")!.rating;
+
+  it("counts only champion strength and your experience in the shown chance", () => {
+    const p = adviseLivePicks(input(draft([201]), { config: real })).picks[0]!;
+    const counted = p.terms!.filter((t) => t.name === "meta" || t.name === "personal").reduce((s, t) => s + t.rating, 0);
+    expect(p.expectedWin).toBeCloseTo(winOf(counted), 6);
+  });
+
+  it("costs most on a champion you never played in this role, less with games, and only partly from other roles or mastery", () => {
+    const at = (gs: PlayerGame[], mastery = 0) =>
+      personalOf(
+        adviseLivePicks(input(draft(), { config: real, pickable: [103], comfort: computeComfort(gs, mastery ? [{ championId: 103, level: 7, points: mastery }] : [], NOW, real.comfort, "middle") })).picks.find(
+          (x) => x.championId === 103,
+        )!,
+      );
+    const never = at([]);
+    const fiveHere = at(Array.from({ length: 5 }, (_, i) => ({ ...game(103, i % 2 === 0, 1 + i) })));
+    const topOnly = at(Array.from({ length: 5 }, (_, i) => ({ ...game(103, i % 2 === 0, 1 + i), position: "top" })));
+    const bigMastery = at([], 300_000); // ~430 games of mastery elsewhere: well known, a small cost left
+    expect(never).toBeLessThanOrEqual(-real.rating.personal.experience!.penalty); // the full penalty (times the band's personal weight)
+    expect(fiveHere).toBeGreaterThan(topOnly); // games in this role count fully
+    expect(topOnly).toBeGreaterThan(never); // other roles and mastery count a little
+    expect(bigMastery).toBeGreaterThan(fiveHere);
   });
 });

@@ -269,8 +269,11 @@
       "neutralComfort": 0.5,
       "fullComfort": 0.65,
       "learningPenalty": 50,
-      "includeUnplayed": true
+      "includeUnplayed": true,
+      "experience": { "penalty": 60, "tauGames": 10, "transfer": 0.2, "pointsPerGame": 700 },
+      "skill": { "priorGames": 100, "maxPoints": 60 }
     },
+    "inChance": ["meta", "personal"],
     "blind": {
       "riskAversion": 0.5,
       "riskQuantile": 0.2,

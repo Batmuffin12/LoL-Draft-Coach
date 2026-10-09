@@ -1,3 +1,4 @@
+import { TERM_NAMES } from "@ldc/shared";
 import { z } from "zod";
 import type { FactorName, RankBandId } from "@ldc/shared";
 
@@ -247,7 +248,26 @@ export const EngineConfigSchema = z.object({
       learningPenalty: z.number().min(0),
       /** Suggest champions the player hasn't played yet (they carry the learning penalty). */
       includeUnplayed: z.boolean(),
+      /**
+       * The experience model (research/answers/06-draft-engine.md, our own learning curve: about 43%
+       * on a first game, 52-55% after 20). When set, it replaces the comfort-score mapping above:
+       * - experience: −penalty · e^(−n / tauGames) rating points, where n = your games on the
+       *   champion in this role + transfer × (its games in other roles + mastery ÷ pointsPerGame);
+       *   knowing a champion in another role only partly carries over.
+       * - skill: your win rate on it in this role, shrunk with priorGames toward the champion's
+       *   win rate in your rank, as rating points over that rate, capped at ±maxPoints.
+       */
+      experience: z
+        .object({ penalty: z.number().min(0), tauGames: z.number().positive(), transfer: unit, pointsPerGame: z.number().positive() })
+        .optional(),
+      skill: z.object({ priorGames: z.number().min(0), maxPoints: z.number().min(0) }).optional(),
     }),
+    /**
+     * Terms that count in the shown win chance (and the ranking). Measured on production games,
+     * only champion strength (meta) and your own experience (personal) predict the result; the
+     * others are shown for information. Absent: every term.
+     */
+    inChance: z.array(z.enum(TERM_NAMES)).optional(),
     /** Lane opponent unknown: expected matchup over likely opponents, minus a share of the bad tail. */
     blind: z.object({
       riskAversion: z.number().min(0),
