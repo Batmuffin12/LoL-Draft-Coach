@@ -7,7 +7,7 @@ Started 2026-10-09 ~03:35 with all eleven at once; the usage limit stopped them 
 | 1 | Coaching language | 01-language.md | done |
 | 2 | Goals and targets per role | 02-goals.md | running |
 | 3 | Style tab and monthly report | 03-style-month.md | running |
-| 4 | Runes with real reasons | 04-runes.md | running |
+| 4 | Runes with real reasons | 04-runes.md | done |
 | 5 | Items | 05-items.md | running |
 | 6 | The draft engine | 06-draft-engine.md | waiting (second wave) |
 | 7 | Learning a champion | 07-learning.md | waiting (second wave) |
