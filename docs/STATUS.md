@@ -1,10 +1,11 @@
 # Status (one place to look)
 
-Updated 2026-10-09 (v0.7.4). Started 2026-10-08 when three Claude sessions were consolidated into one. The roadmap and task list are in the tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD (M9 friends release v1.0.0, M10 in game, M11 personal engine, M12 meta signal quality).
+Updated 2026-10-09 (v0.7.5). Started 2026-10-08 when three Claude sessions were consolidated into one. The roadmap and task list are in the tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD (M9 friends release v1.0.0, M10 in game, M11 personal engine, M12 meta signal quality).
 
 ## Live
 
-- **v0.7.4** on `main` and in production (2026-10-09): 1,000-game history loaded in the background, four timeline goals, how a champion wins, comfort fixes, the audit fixes and the collector boost (CHANGELOG.md). v0.7.3 before it.
+- **v0.7.5** on `main` and in production (2026-10-09): your numbers vs your rank on Style, This month as its own tab with number trends, an honest chance, off-role mode, and the snapshot build no longer blocks the API (CHANGELOG.md).
+- **v0.7.4** before it: 1,000-game history loaded in the background, four timeline goals, how a champion wins, comfort fixes, the audit fixes and the collector boost (CHANGELOG.md). v0.7.3 before it.
 
 ## Committed, not released
 
@@ -29,7 +30,7 @@ Updated 2026-10-09 (v0.7.4). Started 2026-10-08 when three Claude sessions were 
 
 ## Next, in order
 
-1. Watch the first hourly run after v0.7.4 (memory, boosted run, backfill); then check Railway usage after a day.
+1. Check that `/health` answers fast during the first hourly run after v0.7.5 (the snapshot-build fix); then check Railway usage after a day.
 2. ops-5: merge `main` into `milestone-8-spikes`, resolving the timeline conflicts.
 3. spk-7: add "spike info is passive, never pushed" to SPEC compliance, before v0.8.0.
 4. ops-7: fix the rest of the SPEC drift (data model, pruning, drop `POST /recommend`).

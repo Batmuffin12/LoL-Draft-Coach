@@ -2,6 +2,25 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.7.5] — 2026-10-09 — Your numbers, an honest chance
+
+### Added
+- **Your numbers on the Style tab** (the op.gg comparison): six headline numbers per role (KDA, kill participation, CS, damage, vision, deaths; support and jungle get their own) next to typical in your rank, coloured only when clearly off (`style.headline`, `style.toneGap`). Below them: pool focus (share of your last 100 games on your top 1, 3 and 5 champions), your champion classes (Data Dragon tags) and your damage split (physical, magic, true). Win rate by side is said only when the gap passes a two-proportion test over all your games (`style.side`). Each style axis opens on click to every metric behind it.
+- **This month** has its own lobby tab, with number trends (KDA, KP, CS, damage, deaths, vision: last month → this month, coloured only for a real change, `report.stats`), your two main roles' shares and your top-3 pool focus against the month before (`report.focusTop`).
+- **Off-role mode**: when Riot fills you into a role that is under 10% of your last 100 games, picks lean on champions you know and the panel says so (`rating.personal.offRole`).
+- **Rune swaps come with the game mechanic that answers the enemy team**, from the rune's own Data Dragon text (`loadout.runeMechanics`); traits without one get no rune suggestion.
+
+### Changed
+- **An honest chance**: the shown chance and the ranking count only champion strength in your rank and your own experience on the champion; matchup, counter, synergy and team stay as information (production backtest on 18,783 games). Your effect is an experience model that fades with your games on the champion in the role, at the strength the data supports.
+- **Items follow what players buy**, and "against this team" items need their own Data Dragon text to answer the trait (`loadout.itemMechanics`), with the reason said.
+- Win-rate differences read as whole wins per 100 games ("2 more wins per 100 games").
+- The lobby's roles and This month are small sub-tabs, with bigger, clearer rows; every tab still fits 440 × 720.
+- The monthly report says a style changed only when it really did (separate games, Welch z ≥ 2.4 and 5 points).
+
+### Fixed
+- **The server no longer stops answering during the hourly snapshot build**: one sorted query re-sorted the whole window for every chunk, so `/me/profile` hung and the panel stayed empty for most of each collector run (a full pass 77 s → 1.5 s, longest block 1,465 ms → 17 ms).
+- A ban a teammate is already hovering is never suggested; difficulty 0 is unknown, not easy; another mode's copy of an item no longer counts as a Rift item; Riot's notice includes the required trademark sentence; the goal's why is the game mechanic alone.
+
 ## [0.7.4] — 2026-10-09 — A coach that knows your history
 
 ### Added
