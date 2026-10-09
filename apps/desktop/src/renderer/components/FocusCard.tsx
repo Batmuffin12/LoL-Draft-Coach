@@ -49,7 +49,9 @@ export function FocusCard({ focus: f }: { focus: FocusView }) {
           </ul>
         </div>
       )}
-      <span className="micro">{f.why}</span>
+      <span className="micro" title={f.whyHover}>
+        {f.why}
+      </span>
     </div>
   );
 }

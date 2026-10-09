@@ -361,6 +361,8 @@ export interface FocusView {
   recent: boolean[];
   /** Why this metric (how much it separates wins from losses where you play). */
   why: string;
+  /** The win-rate link behind the choice, for a hover (a link, not a cause). */
+  whyHover: string;
   /** What to keep in mind to reach it, for the role (short, actionable). */
   tips: string[];
   /** Targets you already reached ("Deaths per minute: 0.5 → 0.4, target met"). */

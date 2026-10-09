@@ -27,7 +27,12 @@ describe("focus view", () => {
   it("formats the focus with its numbers and why it was chosen, from config wording", () => {
     const v = focusView(growth, deps)!;
     expect(v).toMatchObject({ label: "CS per minute", title: "More CS per minute", goalText: "6.8 or more", goalHint: expect.stringMatching(/^Your next step: \d+% of the way to the average$/), on: "Ahri · Mid", youText: "6.1", targetText: "6.8", typicalText: "7.6", recent: [true, false, false] });
-    expect(v.why).toBe("Why this: in Gold to Platinum, mid players on the better half here win 8 points more of their games than the other half.");
+    // No mechanic line for CS per minute: your number against typical; the win link only in the hover.
+    expect(v.why).toBe("You: 6.1. Typical mid player in Gold to Platinum: 7.6");
+    expect(v.whyHover).toBe("In Gold to Platinum, mid players above typical here win 8 more games per 100 (a link, not a cause)");
+    // With a mechanic line, the reason is the game mechanic first.
+    const deaths = focusView({ ...growth, focus: { ...growth.focus!, metric: "earlyDeaths", lowerIsBetter: true, you: 2.1, typical: 1.2, target: 1.6 } }, deps)!;
+    expect(deaths.why).toBe("Each early death hands your opponent gold, XP and a free wave. You: 2.1. Typical mid player in Gold to Platinum: 1.2");
     expect(v.met).toEqual(["Deaths per minute: 0.42 → 0.31, goal met"]);
     expect(v.tips).toEqual(config.explain.tips["middle:csPerMinute"] ?? []);
     const support = focusView({ ...growth, role: "utility", focus: { ...growth.focus!, metric: "challenges.controlWardsPlaced" } }, deps)!;
@@ -59,7 +64,8 @@ describe("focus view", () => {
 
   it("says the why from where the importance was measured, even when typical comes from your rank", () => {
     const fromGames = { ...growth, focus: { ...growth.focus!, importanceFrom: "games" as const } };
-    expect(focusView(fromGames, deps)!.why).toMatch(/^Why this: in your games, mid players/);
+    expect(focusView(fromGames, deps)!.whyHover).toMatch(/^In your games, mid players/);
+    expect(focusView(fromGames, deps)!.why).toMatch(/Typical mid player in Gold to Platinum: 7\.6$/);
     expect(focusView(fromGames, deps)!.typicalLine).toBe("Typical mid player in your rank: 7.6");
   });
 
