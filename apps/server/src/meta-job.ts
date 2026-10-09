@@ -140,21 +140,35 @@ export async function publishSnapshot(
   extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null } = {},
 ): Promise<PublishedSnapshot> {
   const since = now - settings.meta.aggregation.windowDays * DAY_MS;
-  // Newest first, in chunks (keyset on ended_at, match_id), yielding to the event loop between them.
+  // Newest first, in chunks, yielding to the event loop between them. One cursor per band, each
+  // reading its band's (band, ended_at) index in order (keyset on ended_at, rowid: the index holds
+  // rowid, so SQLite never sorts), merged newest first. A single query over several bands made
+  // SQLite sort the whole window again for every chunk, which blocked the API for minutes.
+  type Row = { summary: string; band: number; endedAt: number; rid: number };
   const rows: Rows = async function* (bands) {
     const stmt = db.$client.prepare(
-      `SELECT summary, band, ended_at AS endedAt, match_id AS id FROM matches
-       WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND match_id < ?))
-       ORDER BY ended_at DESC, match_id DESC LIMIT ?`,
+      `SELECT summary, band, ended_at AS endedAt, rowid AS rid FROM matches
+       WHERE band = ? AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND rowid < ?))
+       ORDER BY ended_at DESC, rowid DESC LIMIT ?`,
     );
-    let at = Number.MAX_SAFE_INTEGER;
-    let id = "";
+    const cursors = [...new Set(bands)].map((b) => ({ band: b, buf: [] as Row[], i: 0, at: Number.MAX_SAFE_INTEGER, rid: Number.MAX_SAFE_INTEGER, done: false }));
+    const fill = (c: (typeof cursors)[number]) => {
+      c.buf = stmt.all(c.band, since, c.at, c.at, c.rid, CHUNK_ROWS) as Row[];
+      c.i = 0;
+      if (c.buf.length < CHUNK_ROWS) c.done = true;
+      else ({ endedAt: c.at, rid: c.rid } = c.buf[c.buf.length - 1]!);
+    };
+    let sent = 0;
     for (;;) {
-      const chunk = stmt.all(...bands, since, at, at, id, CHUNK_ROWS) as { summary: string; band: number; endedAt: number; id: string }[];
-      yield* chunk;
-      if (chunk.length < CHUNK_ROWS) return;
-      ({ endedAt: at, id } = chunk[chunk.length - 1]!);
-      await new Promise((resolve) => setImmediate(resolve));
+      let next: (typeof cursors)[number] | null = null;
+      for (const c of cursors) {
+        if (c.i >= c.buf.length && !c.done) fill(c);
+        const r = c.buf[c.i];
+        if (r && (!next || r.endedAt > next.buf[next.i]!.endedAt)) next = c;
+      }
+      if (!next) return;
+      yield next.buf[next.i++]!;
+      if (++sent % CHUNK_ROWS === 0) await new Promise((resolve) => setImmediate(resolve));
     }
   };
   const bands = [band, ...(extra.buildBands ?? [])];

@@ -354,6 +354,22 @@ describe("meta routes", () => {
     expect((await publishSnapshot(db, 2, settings, NOW)).matches).toBe(1203);
   });
 
+  it("reads the band and the band above together, chunk by chunk, counting only the band's own games", async () => {
+    const { db } = setup();
+    const { summarizeMatch } = await import("@ldc/riot-api");
+    const insert = db.$client.prepare("INSERT INTO matches (match_id, queue_id, game_version, ended_at, duration_sec, summary, source, stored_at, band) VALUES (?, 420, '16.19.1', ?, 1800, ?, 'collector', ?, ?)");
+    db.$client.transaction(() => {
+      // Interleaved in time, with ties inside each band, more than one chunk each.
+      for (let i = 0; i < 1300; i++) {
+        const band = i % 2 ? 3 : 2;
+        const endedAt = NOW - MIN * (1 + Math.floor(i / 4));
+        insert.run(`m${i}`, endedAt, JSON.stringify(summarizeMatch(rawMatch(`m${i}`, endedAt))), NOW, band);
+      }
+    })();
+    const s = await publishSnapshot(db, 2, settings, NOW, { buildBands: [3] });
+    expect(s.matches).toBe(650);
+  });
+
   it("serves the band snapshot to registered users only, gzipped with an ETag", async () => {
     const { db, app } = setup();
     expect((await app.request("/meta/2")).status).toBe(401);
