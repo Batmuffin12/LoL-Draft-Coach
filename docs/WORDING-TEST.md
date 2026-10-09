@@ -27,7 +27,7 @@ The owner approved this test on 2026-10-09. It checks that the panel's lines mak
 | 5 | Picks: your experience | New to you: expect a few learning games | You haven't played it, so expect to lose a bit more at first. |
 | 6 | Picks: filled | You're filled: support is 3% of your last 100 games. Picks lean on champions you know | You got a role you rarely play; suggestions favour champions you already know. |
 | 7 | Goal | Each early death hands your opponent gold, XP and a free wave. You: 2.1. Typical mid player in Gold to Platinum: 1.2 | Dying early is costly, and you die early more than typical players at your rank. |
-| 8 | Runes | Their team has a lot of crowd control. Legend: Tenacity: Gain tenacity… | Take this rune because their team stuns or slows a lot and it shortens that. |
+| 8 | Runes | Their team has a lot of crowd control. Unflinching: Gain Armor and Magic Resist when receiving crowd control. | Take this rune because their team stuns or slows a lot, and it makes you tougher when that happens. |
 | 9 | Items | Their team heals a lot: Mortal Reminder cuts their healing (Wounds) | Buy it to reduce their healing. |
 | 10 | Items: power spike | Power spike: after finishing it first, Irelia pulls ahead of the lane opponent by about 34 more gold a minute than after a typical first item (1,044 games) | Irelia gets much stronger in lane once this item is done; play for it. |
 
