@@ -3,7 +3,7 @@
 **To start:** open a new Claude session in this repo and paste:
 
 ```
-Read research/RESEARCH-QUESTIONS.md and do that research. Start with sections 1–4 (owner priority), then 5–8, then 9–10. Write each answer to research/answers/<topic>.md as the file describes, with sources. Research only: don't change code or config. Commit only the research/answers files on milestone-7-grow, and stage explicit paths (another session works in this checkout).
+Read research/RESEARCH-QUESTIONS.md, including "How to work" at the end, and do that research as a long-running task: hours, not minutes. Work in a git worktree on a new branch research/answers so you never touch the main checkout. Use one subagent per topic (sections 1–11) for the searching, with the thorough ("extended") web search mode and full-page fetches of the best sources. Then check, merge and write each answer yourself. Start with 1–4 and 11, then 5–8, then 9–10. Write each answer to research/answers/<topic>.md and commit and push it as soon as it's done. Keep research/answers/PROGRESS.md up to date so a new session can continue where you stopped. Research only: don't change code or config.
 ```
 
 For a research session. Read `CLAUDE.md`, `docs/SPEC.md`, `research/ROLE-GOALS.md`, `research/LEARNING.md` and `research/REVIEW-2026-10.md` first. Answer in `research/answers/<topic>.md`, one file per topic below. Cite every claim with a link. Mark opinion as opinion. Where a recommendation becomes config, give it as JSON that fits the current config shape.
@@ -191,9 +191,81 @@ The same structure should work for situational items (section 5).
 
 ---
 
+## 11. More data than the Riot API (priority)
+
+**Today:** our data comes from the Riot API (personal key: 100 calls per 2 minutes, one region), Data Dragon, CommunityDragon and the local League client (LCU, reads only). The key's rate limit is the bottleneck: power spikes need about 60–100k games, per-champion numbers need more, and a public release needs a production key.
+
+**Questions:**
+1. **Open datasets of League games:**
+   - Kaggle, Hugging Face, GitHub, academic datasets (DraftRec, the "LoL ranked games" sets, Zilean's data, …).
+   - For each:
+     - size;
+     - patch or season;
+     - ranks and regions;
+     - what fields (draft only, end-of-game stats, timelines);
+     - licence;
+     - how fresh.
+   - Is any of it current enough (patch 16.x / 2026) to use for meta, or only for methods and priors (e.g. learning curves, which change slowly)?
+2. **Public APIs that serve League data:**
+   - official ones: Riot's other APIs (Challenges-V1, Clash, Spectator-V5, League-Exp-V4, Account-V1 for other regions);
+   - third-party ones with a documented API:
+     - Mobalytics, op.gg, u.gg, lolalytics;
+     - Blitz, Porofessor;
+     - iTero;
+     - Leaguepedia (pro games);
+     - Oracle's Elixir (pro games CSVs);
+     - Meraki Analytics (clean static champion and item data).
+   - For each:
+     - what it serves;
+     - rate limits;
+     - terms of use (may a coaching app use it, may we store it);
+     - whether it needs a key or partnership;
+     - how stable it is.
+   - **Mark clearly anything that is scraping or against terms: we won't use those.**
+3. **Aggregated stats we could use as priors** without collecting them ourselves: champion win rates by rank, matchup tables, mastery curves, item and rune win rates. Who publishes them openly (with an API or download) and under what licence?
+4. **More from Riot itself:**
+   - What does a production key give (rate limits, regions) and what does Riot require for it?
+   - Can one app use several regions to collect more games (EUW + EUNE + NA)?
+   - Are there Riot data programs or partnerships for analytics apps?
+   - What's allowed on caching and storing Match-V5 data?
+5. **More from the local client (LCU, reads only):**
+   - What else does it expose that we don't use? Candidates:
+     - match history beyond Match-V5 (customs, other modes);
+     - challenges;
+     - the player's own stats;
+     - honor;
+     - champ select timers;
+     - replay files (.rofl: can their data be read, and is that allowed?).
+   - What is documented (Hextech docs, lcu-explorer), and what does Riot allow?
+6. **The Live Client Data API (in game, milestone 10):** exactly what fields are available, how often, and what Riot allows a coaching app to do with them.
+7. **Crowd data:** could our users' own games (with consent, anonymous) feed the meta instead of only the collector? What do privacy rules and Riot's policies say?
+
+**Deliverable:** a table of every source (what, freshness, size, cost, terms: allowed / unclear / not allowed, how to access), a short list of the 3–5 worth adding with the work each needs, and what to ask Riot for at the production key.
+
 ## How to work
 
-- Start with sections 1–4 (owner priority), then 5–8, then 9–10.
+### Depth (this is a long-running task)
+
+- **Plan first.** For each topic, list the sub-questions and where answers are likely to be before searching: coaching sites, Riot dev blogs and developer docs, papers (Google Scholar, arXiv), GitHub, Kaggle, Reddit (r/summonerschool, r/leagueoflegends), competitor docs and changelogs.
+- **Search wide, then deep.** Use the thorough web search mode. Fetch the full page of every source you rely on, not just the snippet. Follow good sources to their own sources.
+- **Bar for an answer:**
+  - at least 3 independent sources per key claim (1 is enough for official Riot docs);
+  - conflicting views stated, with which is better supported and why;
+  - dates noted (anything from before 2024 is checked against the current game).
+- **Self-check before finishing a topic:**
+  - every question answered, or marked "no evidence found" with what was searched;
+  - every recommendation fits "What every answer must respect";
+  - every config proposal is valid JSON in our shapes.
+- **Save as you go.**
+  - Commit and push each answer file when it's done.
+  - Keep research/answers/PROGRESS.md: topics done, in progress, open leads.
+  - If the session stops, a new one continues from PROGRESS.md.
+- **Use subagents for breadth:** one per topic for searching and reading. The main session checks their findings, removes duplicates, and writes the answer.
+- **Don't guess.** "We don't know" with what was tried beats a confident guess.
+
+### Scope and order
+
+- Start with sections 1–4 and 11 (owner priority), then 5–8, then 9–10.
 - For each: search widely (coaching sites, Riot dev blogs, research papers, Reddit, competitor docs), then check claims against our data constraints.
 - Where a question needs our own data to answer, say exactly what to measure, and we'll run it on the production copy.
 - End each answer with a short "what to change in the code or config" list.
