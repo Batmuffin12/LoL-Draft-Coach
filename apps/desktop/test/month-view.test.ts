@@ -12,6 +12,9 @@ const report: MonthlyReport = {
   winRateBefore: 0.45,
   role: "middle",
   axes: [{ axis: "farming", from: 40, to: 47, changed: "up" }],
+  stats: [],
+  roles: [],
+  focus: null,
   champions: [{ championId: 103, games: 12, winRate: 0.58, change: 0.08 }],
   rank: { start: { tier: "SILVER", rank: "I" }, now: { tier: "GOLD", rank: "IV" }, direction: "up" },
 };

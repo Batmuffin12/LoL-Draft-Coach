@@ -24,6 +24,8 @@ export function readMetric(p: ParticipantSummary, durationSec: number, metric: s
       return p.cs / minutes;
     case "deathsPerMinute":
       return p.deaths / minutes;
+    case "kda":
+      return (p.kills + p.assists) / Math.max(1, p.deaths);
     case "killsPerMinute":
       return p.kills / minutes;
     case "ccPerMinute":
@@ -161,25 +163,8 @@ export function computePlaystyle(
   cfg: PlaystyleConfig,
   bandReferences?: Record<string, MetricReference>,
 ): Playstyle | null {
-  const mine = matches.filter((m) => m.match.participants[m.me]?.position === role);
-  if (!role || mine.length < cfg.minGamesPerRole) return null;
-
-  const refs = matches.flatMap((m) =>
-    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec, match: m.match })),
-  );
-  const band = Object.fromEntries(Object.entries(bandReferences ?? {}).filter(([, r]) => r.n >= cfg.minReferenceSamples && r.quantiles.length > 1));
-  const useBand = Object.keys(band).length > 0;
-  if (!useBand && refs.length < cfg.minReferenceSamples) return null;
-
-  const referenceSorted = new Map<string, number[]>();
-  const refValues = (metric: string) => {
-    let v = referenceSorted.get(metric);
-    if (!v) {
-      v = refs.map((r) => readMetric(r.p, r.durationSec, metric, r.match)).filter((x): x is number => x !== null).sort((a, b) => a - b);
-      referenceSorted.set(metric, v);
-    }
-    return v;
-  };
+  const ctx = context(matches, role, now, cfg, bandReferences);
+  if (!ctx) return null;
 
   const axes: PlaystyleAxis[] = [];
   for (const [axis, def] of Object.entries(cfg.axes)) {
@@ -187,30 +172,10 @@ export function computePlaystyle(
     // Per game, the axis value is the mean percentile of the metrics that game has.
     const perGame = new Map<UserMatch, number[]>();
     for (const raw of def.metrics) {
-      const lowerIsBetter = raw.startsWith("-");
-      const metric = lowerIsBetter ? raw.slice(1) : raw;
-      const bandRef = useBand ? band[metric] : undefined;
-      const ref = bandRef ? [] : refValues(metric);
-      if (!bandRef && ref.length < cfg.minReferenceSamples) continue;
-      const pctOf = (v: number) => (bandRef ? percentileFromQuantiles(v, bandRef.quantiles) : empiricalPercentile(v, ref));
-      let wSum = 0;
-      let youSum = 0;
-      let pctSum = 0;
-      let n = 0;
-      for (const m of mine) {
-        const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
-        if (v === null) continue;
-        const w = halfLifeWeight(now - m.match.endedAt, cfg.halfLifeDays);
-        const pct = lowerIsBetter ? 1 - pctOf(v) : pctOf(v);
-        wSum += w;
-        youSum += w * v;
-        pctSum += w * pct;
-        n++;
-        perGame.set(m, [...(perGame.get(m) ?? []), pct]);
-      }
-      if (n === 0 || wSum === 0) continue;
-      const reference = bandRef ? bandRef.quantiles[Math.floor((bandRef.quantiles.length - 1) / 2)]! : median(ref);
-      metrics.push({ metric, lowerIsBetter, you: youSum / wSum, reference, percentile: pctSum / wSum, games: n });
+      const measured = measure(raw, ctx);
+      if (!measured) continue;
+      metrics.push(measured.result);
+      for (const [m, pct] of measured.perGame) perGame.set(m, [...(perGame.get(m) ?? []), pct]);
     }
 
     let wSum = 0;
@@ -229,8 +194,91 @@ export function computePlaystyle(
     if (games < cfg.minGamesPerRole || wSum === 0) continue;
     axes.push({ axis, score: sum / wSum, games, metrics: metrics.sort((a, b) => Math.abs(b.percentile - 0.5) - Math.abs(a.percentile - 0.5)), perGame: scores });
   }
-  const referenceSamples = useBand ? Math.max(...Object.values(band).map((r) => r.n)) : refs.length;
-  return { role, games: mine.length, referenceSamples, reference: useBand ? "band" : "games", axes };
+  const referenceSamples = ctx.band ? Math.max(...Object.values(ctx.band).map((r) => r.n)) : ctx.refs.length;
+  return { role, games: ctx.mine.length, referenceSamples, reference: ctx.band ? "band" : "games", axes };
+}
+
+/** What measuring a metric needs: your games in the role, the reference and the config. */
+interface MetricContext {
+  mine: UserMatch[];
+  refs: { p: ParticipantSummary; durationSec: number; match: MatchSummary }[];
+  /** Band references with enough samples (live meta), or null to use the others in your games. */
+  band: Record<string, MetricReference> | null;
+  now: number;
+  cfg: PlaystyleConfig;
+  /** Sorted reference values per metric (from your games). */
+  cache: Map<string, number[]>;
+}
+
+/**
+ * One metric ("-" prefix = lower is better) in your games against the reference: your
+ * recency-weighted average, the reference median and your average percentile, with each game's
+ * percentile. Null without enough reference values or without any game carrying it.
+ */
+function measure(raw: string, ctx: MetricContext): { result: MetricResult; perGame: Map<UserMatch, number> } | null {
+  const lowerIsBetter = raw.startsWith("-");
+  const metric = lowerIsBetter ? raw.slice(1) : raw;
+  const bandRef = ctx.band?.[metric];
+  let ref: number[] = [];
+  if (!bandRef) {
+    // A metric the band lacks falls back to the others in your games.
+    ref = ctx.cache.get(metric) ?? ctx.refs.map((r) => readMetric(r.p, r.durationSec, metric, r.match)).filter((x): x is number => x !== null).sort((a, b) => a - b);
+    ctx.cache.set(metric, ref);
+    if (ref.length < ctx.cfg.minReferenceSamples) return null;
+  }
+  const pctOf = (v: number) => (bandRef ? percentileFromQuantiles(v, bandRef.quantiles) : empiricalPercentile(v, ref));
+  let wSum = 0;
+  let youSum = 0;
+  let pctSum = 0;
+  let n = 0;
+  const perGame = new Map<UserMatch, number>();
+  for (const m of ctx.mine) {
+    const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
+    if (v === null) continue;
+    const w = halfLifeWeight(ctx.now - m.match.endedAt, ctx.cfg.halfLifeDays);
+    const pct = lowerIsBetter ? 1 - pctOf(v) : pctOf(v);
+    wSum += w;
+    youSum += w * v;
+    pctSum += w * pct;
+    n++;
+    perGame.set(m, pct);
+  }
+  if (n === 0 || wSum === 0) return null;
+  const reference = bandRef ? bandRef.quantiles[Math.floor((bandRef.quantiles.length - 1) / 2)]! : median(ref);
+  return { result: { metric, lowerIsBetter, you: youSum / wSum, reference, percentile: pctSum / wSum, games: n }, perGame };
+}
+
+/**
+ * Single metrics in one role against the same reference as the playstyle (band, else the others
+ * in your games): the headline numbers ("CS per minute: you 6.6, typical 6.9"). Metrics without
+ * enough reference values are left out; null below the role's minimum games.
+ */
+export function measureMetrics(
+  matches: UserMatch[],
+  role: Position,
+  metrics: string[],
+  now: number,
+  cfg: PlaystyleConfig,
+  bandReferences?: Record<string, MetricReference>,
+): MetricResult[] | null {
+  const ctx = context(matches, role, now, cfg, bandReferences);
+  if (!ctx) return null;
+  return metrics.flatMap((raw) => {
+    const m = measure(raw, ctx);
+    return m ? [m.result] : [];
+  });
+}
+
+function context(matches: UserMatch[], role: Position, now: number, cfg: PlaystyleConfig, bandReferences?: Record<string, MetricReference>): MetricContext | null {
+  const mine = matches.filter((m) => m.match.participants[m.me]?.position === role);
+  if (!role || mine.length < cfg.minGamesPerRole) return null;
+  const refs = matches.flatMap((m) =>
+    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec, match: m.match })),
+  );
+  const band = Object.fromEntries(Object.entries(bandReferences ?? {}).filter(([, r]) => r.n >= cfg.minReferenceSamples && r.quantiles.length > 1));
+  const useBand = Object.keys(band).length > 0;
+  if (!useBand && refs.length < cfg.minReferenceSamples) return null;
+  return { mine, refs, band: useBand ? band : null, now, cfg, cache: new Map() };
 }
 
 /** Roles the player has enough games in for a playstyle read, most played first. */

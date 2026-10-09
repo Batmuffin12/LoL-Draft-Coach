@@ -23,3 +23,4 @@ export * from "./report";
 export * from "./session";
 export * from "./plan";
 export * from "./power-curve";
+export * from "./style-profile";
