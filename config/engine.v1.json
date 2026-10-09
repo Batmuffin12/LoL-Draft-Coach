@@ -212,7 +212,7 @@
     "cloneCut": 0.92,
     "topN": 3,
     "planGames": [3, 5],
-    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 },
+    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.8, "overlap": 1 },
     "learn": {
       "firstGames": 3,
       "settleGames": { "easy": 15, "medium": 20, "hard": 30 },
