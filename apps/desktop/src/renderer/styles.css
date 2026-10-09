@@ -302,6 +302,9 @@ p { margin: 0; }
 .seg button { all: unset; cursor: pointer; padding: 8px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-button); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
 .seg button.on { color: var(--gold-bright); border-bottom-color: var(--gold); }
+/* Secondary tabs under a main tab: smaller, and on top of its content. */
+.seg.sub { gap: 14px; position: sticky; top: 0; z-index: 1; background: var(--bg); }
+.seg.sub button { padding: 6px 0 4px; font-size: var(--fs-label); border-bottom-width: 2px; }
 
 /* Keycaps */
 .key { width: 26px; height: 26px; display: inline-grid; place-items: center; border-radius: var(--radius-xs); border: 1px solid var(--line-strong); font-family: var(--font-display); font-size: var(--fs-key); font-weight: 700; background: var(--card); }
