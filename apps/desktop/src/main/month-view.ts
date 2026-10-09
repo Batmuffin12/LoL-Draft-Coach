@@ -1,4 +1,4 @@
-import { formatMetric, metricLabel, renderReason, type ExplainConfig, type GrowthFocus, type MonthlyReport } from "@ldc/engine";
+import { formatMetric, metricLabel, metricShort, renderReason, type ExplainConfig, type GrowthFocus, type MonthlyReport } from "@ldc/engine";
 import type { ChampView, MonthView } from "../shared/view";
 import { capital } from "./reason-view";
 
@@ -19,7 +19,16 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
   const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, deps.explain.templates, String);
   const winChange = r.winRate !== null && r.winRateBefore !== null ? r.winRate - r.winRateBefore : null;
   const strip: MonthView["strip"] = [
-    { label: "Games", value: String(r.games), ...(r.role ? { sub: say("month.games.sub", { role: r.role }) } : {}) },
+    {
+      label: "Games",
+      value: String(r.games),
+      // Your top two roles with their shares ("bot 60% · jungle 30%"); one role reads "mostly bot".
+      ...(r.roles.length > 1
+        ? { sub: r.roles.slice(0, 2).map((x) => say("month.role.share", { role: x.role, share: x.share })).join(" · ") }
+        : r.role
+          ? { sub: say("month.games.sub", { role: r.role }) }
+          : {}),
+    },
     {
       label: "Win rate",
       value: `${Math.round((r.winRate ?? 0) * 100)}%`,
@@ -42,6 +51,22 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
     strip,
     role: r.role ? deps.positionLabel(r.role) : null,
     axes: r.axes.map((a) => ({ label: deps.explain.axes[a.axis] ?? a.axis, from: a.from, to: a.to, changed: a.changed })),
+    stats: r.stats.map((s) => {
+      const better = s.changed === "up" || s.changed === "down" ? (s.changed === "up") !== s.lowerIsBetter : null;
+      return {
+        label: metricShort(s.metric, deps.explain),
+        title: capital(metricLabel(s.metric, deps.explain)),
+        from: s.from === null ? null : formatMetric(s.from, s.metric, deps.explain),
+        to: formatMetric(s.to, s.metric, deps.explain),
+        changed: s.changed,
+        tone: better === null ? null : better ? ("pos" as const) : ("neg" as const),
+      };
+    }),
+    focusLine: r.focus
+      ? r.focus.before === null
+        ? say("month.focus.first", { n: r.focus.n, now: r.focus.now })
+        : say("month.focus.line", { n: r.focus.n, now: r.focus.now, before: r.focus.before })
+      : null,
     champions: r.champions.flatMap((c) => {
       const champion = deps.champion(c.championId);
       return champion ? [{ champion, games: c.games, winRate: c.winRate, change: c.change }] : [];

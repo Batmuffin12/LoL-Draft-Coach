@@ -45,6 +45,27 @@ export function TrendTable({ rows }: { rows: MonthView["axes"] }) {
   );
 }
 
+/** Raw numbers over the month, two to a row: last period → this one; coloured only for a real change, by whether it's better. */
+export function NumberTrends({ rows }: { rows: MonthView["stats"] }) {
+  return (
+    <div className="trends2 numtrends" role="table">
+      {rows.map((r) => {
+        const t = r.tone ?? "flat";
+        return (
+          <div key={r.label} className="tr" role="row" title={`${r.title}: ${r.from ?? "—"} last period, ${r.to} this period${r.changed === "steady" ? ": no real change" : r.changed === null ? ": too few games to tell" : ""}`}>
+            <span className="axis-nm one-line">{r.label}</span>
+            <span className="num muted">{r.from ?? "—"}</span>
+            <span className={cx("arrow", t)} aria-hidden="true">
+              {r.changed === "up" ? "▲" : r.changed === "down" ? "▼" : "→"}
+            </span>
+            <span className={cx("num", t)}>{r.to}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Champion form over the month, against your games on it before. */
 export function FormTable({ rows }: { rows: MonthView["champions"] }) {
   return (
@@ -79,13 +100,14 @@ export function MonthReport({ month: m }: { month: MonthView }) {
       <Section>
         <StatStrip items={m.strip} />
       </Section>
-      {m.axes.length > 0 && (
+      {(m.axes.length > 0 || m.stats.length > 0) && (
         <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">last month → this month · 50 = typical in your rank</span>}>
-          <TrendTable rows={m.axes} />
+          {m.stats.length > 0 && <NumberTrends rows={m.stats} />}
+          {m.axes.length > 0 && <TrendTable rows={m.axes} />}
         </Section>
       )}
       {m.champions.length > 0 && (
-        <Section title="Champions">
+        <Section title="Champions" aside={m.focusLine ? <span className="micro">{m.focusLine}</span> : undefined}>
           <FormTable rows={m.champions} />
         </Section>
       )}

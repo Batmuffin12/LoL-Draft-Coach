@@ -250,6 +250,20 @@ export interface AxisView {
   /** The metric that moves this axis most, e.g. "deaths per minute: you 0.3, typical 0.2". */
   detail: string | null;
   games: number;
+  /** Every metric behind the axis, most telling first ("CS at 10 min: you 56, typical in your rank 61"), shown on click. */
+  metrics: string[];
+}
+
+/** One headline number in a role: yours against typical in your rank. */
+export interface NumberView {
+  /** Short name ("CS/min"). */
+  label: string;
+  you: string;
+  typical: string;
+  /** Better or worse than typical (lower-is-better metrics already turned around), else null. */
+  tone: "pos" | "neg" | null;
+  /** The full sentence, on hover. */
+  title: string;
 }
 
 /** The player's playstyle in one role. */
@@ -257,6 +271,19 @@ export interface PlaystyleView {
   role: string;
   games: number;
   axes: AxisView[];
+  /** Headline numbers against your rank (empty without the style config). */
+  numbers: NumberView[];
+  /** How you play the role in your last games; null without the style config. */
+  how: {
+    games: number;
+    /** "top 1 47% · top 3 58% · top 5 66%" and "15 champions". */
+    focus: string;
+    champions: string;
+    /** Data Dragon classes as shares ("Marksman 60%"). */
+    classes: { label: string; share: number }[];
+    /** Damage to champions by type, as shares (0..1). */
+    damage: { label: string; share: number; kind: "physical" | "magic" | "true" }[] | null;
+  } | null;
 }
 
 /** The explanation for the pick list as a whole. */
@@ -281,6 +308,10 @@ export interface MonthView {
   role: string | null;
   /** changed: a real change between last period and this one (statistical test), else "steady" or null (too few games). */
   axes: { label: string; from: number | null; to: number; changed: "up" | "down" | "steady" | null }[];
+  /** Raw numbers in that role, last period → this one; tone: a real change for the better ("pos") or worse ("neg"), else null. */
+  stats: { label: string; title: string; from: string | null; to: string; changed: "up" | "down" | "steady" | null; tone: "pos" | "neg" | null }[];
+  /** "Top 3: 72% of games, 58% before", or null. */
+  focusLine: string | null;
   champions: { champion: ChampView; games: number; winRate: number; change: number | null }[];
   /** Focus targets met, then the current focus. */
   focus: { met: string[]; current: string | null };
@@ -420,6 +451,8 @@ export interface ViewState {
   roles: RoleView[];
   /** Your playstyle per role with enough games (most played first). */
   playstyle: PlaystyleView[];
+  /** Your win rate by map side, said only when the gap is real (all your games), else null. */
+  side: string | null;
   /** Your most recent game with logged advice, or null. */
   lastGame: PostGameView | null;
   /** Your growth focus, or null without enough games. */
@@ -453,6 +486,7 @@ export function emptyViewState(): ViewState {
     laneOpponent: null,
     roles: [],
     playstyle: [],
+    side: null,
     lastGame: null,
     focus: null,
     newChamps: [],

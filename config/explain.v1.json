@@ -222,6 +222,18 @@
     "month.focus.sub": "met",
     "month.focus.current": "Now: {metric}, {you} → {target}",
     "month.footer": "Trends over {games} games, not single games.",
+    "month.role.share": "{role} {share:pct}%",
+    "month.focus.line": "Top {n}: {now:pct}% of games, {before:pct}% before",
+    "month.focus.first": "Top {n}: {now:pct}% of games",
+    "style.focus.top": "top {n} {share:pct}%",
+    "style.focus.champions": "{champions} {champions|champion|champions}",
+    "style.damage.physical": "physical",
+    "style.damage.magic": "magic",
+    "style.damage.true": "true",
+    "style.side": "You win {win:pct}% on the {side} side vs {other:pct}% on {otherSide}, over {games} games: a real gap, not chance",
+    "style.side.blue": "blue",
+    "style.side.red": "red",
+    "style.number.title": "{metric}: you {you}, typical in your rank {reference}, from {games} games",
     "growth.title.more": "More {metric}",
     "growth.title.less": "Fewer {metric}",
     "growth.goal.more": "{target} or more",
@@ -281,6 +293,11 @@
     "playmaking": "Playmaking (CC)"
   },
   "metrics": {
+    "kda": {
+      "short": "KDA",
+      "label": "KDA",
+      "format": "decimal"
+    },
     "laneCsDiffAt10": {
       "label": "CS lead on your lane opponent at 10 min",
       "format": "integer"
@@ -342,6 +359,7 @@
       "count": true
     },
     "challenges.killParticipation": {
+      "short": "KP",
       "label": "kill participation",
       "format": "percent"
     },
@@ -350,6 +368,7 @@
       "format": "percent"
     },
     "challenges.damagePerMinute": {
+      "short": "Dmg/min",
       "label": "damage per minute",
       "format": "integer"
     },
@@ -359,6 +378,7 @@
       "count": true
     },
     "csPerMinute": {
+      "short": "CS/min",
       "label": "CS per minute",
       "format": "decimal"
     },
@@ -372,14 +392,17 @@
       "format": "integer"
     },
     "challenges.goldPerMinute": {
+      "short": "Gold/min",
       "label": "gold per minute",
       "format": "integer"
     },
     "challenges.visionScorePerMinute": {
+      "short": "Vision/min",
       "label": "vision score per minute",
       "format": "decimal"
     },
     "challenges.controlWardsPlaced": {
+      "short": "Control wards",
       "label": "control wards",
       "format": "decimal",
       "count": true
@@ -394,6 +417,7 @@
       "format": "percent"
     },
     "deathsPerMinute": {
+      "short": "Deaths/min",
       "label": "deaths per minute",
       "format": "decimal2"
     },
@@ -423,6 +447,7 @@
       "count": true
     },
     "objectiveDamagePerMinute": {
+      "short": "Obj dmg/min",
       "label": "objective damage per minute",
       "format": "integer"
     },
@@ -441,6 +466,7 @@
       "format": "decimal"
     },
     "ccPerMinute": {
+      "short": "CC/min",
       "label": "CC seconds per minute",
       "format": "decimal"
     },

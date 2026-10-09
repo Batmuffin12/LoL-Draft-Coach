@@ -9,7 +9,7 @@ export const ExplainConfigSchema = z.object({
   /** Display names of playstyle axes. */
   axes: z.record(z.string(), z.string()).default({}),
   /** Display names and number formats of playstyle metrics; `count`: counted per game (deaths, plates), so one game's value reads as a whole number. */
-  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
+  metrics: z.record(z.string(), z.object({ label: z.string(), short: z.string().optional(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
   /** What to keep in mind for a growth goal, by "role:metric" (research/ROLE-GOALS.md). */
   tips: z.record(z.string(), z.array(z.string())).default({}),
   settings: z.object({
@@ -99,6 +99,11 @@ export function formatMetric(value: number, metric: string, cfg: ExplainConfig):
   // Small rates (deaths per minute) need two decimals to show a change.
   if (f === "decimal2") return value.toFixed(2);
   return value.toFixed(1);
+}
+
+/** A metric's short name for tight tables ("CS/min"): configured short label, else its label. */
+export function metricShort(metric: string, cfg: ExplainConfig): string {
+  return cfg.metrics[metric]?.short ?? metricLabel(metric, cfg);
 }
 
 /** A metric's display name: configured label, else the Riot field name split into words. */
