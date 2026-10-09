@@ -279,7 +279,8 @@ export interface MonthView {
   strip: { label: string; value: string; sub?: string; tone?: "pos" | "neg" }[];
   /** The role whose style trends are shown ("Mid"), or null. */
   role: string | null;
-  axes: { label: string; from: number | null; to: number }[];
+  /** changed: a real change between last period and this one (statistical test), else "steady" or null (too few games). */
+  axes: { label: string; from: number | null; to: number; changed: "up" | "down" | "steady" | null }[];
   champions: { champion: ChampView; games: number; winRate: number; change: number | null }[];
   /** Focus targets met, then the current focus. */
   focus: { met: string[]; current: string | null };

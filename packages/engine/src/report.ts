@@ -22,8 +22,12 @@ export interface MonthlyReport {
   winRateBefore: number | null;
   /** The role you played most in the period, whose style trends are shown. */
   role: Position | null;
-  /** Each playstyle axis at the start of the period (your games before it) and now (0–100). */
-  axes: { axis: string; from: number | null; to: number }[];
+  /**
+   * Each playstyle axis over the period before (from) and this period (to), as the mean of each
+   * game's score (0–100), and whether it really changed: "up" / "down" / "steady", or null when
+   * either side has too few games to tell.
+   */
+  axes: { axis: string; from: number | null; to: number; changed: "up" | "down" | "steady" | null }[];
   /** Champions you played most in the period, with the change against your games on them before it. */
   champions: { championId: ChampionId; games: number; winRate: number; change: number | null }[];
   /** Your rank at the start and now, in your main ranked queue; `direction` compares tiers only (config order). */
@@ -57,12 +61,30 @@ export function monthlyReport(
 
   const axes: MonthlyReport["axes"] = [];
   if (role) {
+    // Separate sets: this period's games against the period before, game by game (not overlapping windows).
     const refs = opts.references?.(role);
-    const nowStyle = computePlaystyle(matches.filter((m) => m.match.endedAt < now), role, now, cfg.playstyle, refs);
-    const startStyle = computePlaystyle(older, role, from, cfg.playstyle, refs);
-    for (const a of nowStyle?.axes ?? []) {
-      const s = startStyle?.axes.find((x) => x.axis === a.axis);
-      axes.push({ axis: a.axis, from: s ? Math.round(s.score * 100) : null, to: Math.round(a.score * 100) });
+    const style = computePlaystyle(matches.filter((m) => m.match.endedAt < now), role, now, cfg.playstyle, refs);
+    const t = cfg.report.trend;
+    const stats = (xs: number[]) => {
+      const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+      const variance = xs.length > 1 ? xs.reduce((s, x) => s + (x - mean) ** 2, 0) / (xs.length - 1) : 0;
+      return { mean, variance, n: xs.length };
+    };
+    for (const a of style?.axes ?? []) {
+      const cur = a.perGame.filter((g) => g.endedAt >= from).map((g) => g.score * 100);
+      const prev = a.perGame.filter((g) => g.endedAt < from && g.endedAt >= from - span).map((g) => g.score * 100);
+      if (!cur.length) continue;
+      const c = stats(cur);
+      const p = prev.length ? stats(prev) : null;
+      let changed: MonthlyReport["axes"][number]["changed"] = null;
+      if (p && c.n >= t.minGamesPerSide && p.n >= t.minGamesPerSide) {
+        const se = Math.sqrt(c.variance / c.n + p.variance / p.n);
+        const d = c.mean - p.mean;
+        // No spread at all (every game the same) makes any big enough difference real.
+        const real = Math.abs(d) >= t.minChange && (se === 0 || Math.abs(d) / se >= t.z);
+        changed = real ? (d > 0 ? "up" : "down") : "steady";
+      }
+      axes.push({ axis: a.axis, from: p ? Math.round(p.mean) : null, to: Math.round(c.mean), changed });
     }
   }
 

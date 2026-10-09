@@ -132,6 +132,8 @@ export interface PlaystyleAxis {
   /** Games in the role that carried enough of this axis's metrics. */
   games: number;
   metrics: MetricResult[];
+  /** Each of those games' own axis score (0..1, unweighted), for trends over separate sets of games. */
+  perGame: { endedAt: number; score: number }[];
 }
 
 export interface Playstyle {
@@ -214,15 +216,18 @@ export function computePlaystyle(
     let wSum = 0;
     let sum = 0;
     let games = 0;
+    const scores: PlaystyleAxis["perGame"] = [];
     for (const [m, pcts] of perGame) {
       if (pcts.length < cfg.minMetrics) continue;
       const w = halfLifeWeight(now - m.match.endedAt, cfg.halfLifeDays);
+      const score = pcts.reduce((a, b) => a + b, 0) / pcts.length;
       wSum += w;
-      sum += (w * pcts.reduce((a, b) => a + b, 0)) / pcts.length;
+      sum += w * score;
       games++;
+      scores.push({ endedAt: m.match.endedAt, score });
     }
     if (games < cfg.minGamesPerRole || wSum === 0) continue;
-    axes.push({ axis, score: sum / wSum, games, metrics: metrics.sort((a, b) => Math.abs(b.percentile - 0.5) - Math.abs(a.percentile - 0.5)) });
+    axes.push({ axis, score: sum / wSum, games, metrics: metrics.sort((a, b) => Math.abs(b.percentile - 0.5) - Math.abs(a.percentile - 0.5)), perGame: scores });
   }
   const referenceSamples = useBand ? Math.max(...Object.values(band).map((r) => r.n)) : refs.length;
   return { role, games: mine.length, referenceSamples, reference: useBand ? "band" : "games", axes };

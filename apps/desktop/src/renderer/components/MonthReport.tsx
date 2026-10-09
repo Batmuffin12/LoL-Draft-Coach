@@ -22,15 +22,15 @@ export function StatStrip({ items }: { items: MonthView["strip"] }) {
   );
 }
 
-/** Playstyle axes over the month, two to a row: then → now and the change (within ±2 is flat). */
+/** Playstyle axes over the month, two to a row: last period → this one; coloured only when the change is real (tested). */
 export function TrendTable({ rows }: { rows: MonthView["axes"] }) {
   return (
     <div className="trends2" role="table">
       {rows.map((r) => {
         const d = r.from === null ? null : r.to - r.from;
-        const t = d === null || Math.abs(d) < 2 ? "flat" : d > 0 ? "pos" : "neg";
+        const t = r.changed === "up" ? "pos" : r.changed === "down" ? "neg" : "flat";
         return (
-          <div key={r.label} className="tr" role="row" title={`${r.label}: ${r.from ?? "—"} at the start of the month, ${r.to} now (50 = typical)`}>
+          <div key={r.label} className="tr" role="row" title={`${r.label}: ${r.from ?? "—"} last period, ${r.to} this period (50 = typical)${r.changed === "steady" ? ": no real change" : r.changed === null ? ": too few games to tell" : ""}`}>
             <span className="axis-nm one-line">{r.label}</span>
             <span className="num muted">{r.from ?? "—"}</span>
             <span className={cx("arrow", t)} aria-hidden="true">

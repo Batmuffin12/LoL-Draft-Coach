@@ -198,7 +198,7 @@
   "earlyDeathsMinute": 14,
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
-  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },
+  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5, "trend": { "minGamesPerSide": 15, "z": 2.4, "minChange": 5 } },
   "newChamps": {
     "maxGames": 3,
     "maxMastery": 30000,

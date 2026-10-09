@@ -142,6 +142,13 @@ export const EngineConfigSchema = z.object({
     maxChampions: z.number().int().min(1),
     /** Games on a champion before the period needed to show its change. */
     minPriorGames: z.number().int().min(1),
+    /**
+     * When a style axis counts as changed (research/answers/03-style-month.md): this period's games
+     * against the period before (separate games), each side with minGamesPerSide games, a Welch
+     * z of at least z, and a change of at least minChange points (0-100). The old rule (any 2
+     * points between overlapping sets) marked 58-74% of axes changed for a player who didn't change.
+     */
+    trend: z.object({ minGamesPerSide: z.number().int().min(2), z: z.number().min(0), minChange: z.number().min(0) }).default({ minGamesPerSide: 15, z: 2.4, minChange: 5 }),
   }),
   /** New-champion recommender (DESIGN §6). */
   newChamps: z.object({
