@@ -9,9 +9,9 @@ import {
   advisePicks,
   analyzePool,
   computePlaystyle,
-  formatMetric,
-  metricLabel,
   playstyleRoles,
+  sideSplit,
+  styleProfile,
   mainRole,
   renderReason,
   weightsForBand,
@@ -46,6 +46,7 @@ import { importLoadout } from "./loadout-import";
 import { focusInGame, focusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
 import { monthView } from "./month-view";
+import { howView, metricSentence, numberViews, sideView } from "./style-view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
@@ -498,16 +499,22 @@ export class PersonalCoach extends Coach {
     this.onDraft();
   }
 
-  /** Playstyle per role (lobby card): percentiles against others in the role in the player's own games. */
+  /**
+   * Playstyle per role (lobby Style tab): axes as percentiles against others in the role, the
+   * headline numbers behind them, and how you play the role (pool focus, classes, damage).
+   */
   private updatePlaystyle(): void {
     if (!this.profile) return;
     const { engine, explain } = this.config;
     const now = Date.now();
     const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
+    const tagsOf = (id: ChampionId) => this.championLookup(id)?.tags;
     const views: PlaystyleView[] = [];
     for (const role of playstyleRoles(this.profile.matches, engine.playstyle).slice(0, 3)) {
-      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle, this.metaIndex?.snapshot.references[role]);
+      const refs = this.metaIndex?.snapshot.references[role];
+      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle, refs);
       if (!ps) continue;
+      const profile = engine.style ? styleProfile(this.profile.matches, role, now, { playstyle: engine.playstyle, style: engine.style }, tagsOf, refs) : null;
       views.push({
         role,
         games: ps.games,
@@ -520,22 +527,16 @@ export class PersonalCoach extends Coach {
             score: Math.round(a.score * 100),
             level: lv,
             levelLabel: renderReason({ id: `playstyle.level.${lv}`, slots: {} }, explain.templates, String),
-            detail: m
-              ? renderReason(
-                  {
-                    id: "playstyle.metric",
-                    slots: { metric: metricLabel(m.metric, explain), you: formatMetric(m.you, m.metric, explain), reference: formatMetric(m.reference, m.metric, explain) },
-                  },
-                  explain.templates,
-                  String,
-                )
-              : null,
+            detail: m ? metricSentence(m, explain) : null,
             games: a.games,
+            metrics: a.metrics.map((x) => metricSentence(x, explain)),
           };
         }),
+        numbers: profile && engine.style ? numberViews(profile.headline, explain, engine.style.toneGap) : [],
+        how: profile ? howView(profile, explain) : null,
       });
     }
-    this.update({ playstyle: views });
+    this.update({ playstyle: views, side: engine.style ? sideView(sideSplit(this.profile.matches, engine.style.side), explain) : null });
   }
 
   private updateRoleAdvice(): void {

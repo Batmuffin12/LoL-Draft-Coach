@@ -198,7 +198,27 @@
   "earlyDeathsMinute": 14,
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
-  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5, "trend": { "minGamesPerSide": 15, "z": 2.4, "minChange": 5 } },
+  "report": {
+    "days": 30,
+    "maxChampions": 3,
+    "minPriorGames": 5,
+    "trend": { "minGamesPerSide": 15, "z": 2.4, "minChange": 5 },
+    "stats": { "metrics": ["kda", "challenges.killParticipation", "csPerMinute", "challenges.damagePerMinute", "-deathsPerMinute", "challenges.visionScorePerMinute"], "minRelChange": 0.08 },
+    "focusTop": 3
+  },
+  "style": {
+    "window": 100,
+    "headline": {
+      "default": ["kda", "challenges.killParticipation", "csPerMinute", "challenges.damagePerMinute", "challenges.visionScorePerMinute", "-deathsPerMinute"],
+      "jungle": ["kda", "challenges.killParticipation", "csPerMinute", "challenges.damagePerMinute", "objectiveDamagePerMinute", "-deathsPerMinute"],
+      "utility": ["kda", "challenges.killParticipation", "challenges.visionScorePerMinute", "challenges.controlWardsPlaced", "ccPerMinute", "-deathsPerMinute"]
+    },
+    "focusTop": [1, 3, 5],
+    "maxClasses": 3,
+    "minClassShare": 0.1,
+    "side": { "blueTeamId": 100, "minGames": 40, "minDiff": 0.05, "z": 2.4 },
+    "toneGap": 0.04
+  },
   "newChamps": {
     "maxGames": 3,
     "maxMastery": 30000,

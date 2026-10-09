@@ -6,6 +6,7 @@ import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
 import { ChampIcon } from "../components/ChampIcon";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
+import { HowYouPlay, NumberGrid } from "../components/StyleNumbers";
 import { PostGameCard } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
@@ -223,14 +224,20 @@ function Style({ state }: { state: ViewState }) {
       {state.playstyle
         .filter((p) => p.role === sub)
         .map((p) => (
-          <Section key={p.role} title={`Your ${roleName(p.role)} style`} aside={<span className="micro">50 = typical in your rank</span>}>
-            {p.axes.map((a) => (
-              <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
-            ))}
-            <span className="micro">
-              From your last {p.games} {roleName(p.role)} games.
-            </span>
-          </Section>
+          <div key={p.role} className="stylerole">
+            <Section title={`Your ${roleName(p.role)} style`} aside={<span className="micro">{`50 = typical in your rank · ${p.games} games`}</span>}>
+              {p.axes.map((a) => (
+                <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
+              ))}
+            </Section>
+            {(p.numbers.length > 0 || p.how) && (
+              <Section title="Your numbers" aside={p.how ? <span className="micro">{`pool and damage: last ${p.how.games} games`}</span> : undefined}>
+                {p.numbers.length > 0 && <NumberGrid items={p.numbers} />}
+                {p.how && <HowYouPlay how={p.how} />}
+                {state.side && <span className="caption">{state.side}</span>}
+              </Section>
+            )}
+          </div>
         ))}
     </>
   );

@@ -15,6 +15,10 @@
   --frame: #7a6640;
   --blue: #4fa3ff;
   --red: #ff5d5d;
+  /* Damage types (Style tab): physical warm, magic blue-violet, true light */
+  --dmg-physical: #e08a4f;
+  --dmg-magic: #7d8cff;
+  --dmg-true: #d8dde6;
   --ok: #3ccf8e;
   --warn: #ffb86b;
   --warn-tint: rgba(255, 184, 107, 0.08);
@@ -469,3 +473,34 @@ p { margin: 0; }
 .focus .f-tips .notes li::marker { color: var(--muted); }
 .table .open.no-games { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
 .tree.shards { gap: 3px; }
+
+/* Style tab: headline numbers three to a row, then how you play (pool, classes, damage) */
+.stylerole .section { padding-block: 6px; }
+.stylerole .section:first-child { gap: 2px; }
+.stylerole button.axis { min-height: 32px; }
+.strip.numgrid .vrow { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.strip.numgrid .vrow .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.strip.numgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.strip.numgrid .tile { padding: 2px 8px; }
+.strip.numgrid .neg .v { color: var(--red); }
+.how { display: flex; flex-direction: column; gap: 2px; }
+.how-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: center; font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.how-k { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.how-v { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.how-v.dmg { display: flex; align-items: center; gap: 8px; }
+.dmgbar { display: flex; flex: 0 0 72px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--track); }
+.dmgbar .physical, .dmg-l.physical::before { background: var(--dmg-physical); }
+.dmgbar .magic, .dmg-l.magic::before { background: var(--dmg-magic); }
+.dmgbar .true, .dmg-l.true::before { background: var(--dmg-true); }
+.dmg-l { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.dmg-l::before { content: ""; width: 8px; height: 8px; border-radius: 2px; }
+/* An axis is a button: a click lists the metrics behind it */
+button.axis { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 128px 1fr 36px; gap: 12px; align-items: center; min-height: 34px; font-size: var(--fs-body); line-height: var(--lh-body); cursor: pointer; width: 100%; }
+button.axis:hover > span:first-child { color: var(--gold); }
+button.axis:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.axis-metrics { list-style: none; margin: -2px 0 2px 12px; padding: 0; display: flex; flex-direction: column; gap: 1px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
+.numtrends { margin-bottom: 4px; }
+.axis-metrics li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.monthreport .strip .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.monthreport .trends2 .tr { padding: 2px 0; }
+.numtrends .tr { grid-template-columns: minmax(0, 1fr) 40px 12px 40px; }

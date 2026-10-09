@@ -149,7 +149,37 @@ export const EngineConfigSchema = z.object({
      * points between overlapping sets) marked 58-74% of axes changed for a player who didn't change.
      */
     trend: z.object({ minGamesPerSide: z.number().int().min(2), z: z.number().min(0), minChange: z.number().min(0) }).default({ minGamesPerSide: 15, z: 2.4, minChange: 5 }),
+    /**
+     * Raw numbers compared between the two periods in your most played role ("-" = lower is better),
+     * with the same test; minRelChange: the smallest change that counts, as a share of the value.
+     * Absent: no number trends.
+     */
+    stats: z.object({ metrics: z.array(z.string().regex(/^-?[\w.]+$/)).min(1), minRelChange: z.number().min(0) }).optional(),
+    /** Share of the period's games on your this many most played champions (pool focus); absent: not shown. */
+    focusTop: z.number().int().min(1).optional(),
   }),
+  /**
+   * How you play in a role, beside the playstyle axes (the op.gg comparison, Oct 9 2026): headline
+   * numbers against your rank, pool focus, class mix and damage split; and win rate by map side
+   * when the split is real. Absent: the Style tab shows the axes only.
+   */
+  style: z
+    .object({
+      /** Your last this many games in the role count for focus, classes and damage. */
+      window: z.number().int().min(1),
+      /** Headline numbers per role ("-" = lower is better); `default` for roles not listed. */
+      headline: z.record(z.string(), z.array(z.string().regex(/^-?[\w.]+$/)).min(1)),
+      /** Pool focus: share of games on your top N champions, for each N. */
+      focusTop: z.array(z.number().int().min(1)).min(1),
+      /** Class mix (Data Dragon's first tag): at most this many classes, each with at least this share. */
+      maxClasses: z.number().int().min(1),
+      minClassShare: unit,
+      /** Win rate by side: Riot's team id of the blue side; shown only with minGames a side, a gap of minDiff and a z of at least z. */
+      side: z.object({ blueTeamId: z.number().int(), minGames: z.number().int().min(1), minDiff: unit, z: z.number().min(0) }),
+      /** A headline number reads as better or worse than typical when its average percentile is this far from 0.5. */
+      toneGap: unit,
+    })
+    .optional(),
   /** New-champion recommender (DESIGN §6). */
   newChamps: z.object({
     /** Champions you played fewer games of in the role (and with less mastery) count as new. */
