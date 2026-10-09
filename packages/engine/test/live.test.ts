@@ -211,11 +211,11 @@ describe("adviseLivePicks", () => {
     const rank = (a: typeof blind, id: number) => a.picks.findIndex((p) => p.championId === id);
     expect(rank(into201, 102)).toBe(0);
     expect(rank(into201, 102)).toBeLessThan(rank(blind, 102) === -1 ? 99 : rank(blind, 102) + 1);
-    expect(text(into201.picks[0]!.reasons)).toMatch(/^\+\d+\.\d% into #201 \(300 games\)/);
+    expect(text(into201.picks[0]!.reasons)).toMatch(/^Favoured into #201: \d+ more wins per 100 games \(300 games\)/);
     expect(say(into201.whyNot)).toMatch(/Picked over your #101: a better lane into #201 \(\+\d+\.\d%\)/);
     // The main's bad matchup shows as a caveat.
     const main = into201.picks.find((p) => p.championId === 101);
-    if (main) expect(text(main.reasons)).toMatch(/But −\d+\.\d% into #201/);
+    if (main) expect(text(main.reasons)).toMatch(/But hard into #201: \d+ fewer wins per 100/);
   });
 
   it("rates blind picks by their likely opponents: risky with a common counter, safe without", () => {
@@ -350,7 +350,7 @@ describe("assessPick", () => {
     const p = assessPick(input(d, { unavailable: new Set([201, 102]) }), 102);
     expect(p.championId).toBe(102);
     expect(p.expectedWin).toBeGreaterThan(0.5);
-    expect(text(p.reasons)).toMatch(/into #201 \(300 games\)/);
+    expect(text(p.reasons)).toMatch(/into #201: \d+ more wins per 100 games \(300 games\)/);
   });
 });
 
@@ -359,7 +359,7 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft([], 301)));
     const ids = bans.map((b) => b.championId);
     expect(ids[0]).toBe(202);
-    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: −\d+\.\d% \(200 games\); picked in 40% of mid games/);
+    expect(text(bans[0]!.reasons)).toMatch(/Beats your #10[12]: \d+ fewer wins per 100 for you; in 40% of mid games/);
     expect(ids).not.toContain(301); // an ally is hovering it
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
@@ -394,7 +394,7 @@ describe("suggestBans", () => {
     expect(hover.some((b) => general.includes(b.championId))).toBe(false);
     if (!general.includes(203)) {
       expect(hover[0]!.championId).toBe(203);
-      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: −\d+\.\d% \(200 games\)/);
+      expect(text(hover[0]!.reasons)).toMatch(/Beats your #103: \d+ fewer wins per 100 for you/);
     }
     expect(suggestHoverBans(inp, top, general)).toHaveLength(config.rating.bans.hoverTopNWhenSuggested);
   });

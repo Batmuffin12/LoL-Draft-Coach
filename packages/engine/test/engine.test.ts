@@ -353,6 +353,13 @@ describe("explanation helpers", () => {
     expect(renderReason({ id: "missing", slots: {} }, t, name)).toBe("missing");
   });
 
+  it("writes a win-rate difference as whole wins per 100 games, unsigned, at least 1", () => {
+    const per = { p: "{d:per100} more wins per 100" };
+    expect(renderReason({ id: "p", slots: { d: 0.021 } }, per, String)).toBe("2 more wins per 100");
+    expect(renderReason({ id: "p", slots: { d: -0.038 } }, per, String)).toBe("4 more wins per 100");
+    expect(renderReason({ id: "p", slots: { d: 0.002 } }, per, String)).toBe("1 more wins per 100");
+  });
+
   it("every reason the engine emits has a template", () => {
     const ids = ["comfort.role", "comfort.roleWithAll", "comfort.otherRoles", "comfort.any", "comfort.role.weak", "comfort.none.weak", "comfort.any.weak", "comfort.none.any.weak", "mastery", "mastery.grades", "team.magic", "team.physical", "team.frontline", "team.engage", "offMeta", "offMeta.usual", "whyNot.unavailable", "whyNot.notPickable", "whyNot.offMeta", "whyNot.team.magic", "whyNot.team.physical", "whyNot.team.frontline", "whyNot.team.engage", "confidence.clear", "confidence.close", "confidence.thin", "meta.strong", "meta.weak", "lane.good", "lane.bad", "blind.safe", "blind.risky", "counter.good", "counter.bad", "synergy.good", "personal.new", "whyNot.meta", "whyNot.lane", "whyNot.counter", "whyNot.synergy", "whyNot.team", "whyNot.personal", "ban.counters", "ban.meta", "ban.popular", "ban.banRate", "trend.pick", "trend.win", "trend.both", "power.late", "power.early", "power.laneAhead", "power.laneBehind", "loadout.page", "loadout.page.matchup", "loadout.spells", "loadout.skills", "loadout.starting", "loadout.core.common", "loadout.item.winAdded", "loadout.item.winAdded.negative", "loadout.page.popular", "loadout.item.popular", "loadout.later.personal", "loadout.quest", "loadout.boots", "loadout.boots.popular", "loadout.boots.personal", "loadout.item.matchup", "loadout.starting.matchup", "loadout.page.personal", "loadout.spells.popular", "loadout.spells.personal", "loadout.core.personal", "plan.lane.favoured", "draft.damage.physical", "draft.damage.magic", "draft.engage", "plan.lane.even", "plan.lane.hard", "plan.scaling.us", "plan.scaling.them", "plan.damage.physical", "plan.damage.magic", "plan.engage", "plan.record", "session.losses", "session.long", "session.record", ...["item", "rune"].flatMap((k) => ["magic", "physical", "frontline", "engage", "heal"].map((t) => `loadout.${k}.lift.${t}`))];
     for (const id of ids) expect(explainCfg.templates, id).toHaveProperty([id]);
