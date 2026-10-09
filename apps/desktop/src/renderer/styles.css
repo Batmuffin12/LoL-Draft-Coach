@@ -83,6 +83,7 @@ p { margin: 0; }
 .heading { font-family: var(--font-display); font-size: var(--fs-heading); line-height: var(--lh-heading); font-weight: 600; }
 .muted { color: var(--muted); }
 .pos { color: var(--positive); }
+.spike { color: var(--accent); }
 .neg { color: var(--negative); }
 .text { color: var(--text); }
 

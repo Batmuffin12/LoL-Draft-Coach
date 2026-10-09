@@ -8,6 +8,8 @@ export interface MatrixOption {
   share: number | null;
   /** Win added; null with thin data. */
   winAdded: number | null;
+  /** Why it's a power spike for this champion (shown as a mark, reason on hover). */
+  spike?: string | null;
 }
 
 export interface MatrixSlot {
@@ -51,6 +53,7 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
             o.item.name,
             o.share === null ? null : `Bought by ${rate(o.share)} of players`,
             o.winAdded === null ? null : `Players who bought it won ${signedPctOrDash(o.winAdded)} points vs what their game state predicted`,
+            o.spike ?? null,
             ...(o.item.reasons ?? []),
           ]
             .filter(Boolean)
@@ -63,6 +66,7 @@ export function ItemMatrix({ slots, rows = 2 }: { slots: MatrixSlot[]; rows?: nu
                 <span className="nums">
                   <b>{rate(o.share)}</b>
                   {helpsMost && <span className="pos" aria-label="helps most">{" ★"}</span>}
+                  {o.spike && <span className="spike" aria-label="power spike">{" ⚡"}</span>}
                 </span>
               )}
             </span>

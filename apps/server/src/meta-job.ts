@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
-import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
+import { completedBoots, completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
 import { BandAggregator, BuildAggregator, ExpectedWinFitter, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
 import type { ExpectedWinTable, ItemInfo, MatchSummary, RankBandId } from "@ldc/shared";
@@ -118,6 +118,7 @@ async function buildPass(
     minDurationSec: aggregation.minDurationSec,
     config: builds,
     completed: items ? completedItems(items, settings.engine.loadout.items) : new Set(),
+    boots: items ? completedBoots(items, settings.engine.loadout.items) : new Set(),
     attributes,
     traitCuts,
     expected,

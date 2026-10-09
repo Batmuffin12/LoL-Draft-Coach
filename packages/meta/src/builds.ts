@@ -153,6 +153,8 @@ class BuildAcc {
   /** Games that reached each completed-item slot. */
   readonly slotGames: number[] = [];
   readonly traitGames = emptyTraits();
+  /** Power spikes: per first item, the lead-slope changes' count, sum and sum of squares. */
+  readonly spikes = new Map<number, Moments>();
   /** "rune:id" / "item:id" → games taken per trait side. */
   readonly takes = new Map<number, TraitCounts>() // key: rune id, or -item id;
   /**
@@ -213,6 +215,8 @@ export interface BuildAggregatorOptions {
   config: BuildsConfig;
   /** Completed items (derived from Data Dragon with the engine's item rules). */
   completed: ReadonlySet<number>;
+  /** Completed boots (not a first item for power spikes). */
+  boots?: ReadonlySet<number>;
   /** Measured champion attributes (the band's), for enemy-team traits. */
   attributes: ReadonlyMap<ChampionId, ChampionAttributes>;
   /** Band-average trait values: above, a trait counts as high. */
@@ -265,6 +269,40 @@ export function completedPurchases(t: MatchTimeline, participant: number, comple
   return out;
 }
 
+interface Moments {
+  n: number;
+  sum: number;
+  sq: number;
+}
+const addMoment = (m: Moments, x: number) => {
+  m.n++;
+  m.sum += x;
+  m.sq += x * x;
+};
+const momentStats = (m: Moments): { mean: number; se: number } | null => {
+  if (m.n < 2) return null;
+  const mean = m.sum / m.n;
+  const variance = Math.max(0, (m.sq - m.n * mean * mean) / (m.n - 1));
+  return { mean, se: Math.sqrt(variance / m.n) };
+};
+
+/**
+ * How much faster a player's gold lead over their lane opponent grew in the `window` minutes
+ * after finishing `first` than in the `window` minutes before (gold per minute). Null when the
+ * timeline doesn't cover both windows.
+ */
+export function leadSlopeChange(t: MatchTimeline, me: number, opp: number, first: { itemId: number; sec: number } | undefined, window: number): { itemId: number; change: number } | null {
+  if (!first || opp < 0) return null;
+  const m = Math.round(first.sec / 60);
+  const lead = (f: number) => {
+    const a = t.gold[me]?.[f], b = t.gold[opp]?.[f];
+    return a === undefined || b === undefined ? undefined : a - b;
+  };
+  const l0 = lead(m - window), l1 = lead(m), l2 = lead(m + window);
+  if (m - window < 1 || l0 === undefined || l1 === undefined || l2 === undefined) return null;
+  return { itemId: first.itemId, change: (l2 - l1 - (l1 - l0)) / window };
+}
+
 /** Items bought in the first `seconds` and not sold again in that time. */
 export function startingItems(t: MatchTimeline, participant: number, seconds: number): number[] {
   const bag: number[] = [];
@@ -290,6 +328,8 @@ export function startingItems(t: MatchTimeline, participant: number, seconds: nu
  */
 export class BuildAggregator {
   private readonly builds = new Map<string, BuildAcc>();
+  /** Power spikes: the same moments over every champion's first item (the baseline). */
+  private readonly spikeAll: Moments = { n: 0, sum: 0, sq: 0 };
   /** This pass's own expected-win fit (used when no table was given, and published). */
   private readonly fitter: ExpectedWinFitter;
   /** Per item, games it was bought or held in, per role. */
@@ -399,6 +439,13 @@ export class BuildAggregator {
       if (start.length) b.starting.add(start.join(","), start, w, p.win);
 
       const bought = completedPurchases(t, i, o.completed);
+      const spike = cfg.spikes && laneOpp ? leadSlopeChange(t, i, ps.indexOf(laneOpp), bought.find((x) => !o.boots?.has(x.itemId)), cfg.spikes.window) : null;
+      if (spike) {
+        addMoment(this.spikeAll, spike.change);
+        let s = b.spikes.get(spike.itemId);
+        if (!s) b.spikes.set(spike.itemId, (s = { n: 0, sum: 0, sq: 0 }));
+        addMoment(s, spike.change);
+      }
       for (const it of new Set(bought.map((x) => x.itemId))) take(-it);
       if (vs) {
         vs.tgames++;
@@ -429,6 +476,20 @@ export class BuildAggregator {
       });
     });
     return true;
+  }
+
+  /** A build's significant power spikes: first items well above the all-champion baseline. */
+  private spikesOf(b: BuildAcc, c: { minGames: number; minZ: number }): NonNullable<ChampionBuild["spikes"]> {
+    const all = momentStats(this.spikeAll);
+    if (!all) return [];
+    const out: NonNullable<ChampionBuild["spikes"]> = [];
+    for (const [itemId, m] of b.spikes) {
+      const s = momentStats(m);
+      if (!s || m.n < c.minGames) continue;
+      const se = Math.sqrt(s.se ** 2 + all.se ** 2);
+      if (se > 0 && (s.mean - all.mean) / se >= c.minZ) out.push({ itemId, n: m.n, gold: Math.round(s.mean - all.mean) });
+    }
+    return out.sort((x, y) => y.gold - x.gold);
   }
 
   /** The expected-win table used for win added (the given one, or this pass's own fit). */
@@ -557,6 +618,7 @@ export class BuildAggregator {
         lifts: lifts.slice(0, maxPerBuild),
         matchupPages,
         matchupItems,
+        ...(cfg.spikes ? { spikes: this.spikesOf(b, cfg.spikes) } : {}),
       });
     }
     return out.sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role));

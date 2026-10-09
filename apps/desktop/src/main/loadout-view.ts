@@ -82,7 +82,12 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   const thin = l.source.thin;
   /** Win rate and games of a choice; no win rate with thin data (D31) or when the choice has none (0: e.g. the start into your lane opponent). */
   const numbers = (c: LoadoutChoice<unknown>): ChoiceNumbers => ({ winRate: thin || c.winRate <= 0 ? null : c.winRate, games: c.n });
-  const option = (r: RankedItem): ItemOptionView => ({ ...withReasons(item(r.itemId), r.reasons), share: r.share, winAdded: thin ? null : r.winAdded });
+  const spikes = new Map((l.spikes ?? []).map((s) => [s.itemId, s]));
+  const spikeText = (id: number) => {
+    const s = spikes.get(id);
+    return s ? renderReason({ id: "loadout.spike", slots: { champion: l.championId, gold: s.gold, games: s.n } }, deps.templates, deps.championName) : null;
+  };
+  const option = (r: RankedItem): ItemOptionView => ({ ...withReasons(item(r.itemId), r.reasons), share: r.share, winAdded: thin ? null : r.winAdded, spike: spikeText(r.itemId) });
   // Stored in Riot's match order (defense, flex, offense); shown like the client (offense, flex, defense).
   const shardIds = l.page ? [...l.page.value.statPerks].reverse() : [];
   const start = l.starting ? groupRepeats(l.starting.value) : null;

@@ -69,6 +69,12 @@ export const MetaConfigSchema = z.object({
       /** Two-proportion z-score the difference must reach, so a few games can't make a big ratio (6 vs 3 games). */
       minZ: z.number().min(0).default(2),
     }),
+    /**
+     * Power spikes: the lane gold lead's slope over `window` minutes after a first item minus the
+     * slope before; published for a champion's first item with `minGames` games and a z of `minZ`
+     * against all first items (research: Irelia + Blade of the Ruined King, z 4.5 in 1,044 games).
+     */
+    spikes: z.object({ window: z.number().int().min(1), minGames: z.number().int().min(1), minZ: z.number().min(0) }).optional(),
     /** Rune pages and items into a lane opponent are kept when the matchup has this many games. */
     minMatchupGames: z.number().int().min(1),
     /** Items published per build slot (the most bought). */

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ITEM_BOUGHT, ITEM_DESTROYED, ITEM_SOLD, type ChampionAttributes, type MatchSummary, type MatchTimeline, type ParticipantSummary } from "@ldc/shared";
-import { BuildAggregator, completedPurchases, maxOrder, parseMetaConfig, startingItems } from "../src/index";
+import { BuildAggregator, completedPurchases, leadSlopeChange, maxOrder, parseMetaConfig, startingItems } from "../src/index";
 
 const NOW = 1_800_000_000_000;
 const config = parseMetaConfig(JSON.parse(readFileSync(new URL("../../../config/meta.v1.json", import.meta.url), "utf8")));
@@ -97,6 +97,43 @@ const cfg = { ...config.builds, minGames: 1, minOptionGames: 1, minItemGames: 1,
 const make = (over: Partial<typeof cfg> = {}) =>
   new BuildAggregator({ now: NOW, halfLifeDays: 10, windowDays: 30, minDurationSec: 300, config: { ...cfg, ...over }, completed: COMPLETED, attributes, traitCuts: CUTS });
 const champ1 = (agg: BuildAggregator) => agg.finish().find((b) => b.championId === 1)!;
+
+describe("power spikes", () => {
+  /** Everyone finishes 3002 first at minute 10, champion 1 finishes `first`; champion 1's lead grows `boost` gold a minute after it. */
+  const spikeGame = (k: number, first: number, boost: number) => {
+    const g = game(`s${k}`, { win: true, items: [first] });
+    const t = g.timeline!;
+    for (let p = 1; p < 10; p++) t.items.push([p, 600, ITEM_BOUGHT, 3002]);
+    t.gold.forEach((row, p) => {
+      row[14] = row[14]! + ((k * 7 + p * 3) % 5) * 40; // noise for everyone
+      if (p === 0) for (let f = 11; f < row.length; f++) row[f] = row[f]! + (f - 10) * boost;
+    });
+    return g;
+  };
+
+  it("measures the lead's slope after a first item minus before", () => {
+    const t = spikeGame(0, 3001, 300).timeline!;
+    // Minutes 6→10: lead flat; 10→14: +300 a minute (plus minute 14's noise of 0 for this game and player).
+    expect(leadSlopeChange(t, 0, 5, { itemId: 3001, sec: 600 }, 4)).toEqual({ itemId: 3001, change: 300 });
+    expect(leadSlopeChange(t, 0, 5, { itemId: 3001, sec: 120 }, 4)).toBeNull(); // before minute `window`
+    expect(leadSlopeChange(t, 0, 5, undefined, 4)).toBeNull();
+  });
+
+  it("publishes a first item as a spike only when it's well above every champion's first item", () => {
+    const spikes = { window: 4, minGames: 5, minZ: 3 };
+    const strong = make({ spikes });
+    for (let k = 0; k < 12; k++) strong.add(spikeGame(k, 3001, 300));
+    expect(champ1(strong).spikes).toEqual([expect.objectContaining({ itemId: 3001, n: 12 })]);
+    expect(champ1(strong).spikes![0]!.gold).toBeGreaterThan(200);
+    const flat = make({ spikes });
+    for (let k = 0; k < 12; k++) flat.add(spikeGame(k, 3001, 0));
+    expect(champ1(flat).spikes).toEqual([]);
+    // Too few games: nothing, however big.
+    const few = make({ spikes: { ...spikes, minGames: 20 } });
+    for (let k = 0; k < 12; k++) few.add(spikeGame(k, 3001, 300));
+    expect(champ1(few).spikes).toEqual([]);
+  });
+});
 
 describe("timeline helpers", () => {
   it("finds the max order: the skill that got all its points first, then by points", () => {

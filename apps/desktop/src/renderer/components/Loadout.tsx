@@ -96,7 +96,7 @@ export function BuildTab({ loadout: l, onImport, busy, importMessage }: LoadoutP
   const canImport = l.canImport && (l.items.length > 0 || l.commonPath || l.starting);
   const button = canImport ? <ImportButton kind="items" label="Import item set" busy={busy} onImport={onImport} /> : null;
   const slots: MatrixSlot[] = l.items.length
-    ? l.items.slice(0, MATRIX_SLOTS).map((s) => ({ slot: s.slot, minute: s.minute, options: [s.top, ...s.alternatives].map((o) => ({ item: o, share: o.share, winAdded: o.winAdded })) }))
+    ? l.items.slice(0, MATRIX_SLOTS).map((s) => ({ slot: s.slot, minute: s.minute, options: [s.top, ...s.alternatives].map((o) => ({ item: o, share: o.share, winAdded: o.winAdded, spike: o.spike ?? null })) }))
     : (l.commonPath?.items.slice(0, MATRIX_SLOTS).map((item, i) => ({ slot: i + 1, minute: null, options: [{ item, share: null, winAdded: null }] })) ?? []);
   // The most telling reason: a top item bought for this draft (a reason before its numbers line), else the first item's.
   // Only a reason the cells don't already show: a top item bought for this draft.

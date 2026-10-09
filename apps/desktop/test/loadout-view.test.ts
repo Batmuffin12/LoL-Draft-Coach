@@ -39,6 +39,7 @@ const loadout = (thin: boolean): Loadout => ({
   laterPool: [],
   situational: [],
   core: { value: [6655], winRate: 0, n: 200, reasons: [] },
+  spikes: [{ itemId: 6655, n: 400, gold: 31 }],
   items: [{ slot: 1, minute: 11.4, top: ranked(6655, 0.58, 0.014, 11), alternatives: [] }],
 });
 const view = (thin: boolean, shardRows?: number[][]) =>
@@ -139,6 +140,9 @@ describe("toLoadoutView numbers", () => {
     expect(v.starting!.items.map((i) => i.name)).toEqual(["Doran's Ring", "Health Potion"]);
     expect(v.items[0]).toMatchObject({ minute: 11.4, top: { name: "Luden's Companion", share: 0.58, winAdded: 0.014 } });
     expect(v.boots!.top).toMatchObject({ share: 0.61, winAdded: 0.006 });
+    // A measured power spike says so on its item; other items don't.
+    expect(v.items[0]!.top.spike).toBe("Power spike: after finishing it first, Ahri pulls ahead of the lane opponent by about 31 more gold a minute than after a typical first item (400 games)");
+    expect(v.boots!.top.spike).toBeNull();
   });
 
   it("quotes no win rates with thin data (D31), but keeps games and shares", () => {

@@ -122,6 +122,8 @@ export interface Loadout {
   situational: { itemId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] }[];
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
   core: LoadoutChoice<number[]> | null;
+  /** First items that are a measured power spike for this champion-role (extra lane gold per minute). */
+  spikes: { itemId: number; n: number; gold: number }[];
   items: ItemSlotAdvice[];
 }
 
@@ -449,6 +451,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     situational: situationalItems({ ...input, build: roleBuild }, new Set(core?.value ?? [])),
     laterPool,
     core,
+    spikes: roleBuild.spikes ?? [],
     items: shownItems,
   };
 }
