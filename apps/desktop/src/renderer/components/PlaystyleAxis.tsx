@@ -26,7 +26,9 @@ export function PlaystyleAxis({ axis: a, showDetail }: { axis: AxisView; showDet
       {open ? (
         <ul className="axis-metrics">
           {a.metrics.map((m) => (
-            <li key={m}>{m}</li>
+            <li key={m} title={m}>
+              {m}
+            </li>
           ))}
         </ul>
       ) : (

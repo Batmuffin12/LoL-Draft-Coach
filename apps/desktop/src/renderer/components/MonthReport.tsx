@@ -56,7 +56,7 @@ export function NumberTrends({ rows }: { rows: MonthView["stats"] }) {
             <span className="axis-nm one-line">{r.label}</span>
             <span className="num muted">{r.from ?? "—"}</span>
             <span className={cx("arrow", t)} aria-hidden="true">
-              {r.changed === "up" ? "▲" : r.changed === "down" ? "▼" : "→"}
+              {r.changed === "up" ? "▲" : r.changed === "down" ? "▼" : ""}
             </span>
             <span className={cx("num", t)}>{r.to}</span>
           </div>
@@ -101,7 +101,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <StatStrip items={m.strip} />
       </Section>
       {(m.axes.length > 0 || m.stats.length > 0) && (
-        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">last month → this month · 50 = typical in your rank</span>}>
+        <Section title={`Your ${m.role ? `${m.role.toLowerCase()} ` : ""}style`} aside={<span className="micro" title={`${m.role ? `${m.role}: your most played role this month. ` : ""}Style axes: 50 = typical in your rank.`}>last month → this month</span>}>
           {m.stats.length > 0 && <NumberTrends rows={m.stats} />}
           {m.axes.length > 0 && <TrendTable rows={m.axes} />}
         </Section>

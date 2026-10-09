@@ -476,6 +476,10 @@ p { margin: 0; }
 
 /* Style tab: headline numbers three to a row, then how you play (pool, classes, damage) */
 .stylerole .section { padding-block: 6px; }
+.stylerole .section:first-child { gap: 2px; }
+.stylerole button.axis { min-height: 32px; }
+.strip.numgrid .vrow { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.strip.numgrid .vrow .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .strip.numgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .strip.numgrid .tile { padding: 2px 8px; }
 .strip.numgrid .neg .v { color: var(--red); }
@@ -494,6 +498,9 @@ p { margin: 0; }
 button.axis { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 128px 1fr 36px; gap: 12px; align-items: center; min-height: 34px; font-size: var(--fs-body); line-height: var(--lh-body); cursor: pointer; width: 100%; }
 button.axis:hover > span:first-child { color: var(--gold); }
 button.axis:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.axis-metrics { list-style: none; margin: -4px 0 2px 140px; padding: 0; display: flex; flex-direction: column; gap: 1px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
+.axis-metrics { list-style: none; margin: -2px 0 2px 12px; padding: 0; display: flex; flex-direction: column; gap: 1px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .numtrends { margin-bottom: 4px; }
+.axis-metrics li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.monthreport .strip .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.monthreport .trends2 .tr { padding: 2px 0; }
 .numtrends .tr { grid-template-columns: minmax(0, 1fr) 40px 12px 40px; }

@@ -8,8 +8,10 @@ export function NumberGrid({ items }: { items: PlaystyleView["numbers"] }) {
       {items.map((n) => (
         <div key={n.label} className={cx("tile", n.tone)} title={n.title}>
           <span className="k">{n.label}</span>
-          <span className="v">{n.you}</span>
-          <span className="s">{`typical ${n.typical}`}</span>
+          <span className="vrow">
+            <span className="v">{n.you}</span>
+            <span className="s">{`typical ${n.typical}`}</span>
+          </span>
         </div>
       ))}
     </div>
