@@ -15,7 +15,7 @@ import { cx, pct, positionLabel, roleName } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices } from "./common";
 
-type LobbyTab = "last" | "style" | "pool" | "new";
+type LobbyTab = "last" | "style" | "pool" | "new" | "month";
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
@@ -45,6 +45,7 @@ function Lobby({ state }: { state: ViewState }) {
             { value: "style", label: "Style" },
             { value: "pool", label: "Pool" },
             { value: "new", label: "New" },
+            { value: "month", label: "This month" },
           ]}
         />
       }
@@ -52,7 +53,17 @@ function Lobby({ state }: { state: ViewState }) {
     >
       <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
       <SessionNotice state={state} />
-      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} /> : tab === "pool" ? <Pool state={state} /> : <NewChamps state={state} />}
+      {tab === "last" ? (
+        <LastGame state={state} />
+      ) : tab === "style" ? (
+        <Style state={state} />
+      ) : tab === "pool" ? (
+        <Pool state={state} />
+      ) : tab === "new" ? (
+        <NewChamps state={state} />
+      ) : (
+        <Month state={state} />
+      )}
     </Window>
   );
 }
@@ -197,48 +208,44 @@ function Lines({ lines }: { lines: string[] }) {
   );
 }
 
-/** Your style per role, and the monthly report, each a sub-tab. */
+/** Your style per role, a sub-tab each. */
 function Style({ state }: { state: ViewState }) {
-  const MONTH = "month";
-  const [sub, setSub] = useSubTab([...state.playstyle.map((p) => p.role), ...(state.month ? [MONTH] : [])]);
-  if (!state.playstyle.length && !state.month) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
+  const [sub, setSub] = useSubTab(state.playstyle.map((p) => p.role));
+  if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
     return [`${p.games} games`, high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
   };
-  const m = state.month;
   return (
     <>
-      <SubTabs
-        options={[
-          ...state.playstyle.map((p) => ({ value: p.role, label: positionLabel(p.role), title: summary(p) })),
-          ...(m ? [{ value: MONTH, label: "This month", title: [`${m.games} games`, ...m.strip.slice(1, 3).map((t) => `${t.label} ${t.value}`)].join(" · ") }] : []),
-        ]}
-        value={sub}
-        onChange={setSub}
-      />
-      {sub === MONTH && m ? (
-        <>
-          <div className="section">
-            <span className="micro">{`${m.period} · ${m.footer}`}</span>
-          </div>
-          <MonthReport month={m} />
-        </>
-      ) : (
-        state.playstyle
-          .filter((p) => p.role === sub)
-          .map((p) => (
-            <Section key={p.role} title={`Your ${roleName(p.role)} style`} aside={<span className="micro">50 = typical in your rank</span>}>
-              {p.axes.map((a) => (
-                <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
-              ))}
-              <span className="micro">
-                From your last {p.games} {roleName(p.role)} games.
-              </span>
-            </Section>
-          ))
-      )}
+      <SubTabs options={state.playstyle.map((p) => ({ value: p.role, label: positionLabel(p.role), title: summary(p) }))} value={sub} onChange={setSub} />
+      {state.playstyle
+        .filter((p) => p.role === sub)
+        .map((p) => (
+          <Section key={p.role} title={`Your ${roleName(p.role)} style`} aside={<span className="micro">50 = typical in your rank</span>}>
+            {p.axes.map((a) => (
+              <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
+            ))}
+            <span className="micro">
+              From your last {p.games} {roleName(p.role)} games.
+            </span>
+          </Section>
+        ))}
+    </>
+  );
+}
+
+/** The monthly report: your last 30 days against the 30 before, from your own games. */
+function Month({ state }: { state: ViewState }) {
+  const m = state.month;
+  if (!m) return <Section title="This month">{<p className="caption">Your month shows here once your recent games are loaded.</p>}</Section>;
+  return (
+    <>
+      <div className="section">
+        <span className="micro">{`${m.period} · ${m.footer}`}</span>
+      </div>
+      <MonthReport month={m} />
     </>
   );
 }
