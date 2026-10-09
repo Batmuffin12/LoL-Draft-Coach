@@ -116,8 +116,11 @@ function devMetaFile(): MetaSnapshot | null {
   return snapshot;
 }
 
-/** Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits. */
-function scheduleScreenshot(): void {
+/**
+ * Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits;
+ * LDC_VIEW_DUMP=path.json also saves everything the panel shows (its state), to check the numbers.
+ */
+function scheduleScreenshot(coach: Coach): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
@@ -139,6 +142,8 @@ function scheduleScreenshot(): void {
     console.log(`LDC_SCREENSHOT: scroll overflow ${overflow}px`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
+    const dump = process.env.LDC_VIEW_DUMP;
+    if (dump) await writeFile(dump, JSON.stringify(coach.state, null, 2));
     app.quit();
   }, Number(process.env.LDC_SCREENSHOT_DELAY_MS ?? 8_000));
 }
@@ -212,7 +217,11 @@ async function main(): Promise<void> {
     meta,
   });
   // Scoring config from the server (tuning without a release); the bundled copy until then.
-  if (serverProfiles) {
+  // Dev aid: LDC_BUNDLED_CONFIG=1 keeps this branch's config and wording against any server
+  // (`pnpm local:prod`: the branch's panel on production data).
+  const bundledConfig = !app.isPackaged && process.env.LDC_BUNDLED_CONFIG === "1";
+  if (bundledConfig) console.log("LDC_BUNDLED_CONFIG: using this build's config, not the server's");
+  if (serverProfiles && !bundledConfig) {
     const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
     remoteConfig.on("config", (c) => coach.setConfig(c));
     await remoteConfig.loadCached();
@@ -234,6 +243,17 @@ async function main(): Promise<void> {
     });
     ipcMain.handle(IPC.signOut, () => server.signOut());
     ipcMain.handle(IPC.deleteData, () => server.deleteData());
+    // Dev aid: LDC_AUTO_REGISTER=<invite> registers with SERVER_URL once the League client is
+    // logged in (it gives the Riot ID), retrying every few seconds (`pnpm local:prod` sets it).
+    const invite = !app.isPackaged ? process.env.LDC_AUTO_REGISTER : undefined;
+    if (invite && env.serverUrl) {
+      let tries = 0;
+      const timer = setInterval(() => {
+        const state = server.account.state;
+        if (state === "registered" || ++tries > 120) return clearInterval(timer);
+        if (state === "unregistered" || state === "error") void server.register(env.serverUrl!, invite);
+      }, 5_000);
+    }
   }
 
   win = createWindow();
@@ -250,7 +270,7 @@ async function main(): Promise<void> {
   await coach.start();
   startAutoUpdate((m) => coach.announce(m));
   void startDocking(coach);
-  scheduleScreenshot();
+  scheduleScreenshot(coach);
 
   app.on("window-all-closed", () => {
     coach.stop();

@@ -95,6 +95,35 @@ describe("learningPlan", () => {
       ...over,
     });
 
+  it("says how it wins in your rank: the role's goal metrics that differ most between its wins and losses, with your numbers", () => {
+    const roles = { ...config.growth.roles, middle: ["-earlyDeaths", "challenges.laneMinionsFirst10Minutes", "challenges.turretPlatesTaken"] };
+    const withWins: MetaSnapshot = {
+      ...snap,
+      references: { middle: { earlyDeaths: { n: 500, quantiles: [0, 1, 1, 2, 5] }, "challenges.laneMinionsFirst10Minutes": { n: 500, quantiles: [40, 55, 62, 70, 90] }, "challenges.turretPlatesTaken": { n: 500, quantiles: [0, 0, 1, 2, 5] } } },
+      championWins: [{ championId: 4, role: "middle", n: 900, metrics: { earlyDeaths: [1.1, 2.1, 900], "challenges.laneMinionsFirst10Minutes": [66, 64, 900], "challenges.turretPlatesTaken": [0.9, 1.2, 900] } }],
+    };
+    const p = plan({ index: new MetaIndex(withWins, config.rating), config: { ...config, growth: { ...config.growth, roles } } });
+    // Deaths differ by a full spread, CS by 2/15 of one; plates go the wrong way (more in losses): left out.
+    expect(p.wins.map((w) => w.metric)).toEqual(["earlyDeaths", "challenges.laneMinionsFirst10Minutes"]);
+    expect(p.wins[0]).toMatchObject({ winners: 1.1, losers: 2.1, you: 3 });
+    expect(plan().wins).toEqual([]); // no measurements in the snapshot
+  });
+
+  it("measures how it plays, and notices when nothing swings it", () => {
+    const p = plan();
+    expect(p.profile).toMatchObject({ physical: 0.2, magic: 0.8 });
+    expect(p.evenMatchups).toBeNull(); // its matchups differ (good into 1, hard into 2)
+    expect(p.evenCurve).toBeNull(); // its long-game gap is real (46% vs 55% on 800 games each)
+    const flat: MetaSnapshot = {
+      ...snap,
+      matchups: [1, 2, 3, 5, 7, 8].map((b) => [4, "middle", b, "middle", 1000, 540, 1000] as [number, string, number, string, number, number, number]),
+      attributes: [{ ...snap.attributes[0]!, powerCurve: { early: { games: 800, winRate: 0.53 }, late: { games: 800, winRate: 0.54 } } }],
+    };
+    const even = plan({ index: new MetaIndex(flat, config.rating) });
+    expect(even.evenMatchups).toBeGreaterThanOrEqual(config.newChamps.learn.evenMatchupsMin);
+    expect(even.evenCurve).toEqual({ early: 0.53, late: 0.54 });
+  });
+
   it("gives the stage, its job, ease, how long to give it, your record, and the matchups to start into and avoid", () => {
     const p = plan();
     expect(p).toMatchObject({ stage: "building", ease: 1, settleGames: config.newChamps.learn.settleGames.easy, job: "Mage", record: { games: 3, wins: 1 } });

@@ -1,4 +1,4 @@
-import type { ParticipantSummary, Position, UserMatch } from "@ldc/shared";
+import type { MatchSummary, ParticipantSummary, Position, UserMatch } from "@ldc/shared";
 import { halfLifeWeight } from "./comfort";
 import type { EngineConfig } from "./config";
 
@@ -8,8 +8,12 @@ export type PlaystyleConfig = EngineConfig["playstyle"];
  * Reads one metric from a participant. Names are Riot's: "challenges.<field>" reads a
  * Match-V5 challenges value; a few per-minute values are derived from the summary.
  * Returns null when the game doesn't carry the metric (fields vary by patch and role).
+ * With the match, metrics from its timeline (null without the data, e.g. timelines stored before
+ * these were kept): "laneGoldDiffAt14" and "laneCsDiffAt10" (gold or CS minus the lane opponent's,
+ * the one enemy in the same position), "wardsPlacedBefore14", "earlyEpicMonsterTakedowns"
+ * (dragons, grubs and herald before 14 min that you killed or assisted).
  */
-export function readMetric(p: ParticipantSummary, durationSec: number, metric: string): number | null {
+export function readMetric(p: ParticipantSummary, durationSec: number, metric: string, match?: Pick<MatchSummary, "participants" | "timeline">): number | null {
   const minutes = Math.max(1, durationSec / 60);
   if (metric.startsWith("challenges.")) {
     const v = p.challenges[metric.slice("challenges.".length)];
@@ -30,9 +34,37 @@ export function readMetric(p: ParticipantSummary, durationSec: number, metric: s
       return p.visionScore / minutes;
     case "earlyDeaths":
       return p.earlyDeaths ?? null;
+    case "laneGoldDiffAt14":
+      return laneDiff(p, match, match?.timeline?.gold, 14);
+    case "laneCsDiffAt10":
+      return laneDiff(p, match, match?.timeline?.cs, 10);
+    case "wardsPlacedBefore14": {
+      const wards = match?.timeline?.wards;
+      const me = match ? match.participants.indexOf(p) : -1;
+      return wards && me >= 0 ? wards.filter(([sec, placer]) => placer === me && sec < EARLY_SEC).length : null;
+    }
+    case "earlyEpicMonsterTakedowns": {
+      const monsters = match?.timeline?.monsters;
+      const me = match ? match.participants.indexOf(p) : -1;
+      return monsters && me >= 0 ? monsters.filter(([sec, killer, assists]) => sec < EARLY_SEC && (killer === me || (assists & (1 << me)) !== 0)).length : null;
+    }
     default:
       return null;
   }
+}
+
+/** The early-game cut for timeline counts (14 min, the end of the laning phase as plates fall). */
+const EARLY_SEC = 14 * 60;
+
+/** A per-frame value minus the lane opponent's (the one enemy in the same position) at `minute`. */
+function laneDiff(p: ParticipantSummary, match: Pick<MatchSummary, "participants" | "timeline"> | undefined, frames: number[][] | undefined, minute: number): number | null {
+  if (!match || !frames || !p.position) return null;
+  const me = match.participants.indexOf(p);
+  const opponents = match.participants.flatMap((o, i) => (o.teamId !== p.teamId && o.position === p.position ? [i] : []));
+  if (me < 0 || opponents.length !== 1) return null;
+  const mine = frames[me]?.[minute];
+  const theirs = frames[opponents[0]!]?.[minute];
+  return mine === undefined || theirs === undefined ? null : mine - theirs;
 }
 
 /** Share of `sorted` below v, counting ties as half (0..1). */
@@ -131,7 +163,7 @@ export function computePlaystyle(
   if (!role || mine.length < cfg.minGamesPerRole) return null;
 
   const refs = matches.flatMap((m) =>
-    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec })),
+    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec, match: m.match })),
   );
   const band = Object.fromEntries(Object.entries(bandReferences ?? {}).filter(([, r]) => r.n >= cfg.minReferenceSamples && r.quantiles.length > 1));
   const useBand = Object.keys(band).length > 0;
@@ -141,7 +173,7 @@ export function computePlaystyle(
   const refValues = (metric: string) => {
     let v = referenceSorted.get(metric);
     if (!v) {
-      v = refs.map((r) => readMetric(r.p, r.durationSec, metric)).filter((x): x is number => x !== null).sort((a, b) => a - b);
+      v = refs.map((r) => readMetric(r.p, r.durationSec, metric, r.match)).filter((x): x is number => x !== null).sort((a, b) => a - b);
       referenceSorted.set(metric, v);
     }
     return v;
@@ -164,7 +196,7 @@ export function computePlaystyle(
       let pctSum = 0;
       let n = 0;
       for (const m of mine) {
-        const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+        const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
         if (v === null) continue;
         const w = halfLifeWeight(now - m.match.endedAt, cfg.halfLifeDays);
         const pct = lowerIsBetter ? 1 - pctOf(v) : pctOf(v);

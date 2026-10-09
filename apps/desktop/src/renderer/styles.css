@@ -208,6 +208,9 @@ p { margin: 0; }
 .table .c-bar { height: 8px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
 .table .c-bar .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
 .table.matchups .trow { min-height: 30px; padding: 1px 6px; }
+.table.pool .trow { min-height: 34px; padding: 2px 6px; }
+.table.pool .c-num.big { font-size: var(--fs-heading); line-height: var(--lh-heading); }
+.table.pool .nm { font-size: var(--fs-body); line-height: var(--lh-body); }
 .table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .table .trow .sub b { color: var(--text); font-weight: 600; }
 .table .detail { padding: 6px 6px 0; }
@@ -315,10 +318,10 @@ p { margin: 0; }
 .axis .mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--line-strong); }
 .axis .fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--muted); }
 .axis.high .fill { background: var(--positive); }
-.axis.low .fill { background: var(--negative); }
+.axis.low .fill { background: var(--red); }
 .axis .val { text-align: right; font-weight: 600; }
 .axis.high .val { color: var(--positive); }
-.axis.low .val { color: var(--negative); }
+.axis.low .val { color: var(--red); }
 .axis-detail { font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); margin: -4px 0 0 122px; }
 
 /* Notice: one per problem, at the top of the scrolling area */
@@ -355,7 +358,7 @@ p { margin: 0; }
 .section-head.closed:hover .label, .section-head.closed:hover .micro { color: var(--text); }
 .section-head.closed:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .section-head.closed .rule { flex: 0 0 16px; }
-.section-head.closed .micro { flex: 1; line-height: 15px; }
+.section-head.closed .micro { flex: 1; line-height: 15px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section-head.closed { align-items: center; }
 .section-head .chev { color: var(--muted); font-size: var(--fs-heading); }
 
@@ -403,6 +406,7 @@ p { margin: 0; }
 .table.newchamps .thead, .table.newchamps .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 70px; }
 .table.newchamps .trow { min-height: 0; padding: 3px 6px; }
 .table.newchamps .like { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: var(--fs-micro); color: var(--muted); }
+.table.newchamps .nm { font-size: var(--fs-body); line-height: var(--lh-body); overflow-wrap: normal; word-break: normal; }
 .table .c-num.ease { font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .table .c-num.ease.easy { color: var(--positive); }
 .table .c-num.ease.hard { color: var(--negative); }
@@ -450,7 +454,7 @@ p { margin: 0; }
 .table.champform .trow { height: 28px; padding: 0 6px; }
 .trends2 .axis-nm { font-size: var(--fs-micro); line-height: 14px; }
 .monthreport .section { padding-block: 5px; }
-/* Focus, said plainly: now → goal, the rank average beside it */
+/* Focus, said plainly: now → goal, the typical value beside it */
 .focus .f-goal { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 10px; background: var(--card); border-radius: var(--radius-sm); }
 .focus .f-goal > span { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .focus .f-goal b { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }

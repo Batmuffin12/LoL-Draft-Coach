@@ -64,7 +64,7 @@ describe("registration", () => {
     expect(res.status).toBe(201);
     const body = (await res.json()) as { token: string; user: Record<string, unknown> };
     expect(body.token).toMatch(/^ldc_/);
-    expect(body.user).toEqual({ id: 1, riotId: "Ofek#EUW", band: null, createdAt: NOW, lastSyncAt: null });
+    expect(body.user).toEqual({ id: 1, riotId: "Ofek#EUW", band: null, createdAt: NOW, lastSyncAt: null, historyBacklog: null });
     expect(JSON.stringify(body)).not.toContain("PUUID");
 
     const [user] = db.select().from(schema.users).all();

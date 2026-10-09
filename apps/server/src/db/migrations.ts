@@ -140,6 +140,11 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX user_matches_by_match ON user_matches(match_id);
     `,
   },
+  {
+    version: 7,
+    name: "users.history_backlog: games still to load in a long history (filled over several syncs)",
+    sql: `ALTER TABLE users ADD COLUMN history_backlog INTEGER;`,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

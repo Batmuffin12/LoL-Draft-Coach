@@ -73,6 +73,10 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   const ranges = bandNames.map((n) => /^(.+) to (.+)$/.exec(n));
   const source = bandNames.length > 1 && ranges.every(Boolean) ? `${ranges[0]![1]} to ${ranges.at(-1)![2]}` : bandNames.join(" + ");
 
+  const primaryTree = l.page ? runeTree(d, l.page.value.primaryStyle, false) : null;
+  const secondaryTree = l.page ? runeTree(d, l.page.value.subStyle, true) : null;
+  // "Swap in" only what fits the shown page: a rune from one of its two trees (another tree is a different page).
+  const inTrees = new Set([primaryTree, secondaryTree].flatMap((t) => t?.rows.flat().map((r) => r.id) ?? []));
   return {
     games: l.games,
     source,
@@ -92,13 +96,13 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
             return p ? [{ id, name: p.name, iconUrl: p.iconUrl }] : [];
           }),
           reason: first(l.page.reasons),
-          primaryTree: runeTree(d, l.page.value.primaryStyle, false),
-          secondaryTree: runeTree(d, l.page.value.subStyle, true),
+          primaryTree,
+          secondaryTree,
           shardRows: shardRowsView(deps.shardRows ?? [], shardIds, deps.perk),
           ...numbers(l.page),
         }
       : null,
-    situationalRunes: l.situationalRunes.map((r) => withReasons(rune(r.runeId), r.reasons)),
+    situationalRunes: l.situationalRunes.filter((r) => !inTrees.size || inTrees.has(r.runeId)).map((r) => withReasons(rune(r.runeId), r.reasons)),
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons), ...numbers(l.spells) } : null,
     skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), basic: [1, 2, 3].map(key), ult: key(4), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
     starting: l.starting && start ? { items: start.ids.map(item), counts: start.counts, reason: first(l.starting.reasons), ...numbers(l.starting) } : null,

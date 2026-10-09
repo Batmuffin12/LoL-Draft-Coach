@@ -112,14 +112,17 @@ export function computeComfort(
       { value: experience, weight: cfg.form.mix.experience },
     ]);
 
-    const score = mixAvailable([
-      { value: skill, weight: cfg.mix.skill },
-      { value: form, weight: cfg.mix.form },
-    ]);
-
+    const roleList = role ? list.filter((g) => g.position === role) : [];
+    // A role you never played it in: only part of what you know about the champion carries over.
+    const roleShare = role && !roleList.length ? cfg.unplayedRoleShare : 1;
+    const score =
+      roleShare *
+      mixAvailable([
+        { value: skill, weight: cfg.mix.skill },
+        { value: form, weight: cfg.mix.form },
+      ]);
     const gamesByPosition: Record<string, number> = {};
     for (const g of list) if (g.position) gamesByPosition[g.position] = (gamesByPosition[g.position] ?? 0) + 1;
-    const roleList = role ? list.filter((g) => g.position === role) : [];
     const wins = list.filter((g) => g.win).length;
 
     out.set(id, {

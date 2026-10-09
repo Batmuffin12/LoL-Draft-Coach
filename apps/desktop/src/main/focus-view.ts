@@ -23,7 +23,7 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
   const fmt = (v: number) => formatMetric(v, f.metric, explain);
   const label = metricLabel(f.metric, explain);
   const why = renderReason(
-    { id: g.reference === "band" && deps.bandName ? "growth.why.band" : "growth.why.games", slots: { band: deps.bandName ?? "", role: g.role, metric: label, gap: Math.abs(f.importance), step: deps.targetStep } },
+    { id: f.importanceFrom === "band" && deps.bandName ? "growth.why.band" : "growth.why.games", slots: { band: deps.bandName ?? "", role: g.role, metric: label, gap: Math.abs(f.importance), step: deps.targetStep } },
     explain.templates,
     deps.championName,
   );
@@ -68,7 +68,7 @@ export function focusInGame(g: GrowthFocus | null, matchId: string | null, match
   if (!m || !me) return null;
   // The goal is set on one role (and champion): another role's game says nothing about it.
   if (me.position !== g!.role || (g!.championId !== null && me.championId !== g!.championId)) return null;
-  const v = readMetric(me, m.match.durationSec, f.metric);
+  const v = readMetric(me, m.match.durationSec, f.metric, m.match);
   if (v === null) return null;
   // One game's count (deaths, kills) reads as a whole number: "8", not the averages' "8.0".
   const whole = Number.isInteger(v) && explain.metrics[f.metric]?.count === true;

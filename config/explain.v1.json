@@ -33,9 +33,9 @@
     "confidence.clear": "Clear pick",
     "confidence.close": "Close call",
     "confidence.thin": "Not much data yet",
-    "playstyle.metric": "{metric}: you {you}, rank average {reference}",
+    "playstyle.metric": "{metric}: you {you}, typical in your rank {reference}",
     "playstyle.level.high": "Strength",
-    "playstyle.level.mid": "Around the rank average",
+    "playstyle.level.mid": "Around typical for your rank",
     "playstyle.level.low": "Room to grow",
     "pool.tier.main": "Main",
     "pool.tier.comfortable": "Comfortable",
@@ -46,7 +46,7 @@
     "pool.hole.frontline": "No frontline pick",
     "pool.hole.engage": "No crowd-control pick",
     "pool.hole.evidence": "Your team lacked it in {lacking} of your last {losses} {role} {losses|loss|losses}",
-    "pool.hole.coveredBy": "{champions} would cover it",
+    "pool.hole.coveredBy": "try {champions}",
     "meta.strong": "Strong in {role} in your rank: {winRate:pct1}% win rate ({games} games)",
     "meta.weak": "Weak in {role} in your rank right now: {winRate:pct1}% win rate ({games} games)",
     "lane.good": "{delta:signedPct1}% into {enemy:champion} ({games} games)",
@@ -86,8 +86,8 @@
     "import.block.situational.engage": "Vs heavy crowd control",
     "import.block.situational.heal": "Vs heavy healing",
     "import.block.alternatives": "Other options",
-    "power.laneAhead": "Usually ahead in lane: +{gold} gold over its opponent at 15 minutes ({games} games)",
-    "power.laneBehind": "Usually behind in lane: {gold} gold down on its opponent at 15 minutes ({games} games); plays for later",
+    "power.laneAhead": "Usually ahead of its {role} opponent: +{gold} gold at 15 minutes ({games} games)",
+    "power.laneBehind": "Usually behind its {role} opponent: {gold} gold down at 15 minutes ({games} games); plays for later",
     "loadout.item.popular": "Bought as item {slot} in {share:pct}% of games ({games} games)",
     "loadout.item.matchup": "Into {enemy:champion}: finished first {lift}× more often ({count} of {games} games)",
     "loadout.starting.matchup": "Into {enemy:champion}: {count} of {games} players start with this",
@@ -172,35 +172,34 @@
     "newchamp.learning": "Learning {champion:champion}",
     "newchamp.learning.progress": "{games} of {max} games · {days} days left",
     "newchamp.learning.progress.oneDay": "{games} of {max} games · 1 day left",
-    "newchamp.learn.record": "Your games on it: {wins} won, {losses} lost",
-    "newchamp.stage.practice.label": "Before your first game",
-    "newchamp.stage.first.label": "First games",
-    "newchamp.stage.building.label": "Building up",
-    "newchamp.stage.practice": "Spend a few minutes in the Practice Tool on its combo and spell ranges, then play it in Normal Draft, not ranked",
-    "newchamp.stage.practice.hard": "Hard to learn: practise its combo before each game and give it Normal Draft games before ranked",
-    "newchamp.stage.first": "Learn what each spell does and when it's strong; play for that, not for the win",
-    "newchamp.stage.building": "One thing per game, then look back at that game before the next",
-    "newchamp.learn.settle": "Play it in blocks of {from} to {to} games; players keep improving on a new champion for about {games} games, so don't judge it before",
-    "newchamp.focus.drop": "{metric}: {value} on it, {usual} on your other {role} champions. Get back to {goal}",
-    "newchamp.focus.goal": "{metric}: your {role} goal is {goal}",
-    "newchamp.focus.goal.value": "{metric}: your {role} goal is {goal}; on it so far {value}",
-    "newchamp.focus.basic": "{metric}: hold your usual ({goal}) while you learn the kit",
-    "newchamp.focus.basic.value": "{metric}: hold your usual ({goal}); on it so far {value}",
-    "newchamp.job.Assassin": "Its job: catch carries who walk alone, then get out; don't start front-to-back fights",
-    "newchamp.job.Fighter": "Its job: win long fights; stay in where it can keep hitting and outlast them",
-    "newchamp.job.Mage": "Its job: hit spells from range before the fight starts; stay behind your frontline",
-    "newchamp.job.Marksman": "Its job: steady damage from the back; farm, stay alive and hit the closest target",
-    "newchamp.job.Tank": "Its job: start fights and take the damage for your carries",
-    "newchamp.job.Support": "Its job: set up and protect; vision, engage or peel for your carries",
-    "newchamp.role.top": "Top: trade on your turn (its key spell up, your opponent's down) and back off on theirs",
-    "newchamp.role.jungle": "Jungle: farm first and keep your clear on time; gank when it's strong (ultimate up or an item done)",
-    "newchamp.role.middle": "Mid: learn its trading pattern (short trades or all-in) and when it can leave lane to help",
-    "newchamp.role.bottom": "Bot: learn its attack range and when it can fight; farm safely until then",
-    "newchamp.role.utility": "Support: learn when it can fight in lane (your level-ups, their spells down) and keep vision when it can't",
-    "newchamp.learn.good": "Easier first games into {champions}",
-    "newchamp.learn.hard": "Avoid or ban while learning: {champions}",
-    "newchamp.learn.late": "Wins more of long games ({late:pct}% vs {early:pct}% in short ones): farm safely and fight later",
-    "newchamp.learn.early": "Wins more of short games ({early:pct}% vs {late:pct}% in long ones): look for an early lead",
+    "newchamp.learn.record": "You on it: {wins}–{losses}",
+    "newchamp.learn.profile": "Plays as: {traits}",
+    "newchamp.profile.physical": "mostly physical damage",
+    "newchamp.profile.magic": "mostly magic damage",
+    "newchamp.profile.mixed": "mixed physical and magic damage",
+    "newchamp.profile.tanky": "tankier than most",
+    "newchamp.profile.fragile": "fragile",
+    "newchamp.profile.cc": "lots of crowd control",
+    "newchamp.profile.nocc": "little crowd control",
+    "newchamp.learn.skills": "Skills: start {first}; max {order} ({share:pct}% of players)",
+    "newchamp.learn.evenCurve": "As strong in short games as in long ones: {early:pct}% and {late:pct}%",
+    "newchamp.learn.evenMatchups": "No {role} matchup swings it much in your rank ({count} measured): a safe blind pick",
+    "newchamp.learn.gold.even": "Usually even in gold with its {role} opponent at 15 min",
+    "newchamp.learn.gold.ahead": "Usually {gold} gold ahead of its {role} opponent at 15 min",
+    "newchamp.learn.gold.behind": "Usually {gold} gold behind its {role} opponent at 15 min: it plays for later",
+    "newchamp.learn.wins": "It wins with {items}",
+    "newchamp.stage.practice.label": "First game on it",
+    "newchamp.stage.first.label": "Early games on it",
+    "newchamp.stage.building.label": "Getting comfortable",
+    "newchamp.focus.drop": "On it: {metric} {value}, vs {usual} on your other {role} picks",
+    "newchamp.focus.goal": "Your {role} goal applies here too: {metric} {goal}",
+    "newchamp.focus.goal.value": "Your {role} goal applies here too: {metric} {goal} (on it so far: {value})",
+    "newchamp.focus.basic": "Keep your {metric} at {goal}, your usual",
+    "newchamp.focus.basic.value": "Keep your {metric} at {goal}, your usual (on it so far: {value})",
+    "newchamp.learn.good": "Good first matchups: {champions}",
+    "newchamp.learn.hard": "Tough matchups for now: {champions}",
+    "newchamp.learn.late": "Stronger in long games: wins {late:pct}%, vs {early:pct}% in short ones",
+    "newchamp.learn.early": "Stronger in short games: wins {early:pct}%, vs {late:pct}% in long ones",
     "newchamp.after": "After {champion:champion}",
     "newchamp.after.why": "one new champion per role at a time",
     "newchamp.easeShort.easy": "Easy",
@@ -232,7 +231,11 @@
     "session.losses": "{streak} losses in a row. A short break before the next game usually helps.",
     "session.long": "{games} games in this session. A short break before the next one usually helps.",
     "session.record": "Your record right after {streak} losses in a row: {winRate:pct}% won ({games} games), against {overall:pct}% overall.",
-    "growth.goalHint": "Your next step: {step:pct}% of the way to the average"
+    "growth.goalHint": "Your next step: {step:pct}% of the way to the average",
+    "newchamp.learn.win.more": "more {metric}: {winners} in wins, {losers} in losses",
+    "newchamp.learn.win.more.you": "more {metric}: {winners} in wins, {losers} in losses (you: {you})",
+    "newchamp.learn.win.less": "fewer {metric}: {winners} in wins, {losers} in losses",
+    "newchamp.learn.win.less.you": "fewer {metric}: {winners} in wins, {losers} in losses (you: {you})"
   },
   "settings": {
     "clearGap": 0.05,
@@ -252,6 +255,24 @@
     "playmaking": "Playmaking (CC)"
   },
   "metrics": {
+    "laneCsDiffAt10": {
+      "label": "CS lead on your lane opponent at 10 min",
+      "format": "integer"
+    },
+    "wardsPlacedBefore14": {
+      "label": "wards placed before 14 min",
+      "format": "decimal",
+      "count": true
+    },
+    "earlyEpicMonsterTakedowns": {
+      "label": "early dragons, grubs and herald",
+      "format": "decimal",
+      "count": true
+    },
+    "laneGoldDiffAt14": {
+      "label": "gold lead on your lane opponent at 14 min",
+      "format": "integer"
+    },
     "earlyDeaths": {
       "label": "deaths before 14 min",
       "format": "decimal",
@@ -494,6 +515,26 @@
     ],
     "utility:challenges.visionScorePerMinute": [
       "Wards in unwarded spots score more than wards next to others."
+    ],
+    "top:laneGoldDiffAt14": [
+      "Trade when your wave is bigger than theirs.",
+      "Count plates: every plate is gold your opponent doesn't get."
+    ],
+    "middle:laneGoldDiffAt14": [
+      "Trade when your wave is bigger than theirs.",
+      "Push first, then roam, so your opponent loses farm following you."
+    ],
+    "jungle:earlyEpicMonsterTakedowns": [
+      "Ward the next objective a minute before it spawns.",
+      "Start dragon or grubs only when your nearby lanes can move first.",
+      "Keep Smite up for the objective."
+    ],
+    "bottom:laneCsDiffAt10": [
+      "Hit them when they walk up to last-hit while your support zones."
+    ],
+    "utility:wardsPlacedBefore14": [
+      "Use your support item's wards right away.",
+      "Ward river before the enemy jungler's first gank."
     ]
   }
 }

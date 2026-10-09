@@ -7,6 +7,8 @@ const PublicUserSchema = z.looseObject({
   riotId: z.string(),
   band: z.number().nullable(),
   lastSyncAt: z.number().nullable(),
+  // Games of a long history still loading in the background (servers before 0.7.4 don't send it).
+  historyBacklog: z.number().nullable().optional(),
 });
 
 const SyncStateSchema = z.union([
@@ -112,6 +114,10 @@ export const MetaSnapshotSchema = z.looseObject({
     }),
   ),
   references: z.record(z.string(), z.record(z.string(), z.looseObject({ n: z.number(), quantiles: z.array(z.number()) }))),
+  // How each champion wins (absent in snapshots made before it).
+  championWins: z
+    .array(z.looseObject({ championId: z.number(), role: z.string(), n: z.number(), metrics: z.record(z.string(), z.tuple([z.number(), z.number(), z.number()])) }))
+    .optional(),
   // Builds (loadout): the fields every build carries; absent in snapshots made before builds.
   builds: z
     .array(

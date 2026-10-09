@@ -38,6 +38,11 @@ export const EngineConfigSchema = z.object({
       mix: z.object({ winRate: weight, experience: weight }),
     }),
     mix: z.object({ skill: weight, form: weight }),
+    /**
+     * Comfort in a role you never played the champion in is this share of it (0..1): knowing Gwen
+     * top doesn't mean knowing Gwen jungle (another way to play her).
+     */
+    unplayedRoleShare: unit.default(0.6),
   }),
   roleAdvice: z.object({
     halfLifeDays: z.number().positive(),
@@ -173,6 +178,12 @@ export const EngineConfigSchema = z.object({
       dropMin: z.number().min(0),
       /** Per role, the growth metric to hold at your usual while learning ("-" = lower is better). */
       basics: z.record(z.string(), z.string()),
+      /** "How it plays": a measured percentile (0..1) at or above `high` is said as high, at or below `low` as low. */
+      profile: z.object({ high: unit, low: unit }).default({ high: 0.66, low: 0.33 }),
+      /** Skill order is shown once this many games back it. */
+      skillMinGames: z.number().int().min(1).default(100),
+      /** "No matchup swings it much" once this many opponents are measured, all within plan.evenWin. */
+      evenMatchupsMin: z.number().int().min(1).default(5),
     }),
   }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */
@@ -185,6 +196,8 @@ export const EngineConfigSchema = z.object({
     /** Learning: first played within learningWindowDays and at most learningMaxGames games. */
     learningWindowDays: z.number().positive(),
     learningMaxGames: z.number().int().min(1),
+    /** ...and with mastery under this: a champion you already know is "rusty" when you come back to it, never "learning". */
+    learningMaxMastery: z.number().min(0).default(30000),
     /** Rusty: at least dormantMastery points, unplayed for dormantDays, and a listed role fit. */
     dormantMastery: z.number().min(0),
     dormantDays: z.number().positive(),
@@ -193,6 +206,11 @@ export const EngineConfigSchema = z.object({
     coverage: z.object({ damageShare: unit, frontline: unit, engage: unit }),
     /** A hole is shown only when the team lacked it in at least this share of the player's losses in the role... */
     minLossShare: unit,
+    /**
+     * A need counts as a hole only when champions that fill it play at least this share of the role's
+     * games in your rank (bot lane rarely brings magic damage: no "no magic-damage pick" there).
+     */
+    minRoleNeedShare: unit.default(0.15),
     /** ...unless there are fewer losses than this to judge by (then it's shown without evidence). */
     minLossesForEvidence: z.number().int().min(1),
   }),
@@ -271,6 +289,8 @@ export const EngineConfigSchema = z.object({
       clearMaxPersonalLossWin: unit,
       /** A champion's power curve is mentioned when long- and short-game win rates differ by this much (0..1). */
       powerCurveGap: unit,
+      /** ...and by this many standard errors of the two win rates, so noise isn't said as fact. */
+      powerCurveZ: z.number().min(0).default(2),
       /** Mentioned when the champion is this much gold ahead of (or behind) its lane opponent at 15 minutes on average. */
       laneGoldGap: z.number().min(0),
       /** Factor bars: this change in win chance fills a bar from the middle to the end. */
@@ -386,6 +406,14 @@ export const AppConfigSchema = z.object({
     queues: z.array(z.number().int()).min(1),
     /** Your newest games that also get their timeline (one more Riot call each): when you die, your gold at 15. */
     timelineCount: z.number().int().min(0).optional(),
+    /**
+     * Riot calls one sync may spend on games (a match and its timeline are one each): newest games
+     * first, then older ones and missing timelines. The rest of a long history fills in over the
+     * next syncs and hourly wake-ups. Absent: no limit.
+     */
+    callsPerSync: z.number().int().positive().optional(),
+    /** The same, for each user still loading their history during the hourly wake-up (it fills a long history in a few hours). */
+    backfillCallsPerWake: z.number().int().positive().optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */

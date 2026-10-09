@@ -19,6 +19,7 @@ import type { RatingConfig } from "./config";
 import { placeDraft, type PlacedChampion } from "./draft-roles";
 import { reason, type Confidence } from "./explain";
 import type { MetaIndex } from "./meta-index";
+import { curveGap } from "./power-curve";
 import { deltaWin, weightedQuantile, winOf } from "./rating";
 import { roleFit, usualPick, type RecommendInput } from "./recommend";
 import { scoreTeamNeeds, teamProfile } from "./team-needs";
@@ -174,17 +175,15 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   }
   // Power curve (information only): does it win short games or long ones?
   const curve = ctx.attributes.get(id)?.powerCurve;
-  if (curve && curve.early.games >= cfg.minGames.meta && curve.late.games >= cfg.minGames.meta) {
-    const gap = curve.late.winRate - curve.early.winRate;
-    if (Math.abs(gap) >= cfg.explain.powerCurveGap) {
-      const slots = { early: curve.early.winRate, late: curve.late.winRate };
-      notes.push({ r: reason(gap > 0 ? "power.late" : "power.early", slots), weight: cfg.explain.minDeltaWin, positive: true });
-    }
+  const gap = curveGap(curve, cfg.minGames.meta, cfg.explain.powerCurveGap, cfg.explain.powerCurveZ);
+  if (curve && gap !== null) {
+    const slots = { early: curve.early.winRate, late: curve.late.winRate };
+    notes.push({ r: reason(gap > 0 ? "power.late" : "power.early", slots), weight: cfg.explain.minDeltaWin, positive: true });
   }
   // Lane gold at 15 (information only, like the power curve).
   const lane15 = curve?.goldAt15;
   if (lane15 && lane15.games >= cfg.minGames.meta && Math.abs(lane15.diff) >= cfg.explain.laneGoldGap) {
-    notes.push({ r: reason(lane15.diff > 0 ? "power.laneAhead" : "power.laneBehind", { gold: Math.abs(lane15.diff), games: lane15.games }), weight: cfg.explain.minDeltaWin, positive: true });
+    notes.push({ r: reason(lane15.diff > 0 ? "power.laneAhead" : "power.laneBehind", { gold: Math.abs(lane15.diff), games: lane15.games, role }), weight: cfg.explain.minDeltaWin, positive: true });
   }
   // Rising in the band lately: information only (no evidence yet that trends add to the win chance).
   const rising = trendReason(index, id, role);

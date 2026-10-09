@@ -280,6 +280,15 @@ export interface MatchTimeline {
    * killer is -1 when no champion got the kill. For power spikes and "when you die" (absent before 2026-10-08).
    */
   kills?: [number, number, number, number][];
+  /** CS (lane minions + jungle monsters) per participant at each frame (absent before 2026-10-08). */
+  cs?: number[][];
+  /** Wards placed, in time order: [second, placer] (trinkets, sight and control wards; absent before 2026-10-08). */
+  wards?: [number, number][];
+  /**
+   * Epic monsters taken (dragons, grubs, herald, baron...), in time order: [second, killer, assists
+   * bitmask, killer team id]; killer is -1 without a champion (absent before 2026-10-08).
+   */
+  monsters?: [number, number, number, number][];
 }
 
 /** A match from a user's own history, with which participant they were. */
@@ -489,6 +498,11 @@ export interface MetaSnapshot {
    * between the top and bottom halves (growth focus; absent in older snapshots).
    */
   references: Record<Position, Record<string, { n: number; quantiles: number[]; importance?: number }>>;
+  /**
+   * How each champion wins in a role: for the role's goal metrics (early game and habits),
+   * the mean in its won and lost games, as [winMean, lossMean, games]. Absent in older snapshots.
+   */
+  championWins?: { championId: ChampionId; role: Position; n: number; metrics: Record<string, [number, number, number]> }[];
 }
 
 /** Status shown in the panel. */
@@ -502,6 +516,12 @@ export interface CoachStatus {
   profile:
     | { state: "idle" }
     | { state: "loading"; done: number; total: number }
-    | { state: "ready"; games: number; role: Position | null }
+    | {
+        state: "ready";
+        games: number;
+        role: Position | null;
+        /** Server mode: older games still loading in the background (absent or 0: the history is complete). */
+        backlog?: number;
+      }
     | { state: "error"; message: string };
 }

@@ -73,6 +73,8 @@ export function analyzePool(input: {
   intendedPositions: Map<ChampionId, Position[]>;
   now: number;
   config: EngineConfig;
+  /** The band's champions in the role and their games (meta), to skip needs the role rarely fills. */
+  rolePicks?: { championId: ChampionId; games: number }[];
 }): RolePool {
   const { role, comfort, attributes, now, config } = input;
   const cfg = config.pool;
@@ -92,22 +94,23 @@ export function analyzePool(input: {
     const first = firstPlayed.get(c.championId);
     const m = mastery.get(c.championId);
     if (fit && games >= cfg.coreGames && c.score >= cfg.coreMin) champions.push({ ...entry, tier: "main" });
-    else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames)
+    else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames && (m?.points ?? 0) < cfg.learningMaxMastery)
       champions.push({
         ...entry,
         tier: "learning",
         progress: { games: c.games, maxGames: cfg.learningMaxGames, daysLeft: Math.max(1, Math.ceil(cfg.learningWindowDays - (now - first) / DAY_MS)) },
       });
-    else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
     else if (
-      // Rusty: lots of mastery, not played for a while, and a real role fit here (not just the player's own games).
+      // Rusty: a champion you know (lots of mastery) and that is a real role fit here (not just the
+      // player's own games), either not played for a while or only a few games since coming back to
+      // it (clearing the rust). Checked before "comfortable" so coming back reads as coming back.
       m &&
       m.points >= cfg.dormantMastery &&
-      m.lastPlayTime !== undefined &&
-      now - m.lastPlayTime >= cfg.dormantDays * DAY_MS &&
+      ((m.lastPlayTime !== undefined && now - m.lastPlayTime >= cfg.dormantDays * DAY_MS) || c.games <= cfg.learningMaxGames) &&
       (input.intendedPositions.get(c.championId)?.includes(role) ?? false)
     )
       champions.push({ ...entry, tier: "rusty" });
+    else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
   }
   const order: Record<PoolTier, number> = { main: 0, comfortable: 1, learning: 2, rusty: 3 };
   champions.sort((a, b) => order[a.tier] - order[b.tier] || b.comfort - a.comfort || a.championId - b.championId);
@@ -123,8 +126,17 @@ export function analyzePool(input: {
       const p = m.match.participants[m.me];
       return p && p.position === role && !p.win;
     });
+    const total = input.rolePicks?.reduce((s, c) => s + c.games, 0) ?? 0;
+    const roleFills = (need: PoolNeed) => {
+      if (!input.rolePicks || total <= 0) return true;
+      const filled = input.rolePicks.reduce((s, c) => {
+        const a = attributes.get(c.championId);
+        return s + (a && covers(a, need, cfg.coverage) ? c.games : 0);
+      }, 0);
+      return filled / total >= cfg.minRoleNeedShare;
+    };
     for (const need of NEEDS) {
-      if (reliable.some((a) => covers(a, need, cfg.coverage))) continue;
+      if (reliable.some((a) => covers(a, need, cfg.coverage)) || !roleFills(need)) continue;
       const lossesLacking = losses.filter((m) => {
         const me = m.match.participants[m.me]!;
         const team = m.match.participants.filter((p) => p.teamId === me.teamId);

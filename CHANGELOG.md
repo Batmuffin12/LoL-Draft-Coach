@@ -2,6 +2,25 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.7.4] — 2026-10-09 — A coach that knows your history
+
+### Added
+- **1,000 games of history, every one with a timeline** (was 200, and 30 with timelines), loaded in the background: each sync spends at most `history.callsPerSync` (200) Riot calls, newest games first, and the hourly wake-up continues every history still loading (`backfillCallsPerWake` 800, users' calls before the collector's). The panel says "Loading your older games in the background: N to go". A complete history then lists only new games (`users.history_backlog`, migration 7).
+- **Four more role goals from timelines**: gold lead on your lane opponent at 14 min (top, mid), CS lead at 10 (bot), wards placed before 14 (support), early dragons, grubs and herald (jungle), with tips. Timelines now keep CS per minute, vision wards and epic monsters.
+- **How a champion wins in your rank** (New tab): its role's goal metrics in its won vs lost games, measured per champion on the server (`championWins`, only real differences: z ≥ 2), with your own number on it. And how it plays (damage type, frontline, crowd control), its skill order, and "no matchup swings it much: a safe blind pick" when that's what the data says.
+- **A collector boost behind a switch** (`meta.collector.boost`): 100% of the key and ~53 minutes per hourly run until 60,000 collected games are stored, for power spikes; it switches itself off.
+- **The Last game card** shows your newest game from your history when the coach wasn't open for it.
+- Dev: `pnpm local:prod` runs the branch's panel on production data with the branch's config, registering itself on the first run; `LDC_VIEW_DUMP` saves everything the panel shows.
+
+### Changed
+- **Comfort that knows you**: steadier recent form (one streak can't sink a champion you know), a role you never played a champion in keeps only part of its comfort (Gwen top isn't Gwen jungle), and a champion with real mastery is "Rusty" when you come back to it, never "Learning".
+- **The New tab shows only what the data says**, in plain sentences ("Keep your jungle CS at 10 min at 56 or more, your usual", "You on it: 2–1"); the generic advice (practice tips, class jobs, "don't judge it before N games") is gone.
+- Pool, Style and New tabs fit the panel again; room to grow is red; style numbers say "typical in your rank"; the Playmaking (CC) axis is gone (it measured the champion's kit).
+
+### Fixed (audit on the owner's games and 13,414 production games)
+- Rune and item "swap in" suggestions need a real difference (z ≥ 2) and come only from the page's two rune trees ("Triple Tonic" came from ~6 games vs 3).
+- "Scales" / "strong early" is said only beyond chance; the goal's typical value comes from your rank, as on the Style tab, and its why line says where it was measured; "ahead of its jungle opponent" instead of "ahead in lane"; no pool gap for a need the role rarely fills (bot magic damage).
+
 ## [0.7.3] — 2026-10-08 — Goals from your first games in a role
 
 ### Changed

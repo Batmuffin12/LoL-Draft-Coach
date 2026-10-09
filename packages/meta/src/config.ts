@@ -20,6 +20,10 @@ export const MetaConfigSchema = z.object({
     referenceMaxSamples: z.number().int().min(1),
     /** Values a role/metric needs before a reference is published. */
     minReferenceSamples: z.number().int().min(1),
+    /** "How it wins": a champion-role is measured once it has this many won and this many lost games with the metric. */
+    championWinMinGames: z.number().int().min(1).default(40),
+    /** ...and the won-vs-lost difference must be this many standard errors (a real difference, not noise). */
+    championWinMinZ: z.number().min(0).default(2),
     /** Power curve: win rate in games shorter than earlyMinutes vs longer than lateMinutes. */
     powerCurve: z.object({ earlyMinutes: z.number().positive(), lateMinutes: z.number().positive() }),
     /** Trending champions: the last recentDays compared with the rest of the window. */
@@ -57,7 +61,14 @@ export const MetaConfigSchema = z.object({
     /** Expected win per state bin: bucket edges (minutes, team gold difference) and smoothing toward 50%. */
     stateBins: z.object({ minutes: z.array(z.number()).min(1), goldDiff: z.array(z.number()).min(1), priorGames: z.number().min(0) }),
     /** Situational lift: smoothing, and what is published (games on each side, minimum lift, most per champion-role). */
-    lift: z.object({ priorGames: z.number().min(0), minGames: z.number().int().min(1), minLift: z.number().min(1), maxPerBuild: z.number().int().min(0) }),
+    lift: z.object({
+      priorGames: z.number().min(0),
+      minGames: z.number().int().min(1),
+      minLift: z.number().min(1),
+      maxPerBuild: z.number().int().min(0),
+      /** Two-proportion z-score the difference must reach, so a few games can't make a big ratio (6 vs 3 games). */
+      minZ: z.number().min(0).default(2),
+    }),
     /** Rune pages and items into a lane opponent are kept when the matchup has this many games. */
     minMatchupGames: z.number().int().min(1),
     /** Items published per build slot (the most bought). */
@@ -99,6 +110,20 @@ export const MetaConfigSchema = z.object({
     rateLimitShare: z.number().gt(0).max(1),
     /** /health calls the collector stale after this many hours without a new game. */
     staleAfterHours: z.number().positive(),
+    /**
+     * A temporary boost to gather data faster (power spikes need ~6-10x the games): while
+     * enabled and fewer than `untilMatches` collected games are stored, runs use these limits
+     * instead. It switches itself off at that size; `enabled: false` switches it off at once.
+     */
+    boost: z
+      .object({
+        enabled: z.boolean(),
+        untilMatches: z.number().int().min(1),
+        budgetSeconds: z.number().positive(),
+        maxMatchesPerRun: z.number().int().min(1),
+        rateLimitShare: z.number().gt(0).max(1),
+      })
+      .optional(),
   }),
 });
 export type MetaConfig = z.infer<typeof MetaConfigSchema>;

@@ -132,6 +132,20 @@ describe("aggregateBand", () => {
     expect(a.roleShares).toEqual({ top: 1 });
   });
 
+  it("measures how each champion wins: its role's goal metrics in won vs lost games", () => {
+    const games = Array.from({ length: 8 }, (_, i) => {
+      const m = match(`W${i}`, BLUE, RED, i % 2 === 0);
+      // Top champion 1: about 1 early death in its wins, 3 in its losses; plates differ by noise only.
+      m.participants[0]!.earlyDeaths = (i % 2 === 0 ? 1 : 3) + (i % 4 < 2 ? 0 : 0.5);
+      m.participants[0]!.challenges = { turretPlatesTaken: [1, 2, 2, 1, 3, 0, 0, 3][i]! };
+      return m;
+    });
+    const s = aggregateBand({ ...base, matches: games, config: { ...cfg, championWinMinGames: 4 }, championMetrics: { top: ["-earlyDeaths", "challenges.turretPlatesTaken"] } });
+    expect(s.championWins?.find((c) => c.championId === 1 && c.role === "top")?.metrics).toEqual({ earlyDeaths: [1.25, 3.25, 8] });
+    // Fewer won or lost games than championWinMinGames: not published.
+    expect(aggregateBand({ ...base, matches: games, config: { ...cfg, championWinMinGames: 5 }, championMetrics: { top: ["-earlyDeaths"] } }).championWins).toBeUndefined();
+  });
+
   it("caps reference values per role and metric, keeping the newest games", () => {
     const games = [0, 1, 2].map((i) => {
       const m = match(`M${i}`, BLUE, RED, true, i);

@@ -256,7 +256,7 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
           return <ClosedRole key={p.role} title={positionLabel(p.role)} summary={summary} onOpen={() => roles.open(i)} />;
         }
         return (
-          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = rank average</span>}>
+          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = typical in your rank</span>}>
             {p.axes.map((a) => (
               <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
             ))}
@@ -278,12 +278,14 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
 }
 
 function Pool({ state }: { state: ViewState }) {
-  const roles = useOpenRoles(state.roles.length, state.roles.map((r) => `${r.role}:${r.games}`).join());
-  if (!state.roles.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
+  // Roles with too few games to judge have no pool to show: left out, so the others fit.
+  const list = state.roles.filter((r) => r.enoughData);
+  const roles = useOpenRoles(list.length, list.map((r) => `${r.role}:${r.games}`).join());
+  if (!list.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)} WR`;
   return (
     <>
-      {state.roles.map((r, i) =>
+      {list.map((r, i) =>
         !roles.isOpen(i) ? (
           <ClosedRole
             key={r.role}
@@ -292,16 +294,18 @@ function Pool({ state }: { state: ViewState }) {
             onOpen={() => roles.open(i)}
           />
         ) : (
-          <Section key={r.role} title={`${positionLabel(r.role)} pool`} gold={i === 0} aside={<span className="micro">{stats(r)}</span>}>
+          <Section key={r.role} title={`${positionLabel(r.role)} pool`} gold={i === 0} aside={<span className="micro" title="Roles ranked by your recent results. Information only: you choose your positions.">{stats(r)}</span>}>
             {r.enoughData ? (
               <>
                 {r.pool.length > 0 && <PoolTable rows={r.pool} />}
                 {r.holes.map((h) => (
-                  <Notice key={h.text}>
-                    <strong>{h.text}</strong>
-                    {h.evidence ? `. ${h.evidence}` : ""}
-                    {h.coveredBy ? `. ${h.coveredBy}.` : ""}
-                  </Notice>
+                  // The evidence (how often your team lacked it in your losses) is on hover, so the pool fits.
+                  <span key={h.text} title={h.evidence ?? undefined}>
+                    <Notice>
+                      <strong>{h.text}</strong>
+                      {h.coveredBy ? ` · ${h.coveredBy}` : ""}
+                    </Notice>
+                  </span>
                 ))}
               </>
             ) : (
@@ -310,9 +314,6 @@ function Pool({ state }: { state: ViewState }) {
           </Section>
         ),
       )}
-      <Section>
-        <span className="micro">Roles ranked by your recent results. Information only: you choose your positions.</span>
-      </Section>
     </>
   );
 }

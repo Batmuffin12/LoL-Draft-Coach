@@ -75,6 +75,17 @@ describe("rune trees", () => {
   });
 });
 
+describe("situational runes", () => {
+  it("suggests swapping in only runes from the shown page's two trees", () => {
+    // 8139 is in Domination (the page's primary); 9999 is in neither tree (another page).
+    const l = { ...loadout(false), situationalRunes: [8139, 9999].map((runeId) => ({ runeId, reasons: [] })) };
+    const deps = { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false };
+    expect(toLoadoutView(l, deps).situationalRunes.map((r) => r.id)).toEqual([8139]);
+    // Without rune data the trees are unknown: nothing is filtered.
+    expect(toLoadoutView(l, { ...deps, data: null }).situationalRunes).toHaveLength(2);
+  });
+});
+
 describe("toLoadoutView numbers", () => {
   it("carries win rate and games on every choice, the slot minute, and share and win added on items", () => {
     const v = view(false, [[5008, 5005, 5007], [5008, 5010, 5001], [5011, 5013, 5001]]);

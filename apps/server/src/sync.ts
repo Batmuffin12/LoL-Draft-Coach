@@ -47,6 +47,8 @@ export interface SyncResult {
   newMatches: number;
   totalMatches: number;
   band: number;
+  /** Games (or timelines) still to load: the next syncs continue (0: the history is complete). */
+  remaining: number;
 }
 
 /** Sorts Match-V5 ids newest first by their numeric part (e.g. EUW1_7123456789). */
@@ -89,38 +91,64 @@ export async function syncUser(
   }));
   const band = bandFromRankedEntries(ranked, settings.bands);
 
+  // Once the whole history is stored (backlog 0), only new games are listed: paging stops at the
+  // first page whose games are all stored already.
+  const complete = user.historyBacklog === 0;
+  const stored = (ids: string[]) =>
+    new Set(
+      ids.length
+        ? db
+            .select({ id: userMatches.matchId })
+            .from(userMatches)
+            .where(and(eq(userMatches.userId, user.id), inArray(userMatches.matchId, ids)))
+            .all()
+            .map((r) => r.id)
+        : [],
+    );
   const idPages: string[][] = [];
   for (const queue of history.queues) {
     for (let start = 0; start < history.matchCount; start += MATCH_IDS_PAGE) {
       const page = await riot.matchIdsByPuuid(puuid, { queue, start, count: Math.min(MATCH_IDS_PAGE, history.matchCount - start) });
       idPages.push(page);
       if (page.length < MATCH_IDS_PAGE) break;
+      if (complete && stored(page).size === page.length) break;
     }
   }
   const wanted = sortMatchIdsNewestFirst(idPages.flat()).slice(0, history.matchCount);
-  const have = new Set(
-    wanted.length
-      ? db
-          .select({ id: userMatches.matchId })
-          .from(userMatches)
-          .where(and(eq(userMatches.userId, user.id), inArray(userMatches.matchId, wanted)))
-          .all()
-          .map((r) => r.id)
-      : [],
-  );
+  const have = stored(wanted);
   const missing = wanted.filter((id) => !have.has(id));
+  // Stored games that should have a timeline but have none, or one from before CS, wards and
+  // epic monsters were kept (they are fetched again, newest first).
+  const timelineCount = history.timelineCount ?? 0;
+  const withTimeline = new Set(wanted.slice(0, timelineCount));
+  const stale = riot.timeline
+    ? wanted.filter(
+        (id) =>
+          have.has(id) &&
+          withTimeline.has(id) &&
+          (db.$client.prepare("SELECT json_type(summary, '$.timeline.monsters') IS NULL AS stale FROM matches WHERE match_id = ?").get(id) as { stale: number } | undefined)?.stale === 1,
+      )
+    : [];
+  const work = [...missing.map((id) => ({ id, stored: false })), ...stale.map((id) => ({ id, stored: true }))];
+  const budget = history.callsPerSync ?? Infinity;
+  let calls = 0;
 
   let added = 0;
-  for (let i = 0; i < missing.length; i++) {
-    const id = missing[i]!;
+  let done = 0;
+  for (let i = 0; i < work.length; i++) {
+    const { id, stored: isStored } = work[i]!;
+    if (calls >= budget) break;
+    done++;
+    calls++;
     // The raw match is needed even when another user already stored it: only the raw
     // payload says which participant this user was (stored summaries carry no PUUIDs).
     const match = await riot.match(id);
     const index = match ? participantIndex(match, puuid) : -1;
     if (match && index >= 0) {
       let summary = summarizeMatch(match);
-      // Your newest games also get their timeline (when you die, your gold at 15); a failed one is skipped.
-      if (riot.timeline && wanted.indexOf(id) < (history.timelineCount ?? 0)) {
+      // Your games also get their timeline (when you die, your gold at 15); a failed one is skipped.
+      if (riot.timeline && withTimeline.has(id)) {
+        calls++;
         const timeline = await riot.timeline(id).catch((err: unknown) => {
           if (err instanceof RiotKeyError) throw err;
           return null;
@@ -129,6 +157,12 @@ export async function syncUser(
           summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
           if (settings.earlyDeathsMinute) summary = withEarlyDeaths(summary, deathsBefore(timeline, match, settings.earlyDeathsMinute * 60));
         }
+      }
+      if (isStored) {
+        // A stored game getting its timeline: only the summary changes.
+        if (summary.timeline) db.update(matches).set({ summary }).where(eq(matches.matchId, summary.matchId)).run();
+        onProgress?.(i + 1, work.length);
+        continue;
       }
       db.transaction((tx) => {
         tx.insert(matches)
@@ -151,15 +185,16 @@ export async function syncUser(
       });
       added++;
     }
-    onProgress?.(i + 1, missing.length);
+    onProgress?.(i + 1, work.length);
   }
+  const remaining = work.length - done;
 
   db.transaction((tx) => {
     tx.insert(userMasteries)
       .values({ userId: user.id, data: masteries, updatedAt: now })
       .onConflictDoUpdate({ target: userMasteries.userId, set: { data: masteries, updatedAt: now } })
       .run();
-    tx.update(users).set({ band, ranked, lastSyncAt: now }).where(eq(users.id, user.id)).run();
+    tx.update(users).set({ band, ranked, lastSyncAt: now, historyBacklog: remaining }).where(eq(users.id, user.id)).run();
     // The rank today (the last sync of the day wins), for the monthly report's rank trend.
     const day = new Date(now).toISOString().slice(0, 10);
     for (const r of ranked) {
@@ -172,7 +207,7 @@ export async function syncUser(
   pruneUserHistory(db, user.id, history.matchCount);
 
   const totalMatches = db.select({ n: sql<number>`count(*)` }).from(userMatches).where(eq(userMatches.userId, user.id)).get()?.n ?? 0;
-  return { newMatches: added, totalMatches, band };
+  return { newMatches: added, totalMatches, band, remaining };
 }
 
 /** Keeps the user's newest `keep` matches, then deletes user-history matches nobody references any more. */

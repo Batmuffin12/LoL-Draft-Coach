@@ -22,3 +22,4 @@ export * from "./newchamps";
 export * from "./report";
 export * from "./session";
 export * from "./plan";
+export * from "./power-curve";

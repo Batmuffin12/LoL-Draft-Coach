@@ -122,7 +122,7 @@ describe("collector", () => {
     expect(text).not.toContain("SECRET");
     expect(text).not.toContain("Name0");
     expect(rows[0]!.summary.participants[0]!.challenges).toEqual({ killParticipation: 0.5 });
-    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [] });
+    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [], wards: [], monsters: [] });
     // Players' identifiers are never stored anywhere.
     const dump = JSON.stringify(db.$client.prepare("SELECT * FROM collector_cursors").all());
     expect(dump).not.toContain("P-");
@@ -284,6 +284,24 @@ describe("meta job", () => {
     const r = await new MetaJob(db, { ...fakeRiot(), keyProblem: new Error("x") }, settings, { now: () => NOW, log: () => {} }).run();
     expect(r.error).toMatch(/rejected/);
     expect(r.snapshots).toHaveLength(1);
+  });
+
+  it("boosts collection until enough games are stored, then switches itself off; enabled: false switches it off", async () => {
+    const boost = { enabled: true, untilMatches: 1, budgetSeconds: 3200, maxMatchesPerRun: 1600, rateLimitShare: 1 };
+    const run = async (b: typeof boost, seedGames: number) => {
+      const db = openDb(":memory:");
+      const { summarizeMatch } = await import("@ldc/riot-api");
+      for (let i = 0; i < seedGames; i++) {
+        db.insert(schema.matches).values({ matchId: `S${i}`, queueId: 420, gameVersion: "16.19.1", endedAt: NOW - MIN, durationSec: 1800, summary: summarizeMatch(rawMatch(`S${i}`, NOW - MIN)), source: "collector", storedAt: NOW, band: 2 }).run();
+      }
+      const shares: number[] = [];
+      const s = { ...settings, meta: { ...config.meta, collector: { ...config.meta.collector, boost: b } } };
+      const r = await new MetaJob(db, { ...fakeRiot(), keyProblem: new Error("x") }, s, { now: () => NOW, log: () => {}, collectorShare: (x) => shares.push(x) }).run();
+      return { boosted: r.boosted, shares };
+    };
+    expect(await run(boost, 0)).toEqual({ boosted: true, shares: [1] });
+    expect(await run(boost, 1)).toEqual({ boosted: false, shares: [config.meta.collector.rateLimitShare] });
+    expect(await run({ ...boost, enabled: false }, 0)).toEqual({ boosted: false, shares: [config.meta.collector.rateLimitShare] });
   });
 
   it("closes a run the server never finished (a redeploy mid-run) before the next one", async () => {

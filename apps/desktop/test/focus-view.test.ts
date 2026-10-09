@@ -11,8 +11,8 @@ const growth: GrowthFocus = {
   reference: "band",
   scope: "role",
   games: 20,
-  focus: { metric: "csPerMinute", lowerIsBetter: false, you: 6.1, baseline: 6, target: 6.8, typical: 7.6, importance: 0.083, impact: 0.4, recent: [true, false, false], done: false },
-  met: [{ metric: "deathsPerMinute", lowerIsBetter: true, you: 0.31, baseline: 0.42, target: 0.36, typical: 0.3, importance: -0.1, impact: 0.2, recent: [true], done: true }],
+  focus: { metric: "csPerMinute", lowerIsBetter: false, you: 6.1, baseline: 6, target: 6.8, typical: 7.6, importance: 0.083, importanceFrom: "band", impact: 0.4, recent: [true, false, false], done: false },
+  met: [{ metric: "deathsPerMinute", lowerIsBetter: true, you: 0.31, baseline: 0.42, target: 0.36, typical: 0.3, importance: -0.1, importanceFrom: "band", impact: 0.2, recent: [true], done: true }],
 };
 const deps = {
   explain: config.explain,
@@ -55,6 +55,12 @@ describe("focus view", () => {
     const me = { championId: 103, position: "middle", win: true, challenges: { deathsByEnemyChamps: 8 } } as unknown as ParticipantSummary;
     const m: UserMatch = { match: { matchId: "EUW1_5", queueId: 420, gameVersion: "16.19", endedAt: 1, durationSec: 1800, participants: [me] }, me: 0 };
     expect(focusInGame(deaths, "EUW1_5", [m], config.explain)).toMatchObject({ value: "8", target: "8.0", met: true });
+  });
+
+  it("says the why from where the importance was measured, even when typical comes from your rank", () => {
+    const fromGames = { ...growth, focus: { ...growth.focus!, importanceFrom: "games" as const } };
+    expect(focusView(fromGames, deps)!.why).toMatch(/^Why this: in your games, mid players/);
+    expect(focusView(fromGames, deps)!.typicalLine).toBe("Typical mid player in your rank: 7.6");
   });
 
   it("names the average by where it came from: your rank, or your own games when the rank's data is thin", () => {

@@ -86,6 +86,24 @@ describe("champion pool", () => {
     expect(pool.champions[0]).toMatchObject({ games: 20, winRate: 0.5 });
   });
 
+  it("calls a champion you already know (lots of mastery) rusty when you come back to it, never learning", () => {
+    // NEW's 2 recent games, but with 100k mastery: you know it, you're getting back into it.
+    const known = [...masteries, { championId: NEW, level: 10, points: 100_000, lastPlayTime: NOW - 5 * DAY }];
+    const tierOf = (gs: PlayerGame[]) => analyze({ masteries: known, comfort: computeComfort(gs, known, NOW, cfg.comfort, "jungle") }).champions.find((c) => c.championId === NEW)?.tier;
+    expect(tierOf(games)).toBe("rusty"); // 2 games back on it: still getting back into it
+    expect(tierOf(games.map((g) => (g.championId === NEW ? { ...g, win: false } : g)))).toBe("rusty");
+  });
+
+  it("gives a champion you never played in the role only part of its comfort there", () => {
+    // MAIN's games are all jungle: in top it keeps only unplayedRoleShare of what it would have.
+    const jungle = computeComfort(games, masteries, NOW, cfg.comfort, "jungle").get(MAIN)!.score;
+    const topGames = games.map((g) => (g.championId === MAIN ? { ...g, position: "top" } : g));
+    const asTop = computeComfort(topGames, masteries, NOW, cfg.comfort, "top").get(MAIN)!.score;
+    const notInMid = computeComfort(topGames, masteries, NOW, cfg.comfort, "middle").get(MAIN)!.score;
+    expect(notInMid).toBeLessThan(asTop * cfg.comfort.unplayedRoleShare + 0.05);
+    expect(jungle).toBeGreaterThan(notInMid);
+  });
+
   it("finds a missing magic damage pick, backed by the losses where the team lacked it", () => {
     const pool = analyze();
     const magic = pool.holes.find((h) => h.need === "magic")!;
@@ -104,6 +122,14 @@ describe("champion pool", () => {
   it("doesn't count the rusty or learning champions as covering a need", () => {
     // OLD is a mage but rusty: magic is still a hole.
     expect(analyze().holes.some((h) => h.need === "magic")).toBe(true);
+  });
+
+  it("skips a need the role rarely fills in your rank (a bot lane without magic damage is normal)", () => {
+    // OLD is the only mage: when mages play 5% of the role's games, no magic hole; at 50%, there is one.
+    const rare = analyze({ rolePicks: [{ championId: OLD, games: 5 }, { championId: MAIN, games: 95 }] });
+    expect(rare.holes.some((h) => h.need === "magic")).toBe(false);
+    const common = analyze({ rolePicks: [{ championId: OLD, games: 50 }, { championId: MAIN, games: 50 }] });
+    expect(common.holes.some((h) => h.need === "magic")).toBe(true);
   });
 
   it("judges nothing without measured attributes", () => {

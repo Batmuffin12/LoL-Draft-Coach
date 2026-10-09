@@ -44,7 +44,7 @@ export interface ProfileSource extends EventEmitter<ProfileSourceEvents> {
 const riotIdOf = (i: Identity) => `${i.gameName}#${i.tagLine}`;
 const sameRiotId = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-const readyStatus = (games: PlayerGame[]): ProfileStatus => ({ state: "ready", games: games.length, role: mainRole(games) });
+const readyStatus = (games: PlayerGame[], backlog?: number | null): ProfileStatus => ({ state: "ready", games: games.length, role: mainRole(games), ...(backlog ? { backlog } : {}) });
 
 /**
  * Dev-only: calls the Riot API from this process with the key in the local .env
@@ -379,7 +379,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     }
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
     else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });
-    else this.emit("status", readyStatus(profile.games));
+    else this.emit("status", readyStatus(profile.games, p.user.historyBacklog));
   }
 
   /** Polls the server's sync for this player until it finishes, then fetches the new games. */

@@ -44,6 +44,8 @@ export interface FocusMetric {
   /** The median in your role (and rank, with the band's data). */
   typical: number;
   importance: number;
+  /** Where the importance was measured: your rank's games, or the players in your own games. */
+  importanceFrom: "band" | "games";
   impact: number;
   /** Your last games on it, oldest first: whether each reached the target. */
   recent: boolean[];
@@ -109,42 +111,56 @@ export function pickFocus(
   const baseGames = older.length >= Math.ceil(g.checkGames / 2) ? older : games;
 
   const metrics = [...new Set(g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
-  const useBand = Object.values(bandReferences ?? {}).some((r) => r.importance !== undefined && r.n >= cfg.playstyle.minReferenceSamples);
+  const bandOk = (r: GrowthReference | undefined): r is GrowthReference => !!r && r.n >= cfg.playstyle.minReferenceSamples && r.quantiles.length >= 3;
+  // With the band's references, typical and spread always come from your rank (as on the Style tab).
+  const useBand = Object.values(bandReferences ?? {}).some(bandOk);
   const candidates: FocusMetric[] = [];
   for (const raw of metrics) {
     const lowerIsBetter = raw.startsWith("-");
     const metric = lowerIsBetter ? raw.slice(1) : raw;
     const s = lowerIsBetter ? -1 : 1;
 
-    // Typical, spread and importance: the band's, else the other players in your role in your own games.
-    let typical: number;
-    let spread: number;
-    let importance: number;
-    const band = bandReferences?.[metric];
-    if (useBand) {
-      if (!band || band.importance === undefined || band.n < cfg.playstyle.minReferenceSamples || band.quantiles.length < 3) continue;
-      typical = at(band.quantiles, 0.5);
-      spread = at(band.quantiles, 0.75) - at(band.quantiles, 0.25);
-      importance = band.importance;
-    } else {
-      const others = matches.flatMap((m) =>
+    // Typical and spread: the band's, else the other players in your role in your own games.
+    // Importance: the band's when it has one (older servers don't), else from your games.
+    const others = () =>
+      matches.flatMap((m) =>
         m.match.participants
           .filter((p, i) => i !== m.me && p.position === role)
           .flatMap((p) => {
-            const value = readMetric(p, m.match.durationSec, metric);
+            const value = readMetric(p, m.match.durationSec, metric, m.match);
             return value === null ? [] : [{ value, win: p.win }];
           }),
       );
-      if (others.length < cfg.playstyle.minReferenceSamples) continue;
-      const sorted = others.map((o) => o.value).sort((a, b) => a - b);
+    let typical: number;
+    let spread: number;
+    let importance: number;
+    let importanceFrom: FocusMetric["importanceFrom"] = "games";
+    const band = bandReferences?.[metric];
+    if (useBand) {
+      if (!bandOk(band)) continue;
+      typical = at(band.quantiles, 0.5);
+      spread = at(band.quantiles, 0.75) - at(band.quantiles, 0.25);
+      if (band.importance !== undefined) {
+        importance = band.importance;
+        importanceFrom = "band";
+      }
+      else {
+        const o = others();
+        if (o.length < cfg.playstyle.minReferenceSamples) continue;
+        importance = metricImportance(o);
+      }
+    } else {
+      const o = others();
+      if (o.length < cfg.playstyle.minReferenceSamples) continue;
+      const sorted = o.map((x) => x.value).sort((a, b) => a - b);
       typical = at(sorted, 0.5);
       spread = at(sorted, 0.75) - at(sorted, 0.25);
-      importance = metricImportance(others);
+      importance = metricImportance(o);
     }
     if (!(spread > 0) || s * importance < g.minImportance) continue;
 
     const valuesOf = (ms: UserMatch[]) => ms.flatMap((m) => {
-      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
       return v === null ? [] : [v];
     });
     const base = valuesOf(baseGames);
@@ -163,6 +179,7 @@ export function pickFocus(
       target,
       typical,
       importance,
+      importanceFrom,
       impact: (gap / spread) * s * importance,
       recent: [...recentValues].reverse().map((v) => s * (v - target) >= 0),
       done: s * (you - target) >= 0,
