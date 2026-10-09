@@ -1,6 +1,6 @@
-# Research progress
+waiting (second wave) |waiting (second wave) |waiting (second wave) |waiting (second wave) |waiting (second wave) |waiting (second wave) |# Research progress
 
-Started 2026-10-09 ~03:15 from research/RESEARCH-QUESTIONS.md: one research agent per section, all eleven at once.
+Started 2026-10-09 ~03:35 with all eleven at once; the usage limit stopped them all within minutes. Restarted 06:15 in two waves: 1–4 and 11 first, the rest as those finish.
 
 | # | Topic | File | Status |
 | --- | --- | --- | --- |
