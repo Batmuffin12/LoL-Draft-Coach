@@ -1,5 +1,11 @@
 # Open research questions (2026-10-09)
 
+**To start:** open a new Claude session in this repo and paste:
+
+```
+Read research/RESEARCH-QUESTIONS.md and do that research. Start with sections 1–4 (owner priority), then 5–8, then 9–10. Write each answer to research/answers/<topic>.md as the file describes, with sources. Research only: don't change code or config. Commit only the research/answers files on milestone-7-grow, and stage explicit paths (another session works in this checkout).
+```
+
 For a research session. Read `CLAUDE.md`, `docs/SPEC.md`, `research/ROLE-GOALS.md`, `research/LEARNING.md` and `research/REVIEW-2026-10.md` first. Answer in `research/answers/<topic>.md`, one file per topic below. Cite every claim with a link. Mark opinion as opinion. Where a recommendation becomes config, give it as JSON that fits the current config shape.
 
 ## What every answer must respect
