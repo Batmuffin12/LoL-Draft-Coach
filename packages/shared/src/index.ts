@@ -433,12 +433,6 @@ export interface ChampionBuild {
    * starting items and how often each item was the first completed one. Absent in older snapshots.
    */
   matchupItems?: { enemy: ChampionId; games: number; starting: { items: number[]; n: number } | null; first: { itemId: number; n: number }[] }[];
-  /**
-   * Power spikes (timeline games): first items after which this champion's lane gold lead grows
-   * clearly faster than after the average champion's first item. `gold`: extra gold per minute
-   * (lead slope after minus before, above that average); only significant ones. Absent in older snapshots.
-   */
-  spikes?: { itemId: number; n: number; gold: number }[];
 }
 
 /** Expected win for a team by minute and team gold difference (from timelines), for win added. */

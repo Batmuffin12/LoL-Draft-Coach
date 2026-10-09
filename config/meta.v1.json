@@ -41,7 +41,6 @@
       "priorGames": 20
     },
     "lift": { "priorGames": 20, "minGames": 10, "minLift": 1.3, "maxPerBuild": 12, "minZ": 2 },
-    "spikes": { "window": 4, "minGames": 150, "minZ": 3 },
     "minMatchupGames": 15,
     "minItemRoleGames": 5,
     "counterCapacity": 12,

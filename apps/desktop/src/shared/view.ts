@@ -77,8 +77,6 @@ export interface ItemOptionView extends LoadoutItemView {
   /** Share of the champion-role's games that take it (at this slot, or among boots). */
   share: number;
   winAdded: number | null;
-  /** Why it's a measured power spike for this champion, when it is one. */
-  spike?: string | null;
 }
 
 /** A rune path drawn whole: its runes per row in Data Dragon slot order (keystones first on the primary path). */
