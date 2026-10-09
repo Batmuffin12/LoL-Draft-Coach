@@ -5,7 +5,9 @@ import { buildLoadout, parseEngineConfig, parseExplainConfig, rankItems, renderR
 
 const read = (name: string) => JSON.parse(readFileSync(new URL(`../../../config/${name}`, import.meta.url), "utf8"));
 // Win added and lift alone (the popularity prior is tested separately).
-const cfg = { ...parseEngineConfig(read("engine.v1.json")).loadout, shareScale: 0 };
+// The win-added mechanics, at their former weight (shipped: 0, popularity first; tested below).
+const shipped = parseEngineConfig(read("engine.v1.json")).loadout;
+const cfg = { ...shipped, shareScale: 0, winAddedScale: 695 };
 const explain = parseExplainConfig(read("explain.v1.json"));
 
 const page = (keystone: number, games: number, wins: number) => ({ primaryStyle: 8000, subStyle: 8400, runes: [keystone, 2, 3, 4, 5, 6], statPerks: [5001, 5008, 5005], games, wins, n: games });
@@ -74,8 +76,15 @@ describe("buildLoadout", () => {
   });
 
   it("suggests situational runes against this enemy team only, never ones already on the page", () => {
-    expect(buildLoadout(input({ enemies: [11, 12] })).situationalRunes.map((r) => r.runeId)).toEqual([8242]);
-    expect(buildLoadout(input({ enemies: [13] })).situationalRunes).toEqual([]);
+    // The lift mechanics alone (no mechanic rules): the fixture's lift is on magic damage.
+    const any = { ...cfg, runeMechanics: undefined };
+    expect(buildLoadout(input({ enemies: [11, 12], config: any })).situationalRunes.map((r) => r.runeId)).toEqual([8242]);
+    expect(buildLoadout(input({ enemies: [13], config: any })).situationalRunes).toEqual([]);
+  });
+
+  it("never suggests a rune for a trait no rune mechanic answers (magic or physical damage)", () => {
+    expect(cfg.runeMechanics).toBeDefined();
+    expect(buildLoadout(input({ enemies: [11, 12] })).situationalRunes).toEqual([]);
   });
 
   it("builds the core path from the ranked items, and falls back to the common path without them", () => {
@@ -99,6 +108,13 @@ describe("rankItems", () => {
     expect(slot1!.top.itemId).toBe(3999);
     expect(slot1!.alternatives.map((i) => i.itemId)).toEqual([3078, 3071]);
     expect(slot1!.top.reasons[0]).toMatchObject({ id: "loadout.item.winAdded", slots: { slot: 1, delta: 0.09, games: 50 } });
+  });
+
+  it("with the shipped settings, ranks a slot by what players buy most, still lifted by the enemy team", () => {
+    const [slot1] = rankItems(input({ config: shipped }));
+    const shares = build.items.filter((i) => i.slot === 1).sort((a, b) => b.share - a.share);
+    expect(shipped.winAddedScale).toBe(0);
+    expect(slot1!.top.itemId).toBe(shares[0]!.itemId);
   });
 
   it("lifts the answer to the enemy team (magic resist vs a magic-heavy team) and leaves out the earlier slot's pick", () => {

@@ -1,3 +1,4 @@
+import { TERM_NAMES } from "@ldc/shared";
 import { z } from "zod";
 import type { FactorName, RankBandId } from "@ldc/shared";
 
@@ -141,6 +142,13 @@ export const EngineConfigSchema = z.object({
     maxChampions: z.number().int().min(1),
     /** Games on a champion before the period needed to show its change. */
     minPriorGames: z.number().int().min(1),
+    /**
+     * When a style axis counts as changed (research/answers/03-style-month.md): this period's games
+     * against the period before (separate games), each side with minGamesPerSide games, a Welch
+     * z of at least z, and a change of at least minChange points (0-100). The old rule (any 2
+     * points between overlapping sets) marked 58-74% of axes changed for a player who didn't change.
+     */
+    trend: z.object({ minGamesPerSide: z.number().int().min(2), z: z.number().min(0), minChange: z.number().min(0) }).default({ minGamesPerSide: 15, z: 2.4, minChange: 5 }),
   }),
   /** New-champion recommender (DESIGN §6). */
   newChamps: z.object({
@@ -247,7 +255,34 @@ export const EngineConfigSchema = z.object({
       learningPenalty: z.number().min(0),
       /** Suggest champions the player hasn't played yet (they carry the learning penalty). */
       includeUnplayed: z.boolean(),
+      /**
+       * The experience model (research/answers/06-draft-engine.md, our own learning curve: about 43%
+       * on a first game, 52-55% after 20). When set, it replaces the comfort-score mapping above:
+       * - experience: −penalty · e^(−n / tauGames) rating points, where n = your games on the
+       *   champion in this role + transfer × (its games in other roles + mastery ÷ pointsPerGame);
+       *   knowing a champion in another role only partly carries over.
+       * - skill: your win rate on it in this role, shrunk with priorGames toward the champion's
+       *   win rate in your rank, as rating points over that rate, capped at ±maxPoints.
+       */
+      experience: z
+        .object({ penalty: z.number().min(0), tauGames: z.number().positive(), transfer: unit, pointsPerGame: z.number().positive() })
+        .optional(),
+      /** weight: a multiplier on the skill points (production backtest: half strength is best calibrated). */
+      skill: z.object({ priorGames: z.number().min(0), maxPoints: z.number().min(0), weight: z.number().min(0).default(1) }).optional(),
+      /**
+       * Filled (autofill): the assigned role is under maxShare of your last recentGames games (with at
+       * least minGames). Picks then lean harder on champions you know: the experience cost × penaltyScale.
+       * The role's own cost isn't added to the chance: no published number, not yet measured
+       * (research/answers/06-draft-engine.md Q5).
+       */
+      offRole: z.object({ recentGames: z.number().int().min(1), minGames: z.number().int().min(1), maxShare: unit, penaltyScale: z.number().min(1) }).optional(),
     }),
+    /**
+     * Terms that count in the shown win chance (and the ranking). Measured on production games,
+     * only champion strength (meta) and your own experience (personal) predict the result; the
+     * others are shown for information. Absent: every term.
+     */
+    inChance: z.array(z.enum(TERM_NAMES)).optional(),
     /** Lane opponent unknown: expected matchup over likely opponents, minus a share of the bad tail. */
     blind: z.object({
       riskAversion: z.number().min(0),
@@ -299,6 +334,15 @@ export const EngineConfigSchema = z.object({
   }),
   /** Loadout after lock-in: runes, spells, skill order and items (DESIGN.md "Loadout", "Item ranking"). */
   loadout: z.object({
+    /**
+     * Rune swaps need a game mechanic, not only a lift (research/answers/04-runes.md): per enemy
+     * trait, a pattern on the rune's own Data Dragon description that names the mechanic that
+     * answers it (crowd control → "when receiving crowd control"). Traits without a pattern get no
+     * rune suggestion (no rune reacts to physical or magic damage). Absent: any lift counts.
+     */
+    runeMechanics: z.record(z.string(), z.string()).optional(),
+    /** The same for situational items, on the item's Data Dragon description (anti-heal → "Wounds"). */
+    itemMechanics: z.record(z.string(), z.string()).optional(),
     /** What counts as a completed item (derived from Data Dragon). */
     items: z.object({ mapId: z.string().min(1), legendaryMinGold: z.number().min(0) }),
     /** An option (page, spells, …) needs this share of the champion-role's games to be suggested… */

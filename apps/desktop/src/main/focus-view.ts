@@ -22,11 +22,12 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
   const { explain } = deps;
   const fmt = (v: number) => formatMetric(v, f.metric, explain);
   const label = metricLabel(f.metric, explain);
-  const why = renderReason(
-    { id: f.importanceFrom === "band" && deps.bandName ? "growth.why.band" : "growth.why.games", slots: { band: deps.bandName ?? "", role: g.role, metric: label, gap: Math.abs(f.importance), step: deps.targetStep } },
-    explain.templates,
-    deps.championName,
-  );
+  const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, explain.templates, deps.championName);
+  // The reason is the game mechanic (the card already shows your number against typical); empty
+  // without a mechanic line. The win-rate link is only a hover, labelled as a link: a correlation is
+  // never given as the reason.
+  const why = explain.templates[`growth.why.${f.metric}`] !== undefined ? say(`growth.why.${f.metric}`, {}) : "";
+  const whyHover = say(f.importanceFrom === "band" && deps.bandName ? "growth.why.hover" : "growth.why.hover.games", { band: deps.bandName ?? "", role: g.role, gap: Math.abs(f.importance) });
   const dir = f.lowerIsBetter ? "less" : "more";
   return {
     label: capital(label),
@@ -52,6 +53,7 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
     checkGames: deps.checkGames,
     recent: f.recent,
     why,
+    whyHover,
     tips: explain.tips[`${g.role}:${f.metric}`] ?? [],
     met: g.met.map((m: FocusMetric) =>
       renderReason({ id: "growth.met", slots: { metric: capital(metricLabel(m.metric, explain)), from: formatMetric(m.baseline, m.metric, explain), to: formatMetric(m.you, m.metric, explain) } }, explain.templates, deps.championName),

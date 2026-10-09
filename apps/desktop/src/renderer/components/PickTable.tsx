@@ -11,9 +11,9 @@ export interface PickTableProps {
 }
 
 const COLS = [
-  { key: "lane", label: "Matchup", title: "Into their laner" },
-  { key: "you", label: "You", title: "Your own games on it" },
-  { key: "team", label: "Draft", title: "What your team needs, duos with your allies, and how it does into their other picks" },
+  { key: "lane", label: "Matchup", title: "Into their laner (for information: matchups barely change who wins)" },
+  { key: "you", label: "You", title: "Your experience on it in this role, and your record on it" },
+  { key: "team", label: "Draft", title: "What your team needs, duos with your allies, and how it does into their other picks (for information)" },
 ] as const;
 
 /** Suggested picks as one table with fixed columns; the selected row's reasons under it. Row 1 is selected first. */
@@ -28,7 +28,7 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
     <div className="table picks" role="table">
       <div className="thead" role="row">
         <span className="c-champ">Champion</span>
-        <span className="c-win" title="Your predicted win chance in this draft">
+        <span className="c-win" title="Its strength in your rank plus your experience on it">
           Chance
         </span>
         {COLS.map((c) => (
@@ -57,7 +57,7 @@ export function PickTable({ picks, whyNot }: PickTableProps) {
           </button>
         );
       })}
-      <div className="legend">Chance: your predicted win chance in this draft. The other columns: what each part adds or takes away.</div>
+      <div className="legend">Chance: its strength in your rank plus your experience on it. Matchup and Draft are for information: they barely change who wins.</div>
       {cur && (
         <div className="detail">
           <ul className="reasons">

@@ -59,6 +59,23 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
 - **Stage 4 done** (27049c9): new-champion recommender (New tab).
 - **Stage 5 done** (481481f): monthly report (Style › This month).
 - **New tab learning plan (2026-10-08, owner request):** researched how coaches teach learning a champion ([research/LEARNING.md](../research/LEARNING.md)); `learningPlan` replaces `learningNotes`: a stage (before the first game / first games / building up), one "This game" focus (what dropped on the champion against your usual in the role, else your goal there, else the role's basic), its job by class, a cue per role, matchups to start into and avoid, and how many games to give it before judging (`newChamps.learn`). Design system not yet synced for the `learn-focus` box.
+- **Research changes (2026-10-09, owner: "start all"):** from research/answers and the production backtest:
+  - Engine and items:
+    - the experience model for the personal term (first games cost, other roles and mastery count partly), at half strength;
+    - the chance counts only champion strength and your experience;
+    - items follow what players buy;
+    - "against this team" runes and items only when their own Data Dragon text answers the trait (`runeMechanics`, `itemMechanics`);
+    - off-role mode (`rating.personal.offRole`).
+  - Wording:
+    - goals give the game mechanic, with the win link in a hover;
+    - matchups read "N more wins per 100 games".
+  - Fixes and docs:
+    - the monthly report compares last month with this month, with a significance test;
+    - fixes for Arena item copies, difficulty 0, and allies' ban hovers;
+    - the 5-friend test (docs/WORDING-TEST.md);
+    - NA/KR decision: not now (docs/REGIONS.md).
+
+  An item power-spike mark was built and then reverted the same day: milestone 8 (`milestone-8-spikes`) owns spikes, and its placebo check shows most of a post-item swing is game phase. Not deployed: production stays on v0.7.4 until the owner approves.
 - **Next (stage 6): the owner tries it**, then versions 0.7.0, CHANGELOG (an Unreleased section is ready), CLAUDE.md, merge, tag, push. Ways to try it: `pnpm local:server` + `pnpm local:desktop`, or `pnpm --filter @ldc/sim mock full-game` for a whole simulated game, then a real game. Open questions for the owner: the lobby tab placement (decision 2), and whether the focus should stay on your main role when you play another one.
 
 ## Rules that matter for M7

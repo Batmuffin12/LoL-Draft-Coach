@@ -5,8 +5,9 @@ import { StatusHeader } from "../components/StatusHeader";
 import { count } from "../format";
 import { useNow } from "../hooks";
 
+/** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
 export const RIOT_NOTICE =
-  "LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties.";
+  "LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.";
 
 /** The title bar with the live meta's patch and age ("16.19 · 12 min"). */
 export function Header({ state }: { state: ViewState }) {

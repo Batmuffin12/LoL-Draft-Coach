@@ -69,6 +69,15 @@ describe("recommendNewChampions", () => {
   });
 });
 
+describe("difficulty 0", () => {
+  it("is unknown, not easy: medium, and neutral for the recommendation", () => {
+    const zero: typeof info = { ...info, 4: { ...info[4]!, info: { ...info[4]!.info!, difficulty: 0 } } };
+    const p = recommendNewChampions(input({ champions: (id) => zero[id] })).picks.find((x) => x.championId === 4);
+    expect(p?.ease).toBe(2);
+    expect(p?.parts.ease).toBe(0.5);
+  });
+});
+
 describe("learningPlan", () => {
   let t = 0;
   const game = (championId: number, position: string, win: boolean, earlyDeaths: number) => ({

@@ -279,7 +279,8 @@ export interface MonthView {
   strip: { label: string; value: string; sub?: string; tone?: "pos" | "neg" }[];
   /** The role whose style trends are shown ("Mid"), or null. */
   role: string | null;
-  axes: { label: string; from: number | null; to: number }[];
+  /** changed: a real change between last period and this one (statistical test), else "steady" or null (too few games). */
+  axes: { label: string; from: number | null; to: number; changed: "up" | "down" | "steady" | null }[];
   champions: { champion: ChampView; games: number; winRate: number; change: number | null }[];
   /** Focus targets met, then the current focus. */
   focus: { met: string[]; current: string | null };
@@ -360,6 +361,8 @@ export interface FocusView {
   recent: boolean[];
   /** Why this metric (how much it separates wins from losses where you play). */
   why: string;
+  /** The win-rate link behind the choice, for a hover (a link, not a cause). */
+  whyHover: string;
   /** What to keep in mind to reach it, for the role (short, actionable). */
   tips: string[];
   /** Targets you already reached ("Deaths per minute: 0.5 → 0.4, target met"). */
@@ -407,6 +410,8 @@ export interface ViewState {
   meta: MetaView | null;
   /** Role the picks are for, if known. */
   pickRole: string | null;
+  /** Said when you're filled into a role you rarely play (picks then lean on champions you know). */
+  filledNote?: string | null;
   /** Their team in short during champ select ("80% physical damage", "Nautilus is their engage"); empty until two are picked. */
   enemyNotes: string[];
   /** Your lane opponent in champ select (champion null: not picked yet), or null without a role. */

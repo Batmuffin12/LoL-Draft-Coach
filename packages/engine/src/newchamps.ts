@@ -148,12 +148,14 @@ export function recommendNewChampions(input: NewChampInput): NewChampAdvice {
     // Smoothed toward the role's average, as everywhere else.
     const winRate = (s.wins + cfg.priorGames * meanWin) / (s.games + cfg.priorGames);
     const meta = Math.max(-1, Math.min(1, (winRate - meanWin) / cfg.metaScale));
-    const ease = 1 - info.difficulty / 10;
+    // Data Dragon gives some champions difficulty 0 (Akshan, Rell, Seraphine, Vex in 16.20): unknown, not easy.
+    const known = info.difficulty > 0;
+    const ease = known ? 1 - info.difficulty / 10 : 0.5;
     const overlap = Math.max(0, overlapCos - cfg.cloneCut) / Math.max(1e-9, 1 - cfg.cloneCut);
     const parts = { similarity, gap: filled.length ? 1 : 0, meta, ease, overlap };
     const w = cfg.weights;
     const fit = w.similarity * similarity + w.gap * parts.gap + w.meta * meta + w.ease * ease - w.overlap * overlap;
-    const easeLevel: 1 | 2 | 3 = info.difficulty <= cfg.easyMax ? 1 : info.difficulty >= cfg.hardMin ? 3 : 2;
+    const easeLevel: 1 | 2 | 3 = !known ? 2 : info.difficulty <= cfg.easyMax ? 1 : info.difficulty >= cfg.hardMin ? 3 : 2;
 
     const reasons: Reason[] = [];
     if (like !== null && overlapCos >= cfg.likeMin) reasons.push({ id: "newchamp.like", slots: { like } });
@@ -284,7 +286,8 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
   const record = { games: mine.length, wins: mine.filter((m) => m.match.participants[m.me]!.win).length };
   const stage: LearningStage = mine.length === 0 ? "practice" : mine.length < learn.firstGames ? "first" : "building";
 
-  const difficulty = input.champion?.info?.difficulty;
+  // Difficulty 0 means Riot gave none: unknown, not easy.
+  const difficulty = input.champion?.info?.difficulty || undefined;
   const ease = difficulty === undefined ? null : difficulty <= nc.easyMax ? 1 : difficulty >= nc.hardMin ? 3 : 2;
   const settleGames = learn.settleGames[ease === 1 ? "easy" : ease === 3 ? "hard" : "medium"];
 

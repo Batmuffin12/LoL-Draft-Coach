@@ -5,7 +5,7 @@ import {
   bandFromRankedEntries,
   computeComfort,
   deriveChampionAttributes,
-  draftRole,
+  draftRole, filledRole,
   advisePicks,
   analyzePool,
   computePlaystyle,
@@ -674,7 +674,7 @@ export class PersonalCoach extends Coach {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
       const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [] });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [], filledNote: null });
       return;
     }
     const { engine } = this.config;
@@ -692,7 +692,9 @@ export class PersonalCoach extends Coach {
       config: engine,
     };
     // Live meta (engine v2) when the band's snapshot is loaded; the player's own data otherwise.
-    const live = this.metaIndex ? { ...input, index: this.metaIndex, band: this.band } : null;
+    // Filled into a role you rarely play: picks lean harder on what you know, and the panel says so.
+    const filled = loading ? null : filledRole(this.draft, profile.games, engine.rating.personal.offRole);
+    const live = this.metaIndex ? { ...input, index: this.metaIndex, band: this.band, filled: filled !== null } : null;
     const lookup = this.championLookup;
     const { templates } = this.config.explain;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
@@ -731,6 +733,8 @@ export class PersonalCoach extends Coach {
         reasons: assessed ? assessed.reasons.map((r) => reasonView(r, say)) : [],
         loadout: loadout
           ? toLoadoutView(loadout, {
+            runeMechanics: this.config.engine.loadout.runeMechanics,
+            itemMechanics: this.config.engine.loadout.itemMechanics,
               data,
               templates,
               championName: nameOf,
@@ -751,7 +755,7 @@ export class PersonalCoach extends Coach {
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
       this.recorder.locked(adviceOption(assessed ?? { championId: locked }), { role, band: this.band, queueId: this.queueId, now: Date.now() });
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, enemyNotes, myPick: card(locked, false) });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, enemyNotes, filledNote: null, myPick: card(locked, false) });
       this.keptPick = this.view.myPick;
       return;
     }
@@ -790,7 +794,8 @@ export class PersonalCoach extends Coach {
     const pending = me ? me.championId || me.pickIntentId : 0;
     const hoverCard = live && pending > 0 ? card(pending, true) : null;
     if (!hoverCard?.loadout) this.shownLoadout = null;
-    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane, enemyNotes });
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane, enemyNotes });
+    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane, enemyNotes, filledNote: null });
+    const filledNote = filled && live ? say({ id: "picks.filled", slots: { role: filled.role, share: filled.share, games: filled.games } }) : null;
+    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane, enemyNotes, filledNote });
   }
 }

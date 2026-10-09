@@ -1,10 +1,9 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { LearnView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
-import { Button } from "../components/Button";
 import { ChampIcon } from "../components/ChampIcon";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
 import { PostGameCard } from "../components/PostGameCard";
@@ -16,7 +15,7 @@ import { cx, pct, positionLabel, roleName } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices } from "./common";
 
-type LobbyTab = "last" | "style" | "pool" | "new";
+type LobbyTab = "last" | "style" | "pool" | "new" | "month";
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
@@ -26,40 +25,14 @@ export function LobbyScreen({ state }: { state: ViewState }) {
   return <Lobby state={state} />;
 }
 
-/** The monthly report, opened from the Style tab; Back returns to the lobby. */
-function MonthScreen({ state, onBack }: { state: ViewState; onBack: () => void }) {
-  const m = state.month!;
-  return (
-    <Window
-      header={<Header state={state} />}
-      band={
-        <div className="you">
-          <div className="who">
-            <span className="label gold">{`Monthly report · ${m.period}`}</span>
-            <span className="nm">Your month</span>
-          </div>
-          <Button variant="ghost" small onClick={onBack}>
-            Back
-          </Button>
-        </div>
-      }
-      footer={<span className="micro one-line">{m.footer}</span>}
-    >
-      <MonthReport month={m} />
-    </Window>
-  );
-}
-
 function Lobby({ state }: { state: ViewState }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
-  const [showMonth, setShowMonth] = useState(false);
   // A newly logged game (it arrives after the panel opens): show it first.
   const latest = state.lastGame?.lockedAt ?? 0;
   useEffect(() => {
     if (recent) setTab("last");
   }, [latest]);
-  if (showMonth && state.month) return <MonthScreen state={state} onBack={() => setShowMonth(false)} />;
   return (
     <Window
       header={<Header state={state} />}
@@ -72,6 +45,7 @@ function Lobby({ state }: { state: ViewState }) {
             { value: "style", label: "Style" },
             { value: "pool", label: "Pool" },
             { value: "new", label: "New" },
+            { value: "month", label: "This month" },
           ]}
         />
       }
@@ -79,7 +53,17 @@ function Lobby({ state }: { state: ViewState }) {
     >
       <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
       <SessionNotice state={state} />
-      {tab === "last" ? <LastGame state={state} /> : tab === "style" ? <Style state={state} onMonth={() => setShowMonth(true)} /> : tab === "pool" ? <Pool state={state} /> : <NewChamps state={state} />}
+      {tab === "last" ? (
+        <LastGame state={state} />
+      ) : tab === "style" ? (
+        <Style state={state} />
+      ) : tab === "pool" ? (
+        <Pool state={state} />
+      ) : tab === "new" ? (
+        <NewChamps state={state} />
+      ) : (
+        <Month state={state} />
+      )}
     </Window>
   );
 }
@@ -100,36 +84,17 @@ function SessionNotice({ state }: { state: ViewState }) {
 }
 
 /**
- * Which roles are open: the one you chose first, then as many of the others (in order) as fit
- * without scrolling; the rest show as one-line heads. `dataKey` changes when the roles do.
+ * Which sub-tab (a role, or This month) is shown: the one you chose while it still exists, else the first.
+ * Each role is its own small tab under the main one, so one role shows at a time and nothing scrolls.
  */
-function useOpenRoles(count: number, dataKey: string): { isOpen: (i: number) => boolean; open: (i: number) => void } {
-  const [st, setSt] = useState({ first: 0, fit: count, key: dataKey });
-  if (st.key !== dataKey) setSt({ first: st.first < count ? st.first : 0, fit: count, key: dataKey });
-  // Before paint: close the last open role while the scrolling area overflows.
-  useLayoutEffect(() => {
-    const el = document.querySelector(".window .scroll");
-    if (el && el.scrollHeight > el.clientHeight && st.fit > 1) setSt((x) => ({ ...x, fit: x.fit - 1 }));
-  });
-  const order = [st.first, ...Array.from({ length: count }, (_, i) => i).filter((i) => i !== st.first)];
-  const openSet = new Set(order.slice(0, st.fit));
-  return { isOpen: (i) => openSet.has(i), open: (i) => setSt({ first: i, fit: count, key: dataKey }) };
+function useSubTab(keys: string[]): [string, (key: string) => void] {
+  const [chosen, setChosen] = useState(keys[0] ?? "");
+  return [keys.includes(chosen) ? chosen : (keys[0] ?? ""), setChosen];
 }
 
-/** A closed role: its head with a one-line summary; click to open it. */
-function ClosedRole({ title, summary, onOpen }: { title: string; summary: string; onOpen: () => void }) {
-  return (
-    <section className="section">
-      <button type="button" className="section-head closed" onClick={onOpen} aria-expanded={false} title={summary}>
-        <span className="label">{title}</span>
-        <span className="rule" aria-hidden="true" />
-        <span className="micro one-line">{summary}</span>
-        <span className="chev" aria-hidden="true">
-          ›
-        </span>
-      </button>
-    </section>
-  );
+/** The small tab row under a main tab; a tab's hover gives its one-line summary. */
+function SubTabs({ options, value, onChange }: { options: { value: string; label: string; title?: string }[]; value: string; onChange: (v: string) => void }) {
+  return options.length > 1 ? <Segmented sub options={options} value={value} onChange={onChange} /> : null;
 }
 
 /** Your last game against the advice the coach gave (the advice log). */
@@ -153,10 +118,10 @@ function LastGame({ state }: { state: ViewState }) {
   );
 }
 
-/** New champions per role: meta in your rank, like what you play well; one role open per fit, first-games plan under the table. */
+/** New champions per role (a sub-tab each): meta in your rank, like what you play well; first-games plan under the table. */
 function NewChamps({ state }: { state: ViewState }) {
   const list = state.newChamps.filter((r) => r.picks.length || r.learning);
-  const roles = useOpenRoles(list.length, list.map((r) => `${r.role}:${r.picks.map((p) => p.champion.id).join("-")}`).join());
+  const [sub, setSub] = useSubTab(list.map((r) => r.role));
   if (!list.length) {
     return (
       <Section title="New champions">
@@ -164,15 +129,15 @@ function NewChamps({ state }: { state: ViewState }) {
       </Section>
     );
   }
+  const summary = (r: (typeof list)[number]) => (r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", "));
   return (
     <>
-      {list.map((r, i) => {
+      <SubTabs options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+      {list.filter((r) => r.role === sub).map((r) => {
         const title = `New for ${positionLabel(r.role).toLowerCase()}`;
-        const summary = r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", ");
-        if (!roles.isOpen(i)) return <ClosedRole key={r.role} title={title} summary={summary} onOpen={() => roles.open(i)} />;
         const l = r.learning;
         return (
-          <Section key={r.role} title={title} gold={i === 0} aside={<span className="micro">strong in your rank</span>}>
+          <Section key={r.role} title={title} aside={<span className="micro">strong in your rank</span>}>
             {l && (
               <div className="plan learning">
                 <div className="learning-head">
@@ -243,20 +208,22 @@ function Lines({ lines }: { lines: string[] }) {
   );
 }
 
-function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
-  const roles = useOpenRoles(state.playstyle.length, state.playstyle.map((p) => `${p.role}:${p.games}`).join());
+/** Your style per role, a sub-tab each. */
+function Style({ state }: { state: ViewState }) {
+  const [sub, setSub] = useSubTab(state.playstyle.map((p) => p.role));
   if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
+  const summary = (p: ViewState["playstyle"][number]) => {
+    const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
+    const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
+    return [`${p.games} games`, high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
+  };
   return (
     <>
-      {state.playstyle.map((p, i) => {
-        if (!roles.isOpen(i)) {
-          const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
-          const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
-          const summary = [`${p.games} games`, high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
-          return <ClosedRole key={p.role} title={positionLabel(p.role)} summary={summary} onOpen={() => roles.open(i)} />;
-        }
-        return (
-          <Section key={p.role} title={positionLabel(p.role)} aside={<span className="micro">50 = typical in your rank</span>}>
+      <SubTabs options={state.playstyle.map((p) => ({ value: p.role, label: positionLabel(p.role), title: summary(p) }))} value={sub} onChange={setSub} />
+      {state.playstyle
+        .filter((p) => p.role === sub)
+        .map((p) => (
+          <Section key={p.role} title={`Your ${roleName(p.role)} style`} aside={<span className="micro">50 = typical in your rank</span>}>
             {p.axes.map((a) => (
               <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
             ))}
@@ -264,15 +231,21 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
               From your last {p.games} {roleName(p.role)} games.
             </span>
           </Section>
-        );
-      })}
-      {state.month && (
-        <ClosedRole
-          title="This month"
-          summary={[`${state.month.games} games`, ...state.month.strip.slice(1, 3).map((t) => `${t.label} ${t.value}`)].join(" · ")}
-          onOpen={onMonth}
-        />
-      )}
+        ))}
+    </>
+  );
+}
+
+/** The monthly report: your last 30 days against the 30 before, from your own games. */
+function Month({ state }: { state: ViewState }) {
+  const m = state.month;
+  if (!m) return <Section title="This month">{<p className="caption">Your month shows here once your recent games are loaded.</p>}</Section>;
+  return (
+    <>
+      <div className="section">
+        <span className="micro">{`${m.period} · ${m.footer}`}</span>
+      </div>
+      <MonthReport month={m} />
     </>
   );
 }
@@ -280,21 +253,20 @@ function Style({ state, onMonth }: { state: ViewState; onMonth: () => void }) {
 function Pool({ state }: { state: ViewState }) {
   // Roles with too few games to judge have no pool to show: left out, so the others fit.
   const list = state.roles.filter((r) => r.enoughData);
-  const roles = useOpenRoles(list.length, list.map((r) => `${r.role}:${r.games}`).join());
+  const [sub, setSub] = useSubTab(list.map((r) => r.role));
   if (!list.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)} WR`;
   return (
     <>
-      {list.map((r, i) =>
-        !roles.isOpen(i) ? (
-          <ClosedRole
-            key={r.role}
-            title={`${positionLabel(r.role)} pool`}
-            summary={[stats(r), r.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ")}
-            onOpen={() => roles.open(i)}
-          />
-        ) : (
-          <Section key={r.role} title={`${positionLabel(r.role)} pool`} gold={i === 0} aside={<span className="micro" title="Roles ranked by your recent results. Information only: you choose your positions.">{stats(r)}</span>}>
+      <SubTabs
+        options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: [stats(r), r.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
+        value={sub}
+        onChange={setSub}
+      />
+      {list
+        .filter((r) => r.role === sub)
+        .map((r) => (
+          <Section key={r.role} title={`${positionLabel(r.role)} pool`} aside={<span className="micro" title="Roles ranked by your recent results. Information only: you choose your positions.">{stats(r)}</span>}>
             {r.enoughData ? (
               <>
                 {r.pool.length > 0 && <PoolTable rows={r.pool} />}
@@ -312,8 +284,7 @@ function Pool({ state }: { state: ViewState }) {
               <p className="caption">Not enough games to judge.</p>
             )}
           </Section>
-        ),
-      )}
+        ))}
     </>
   );
 }

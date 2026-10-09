@@ -16,6 +16,7 @@ import {
   ConfigError,
   deriveChampionAttributes,
   draftRole,
+  filledRole,
   mainRole,
   parseEngineConfig,
   parseRankBandConfig,
@@ -238,6 +239,19 @@ describe("role helpers", () => {
     expect(draftRole(custom, [game(1, true, 1, "top")])).toBe("top");
   });
 
+  it("calls you filled only when Riot assigned a role you rarely play, with enough games to tell", () => {
+    const rule = { recentGames: 100, minGames: 20, maxShare: 0.1 };
+    const top = (n: number) => Array.from({ length: n }, (_, i) => game(1, true, 1 + i, "top"));
+    // draft() assigns middle.
+    expect(filledRole(draft(), top(30), rule)).toEqual({ role: "middle", share: 0, games: 30 });
+    expect(filledRole(draft(), [...top(25), ...Array.from({ length: 5 }, (_, i) => game(1, true, 40 + i, "middle"))], rule)).toBeNull(); // 17% mid
+    expect(filledRole(draft(), top(10), rule)).toBeNull(); // too few games to tell
+    expect(filledRole(draft(), top(30), undefined)).toBeNull();
+    // Only the last recentGames count: old mid games don't hide a fill.
+    const oldMid = Array.from({ length: 30 }, (_, i) => game(1, true, 200 + i, "middle"));
+    expect(filledRole(draft(), [...top(30), ...oldMid], { ...rule, recentGames: 30 })).not.toBeNull();
+  });
+
   it("lists ally champions from locks and hovers, excluding the local player", () => {
     const d = draft();
     d.myTeam[3]!.pickIntentId = 3;
@@ -351,6 +365,13 @@ describe("explanation helpers", () => {
     expect(renderReason({ id: "a", slots: { n: 1, wr: 0.555, c: 7 } }, t, name)).toBe("1 game, 56% with Ahri");
     expect(renderReason({ id: "a", slots: { n: 3, wr: 0.5, c: 7 } }, t, name)).toBe("3 games, 50% with Ahri");
     expect(renderReason({ id: "missing", slots: {} }, t, name)).toBe("missing");
+  });
+
+  it("writes a win-rate difference as whole wins per 100 games, unsigned, at least 1", () => {
+    const per = { p: "{d:per100} more wins per 100" };
+    expect(renderReason({ id: "p", slots: { d: 0.021 } }, per, String)).toBe("2 more wins per 100");
+    expect(renderReason({ id: "p", slots: { d: -0.038 } }, per, String)).toBe("4 more wins per 100");
+    expect(renderReason({ id: "p", slots: { d: 0.002 } }, per, String)).toBe("1 more wins per 100");
   });
 
   it("every reason the engine emits has a template", () => {

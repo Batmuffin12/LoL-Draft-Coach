@@ -8,7 +8,7 @@ const engine = parseEngineConfig(read("engine.v1.json"));
 const bands = parseRankBandConfig(read("rank-bands.v1.json"));
 const DAY = 86_400_000;
 const NOW = 1_800_000_000_000;
-const cfg = { report: { days: 30, maxChampions: 4, minPriorGames: 5 }, playstyle: { ...engine.playstyle, minGamesPerRole: 3, minMetrics: 1, minReferenceSamples: 3, axes: { farming: { metrics: ["csPerMinute"] } } } };
+const cfg = { report: { days: 30, maxChampions: 4, minPriorGames: 5, trend: { minGamesPerSide: 5, z: 2.4, minChange: 5 } }, playstyle: { ...engine.playstyle, minGamesPerRole: 3, minMetrics: 1, minReferenceSamples: 3, axes: { farming: { metrics: ["csPerMinute"] } } } };
 
 const player = (championId: number, win: boolean, cs: number): ParticipantSummary =>
   ({ championId, teamId: 100, position: "middle", win, kills: 0, deaths: 0, assists: 0, cs, gold: 0, visionScore: 0, physicalDamage: 0, magicDamage: 0, trueDamage: 0, damageTaken: 0, selfMitigated: 0, ccSeconds: 0, objectiveDamage: 0, items: [], spells: [], perks: null, challenges: {} }) as ParticipantSummary;
@@ -39,6 +39,19 @@ describe("monthlyReport", () => {
     ]);
     const farming = r.axes.find((a) => a.axis === "farming")!;
     expect(farming.to).toBeGreaterThan(farming.from!);
+    expect(farming.changed).toBe("up");
+  });
+
+  it("calls a style change real only when it is beyond the game-to-game noise, between separate sets of games", () => {
+    // The same farming on average in both months, game to game from 40 to 100: no real change.
+    const noisy = [
+      ...Array.from({ length: 12 }, (_, i) => game(35 + i, 103, i % 2 === 0, i % 2 ? 40 : 100)),
+      ...Array.from({ length: 12 }, (_, i) => game(1 + i, 103, i % 2 === 0, i % 2 ? 100 : 40)),
+    ];
+    expect(monthlyReport(noisy, NOW, cfg, { bands }).axes.find((a) => a.axis === "farming")!.changed).toBe("steady");
+    // Too few games last month to tell.
+    const thin = [game(40, 103, true, 55), ...Array.from({ length: 8 }, (_, i) => game(1 + i, 103, true, 80))];
+    expect(monthlyReport(thin, NOW, cfg, { bands }).axes.find((a) => a.axis === "farming")!.changed).toBeNull();
   });
 
   it("takes your rank at the start and now from the rank history, in your main ranked queue", () => {

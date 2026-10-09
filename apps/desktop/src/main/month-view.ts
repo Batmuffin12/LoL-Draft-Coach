@@ -41,7 +41,7 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
     footer: say("month.footer", { games: r.games }),
     strip,
     role: r.role ? deps.positionLabel(r.role) : null,
-    axes: r.axes.map((a) => ({ label: deps.explain.axes[a.axis] ?? a.axis, from: a.from, to: a.to })),
+    axes: r.axes.map((a) => ({ label: deps.explain.axes[a.axis] ?? a.axis, from: a.from, to: a.to, changed: a.changed })),
     champions: r.champions.flatMap((c) => {
       const champion = deps.champion(c.championId);
       return champion ? [{ champion, games: c.games, winRate: c.winRate, change: c.change }] : [];

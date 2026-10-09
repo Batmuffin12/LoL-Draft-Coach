@@ -20,6 +20,19 @@ export function draftRole(draft: DraftState, games: PlayerGame[]): Position | nu
   return me?.position || mainRole(games);
 }
 
+/**
+ * Whether the player is filled into this draft's role: Riot assigned a role that is under
+ * `maxShare` of their last `recentGames` games (needs `minGames` games to tell). Null when not filled.
+ */
+export function filledRole(draft: DraftState, games: PlayerGame[], rule: { recentGames: number; minGames: number; maxShare: number } | undefined): { role: Position; share: number; games: number } | null {
+  const role = draft.myTeam.find((s) => s.isLocalPlayer)?.position;
+  if (!rule || !role) return null;
+  const recent = [...games].sort((a, b) => b.endedAt - a.endedAt).slice(0, rule.recentGames).filter((g) => g.position);
+  if (recent.length < rule.minGames) return null;
+  const share = recent.filter((g) => g.position === role).length / recent.length;
+  return share < rule.maxShare ? { role, share, games: recent.length } : null;
+}
+
 /** Champions locked or hovered by allies (excluding the local player). */
 export function allyChampions(draft: DraftState): ChampionId[] {
   return draft.myTeam

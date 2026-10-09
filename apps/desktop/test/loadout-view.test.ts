@@ -78,11 +78,63 @@ describe("rune trees", () => {
 describe("situational runes", () => {
   it("suggests swapping in only runes from the shown page's two trees", () => {
     // 8139 is in Domination (the page's primary); 9999 is in neither tree (another page).
-    const l = { ...loadout(false), situationalRunes: [8139, 9999].map((runeId) => ({ runeId, reasons: [] })) };
+    const l = { ...loadout(false), situationalRunes: [8139, 9999].map((runeId) => ({ runeId, trait: "engage" as const, lift: 2, games: 300, reasons: [] })) };
     const deps = { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false };
     expect(toLoadoutView(l, deps).situationalRunes.map((r) => r.id)).toEqual([8139]);
     // Without rune data the trees are unknown: nothing is filtered.
     expect(toLoadoutView(l, { ...deps, data: null }).situationalRunes).toHaveLength(2);
+  });
+
+  it("with mechanic rules, keeps a swap only when the rune's own text answers the trait, and says why", () => {
+    const withText = {
+      ...data,
+      runes: data.runes.map((s) => ({
+        ...s,
+        slots: s.slots.map((sl) => ({ runes: sl.runes.map((r) => (r.id === 8139 ? { ...r, shortDesc: "Gain Armor and <b>Magic Resist</b> when receiving crowd control." } : { ...r, shortDesc: "Heal when you damage an enemy champion." })) })),
+      })),
+    } as unknown as typeof data;
+    const swap = (runeId: number, trait: "engage" | "heal") => ({ runeId, trait, lift: 2.1, games: 340, reasons: [] });
+    const l = { ...loadout(false), situationalRunes: [swap(8139, "engage"), swap(8126, "engage"), swap(8139, "heal")] };
+    const deps = { data: withText, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, runeMechanics: config.engine.loadout.runeMechanics };
+    const v = toLoadoutView(l, deps).situationalRunes;
+    expect(v.map((r) => r.id)).toEqual([8139]); // Cheap Shot's text doesn't answer crowd control; no rule for heal
+    expect(v[0]!.reasons).toEqual([
+      "Their team has a lot of crowd control. Taste of Blood: Gain Armor and Magic Resist when receiving crowd control.",
+      "Players take it 2.1× as often into teams like this (340 games)",
+    ]);
+  });
+});
+
+describe("situational items", () => {
+  it("keeps an item against this team only when its own text answers the trait, and says why", () => {
+    const withItems = {
+      ...data,
+      itemInfo: new Map<number, unknown>([...data.itemInfo, item(3033, "Mortal Reminder"), item(3020, "Sorcerer's Shoes")]),
+      items: {
+        "3033": { description: "<stats>35 Attack Damage</stats><passive>Grievous Wounds</passive> applies 40% <keyword>Wounds</keyword>" },
+        "3020": { description: "<stats>12 Magic Penetration</stats>" },
+      },
+    } as unknown as typeof data;
+    const s = (itemId: number, trait: "heal" | "magic") => ({ itemId, trait, lift: 1.9, games: 420, reasons: [] });
+    const l = { ...loadout(false), situational: [s(3033, "heal"), s(3020, "heal"), s(3020, "magic")] };
+    const deps = { data: withItems, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, itemMechanics: config.engine.loadout.itemMechanics };
+    const v = toLoadoutView(l, deps).situational;
+    expect(v.map((x) => x.id)).toEqual([3033]); // Sorcerer's Shoes neither cuts healing nor gives magic resist
+    expect(v[0]!.reasons).toEqual(["Their team heals a lot: Mortal Reminder cuts their healing (Wounds)", "Players buy it 1.9× as often into teams like this (420 games)"]);
+  });
+});
+
+describe("slot item reasons against this team", () => {
+  it("say 'vs teams like this' only when the item's own text answers the trait, in game terms", () => {
+    const withText = {
+      ...data,
+      items: { "6655": { description: "<stats>90 Ability Power</stats><stats>40 Magic Resist</stats>" } },
+    } as unknown as typeof data;
+    const lift = (trait: string) => ({ id: `loadout.item.lift.${trait}`, slots: { id: 6655, lift: "1.5", value: 0.7, games: 300 } });
+    const withReason = (trait: string): Loadout => ({ ...loadout(false), items: [{ slot: 1, minute: 11, top: { ...ranked(6655, 0.58, 0.014, 11), reasons: [lift(trait)] }, alternatives: [] }] });
+    const deps = { data: withText, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, itemMechanics: config.engine.loadout.itemMechanics };
+    expect(toLoadoutView(withReason("magic"), deps).items[0]!.top.reasons).toEqual(["Their team is mostly magic damage: Luden's Companion gives magic resist"]);
+    expect(toLoadoutView(withReason("physical"), deps).items[0]!.top.reasons).toEqual([]); // no armor in its text: a correlation, not said
   });
 });
 

@@ -28,7 +28,17 @@ const CONFIG_DIR = join(__dirname, "..", "..", "..", "config");
 const readJson = (f: string) => JSON.parse(readFileSync(join(CONFIG_DIR, f), "utf8"));
 // The fixture games are sized for a pair prior of 60: pinned, so tuning the shipped prior (backtest) doesn't change what these tests check.
 const shipped = parseEngineConfig(readJson("engine.v1.json"));
-const config = { ...shipped, rating: { ...shipped.rating, priorGames: { ...shipped.rating.priorGames, pair: 60 } } };
+// Also the older all-terms model (comfort mapping, every term in the chance): these tests check its
+// mechanics; the experience model and the honest chance have their own tests below.
+const config = {
+  ...shipped,
+  rating: {
+    ...shipped.rating,
+    priorGames: { ...shipped.rating.priorGames, pair: 60 },
+    personal: { ...shipped.rating.personal, experience: undefined, skill: undefined },
+    inChance: undefined,
+  },
+};
 const explain = parseExplainConfig(readJson("explain.v1.json"));
 const say = (r: Reason | null) => (r ? renderReason(r, explain.templates, (id) => `#${id}`) : "");
 const text = (reasons: Reason[]) => reasons.map(say).join(" | ");
@@ -201,19 +211,19 @@ describe("adviseLivePicks", () => {
     const rank = (a: typeof blind, id: number) => a.picks.findIndex((p) => p.championId === id);
     expect(rank(into201, 102)).toBe(0);
     expect(rank(into201, 102)).toBeLessThan(rank(blind, 102) === -1 ? 99 : rank(blind, 102) + 1);
-    expect(text(into201.picks[0]!.reasons)).toMatch(/^\+\d+\.\d% into #201 \(300 games\)/);
+    expect(text(into201.picks[0]!.reasons)).toMatch(/^Favoured into #201: \d+ more wins per 100 games \(300 games\)/);
     expect(say(into201.whyNot)).toMatch(/Picked over your #101: a better lane into #201 \(\+\d+\.\d%\)/);
     // The main's bad matchup shows as a caveat.
     const main = into201.picks.find((p) => p.championId === 101);
-    if (main) expect(text(main.reasons)).toMatch(/But −\d+\.\d% into #201/);
+    if (main) expect(text(main.reasons)).toMatch(/But hard into #201: \d+ fewer wins per 100/);
   });
 
   it("rates blind picks by their likely opponents: risky with a common counter, safe without", () => {
     const advice = adviseLivePicks(input(draft()));
     const r101 = advice.picks.find((p) => p.championId === 101);
     const r102 = advice.picks.find((p) => p.championId === 102);
-    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: −\d+\.\d% into #(201|202)/);
-    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: −\d+\.\d% into #202/);
+    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: \d+ fewer wins per 100 into #(201|202)/);
+    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: \d+ fewer wins per 100 into #202/);
   });
 
   it("suggests a strong champion the player hasn't played, with the learning cost, only if pickable", () => {
@@ -340,7 +350,7 @@ describe("assessPick", () => {
     const p = assessPick(input(d, { unavailable: new Set([201, 102]) }), 102);
     expect(p.championId).toBe(102);
     expect(p.expectedWin).toBeGreaterThan(0.5);
-    expect(text(p.reasons)).toMatch(/into #201 \(300 games\)/);
+    expect(text(p.reasons)).toMatch(/into #201: \d+ more wins per 100 games \(300 games\)/);
   });
 });
 
@@ -349,12 +359,19 @@ describe("suggestBans", () => {
     const bans = suggestBans(input(draft([], 301)));
     const ids = bans.map((b) => b.championId);
     expect(ids[0]).toBe(202);
-    expect(text(bans[0]!.reasons)).toMatch(/Counters your #10[12]: −\d+\.\d% \(200 games\); picked in 40% of mid games/);
+    expect(text(bans[0]!.reasons)).toMatch(/Beats your #10[12]: \d+ fewer wins per 100 for you; in 40% of mid games/);
     expect(ids).not.toContain(301); // an ally is hovering it
     expect(ids).not.toContain(102);
     expect(bans.length).toBeLessThanOrEqual(config.rating.bans.topN);
     expect(ids).toContain(302); // strong top laner
     expect(bans.every((b) => b.reasons.length > 0)).toBe(true);
+  });
+
+  it("never suggests a ban a teammate is already hovering", () => {
+    const d = draft([], 301);
+    const top = suggestBans(input(d))[0]!.championId;
+    const hovered = { ...d, actions: [...d.actions, { id: 99, type: "ban", actorCellId: 0, championId: top, completed: false, inProgress: true, isAllyAction: true }] };
+    expect(suggestBans(input(hovered)).map((b) => b.championId)).not.toContain(top);
   });
 
   it("adds bans for a hovered champion: its own counters, no repeats, and just 1 when it's the top pick", () => {
@@ -377,7 +394,7 @@ describe("suggestBans", () => {
     expect(hover.some((b) => general.includes(b.championId))).toBe(false);
     if (!general.includes(203)) {
       expect(hover[0]!.championId).toBe(203);
-      expect(text(hover[0]!.reasons)).toMatch(/Counters your #103: −\d+\.\d% \(200 games\)/);
+      expect(text(hover[0]!.reasons)).toMatch(/Beats your #103: \d+ fewer wins per 100 for you/);
     }
     expect(suggestHoverBans(inp, top, general)).toHaveLength(config.rating.bans.hoverTopNWhenSuggested);
   });
@@ -450,5 +467,39 @@ describe("gamePlan", () => {
 
   it("says nothing it can't measure", () => {
     expect(gamePlan(input(draft([]), {}), 103)).toEqual([]);
+  });
+});
+
+describe("the experience model and the honest chance (shipped config)", () => {
+  // The shipped config: experience + skill for the personal term, only meta and personal in the chance.
+  const real = { ...shipped, rating: { ...shipped.rating, priorGames: { ...shipped.rating.priorGames, pair: 60 } } };
+  const personalOf = (p: { terms?: { name: string; rating: number }[] }) => p.terms!.find((t) => t.name === "personal")!.rating;
+
+  it("counts only champion strength and your experience in the shown chance", () => {
+    const p = adviseLivePicks(input(draft([201]), { config: real })).picks[0]!;
+    const counted = p.terms!.filter((t) => t.name === "meta" || t.name === "personal").reduce((s, t) => s + t.rating, 0);
+    expect(p.expectedWin).toBeCloseTo(winOf(counted), 6);
+  });
+
+  it("costs most on a champion you never played in this role, less with games, and only partly from other roles or mastery", () => {
+    const at = (gs: PlayerGame[], mastery = 0) =>
+      personalOf(
+        adviseLivePicks(input(draft(), { config: real, pickable: [103], comfort: computeComfort(gs, mastery ? [{ championId: 103, level: 7, points: mastery }] : [], NOW, real.comfort, "middle") })).picks.find(
+          (x) => x.championId === 103,
+        )!,
+      );
+    const never = at([]);
+    const fiveHere = at(Array.from({ length: 5 }, (_, i) => ({ ...game(103, i % 2 === 0, 1 + i) })));
+    const topOnly = at(Array.from({ length: 5 }, (_, i) => ({ ...game(103, i % 2 === 0, 1 + i), position: "top" })));
+    const bigMastery = at([], 300_000); // ~430 games of mastery elsewhere: well known, a small cost left
+    expect(never).toBeLessThanOrEqual(-real.rating.personal.experience!.penalty); // the full penalty (times the band's personal weight)
+    expect(fiveHere).toBeGreaterThan(topOnly); // games in this role count fully
+    expect(topOnly).toBeGreaterThan(never); // other roles and mastery count a little
+    expect(bigMastery).toBeGreaterThan(fiveHere);
+  });
+
+  it("filled into a role you rarely play, leans harder on what you know: unplayed champions cost more", () => {
+    const personal = (filled: boolean) => personalOf(adviseLivePicks({ ...input(draft(), { config: real, pickable: [103] }), filled }).picks.find((x) => x.championId === 103)!);
+    expect(personal(true)).toBeCloseTo(personal(false) * real.rating.personal.offRole!.penaltyScale, 6);
   });
 });

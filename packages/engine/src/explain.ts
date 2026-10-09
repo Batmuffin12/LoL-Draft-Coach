@@ -36,7 +36,8 @@ export const reason = (id: string, slots: Reason["slots"] = {}): Reason => ({ id
 
 /**
  * Fills a template from a reason's slots. Supported slot forms:
- * `{x}` value, `{x:pct}` 0..1 share as a whole percent, `{x:champion}` champion name,
+ * `{x}` value, `{x:pct}` 0..1 share as a whole percent, `{x:per100}` a 0..1 difference as whole
+ * wins per 100 games (unsigned), `{x:champion}` champion name,
  * `{x:item}` / `{x:rune}` item or rune name,
  * `{x|one|many}` singular/plural by the number in slot x. A missing template renders
  * the id, so a typo is visible instead of silent.
@@ -55,6 +56,9 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
     if (v === undefined) return "";
     if (fmt === "pct" && typeof v === "number") return String(Math.round(v * 100));
     if (fmt === "pct1" && typeof v === "number") return (v * 100).toFixed(1);
+    // A win-rate difference as whole wins per 100 games ("2 more wins per 100 games"), unsigned:
+    // the template says more or fewer (research/answers/01-language.md).
+    if (fmt === "per100" && typeof v === "number") return String(Math.max(1, Math.round(Math.abs(v) * 100)));
     if (fmt === "signedPct1" && typeof v === "number") {
       const s = (v * 100).toFixed(1);
       return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s.replace("-", "−");

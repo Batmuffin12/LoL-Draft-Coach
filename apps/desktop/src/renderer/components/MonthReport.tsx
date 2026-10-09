@@ -22,15 +22,15 @@ export function StatStrip({ items }: { items: MonthView["strip"] }) {
   );
 }
 
-/** Playstyle axes over the month, two to a row: then → now and the change (within ±2 is flat). */
+/** Playstyle axes over the month, two to a row: last period → this one; coloured only when the change is real (tested). */
 export function TrendTable({ rows }: { rows: MonthView["axes"] }) {
   return (
     <div className="trends2" role="table">
       {rows.map((r) => {
         const d = r.from === null ? null : r.to - r.from;
-        const t = d === null || Math.abs(d) < 2 ? "flat" : d > 0 ? "pos" : "neg";
+        const t = r.changed === "up" ? "pos" : r.changed === "down" ? "neg" : "flat";
         return (
-          <div key={r.label} className="tr" role="row" title={`${r.label}: ${r.from ?? "—"} at the start of the month, ${r.to} now (50 = typical)`}>
+          <div key={r.label} className="tr" role="row" title={`${r.label}: ${r.from ?? "—"} last period, ${r.to} this period (50 = typical)${r.changed === "steady" ? ": no real change" : r.changed === null ? ": too few games to tell" : ""}`}>
             <span className="axis-nm one-line">{r.label}</span>
             <span className="num muted">{r.from ?? "—"}</span>
             <span className={cx("arrow", t)} aria-hidden="true">
@@ -60,7 +60,7 @@ export function FormTable({ rows }: { rows: MonthView["champions"] }) {
       {rows.map((r) => (
         <div key={r.champion.id} className="trow" role="row">
           <span className="c-champ">
-            <ChampIcon champ={r.champion} size={22} />
+            <ChampIcon champ={r.champion} size={28} />
             <span className="nm">{r.champion.name}</span>
           </span>
           <span className="c-num">{r.games}</span>
@@ -80,7 +80,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <StatStrip items={m.strip} />
       </Section>
       {m.axes.length > 0 && (
-        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">month start → now · 50 = typical in your rank</span>}>
+        <Section title={`Your style${m.role ? `, ${m.role.toLowerCase()} (most played this month)` : ""}`} aside={<span className="micro">last month → this month · 50 = typical in your rank</span>}>
           <TrendTable rows={m.axes} />
         </Section>
       )}

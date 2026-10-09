@@ -104,7 +104,8 @@ export interface Loadout {
   source: LoadoutSource;
   page: LoadoutChoice<RunePageStat> | null;
   /** Runes worth a look against this enemy team (lift), with the reason. */
-  situationalRunes: { runeId: number; reasons: Reason[] }[];
+  /** Rune swaps against this team, with the trait they answer and the measured lift behind them. */
+  situationalRunes: { runeId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] }[];
   spells: LoadoutChoice<number[]> | null;
   skills: LoadoutChoice<{ first: number[]; order: number[] }> | null;
   starting: LoadoutChoice<number[]> | null;
@@ -118,7 +119,7 @@ export interface Loadout {
    */
   laterPool: { itemId: number; reasons: Reason[] }[];
   /** Items players in your role buy more often against teams like this one (lift), with the trait they answer. */
-  situational: { itemId: number; trait: EnemyTrait; reasons: Reason[] }[];
+  situational: { itemId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] }[];
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
   core: LoadoutChoice<number[]> | null;
   items: ItemSlotAdvice[];
@@ -233,7 +234,7 @@ export function situationalItems(input: LoadoutInput, exclude: ReadonlySet<numbe
   return [...best.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, cfg.maxSituational)
-    .map((l) => ({ itemId: l.id, trait: l.trait, reasons: [liftReason("item", l, enemy)] }));
+    .map((l) => ({ itemId: l.id, trait: l.trait, lift: l.lift, games: l.n, reasons: [liftReason("item", l, enemy)] }));
 }
 
 /** Your role's quest rewards that come from items in the loadout (most common first, one per item). */
@@ -333,10 +334,12 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   const seen = new Set<number>();
   const situationalRunes = build.lifts
     .filter((l) => l.kind === "rune" && l.lift >= cfg.minLift && !onPage.has(l.id) && traitIntensity(enemy[l.trait], input.traitCuts[l.trait]) > 0)
+    // Only traits a rune mechanic can answer (config); the view then checks the rune's own text.
+    .filter((l) => !cfg.runeMechanics || l.trait in cfg.runeMechanics)
     .sort((a, b) => b.lift - a.lift)
     .filter((l) => !seen.has(l.id) && seen.add(l.id))
     .slice(0, cfg.maxSituational)
-    .map((l) => ({ runeId: l.id, reasons: [liftReason("rune", l, enemy)] }));
+    .map((l) => ({ runeId: l.id, trait: l.trait, lift: l.lift, games: l.n, reasons: [liftReason("rune", l, enemy)] }));
 
   // Spells depend on the role (Smite in the jungle), so they never come from other roles.
   let spells: LoadoutChoice<number[]> | null;

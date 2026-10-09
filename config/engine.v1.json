@@ -198,7 +198,7 @@
   "earlyDeathsMinute": 14,
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
-  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },
+  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5, "trend": { "minGamesPerSide": 15, "z": 2.4, "minChange": 5 } },
   "newChamps": {
     "maxGames": 3,
     "maxMastery": 30000,
@@ -212,7 +212,7 @@
     "cloneCut": 0.92,
     "topN": 3,
     "planGames": [3, 5],
-    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 },
+    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.8, "overlap": 1 },
     "learn": {
       "firstGames": 3,
       "settleGames": { "easy": 15, "medium": 20, "hard": 30 },
@@ -269,8 +269,12 @@
       "neutralComfort": 0.5,
       "fullComfort": 0.65,
       "learningPenalty": 50,
-      "includeUnplayed": true
+      "includeUnplayed": true,
+      "experience": { "penalty": 30, "tauGames": 10, "transfer": 0.2, "pointsPerGame": 700 },
+      "skill": { "priorGames": 100, "maxPoints": 60, "weight": 0.5 },
+        "offRole": { "recentGames": 100, "minGames": 20, "maxShare": 0.1, "penaltyScale": 1.5 }
     },
+    "inChance": ["meta", "personal"],
     "blind": {
       "riskAversion": 0.5,
       "riskQuantile": 0.2,
@@ -305,9 +309,20 @@
     "priorGames": 40,
     "minMatchupGames": 25,
     "itemMinShare": 0.04,
-    "winAddedScale": 695,
+    "winAddedScale": 0,
     "shareScale": 50,
     "liftScale": 60,
+    "runeMechanics": {
+      "engage": "when receiving crowd control|tenacity",
+      "frontline": "high health enemy|more damage to high health"
+    },
+    "itemMechanics": {
+      "heal": "Wounds",
+      "magic": "\\d+ Magic Resist",
+      "physical": "\\d+ Armor(?! Penetration)|incoming damage from Attacks",
+      "engage": "Tenacity|Slow Resist",
+      "frontline": "Armor Penetration|Magic Penetration|max(imum)? Health damage"
+    },
     "negativeGuard": -0.02,
     "minLift": 1.3,
     "maxSituational": 3,

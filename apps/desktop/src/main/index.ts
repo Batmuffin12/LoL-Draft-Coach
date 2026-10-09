@@ -125,7 +125,7 @@ function scheduleScreenshot(coach: Coach): void {
   if (!path) return;
   setTimeout(async () => {
     // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
-    // "Style>This month" clicks one after the other.
+    // "Pool>Mid" clicks one after the other.
     for (const click of (process.env.LDC_SCREENSHOT_CLICK ?? "").split(">").filter(Boolean)) {
       await win?.webContents
         .executeJavaScript(
