@@ -269,6 +269,13 @@ export const EngineConfigSchema = z.object({
         .optional(),
       /** weight: a multiplier on the skill points (production backtest: half strength is best calibrated). */
       skill: z.object({ priorGames: z.number().min(0), maxPoints: z.number().min(0), weight: z.number().min(0).default(1) }).optional(),
+      /**
+       * Filled (autofill): the assigned role is under maxShare of your last recentGames games (with at
+       * least minGames). Picks then lean harder on champions you know: the experience cost × penaltyScale.
+       * The role's own cost isn't added to the chance: no published number, not yet measured
+       * (research/answers/06-draft-engine.md Q5).
+       */
+      offRole: z.object({ recentGames: z.number().int().min(1), minGames: z.number().int().min(1), maxShare: unit, penaltyScale: z.number().min(1) }).optional(),
     }),
     /**
      * Terms that count in the shown win chance (and the ranking). Measured on production games,

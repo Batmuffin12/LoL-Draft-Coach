@@ -16,6 +16,7 @@ import {
   ConfigError,
   deriveChampionAttributes,
   draftRole,
+  filledRole,
   mainRole,
   parseEngineConfig,
   parseRankBandConfig,
@@ -236,6 +237,19 @@ describe("role helpers", () => {
     expect(draftRole(draft(), games)).toBe("middle");
     const custom = draft({ myTeam: draft().myTeam.map((s) => ({ ...s, position: "" })) });
     expect(draftRole(custom, [game(1, true, 1, "top")])).toBe("top");
+  });
+
+  it("calls you filled only when Riot assigned a role you rarely play, with enough games to tell", () => {
+    const rule = { recentGames: 100, minGames: 20, maxShare: 0.1 };
+    const top = (n: number) => Array.from({ length: n }, (_, i) => game(1, true, 1 + i, "top"));
+    // draft() assigns middle.
+    expect(filledRole(draft(), top(30), rule)).toEqual({ role: "middle", share: 0, games: 30 });
+    expect(filledRole(draft(), [...top(25), ...Array.from({ length: 5 }, (_, i) => game(1, true, 40 + i, "middle"))], rule)).toBeNull(); // 17% mid
+    expect(filledRole(draft(), top(10), rule)).toBeNull(); // too few games to tell
+    expect(filledRole(draft(), top(30), undefined)).toBeNull();
+    // Only the last recentGames count: old mid games don't hide a fill.
+    const oldMid = Array.from({ length: 30 }, (_, i) => game(1, true, 200 + i, "middle"));
+    expect(filledRole(draft(), [...top(30), ...oldMid], { ...rule, recentGames: 30 })).not.toBeNull();
   });
 
   it("lists ally champions from locks and hovers, excluding the local player", () => {

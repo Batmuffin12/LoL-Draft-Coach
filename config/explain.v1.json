@@ -138,6 +138,7 @@
     "loadout.item.why.engage": "Their team has a lot of crowd control: {item} shortens it",
     "loadout.item.why.frontline": "Their team is tanky: {item} goes through armor or magic resist",
     "loadout.item.backing": "Players buy it {lift}× as often into teams like this ({games} games)",
+    "picks.filled": "You're filled: {role} is {share:pct}% of your last {games} games. Picks lean on champions you know",
     "loadout.spike": "Power spike: after finishing it first, {champion:champion} pulls ahead of the lane opponent by about {gold} more gold a minute than after a typical first item ({games} games)",
     "ban.banRate": "Banned in {banRate:pct}% of games in your rank",
     "trend.pick": "Trending in {role}: picked in {recent:pct}% of games lately, up from {before:pct}%",

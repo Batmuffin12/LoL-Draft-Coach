@@ -497,4 +497,9 @@ describe("the experience model and the honest chance (shipped config)", () => {
     expect(topOnly).toBeGreaterThan(never); // other roles and mastery count a little
     expect(bigMastery).toBeGreaterThan(fiveHere);
   });
+
+  it("filled into a role you rarely play, leans harder on what you know: unplayed champions cost more", () => {
+    const personal = (filled: boolean) => personalOf(adviseLivePicks({ ...input(draft(), { config: real, pickable: [103] }), filled }).picks.find((x) => x.championId === 103)!);
+    expect(personal(true)).toBeCloseTo(personal(false) * real.rating.personal.offRole!.penaltyScale, 6);
+  });
 });

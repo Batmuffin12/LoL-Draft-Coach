@@ -271,7 +271,8 @@
       "learningPenalty": 50,
       "includeUnplayed": true,
       "experience": { "penalty": 30, "tauGames": 10, "transfer": 0.2, "pointsPerGame": 700 },
-      "skill": { "priorGames": 100, "maxPoints": 60, "weight": 0.5 }
+      "skill": { "priorGames": 100, "maxPoints": 60, "weight": 0.5 },
+        "offRole": { "recentGames": 100, "minGames": 20, "maxShare": 0.1, "penaltyScale": 1.5 }
     },
     "inChance": ["meta", "personal"],
     "blind": {

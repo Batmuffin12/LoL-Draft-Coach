@@ -32,6 +32,8 @@ export interface LiveInput extends RecommendInput {
   /** The band's meta snapshot, indexed. */
   index: MetaIndex;
   band: RankBandId;
+  /** Filled into a role you rarely play (filledRole): picks lean harder on champions you know. */
+  filled?: boolean;
 }
 
 /** A scored candidate with what the explanation needs. */
@@ -101,14 +103,14 @@ const bar = (points: number, cfg: RatingConfig) => clamp01(0.5 + deltaWin(points
  * little experience on the champion in this role, plus your skill on it against its win rate in
  * your rank (strongly shrunk). Without it, the older comfort-score mapping.
  */
-function personalRating(c: ComfortStats | undefined, cfg: RatingConfig, bandWinRate: number | null): number {
+function personalRating(c: ComfortStats | undefined, cfg: RatingConfig, bandWinRate: number | null, filled = false): number {
   const p = cfg.personal;
   if (p.experience) {
     const e = p.experience;
     const inRole = c?.gamesInRole ?? 0;
     const elsewhere = (c?.games ?? 0) - inRole + (c?.masteryPoints ?? 0) / e.pointsPerGame;
     const n = inRole + e.transfer * Math.max(0, elsewhere);
-    const cost = -e.penalty * Math.exp(-n / e.tauGames);
+    const cost = -e.penalty * (filled ? (p.offRole?.penaltyScale ?? 1) : 1) * Math.exp(-n / e.tauGames);
     let skill = 0;
     if (p.skill && c && inRole > 0 && c.winRateInRole !== null && bandWinRate !== null) {
       const shrunk = (c.winRateInRole * inRole + bandWinRate * p.skill.priorGames) / (inRole + p.skill.priorGames);
@@ -270,7 +272,7 @@ function scoreCandidate(id: ChampionId, comfort: ComfortStats | undefined, offMe
   // Personal: the player's comfort, or the cost of learning a new champion.
   // Without the champion's rank data, your record is compared with an even 50%.
   const bandWinRate = metaStat.games > 0 ? metaStat.wins / metaStat.games : 0.5;
-  const personal = w.personal * personalRating(comfort, cfg, bandWinRate);
+  const personal = w.personal * personalRating(comfort, cfg, bandWinRate, input.filled);
   const unplayed = !comfort || (comfort.games === 0 && comfort.masteryPoints === 0);
   if (unplayed) note(reason("personal.new", {}), personal);
   else if (personal >= 0) for (const r of comfortReasons(comfort, input.role)) notes.push({ r, weight: Math.abs(deltaWin(personal)), positive: true });
