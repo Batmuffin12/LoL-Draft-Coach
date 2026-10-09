@@ -11,7 +11,7 @@ Started 2026-10-09 ~03:35 with all eleven at once; the usage limit stopped them 
 | 5 | Items | 05-items.md | done |
 | 6 | The draft engine | 06-draft-engine.md | done |
 | 7 | Learning a champion | 07-learning.md | done |
-| 8 | Power spikes | 08-power-spikes.md | running |
+| 8 | Power spikes | 08-power-spikes.md | done |
 | 9 | Bans, breaks, post-game | 09-bans-breaks-postgame.md | running |
 | 10 | Riot policy and product numbers | 10-policy-metrics.md | running |
 | 11 | More data than the Riot API | 11-data-sources.md | done |
