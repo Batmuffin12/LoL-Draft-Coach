@@ -78,11 +78,30 @@ describe("rune trees", () => {
 describe("situational runes", () => {
   it("suggests swapping in only runes from the shown page's two trees", () => {
     // 8139 is in Domination (the page's primary); 9999 is in neither tree (another page).
-    const l = { ...loadout(false), situationalRunes: [8139, 9999].map((runeId) => ({ runeId, reasons: [] })) };
+    const l = { ...loadout(false), situationalRunes: [8139, 9999].map((runeId) => ({ runeId, trait: "engage" as const, lift: 2, games: 300, reasons: [] })) };
     const deps = { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false };
     expect(toLoadoutView(l, deps).situationalRunes.map((r) => r.id)).toEqual([8139]);
     // Without rune data the trees are unknown: nothing is filtered.
     expect(toLoadoutView(l, { ...deps, data: null }).situationalRunes).toHaveLength(2);
+  });
+
+  it("with mechanic rules, keeps a swap only when the rune's own text answers the trait, and says why", () => {
+    const withText = {
+      ...data,
+      runes: data.runes.map((s) => ({
+        ...s,
+        slots: s.slots.map((sl) => ({ runes: sl.runes.map((r) => (r.id === 8139 ? { ...r, shortDesc: "Gain Armor and <b>Magic Resist</b> when receiving crowd control." } : { ...r, shortDesc: "Heal when you damage an enemy champion." })) })),
+      })),
+    } as unknown as typeof data;
+    const swap = (runeId: number, trait: "engage" | "heal") => ({ runeId, trait, lift: 2.1, games: 340, reasons: [] });
+    const l = { ...loadout(false), situationalRunes: [swap(8139, "engage"), swap(8126, "engage"), swap(8139, "heal")] };
+    const deps = { data: withText, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, runeMechanics: config.engine.loadout.runeMechanics };
+    const v = toLoadoutView(l, deps).situationalRunes;
+    expect(v.map((r) => r.id)).toEqual([8139]); // Cheap Shot's text doesn't answer crowd control; no rule for heal
+    expect(v[0]!.reasons).toEqual([
+      "Their team has a lot of crowd control. Taste of Blood: Gain Armor and Magic Resist when receiving crowd control.",
+      "Players take it 2.1× as often into teams like this (340 games)",
+    ]);
   });
 });
 

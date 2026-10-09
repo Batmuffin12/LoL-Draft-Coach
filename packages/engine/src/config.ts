@@ -319,6 +319,13 @@ export const EngineConfigSchema = z.object({
   }),
   /** Loadout after lock-in: runes, spells, skill order and items (DESIGN.md "Loadout", "Item ranking"). */
   loadout: z.object({
+    /**
+     * Rune swaps need a game mechanic, not only a lift (research/answers/04-runes.md): per enemy
+     * trait, a pattern on the rune's own Data Dragon description that names the mechanic that
+     * answers it (crowd control → "when receiving crowd control"). Traits without a pattern get no
+     * rune suggestion (no rune reacts to physical or magic damage). Absent: any lift counts.
+     */
+    runeMechanics: z.record(z.string(), z.string()).optional(),
     /** What counts as a completed item (derived from Data Dragon). */
     items: z.object({ mapId: z.string().min(1), legendaryMinGold: z.number().min(0) }),
     /** An option (page, spells, …) needs this share of the champion-role's games to be suggested… */

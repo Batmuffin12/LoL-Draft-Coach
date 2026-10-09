@@ -74,8 +74,15 @@ describe("buildLoadout", () => {
   });
 
   it("suggests situational runes against this enemy team only, never ones already on the page", () => {
-    expect(buildLoadout(input({ enemies: [11, 12] })).situationalRunes.map((r) => r.runeId)).toEqual([8242]);
-    expect(buildLoadout(input({ enemies: [13] })).situationalRunes).toEqual([]);
+    // The lift mechanics alone (no mechanic rules): the fixture's lift is on magic damage.
+    const any = { ...cfg, runeMechanics: undefined };
+    expect(buildLoadout(input({ enemies: [11, 12], config: any })).situationalRunes.map((r) => r.runeId)).toEqual([8242]);
+    expect(buildLoadout(input({ enemies: [13], config: any })).situationalRunes).toEqual([]);
+  });
+
+  it("never suggests a rune for a trait no rune mechanic answers (magic or physical damage)", () => {
+    expect(cfg.runeMechanics).toBeDefined();
+    expect(buildLoadout(input({ enemies: [11, 12] })).situationalRunes).toEqual([]);
   });
 
   it("builds the core path from the ranked items, and falls back to the common path without them", () => {

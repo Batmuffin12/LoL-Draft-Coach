@@ -104,7 +104,8 @@ export interface Loadout {
   source: LoadoutSource;
   page: LoadoutChoice<RunePageStat> | null;
   /** Runes worth a look against this enemy team (lift), with the reason. */
-  situationalRunes: { runeId: number; reasons: Reason[] }[];
+  /** Rune swaps against this team, with the trait they answer and the measured lift behind them. */
+  situationalRunes: { runeId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] }[];
   spells: LoadoutChoice<number[]> | null;
   skills: LoadoutChoice<{ first: number[]; order: number[] }> | null;
   starting: LoadoutChoice<number[]> | null;
@@ -333,10 +334,12 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   const seen = new Set<number>();
   const situationalRunes = build.lifts
     .filter((l) => l.kind === "rune" && l.lift >= cfg.minLift && !onPage.has(l.id) && traitIntensity(enemy[l.trait], input.traitCuts[l.trait]) > 0)
+    // Only traits a rune mechanic can answer (config); the view then checks the rune's own text.
+    .filter((l) => !cfg.runeMechanics || l.trait in cfg.runeMechanics)
     .sort((a, b) => b.lift - a.lift)
     .filter((l) => !seen.has(l.id) && seen.add(l.id))
     .slice(0, cfg.maxSituational)
-    .map((l) => ({ runeId: l.id, reasons: [liftReason("rune", l, enemy)] }));
+    .map((l) => ({ runeId: l.id, trait: l.trait, lift: l.lift, games: l.n, reasons: [liftReason("rune", l, enemy)] }));
 
   // Spells depend on the role (Smite in the jungle), so they never come from other roles.
   let spells: LoadoutChoice<number[]> | null;

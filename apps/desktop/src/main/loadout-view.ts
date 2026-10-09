@@ -14,6 +14,19 @@ export interface LoadoutViewDeps {
   perk?: (id: number) => { name: string; iconUrl: string | null } | undefined;
   /** The stat shard rows as the client lists them (offense, flex, defense), when known. */
   shardRows?: number[][];
+  /** Per enemy trait, the pattern a rune's own description must match to be suggested (engine loadout.runeMechanics). */
+  runeMechanics?: Record<string, string>;
+}
+
+/** A rune's short description from Data Dragon, as plain text (null when unknown). */
+export function runeText(data: StaticData | null, runeId: number): string | null {
+  for (const style of data?.runes ?? []) {
+    for (const slot of style.slots) {
+      const r = slot.runes.find((x) => x.id === runeId) as { shortDesc?: string } | undefined;
+      if (r?.shortDesc) return r.shortDesc.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    }
+  }
+  return null;
 }
 
 /** A rune path whole, from Data Dragon's runesReforged; `skipKeystones` for the secondary path. Null when the path is unknown. */
@@ -102,7 +115,24 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
           ...numbers(l.page),
         }
       : null,
-    situationalRunes: l.situationalRunes.filter((r) => !inTrees.size || inTrees.has(r.runeId)).map((r) => withReasons(rune(r.runeId), r.reasons)),
+    situationalRunes: l.situationalRunes
+      .filter((r) => !inTrees.size || inTrees.has(r.runeId))
+      .flatMap((r) => {
+        const rules = deps.runeMechanics;
+        if (!rules) return [withReasons(rune(r.runeId), r.reasons)];
+        // The mechanic must be in the rune's own text (Data Dragon), else it's only a correlation.
+        const effect = runeText(d, r.runeId);
+        const pattern = rules[r.trait];
+        if (!effect || !pattern || !new RegExp(pattern, "i").test(effect)) return [];
+        const view = rune(r.runeId);
+        const say = (id: string, slots: Reason["slots"]) => renderReason({ id, slots }, deps.templates, deps.championName);
+        return [
+          {
+            ...view,
+            reasons: [say(`loadout.rune.why.${r.trait}`, { rune: view.name, effect }), say("loadout.rune.backing", { lift: r.lift.toFixed(1), games: r.games })],
+          },
+        ];
+      }),
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons), ...numbers(l.spells) } : null,
     skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), basic: [1, 2, 3].map(key), ult: key(4), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
     starting: l.starting && start ? { items: start.ids.map(item), counts: start.counts, reason: first(l.starting.reasons), ...numbers(l.starting) } : null,

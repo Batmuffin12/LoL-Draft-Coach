@@ -731,6 +731,7 @@ export class PersonalCoach extends Coach {
         reasons: assessed ? assessed.reasons.map((r) => reasonView(r, say)) : [],
         loadout: loadout
           ? toLoadoutView(loadout, {
+            runeMechanics: this.config.engine.loadout.runeMechanics,
               data,
               templates,
               championName: nameOf,
