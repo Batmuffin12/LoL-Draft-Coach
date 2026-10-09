@@ -21,7 +21,7 @@ export function PoolTable({ rows }: { rows: PoolChampView[] }) {
       {listed.map((c) => (
         <div key={c.champion.id} className={cx("trow", c.tier)} role="row">
           <span className="c-champ">
-            <ChampIcon champ={c.champion} size={28} state="picked" framed={c.tier === "main"} />
+            <ChampIcon champ={c.champion} size={36} state="picked" framed={c.tier === "main"} />
             <span className="nm">{c.champion.name}</span>
           </span>
           <span className="c-num tier">{c.tierLabel}</span>
@@ -33,7 +33,7 @@ export function PoolTable({ rows }: { rows: PoolChampView[] }) {
         <div className="open no-games" title={rusty.map(detail).join("\n")}>
           <span className="icons">
             {rusty.map((c) => (
-              <ChampIcon key={c.champion.id} champ={c.champion} size={20} state="off" />
+              <ChampIcon key={c.champion.id} champ={c.champion} size={24} state="off" />
             ))}
           </span>
           <span className="one-line">{`${rusty[0]!.tierLabel}: ${rusty.map((c) => c.champion.name).join(", ")}`}</span>

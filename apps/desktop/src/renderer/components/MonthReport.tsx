@@ -60,7 +60,7 @@ export function FormTable({ rows }: { rows: MonthView["champions"] }) {
       {rows.map((r) => (
         <div key={r.champion.id} className="trow" role="row">
           <span className="c-champ">
-            <ChampIcon champ={r.champion} size={22} />
+            <ChampIcon champ={r.champion} size={28} />
             <span className="nm">{r.champion.name}</span>
           </span>
           <span className="c-num">{r.games}</span>
