@@ -8,9 +8,9 @@ Started 2026-10-09 ~03:35 with all eleven at once; the usage limit stopped them 
 | 2 | Goals and targets per role | 02-goals.md | done |
 | 3 | Style tab and monthly report | 03-style-month.md | done |
 | 4 | Runes with real reasons | 04-runes.md | done |
-| 5 | Items | 05-items.md | running (third try) |
+| 5 | Items | 05-items.md | done |
 | 6 | The draft engine | 06-draft-engine.md | running |
-| 7 | Learning a champion | 07-learning.md | waiting (second wave) |
+| 7 | Learning a champion | 07-learning.md | running |
 | 8 | Power spikes | 08-power-spikes.md | waiting (second wave) |
 | 9 | Bans, breaks, post-game | 09-bans-breaks-postgame.md | waiting (second wave) |
 | 10 | Riot policy and product numbers | 10-policy-metrics.md | waiting (second wave) |
