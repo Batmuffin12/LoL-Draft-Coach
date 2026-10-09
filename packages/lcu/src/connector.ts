@@ -109,8 +109,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
       const creds = await this.opts.discover().catch(() => null);
       if (creds && this.running) {
         try {
-          await this.connect(creds);
-          await new Promise<void>((resolve) => this.socket?.once("close", resolve));
+          await this.connect(creds); // until the socket closes
         } catch {
           // Client still booting or just closed; retry on the next poll.
         }
@@ -122,12 +121,15 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     }
   }
 
+  /** Connects, then settles when the socket closes. */
   private async connect(creds: LcuCredentials): Promise<void> {
     const http = new LcuHttp(creds, this.opts.host);
     // Fails until the client's API is ready, which sends us back to polling.
     const phase = parseLcu(GameflowPhaseSchema, LCU_PATHS.gameflowPhase, await http.get(LCU_PATHS.gameflowPhase));
     const socket = new LcuSocket(creds, this.opts.host);
     await socket.connect();
+    // Listen for the close at once: the client can close while the first reads below are still running.
+    const closed = new Promise<void>((resolve) => socket.once("close", resolve));
     this.http = http;
     this.socket = socket;
     this.creds = creds;
@@ -140,6 +142,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
 
     const session = await this.getChampSelect().catch(() => null);
     if (session) this.emit("champSelect", session);
+    return closed;
   }
 
   private onEvent(e: LcuEvent): void {
