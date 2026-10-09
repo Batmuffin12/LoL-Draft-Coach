@@ -494,7 +494,11 @@ export function suggestBans(input: LiveInput, opts: BanOptions = {}): BanSuggest
   const recommended = all.slice(0, cfg.bans.protectPicks).map((s) => s.pick.championId);
   const protect = opts.protect ?? recommended;
   // Never suggest banning a champion the player might pick (their recommendations or the protected ones).
-  const excluded = new Set<ChampionId>([...ctx.unavailable, ...ctx.allies.map((a) => a.championId), ...recommended, ...protect, ...(opts.exclude ?? [])]);
+  // Nor one a teammate is already hovering for their ban (it will be gone anyway).
+  const allyBanHovers = input.draft.actions
+    .filter((x) => x.type === "ban" && x.isAllyAction && x.inProgress && !x.completed && x.championId > 0 && x.actorCellId !== input.draft.localCellId)
+    .map((x) => x.championId);
+  const excluded = new Set<ChampionId>([...ctx.unavailable, ...ctx.allies.map((a) => a.championId), ...recommended, ...protect, ...allyBanHovers, ...(opts.exclude ?? [])]);
   const role = ctx.role;
 
   const seen = new Set<ChampionId>();

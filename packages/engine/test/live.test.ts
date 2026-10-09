@@ -367,6 +367,13 @@ describe("suggestBans", () => {
     expect(bans.every((b) => b.reasons.length > 0)).toBe(true);
   });
 
+  it("never suggests a ban a teammate is already hovering", () => {
+    const d = draft([], 301);
+    const top = suggestBans(input(d))[0]!.championId;
+    const hovered = { ...d, actions: [...d.actions, { id: 99, type: "ban", actorCellId: 0, championId: top, completed: false, inProgress: true, isAllyAction: true }] };
+    expect(suggestBans(input(hovered)).map((b) => b.championId)).not.toContain(top);
+  });
+
   it("adds bans for a hovered champion: its own counters, no repeats, and just 1 when it's the top pick", () => {
     // 203 hard-counters 103 only (30% for 103 over 200 games); picked in 10% of mid games.
     const s = snapshot();
