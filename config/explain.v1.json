@@ -247,8 +247,6 @@
     "newchamp.learn.win.more.you": "more {metric}: {winners} in wins, {losers} in losses (you: {you})",
     "newchamp.learn.win.less": "fewer {metric}: {winners} in wins, {losers} in losses",
     "newchamp.learn.win.less.you": "fewer {metric}: {winners} in wins, {losers} in losses (you: {you})",
-    "growth.why.size": "You: {you}. Typical {role} player in {band}: {typical}",
-    "growth.why.size.games": "You: {you}. Typical {role} player in your games: {typical}",
     "growth.why.hover": "In {band}, {role} players above typical here win {gap:per100} more games per 100 (a link, not a cause)",
     "growth.why.hover.games": "In your games, {role} players above typical here won {gap:per100} more games per 100 (a link, not a cause)",
     "growth.why.earlyDeaths": "Each early death hands your opponent gold, XP and a free wave",
@@ -263,7 +261,8 @@
     "growth.why.laneGoldDiffAt14": "A gold lead at 14 min means your next item comes before theirs",
     "growth.why.laneCsDiffAt10": "Every minion you out-farm your opponent by is gold they don't get",
     "growth.why.wardsPlacedBefore14": "Early wards spot the enemy jungler before ganks and the first objectives",
-    "growth.why.earlyEpicMonsterTakedowns": "Early dragons, grubs and herald are lasting power for your whole team"
+    "growth.why.earlyEpicMonsterTakedowns": "Early dragons, grubs and herald are lasting power for your whole team",
+    "growth.why.challenges.initialCrabCount": "The first Scuttle Crab gives gold, XP and vision of the river for the early fights"
   },
   "settings": {
     "clearGap": 0.05,
