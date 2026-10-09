@@ -260,7 +260,8 @@ export const EngineConfigSchema = z.object({
       experience: z
         .object({ penalty: z.number().min(0), tauGames: z.number().positive(), transfer: unit, pointsPerGame: z.number().positive() })
         .optional(),
-      skill: z.object({ priorGames: z.number().min(0), maxPoints: z.number().min(0) }).optional(),
+      /** weight: a multiplier on the skill points (production backtest: half strength is best calibrated). */
+      skill: z.object({ priorGames: z.number().min(0), maxPoints: z.number().min(0), weight: z.number().min(0).default(1) }).optional(),
     }),
     /**
      * Terms that count in the shown win chance (and the ranking). Measured on production games,

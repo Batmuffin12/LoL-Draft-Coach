@@ -113,7 +113,7 @@ function personalRating(c: ComfortStats | undefined, cfg: RatingConfig, bandWinR
     if (p.skill && c && inRole > 0 && c.winRateInRole !== null && bandWinRate !== null) {
       const shrunk = (c.winRateInRole * inRole + bandWinRate * p.skill.priorGames) / (inRole + p.skill.priorGames);
       const points = rating(shrunk) - rating(bandWinRate);
-      skill = Math.max(-p.skill.maxPoints, Math.min(p.skill.maxPoints, points));
+      skill = p.skill.weight * Math.max(-p.skill.maxPoints, Math.min(p.skill.maxPoints, points));
     }
     return cost + skill;
   }
