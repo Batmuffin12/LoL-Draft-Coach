@@ -105,6 +105,25 @@ describe("situational runes", () => {
   });
 });
 
+describe("situational items", () => {
+  it("keeps an item against this team only when its own text answers the trait, and says why", () => {
+    const withItems = {
+      ...data,
+      itemInfo: new Map<number, unknown>([...data.itemInfo, item(3033, "Mortal Reminder"), item(3020, "Sorcerer's Shoes")]),
+      items: {
+        "3033": { description: "<stats>35 Attack Damage</stats><passive>Grievous Wounds</passive> applies 40% <keyword>Wounds</keyword>" },
+        "3020": { description: "<stats>12 Magic Penetration</stats>" },
+      },
+    } as unknown as typeof data;
+    const s = (itemId: number, trait: "heal" | "magic") => ({ itemId, trait, lift: 1.9, games: 420, reasons: [] });
+    const l = { ...loadout(false), situational: [s(3033, "heal"), s(3020, "heal"), s(3020, "magic")] };
+    const deps = { data: withItems, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, itemMechanics: config.engine.loadout.itemMechanics };
+    const v = toLoadoutView(l, deps).situational;
+    expect(v.map((x) => x.id)).toEqual([3033]); // Sorcerer's Shoes neither cuts healing nor gives magic resist
+    expect(v[0]!.reasons).toEqual(["Their team heals a lot: Mortal Reminder cuts their healing (Wounds)", "Players buy it 1.9× as often into teams like this (420 games)"]);
+  });
+});
+
 describe("toLoadoutView numbers", () => {
   it("carries win rate and games on every choice, the slot minute, and share and win added on items", () => {
     const v = view(false, [[5008, 5005, 5007], [5008, 5010, 5001], [5011, 5013, 5001]]);

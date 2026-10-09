@@ -334,6 +334,8 @@ export const EngineConfigSchema = z.object({
      * rune suggestion (no rune reacts to physical or magic damage). Absent: any lift counts.
      */
     runeMechanics: z.record(z.string(), z.string()).optional(),
+    /** The same for situational items, on the item's Data Dragon description (anti-heal → "Wounds"). */
+    itemMechanics: z.record(z.string(), z.string()).optional(),
     /** What counts as a completed item (derived from Data Dragon). */
     items: z.object({ mapId: z.string().min(1), legendaryMinGold: z.number().min(0) }),
     /** An option (page, spells, …) needs this share of the champion-role's games to be suggested… */

@@ -732,6 +732,7 @@ export class PersonalCoach extends Coach {
         loadout: loadout
           ? toLoadoutView(loadout, {
             runeMechanics: this.config.engine.loadout.runeMechanics,
+            itemMechanics: this.config.engine.loadout.itemMechanics,
               data,
               templates,
               championName: nameOf,

@@ -308,12 +308,19 @@
     "priorGames": 40,
     "minMatchupGames": 25,
     "itemMinShare": 0.04,
-    "winAddedScale": 695,
+    "winAddedScale": 0,
     "shareScale": 50,
     "liftScale": 60,
     "runeMechanics": {
       "engage": "when receiving crowd control|tenacity",
       "frontline": "high health enemy|more damage to high health"
+    },
+    "itemMechanics": {
+      "heal": "Wounds",
+      "magic": "\\d+ Magic Resist",
+      "physical": "\\d+ Armor(?! Penetration)|incoming damage from Attacks",
+      "engage": "Tenacity|Slow Resist",
+      "frontline": "Armor Penetration|Magic Penetration|max(imum)? Health damage"
     },
     "negativeGuard": -0.02,
     "minLift": 1.3,

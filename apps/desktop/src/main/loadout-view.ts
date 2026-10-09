@@ -16,6 +16,14 @@ export interface LoadoutViewDeps {
   shardRows?: number[][];
   /** Per enemy trait, the pattern a rune's own description must match to be suggested (engine loadout.runeMechanics). */
   runeMechanics?: Record<string, string>;
+  /** The same for situational items (engine loadout.itemMechanics). */
+  itemMechanics?: Record<string, string>;
+}
+
+/** An item's Data Dragon description as plain text (stats and passives; null when unknown). */
+export function itemText(data: StaticData | null, itemId: number): string | null {
+  const raw = (data?.items as Record<string, { description?: string }> | undefined)?.[String(itemId)]?.description;
+  return raw ? raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : null;
 }
 
 /** A rune's short description from Data Dragon, as plain text (null when unknown). */
@@ -137,7 +145,17 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
     skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), basic: [1, 2, 3].map(key), ult: key(4), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
     starting: l.starting && start ? { items: start.ids.map(item), counts: start.counts, reason: first(l.starting.reasons), ...numbers(l.starting) } : null,
     quest: l.quest.map((q) => withReasons(item(q.itemId), q.reasons)),
-    situational: l.situational.map((s) => withReasons(item(s.itemId), s.reasons)),
+    // Against this team: only items whose own text answers the trait, with that reason (else a correlation).
+    situational: l.situational.flatMap((s) => {
+      const rules = deps.itemMechanics;
+      if (!rules) return [withReasons(item(s.itemId), s.reasons)];
+      const pattern = rules[s.trait];
+      const text = itemText(d, s.itemId);
+      if (!pattern || !text || !new RegExp(pattern).test(text)) return [];
+      const view = item(s.itemId);
+      const sayId = (id: string, slots: Reason["slots"]) => renderReason({ id, slots }, deps.templates, deps.championName);
+      return [{ ...view, reasons: [sayId(`loadout.item.why.${s.trait}`, { item: view.name }), sayId("loadout.item.backing", { lift: s.lift.toFixed(1), games: s.games })] }];
+    }),
     laterPool: l.laterPool.map((s) => withReasons(item(s.itemId), s.reasons)),
     laterNote: l.laterPool.length ? renderReason({ id: "loadout.later", slots: {} }, deps.templates, deps.championName) : null,
     boots: l.boots ? { top: option(l.boots.top), alternatives: l.boots.alternatives.map(option) } : null,

@@ -119,7 +119,7 @@ export interface Loadout {
    */
   laterPool: { itemId: number; reasons: Reason[] }[];
   /** Items players in your role buy more often against teams like this one (lift), with the trait they answer. */
-  situational: { itemId: number; trait: EnemyTrait; reasons: Reason[] }[];
+  situational: { itemId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] }[];
   /** The build path: the top item per slot, or the most common path when purchases are too few to rank. */
   core: LoadoutChoice<number[]> | null;
   items: ItemSlotAdvice[];
@@ -234,7 +234,7 @@ export function situationalItems(input: LoadoutInput, exclude: ReadonlySet<numbe
   return [...best.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, cfg.maxSituational)
-    .map((l) => ({ itemId: l.id, trait: l.trait, reasons: [liftReason("item", l, enemy)] }));
+    .map((l) => ({ itemId: l.id, trait: l.trait, lift: l.lift, games: l.n, reasons: [liftReason("item", l, enemy)] }));
 }
 
 /** Your role's quest rewards that come from items in the loadout (most common first, one per item). */
