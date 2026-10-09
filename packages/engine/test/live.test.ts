@@ -222,8 +222,8 @@ describe("adviseLivePicks", () => {
     const advice = adviseLivePicks(input(draft()));
     const r101 = advice.picks.find((p) => p.championId === 101);
     const r102 = advice.picks.find((p) => p.championId === 102);
-    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: −\d+\.\d% into #(201|202)/);
-    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: −\d+\.\d% into #202/);
+    expect(r101 && text(r101.reasons)).toMatch(/Risky blind pick: \d+ fewer wins per 100 into #(201|202)/);
+    expect(r102 && text(r102.reasons)).toMatch(/Safe blind pick|Risky blind pick: \d+ fewer wins per 100 into #202/);
   });
 
   it("suggests a strong champion the player hasn't played, with the learning cost, only if pickable", () => {
