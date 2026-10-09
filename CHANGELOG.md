@@ -2,6 +2,14 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.7.3] — 2026-10-08 — Goals from your first games in a role
+
+### Changed
+- **A role's own goal from your first game in it**: after a first support game the goal is a support goal (control wards, wards cleared), compared with a typical support from the games you have there, and the card says "Support · from your 1 game so far". Replaces the fallback to another role's goal.
+
+### Fixed
+- **The server's `/health` reports its real version**: it was hardcoded as 0.6.2 and missed two releases; it now comes from package.json, with a test.
+
 ## [0.7.2] — 2026-10-08 — Learning a champion, goals per role
 
 ### Added

@@ -12,8 +12,8 @@ import { openDb } from "./db";
 import { readServerEnv } from "./env";
 import { MetaJob } from "./meta-job";
 import { SyncScheduler } from "./sync-scheduler";
+import { SERVER_VERSION as VERSION } from "./version";
 
-const VERSION = "0.6.2";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);
