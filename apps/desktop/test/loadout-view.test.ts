@@ -125,6 +125,20 @@ describe("situational items", () => {
   });
 });
 
+describe("slot item reasons against this team", () => {
+  it("say 'vs teams like this' only when the item's own text answers the trait, in game terms", () => {
+    const withText = {
+      ...data,
+      items: { "6655": { description: "<stats>90 Ability Power</stats><stats>40 Magic Resist</stats>" } },
+    } as unknown as typeof data;
+    const lift = (trait: string) => ({ id: `loadout.item.lift.${trait}`, slots: { id: 6655, lift: "1.5", value: 0.7, games: 300 } });
+    const withReason = (trait: string): Loadout => ({ ...loadout(false), items: [{ slot: 1, minute: 11, top: { ...ranked(6655, 0.58, 0.014, 11), reasons: [lift(trait)] }, alternatives: [] }] });
+    const deps = { data: withText, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, itemMechanics: config.engine.loadout.itemMechanics };
+    expect(toLoadoutView(withReason("magic"), deps).items[0]!.top.reasons).toEqual(["Their team is mostly magic damage: Luden's Companion gives magic resist"]);
+    expect(toLoadoutView(withReason("physical"), deps).items[0]!.top.reasons).toEqual([]); // no armor in its text: a correlation, not said
+  });
+});
+
 describe("toLoadoutView numbers", () => {
   it("carries win rate and games on every choice, the slot minute, and share and win added on items", () => {
     const v = view(false, [[5008, 5005, 5007], [5008, 5010, 5001], [5011, 5013, 5001]]);

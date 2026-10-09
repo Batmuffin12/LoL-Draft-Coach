@@ -87,7 +87,20 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
     const s = spikes.get(id);
     return s ? renderReason({ id: "loadout.spike", slots: { champion: l.championId, gold: s.gold, games: s.n } }, deps.templates, deps.championName) : null;
   };
-  const option = (r: RankedItem): ItemOptionView => ({ ...withReasons(item(r.itemId), r.reasons), share: r.share, winAdded: thin ? null : r.winAdded, spike: spikeText(r.itemId) });
+  // A slot item's "bought more vs teams like this" is said only when the item's own text answers
+  // that trait, in game terms; otherwise it's a correlation (armor penetration "vs physical teams").
+  const answers = (itemId: number, trait: string) => {
+    const pattern = deps.itemMechanics?.[trait];
+    const text = itemText(d, itemId);
+    return !!pattern && !!text && new RegExp(pattern).test(text);
+  };
+  const slotReasons = (r: RankedItem): string[] =>
+    r.reasons.flatMap((x) => {
+      const trait = /^loadout\.item\.lift\.(\w+)$/.exec(x.id)?.[1];
+      if (!trait || !deps.itemMechanics) return [say(x)];
+      return answers(r.itemId, trait) ? [renderReason({ id: `loadout.item.why.${trait}`, slots: { item: item(r.itemId).name } }, deps.templates, deps.championName)] : [];
+    });
+  const option = (r: RankedItem): ItemOptionView => ({ ...item(r.itemId), reasons: slotReasons(r), share: r.share, winAdded: thin ? null : r.winAdded, spike: spikeText(r.itemId) });
   // Stored in Riot's match order (defense, flex, offense); shown like the client (offense, flex, defense).
   const shardIds = l.page ? [...l.page.value.statPerks].reverse() : [];
   const start = l.starting ? groupRepeats(l.starting.value) : null;
