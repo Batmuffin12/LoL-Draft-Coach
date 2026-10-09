@@ -65,7 +65,6 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
     - the chance counts only champion strength and your experience;
     - items follow what players buy;
     - "against this team" runes and items only when their own Data Dragon text answers the trait (`runeMechanics`, `itemMechanics`);
-    - measured item power spikes (⚡, meta `builds.spikes`);
     - off-role mode (`rating.personal.offRole`).
   - Wording:
     - goals give the game mechanic, with the win link in a hover;
@@ -76,7 +75,7 @@ Branch: `milestone-7-grow` (created from `main` at v0.6.2). Merge and tag `v0.7.
     - the 5-friend test (docs/WORDING-TEST.md);
     - NA/KR decision: not now (docs/REGIONS.md).
 
-  Not deployed: production stays on v0.7.4 until the owner approves.
+  An item power-spike mark was built and then reverted the same day: milestone 8 (`milestone-8-spikes`) owns spikes, and its placebo check shows most of a post-item swing is game phase. Not deployed: production stays on v0.7.4 until the owner approves.
 - **Next (stage 6): the owner tries it**, then versions 0.7.0, CHANGELOG (an Unreleased section is ready), CLAUDE.md, merge, tag, push. Ways to try it: `pnpm local:server` + `pnpm local:desktop`, or `pnpm --filter @ldc/sim mock full-game` for a whole simulated game, then a real game. Open questions for the owner: the lobby tab placement (decision 2), and whether the focus should stay on your main role when you play another one.
 
 ## Rules that matter for M7
