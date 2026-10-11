@@ -17,6 +17,8 @@ export function numberViews(headline: MetricResult[], explain: ExplainConfig, to
     you: formatMetric(m.you, m.metric, explain),
     typical: formatMetric(m.reference, m.metric, explain),
     tone: m.percentile >= 0.5 + toneGap ? "pos" : m.percentile <= 0.5 - toneGap ? "neg" : null,
+    // The percentile is already turned for lower-is-better: 0.5 is typical, right of it better.
+    relative: Math.max(-1, Math.min(1, (m.percentile - 0.5) * 2)),
     title: renderReason(
       {
         id: "style.number.title",
@@ -55,4 +57,30 @@ export function sideView(s: SideSplit | null, explain: ExplainConfig): string | 
     otherSide: say(`style.side.${s.better === "blue" ? "red" : "blue"}`),
     games: s.blue.games + s.red.games,
   });
+}
+
+/** "A", "A and B", "A, B and C" (the joining word from the templates). */
+export function listText(parts: string[], templates: Record<string, string>): string {
+  const and = templates["list.and"] ?? "and";
+  return parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} ${and} ${parts.at(-1)}`;
+}
+
+/**
+ * One sentence about a role's style from its high and low axes, built from a sentence part per
+ * axis and level ("You out-farm your rank and win lane early. Vision and early deaths hold you back.").
+ * No numbers; null without axes.
+ */
+export function styleSummary(axes: { axis: string; level: "high" | "mid" | "low" }[], templates: Record<string, string>): string | null {
+  if (!axes.length) return null;
+  const part = (a: { axis: string }, level: string) => templates[`style.summary.${level}.${a.axis}`];
+  const high = axes.filter((a) => a.level === "high").map((a) => part(a, "high")).filter((x): x is string => !!x);
+  const low = axes.filter((a) => a.level === "low").map((a) => part(a, "low")).filter((x): x is string => !!x);
+  const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, templates, String);
+  const out: string[] = [];
+  if (high.length) out.push(say("style.summary.strong", { parts: listText(high, templates) }));
+  if (low.length) {
+    const t = say("style.summary.weak", { parts: listText(low, templates), n: low.length });
+    out.push(t.charAt(0).toUpperCase() + t.slice(1));
+  }
+  return out.length ? out.join(" ") : say("style.summary.even", {});
 }

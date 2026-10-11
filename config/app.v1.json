@@ -6,6 +6,7 @@
     "timelineCount": 1000,
     "callsPerSync": 200,
     "backfillCallsPerWake": 800,
+    "newGameRetrySeconds": [20, 40, 60, 120, 240, 480],
     "queues": [
       420,
       440,
@@ -15,6 +16,9 @@
   "import": {
     "enabled": true
   },
+  "sharedLanes": [
+    ["bottom", "utility"]
+  ],
   "supportedQueues": [
     420,
     440,

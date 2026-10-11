@@ -149,6 +149,8 @@ export interface MatchupRowView {
   /** Points of win chance over what the two champions' strength predicts, or null without games. */
   delta: number | null;
   games: number;
+  /** An ally in your lane (bot and support): your lane partner. */
+  partner?: boolean;
 }
 
 /** The champion the local player has locked in, and how it looks in this draft. */
@@ -211,6 +213,22 @@ export interface PoolHoleView {
   evidence: string | null;
   /** e.g. "try Lillia (rusty)". */
   coveredBy: string | null;
+  /** The learning or rusty champion in your pool that covers it (the first), or null. */
+  coveredByChampion: ChampView | null;
+  /** Every hole that champion covers, biggest first (it fills more than this one when it's a good next step). */
+  fills: PoolNeed[];
+  need: PoolNeed;
+}
+
+export type PoolNeed = "magic" | "physical" | "frontline" | "engage";
+
+/** Champions the Pool tab's matrix has room for (columns at 440px); the rest are listed under it. */
+export const POOL_COLUMNS = 4;
+
+/** What the role's pool covers: one row per need, and which needs each champion brings (missing id: not measured). */
+export interface PoolCoverageView {
+  needs: { need: PoolNeed; label: string; gap: boolean }[];
+  covers: Record<number, PoolNeed[]>;
 }
 
 /** One role in the lobby's role advice (information only; never sets positions). */
@@ -223,6 +241,15 @@ export interface RoleView {
   /** The pool for this role in tiers (main first). */
   pool: PoolChampView[];
   holes: PoolHoleView[];
+  coverage: PoolCoverageView | null;
+  /** "Your next step": a champion you know that fills the biggest hole, with why. Null when none does. */
+  nextStep: { champion: ChampView; title: string; text: string; evidence: string | null } | null;
+  /** The holes nothing you know covers: "Still missing: crowd control. …", or null. */
+  missing: string | null;
+  /** Said when there are no holes. */
+  noGaps: string;
+  /** Champions that didn't fit in the matrix: "Also rusty: Riven, Irelia", or null. */
+  also: string | null;
 }
 
 /**
@@ -236,6 +263,8 @@ export interface AccountView {
   serverUrl: string | null;
   /** Prefill for the server address field. */
   defaultServerUrl: string | null;
+  /** The Riot ID logged into the League client right now (your own), before registering; null without a client. */
+  clientRiotId?: string | null;
   message: string | null;
 }
 
@@ -264,6 +293,8 @@ export interface NumberView {
   tone: "pos" | "neg" | null;
   /** The full sentence, on hover. */
   title: string;
+  /** −1..1: how far from typical, better to the right (lower-is-better already turned); 0 = typical. */
+  relative: number;
 }
 
 /** The player's playstyle in one role. */
@@ -273,6 +304,8 @@ export interface PlaystyleView {
   axes: AxisView[];
   /** Headline numbers against your rank (empty without the style config). */
   numbers: NumberView[];
+  /** One sentence from your high and low axes ("You out-farm your rank. Vision holds you back."), no numbers; null without axes. */
+  summary: string | null;
   /** How you play the role in your last games; null without the style config. */
   how: {
     games: number;
@@ -300,10 +333,17 @@ export interface MonthView {
   /** "Sep 7 – Oct 6". */
   period: string;
   games: number;
-  /** "Trends over 64 games. One game moves these numbers very little." */
-  footer: string;
-  /** The summary tiles: games, win rate, rank, focus. */
-  strip: { label: string; value: string; sub?: string; tone?: "pos" | "neg" }[];
+  /** "Grey lines: no real change over 64 games." */
+  steadyNote: string;
+  /** "Rank: Gold IV, from Silver I", or null without a rank. */
+  rank: string | null;
+  /** Your win rate this period against the period before (from null: no games then), and the line under it. */
+  winRate: { from: number | null; to: number; text: string };
+  /** Games in the period before, and "38 games before". */
+  gamesBefore: number;
+  gamesBeforeText: string;
+  /** Your roles this period as shares of its games, most first; `text`: "Bot 34%". */
+  roles: { role: string; share: number; text: string }[];
   /** The role whose style trends are shown ("Mid"), or null. */
   role: string | null;
   /** changed: a real change between last period and this one (statistical test), else "steady" or null (too few games). */
@@ -398,6 +438,12 @@ export interface FocusView {
   tips: string[];
   /** Targets you already reached ("Deaths per minute: 0.5 → 0.4, target met"). */
   met: string[];
+  /** "Goal met: 2.4 or fewer" / "Goal not met: …", and "Your average is 2.6." */
+  metLine: string;
+  missedLine: string;
+  averageLine: string;
+  /** "6 of your last 10 met it, the last 5 in a row". */
+  streak: string;
 }
 
 /** The last game against the advice the coach gave (the post-game card). The player's own data only. */
@@ -417,6 +463,8 @@ export interface PostGameView {
   followed: boolean;
   /** The term that mattered most (an edge, or a cost): describes the draft, never grades the game. */
   lines: ReasonView[];
+  /** The parts of your pick's win chance when you locked in (biggest first, up to three); empty for old entries or your own pick. */
+  terms: { label: string; deltaWin: number }[];
   /** "Predicted 54% for Ahri when you locked in", or null without live meta. */
   prediction: string | null;
   /** Your focus metric in this game against its target (null without a focus, or before the game is in your history). */
@@ -455,6 +503,10 @@ export interface ViewState {
   side: string | null;
   /** Your most recent game with logged advice, or null. */
   lastGame: PostGameView | null;
+  /** In the lobby with roles chosen (before the queue pops): your best blind picks per role, primary first. */
+  queuePreview: { roles: { role: string; picks: PickView[]; whyNot: string | null; confidence: PickAdviceView["confidence"] }[] } | null;
+  /** A game you just played isn't in your history yet (Riot publishes it a little later): the panel is asking for it. */
+  lastGamePending: boolean;
   /** Your growth focus, or null without enough games. */
   focus: FocusView | null;
   /** New champions per role (needs the band's live meta), roles in the lobby's order. */
@@ -467,6 +519,8 @@ export interface ViewState {
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
   roleLabels: Record<string, string>;
+  /** The panel's fixed wording (explain templates "ui.*", without the prefix). */
+  copy: Record<string, string>;
 }
 
 export function emptyViewState(): ViewState {
@@ -488,6 +542,8 @@ export function emptyViewState(): ViewState {
     playstyle: [],
     side: null,
     lastGame: null,
+    lastGamePending: false,
+    queuePreview: null,
     focus: null,
     newChamps: [],
     month: null,
@@ -495,5 +551,6 @@ export function emptyViewState(): ViewState {
     notices: [],
     docked: true,
     roleLabels: {},
+    copy: {},
   };
 }

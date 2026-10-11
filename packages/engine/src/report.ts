@@ -20,6 +20,8 @@ export interface MonthlyReport {
   winRate: number | null;
   /** Your win rate in the same length of time before the period (null without games then). */
   winRateBefore: number | null;
+  /** Games in the same length of time before the period. */
+  gamesBefore: number;
   /** The role you played most in the period, whose style trends are shown. */
   role: Position | null;
   /**
@@ -89,7 +91,14 @@ export function monthlyReport(
   const span = cfg.report.days * 86_400_000;
   const from = now - span;
   const inPeriod = matches.filter((m) => m.match.endedAt >= from && m.match.endedAt < now);
-  const before = matches.filter((m) => m.match.endedAt < from && m.match.endedAt >= from - span);
+  // The games right before the period, as many as it has (at least enough to judge a trend), from
+  // the lookback window: after a break, the games before the break.
+  const lookback = cfg.report.beforeLookbackDays !== undefined ? cfg.report.beforeLookbackDays * 86_400_000 : span;
+  const before = matches
+    .filter((m) => m.match.endedAt < from && m.match.endedAt >= from - lookback)
+    .sort((a, b) => b.match.endedAt - a.match.endedAt)
+    .slice(0, cfg.report.beforeLookbackDays !== undefined ? Math.max(inPeriod.length, cfg.report.trend.minGamesPerSide) : undefined);
+  const beforeTimes = new Set(before.map((m) => m.match.endedAt));
   const older = matches.filter((m) => m.match.endedAt < from);
 
   const roleCounts = new Map<Position, number>();
@@ -107,7 +116,7 @@ export function monthlyReport(
     const t = cfg.report.trend;
     for (const a of style?.axes ?? []) {
       const cur = a.perGame.filter((g) => g.endedAt >= from).map((g) => g.score * 100);
-      const prev = a.perGame.filter((g) => g.endedAt < from && g.endedAt >= from - span).map((g) => g.score * 100);
+      const prev = a.perGame.filter((g) => g.endedAt < from && beforeTimes.has(g.endedAt)).map((g) => g.score * 100);
       if (!cur.length) continue;
       axes.push({ axis: a.axis, from: prev.length ? Math.round(stats(prev).mean) : null, to: Math.round(stats(cur).mean), changed: trend(cur, prev, t, t.minChange) });
     }
@@ -175,6 +184,7 @@ export function monthlyReport(
     games: inPeriod.length,
     winRate: win(inPeriod),
     winRateBefore: win(before),
+    gamesBefore: before.length,
     role,
     axes,
     stats: numbers,

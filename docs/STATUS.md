@@ -10,6 +10,10 @@ Updated 2026-10-11 (v0.7.6). Started 2026-10-08 when three Claude sessions were 
 
 ## Committed, not released
 
+### `feat/panel-redesign-v2`: panel redesign v2 (v0.7.7)
+
+- All seven screens rebuilt to docs/redesign/ (CHANGELOG 0.7.7); PR open for the owner, tagged `v0.7.7` on merge. The design system needs a resync from `styles.css`. `milestone-8-spikes` touches the build UI and will need `main` merged in after this lands.
+
 ### `milestone-8-spikes` (worktree `C:\fullstack\lol-draft-coach-m8`): power spikes
 
 - **Built:**

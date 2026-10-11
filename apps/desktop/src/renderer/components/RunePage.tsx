@@ -58,7 +58,7 @@ export function RunePage({ primary, secondary, runes, shards, swaps }: RunePageP
       {swaps.map((s) => (
         <div key={s.id} className="swap" title={[s.name, ...s.reasons].join("\n")}>
           <ChampIcon champ={s} kind="game" round size={20} />
-          <span className="one-line">
+          <span className="wrap">
             <b>Swap in {s.name}</b>
             {s.reasons[0] && <span className="muted">{` — ${lower(s.reasons[0])}`}</span>}
           </span>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lobby, this month</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.t-legal{font-size:11px;line-height:14px;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.chip{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;padding:1px 8px;border:1px solid var(--line-strong);border-radius:999px;color:var(--muted)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.tabs{display:flex;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.tab{all:unset;font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.section{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.section+.section{border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:center;gap:10px;min-height:22px;flex-wrap:wrap}
+.section-head .rule{flex:1;height:1px;background:var(--line);min-width:16px}
+.card{background:var(--card);border-radius:4px}
+.icon{display:grid;place-items:center;border-radius:4px;background:var(--track);font-family:var(--font-display);font-weight:700;color:var(--muted);flex-shrink:0;box-sizing:border-box}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.foot-link{all:unset;font-size:12px;line-height:16px;color:var(--muted);cursor:pointer;text-decoration:underline}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="Connected"></span><span class="app">Draft Coach</span><span class="chip">16.20</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+  <nav class="tabs"><button class="tab">Last game</button><button class="tab">Style</button><button class="tab">Pool</button><button class="tab">New</button><button class="tab on">This month</button></nav>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Sep 7 – Oct 6 · 50 games</span><span class="rule"></span><span class="t-micro">38 games before</span></div>
+    <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap">
+      <span class="t-number muted">51%</span>
+      <span class="t-heading muted">→</span>
+      <span class="t-hero pos">54%</span>
+      <span class="t-caption">win rate, up 3 points on the 30 days before</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="display: flex; height: 8px; border-radius: 2px; overflow: hidden; gap: 2px"><span style="width: 34%; background: #c8aa6e"></span><span style="width: 28%; background: #7a6640"></span><span style="width: 22%; background: #66738c"></span><span style="width: 10%; background: #1a2333"></span><span style="width: 6%; background: #222c3d"></span></span>
+      <span class="t-micro"><span class="text">Bot 34%</span> · Jungle 28% · Mid 22% · Top 10% · Support 6%</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Your bot style, before → now</span><span class="rule"></span><span class="t-micro">50 = rank average</span></div>
+    <svg viewBox="0 0 406 196" width="406" height="196" role="img" aria-label="Style scores last period and this period">
+      <g font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" letter-spacing="1" fill="#8a94a7">
+        <text x="110" y="8" text-anchor="middle">BEFORE</text>
+        <text x="250" y="8" text-anchor="middle">NOW</text>
+      </g>
+      <line x1="110" y1="16" x2="110" y2="190" stroke="#222c3d"></line>
+      <line x1="250" y1="16" x2="250" y2="190" stroke="#222c3d"></line>
+      <g stroke="#66738c" stroke-width="1.5" opacity=".7">
+        <line x1="110" y1="70" x2="250" y2="58"></line>
+        <line x1="110" y1="82" x2="250" y2="78"></line>
+        <line x1="110" y1="110" x2="250" y2="102"></line>
+        <line x1="110" y1="126" x2="250" y2="130"></line>
+      </g>
+      <line x1="110" y1="62" x2="250" y2="26" stroke="#3ccf8e" stroke-width="2.5"></line>
+      <line x1="110" y1="170" x2="250" y2="146" stroke="#3ccf8e" stroke-width="2.5"></line>
+      <line x1="110" y1="146" x2="250" y2="174" stroke="#ffb86b" stroke-width="2.5"></line>
+      <g fill="#3ccf8e"><circle cx="110" cy="62" r="3.5"></circle><circle cx="250" cy="26" r="4"></circle><circle cx="110" cy="170" r="3.5"></circle><circle cx="250" cy="146" r="4"></circle></g>
+      <g fill="#ffb86b"><circle cx="110" cy="146" r="3.5"></circle><circle cx="250" cy="174" r="4"></circle></g>
+      <g font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600">
+        <text x="100" y="66" text-anchor="end" fill="#8a94a7">Farming 62</text>
+        <text x="100" y="150" text-anchor="end" fill="#8a94a7">Vision 41</text>
+        <text x="100" y="174" text-anchor="end" fill="#8a94a7">Risk control 35</text>
+        <text x="260" y="30" fill="#3ccf8e">71 Farming +9</text>
+        <text x="260" y="62" fill="#8a94a7">63 Early pressure</text>
+        <text x="260" y="82" fill="#8a94a7">58 Fighting</text>
+        <text x="260" y="106" fill="#8a94a7">52 Objectives</text>
+        <text x="260" y="134" fill="#8a94a7">45 Roaming</text>
+        <text x="260" y="150" fill="#3ccf8e">41 Risk control +6</text>
+        <text x="260" y="178" fill="#ffb86b">34 Vision −7</text>
+      </g>
+    </svg>
+    <span class="t-micro">Grey lines: no real change over 50 games.</span>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label">Champions this month</span><span class="rule"></span><span class="t-micro">top 3: 70% of games, 58% before</span></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <div class="card" style="display: flex; align-items: center; gap: 8px; padding: 8px"><span class="icon" style="width: 28px; height: 28px; font-size: 11px">SA</span><span style="display: flex; flex-direction: column"><span class="t-heading">Samira</span><span class="t-micro"><span class="pos">56%</span> · 18 games</span></span></div>
+      <div class="card" style="display: flex; align-items: center; gap: 8px; padding: 8px"><span class="icon" style="width: 28px; height: 28px; font-size: 11px">JI</span><span style="display: flex; flex-direction: column"><span class="t-heading">Jinx</span><span class="t-micro"><span class="neg">44%</span> · 9 games</span></span></div>
+      <div class="card" style="display: flex; align-items: center; gap: 8px; padding: 8px"><span class="icon" style="width: 28px; height: 28px; font-size: 11px">LS</span><span style="display: flex; flex-direction: column"><span class="t-heading">Lee Sin</span><span class="t-micro">50% · 8 games</span></span></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><span class="t-micro text" style="flex: 1">EzekielSalad#EUW</span><button class="foot-link">Sign out</button><button class="foot-link">Delete my data</button></div>
+    <span class="t-legal">LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

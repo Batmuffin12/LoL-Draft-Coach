@@ -137,8 +137,14 @@ export const EngineConfigSchema = z.object({
   }),
   /** Monthly report (DESIGN §7, F8). */
   report: z.object({
-    /** The period, in days, compared with the same length of time before it. */
+    /** The period, in days, compared with the games before it. */
     days: z.number().int().min(1),
+    /**
+     * How far back the games before the period may come from (days). The comparison takes the
+     * games right before the period, as many as the period has (at least trend.minGamesPerSide),
+     * so a break between them doesn't leave nothing to compare. Absent: the same length of time before.
+     */
+    beforeLookbackDays: z.number().int().min(1).optional(),
     maxChampions: z.number().int().min(1),
     /** Games on a champion before the period needed to show its change. */
     minPriorGames: z.number().int().min(1),
@@ -488,10 +494,17 @@ export const AppConfigSchema = z.object({
     callsPerSync: z.number().int().positive().optional(),
     /** The same, for each user still loading their history during the hourly wake-up (it fills a long history in a few hours). */
     backfillCallsPerWake: z.number().int().positive().optional(),
+    /**
+     * After a game, Riot publishes the match a little later: the panel asks the server to sync
+     * again after each of these delays (seconds) until the game is in your history.
+     */
+    newGameRetrySeconds: z.array(z.number().positive()).optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */
   import: z.object({ enabled: z.boolean() }).default({ enabled: false }),
+  /** Positions that share a lane (bot and support): an ally there is your lane partner. */
+  sharedLanes: z.array(z.array(z.string())).default([]),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 

@@ -124,6 +124,11 @@ function scheduleScreenshot(coach: Coach): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
+    // The design size: 440 × 720 at zoom 1 (Electron keeps the last docked zoom in the profile).
+    // LDC_SCREENSHOT_HEIGHT: a shorter panel, to check how a screen copes when it doesn't fit.
+    win?.setSize(PANEL_WIDTH, Number(process.env.LDC_SCREENSHOT_HEIGHT ?? 720));
+    win?.webContents.setZoomFactor(1);
+    await new Promise((r) => setTimeout(r, 400));
     // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
     // "Pool>Mid" clicks one after the other.
     for (const click of (process.env.LDC_SCREENSHOT_CLICK ?? "").split(">").filter(Boolean)) {
@@ -140,6 +145,13 @@ function scheduleScreenshot(coach: Coach): void {
       .executeJavaScript(`(() => { const s = document.querySelector(".scroll"); return s ? s.scrollHeight - s.clientHeight : 0; })()`)
       .catch(() => null);
     console.log(`LDC_SCREENSHOT: scroll overflow ${overflow}px`);
+    // The height of each block (header, band, sections, footer), to see what to trim when a screen overflows.
+    const layout = await win?.webContents
+      .executeJavaScript(
+        `[...document.querySelectorAll(".window > *, .window .scroll > *, .window .scroll > * > .section")].map((e) => (e.className || e.tagName).toString().split(" ")[0] + " " + Math.round(e.getBoundingClientRect().height)).join(" | ")`,
+      )
+      .catch(() => null);
+    console.log(`LDC_SCREENSHOT: layout ${layout}`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     const dump = process.env.LDC_VIEW_DUMP;
@@ -265,11 +277,12 @@ async function main(): Promise<void> {
     if (latest) e.sender.send(IPC.state, latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
-  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" ? coach.importLoadout(kind) : undefined));
+  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
   startAutoUpdate((m) => coach.announce(m));
-  void startDocking(coach);
+  // Screenshots are of the panel at its design size (440 × 720, zoom 1), wherever the client is.
+  if (!process.env.LDC_SCREENSHOT) void startDocking(coach);
   scheduleScreenshot(coach);
 
   app.on("window-all-closed", () => {

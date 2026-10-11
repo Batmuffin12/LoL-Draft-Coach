@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lobby, style</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.t-legal{font-size:11px;line-height:14px;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.chip{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;padding:1px 8px;border:1px solid var(--line-strong);border-radius:999px;color:var(--muted)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.tabs{display:flex;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.tab{all:unset;font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.pill{all:unset;font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--line-strong);color:var(--muted);cursor:pointer}
+.pill.on{border-color:var(--gold);color:var(--gold-bright);background:var(--gold-tint)}
+.section{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.section+.section{border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:center;gap:10px;min-height:22px;flex-wrap:wrap}
+.section-head .rule{flex:1;height:1px;background:var(--line);min-width:16px}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.foot-link{all:unset;font-size:12px;line-height:16px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.bl{display:grid;grid-template-columns:118px minmax(0,1fr) 92px;align-items:center;gap:10px;min-height:26px}
+.bt{position:relative;height:6px;border-radius:3px;background:var(--track)}
+.bt .avg{position:absolute;left:50%;top:-5px;bottom:-5px;width:2px;background:var(--line-strong)}
+.bt .me{position:absolute;top:-4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;border:2px solid var(--bg);box-sizing:border-box}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="Connected"></span><span class="app">Draft Coach</span><span class="chip">16.20</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+  <nav class="tabs"><button class="tab">Last game</button><button class="tab on">Style</button><button class="tab">Pool</button><button class="tab">New</button><button class="tab">This month</button></nav>
+
+  <section class="section" style="padding-bottom: 4px">
+    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap"><button class="pill on">Bot · 50</button><button class="pill">Jungle · 18</button><button class="pill">Mid · 12</button><span style="flex: 1"></span><span class="t-micro">dashed = rank average</span></div>
+    <svg viewBox="-96 -14 412 224" width="406" height="221" role="img" aria-label="Your bot style against the rank average on seven axes">
+      <polygon points="110,25 172.5,55.1 188,122.8 144.7,177.1 75.3,177.1 32,122.8 47.5,55.1" fill="none" stroke="#222c3d"></polygon>
+      <line x1="110" y1="105" x2="110" y2="25" stroke="#222c3d"></line><line x1="110" y1="105" x2="172.5" y2="55.1" stroke="#222c3d"></line><line x1="110" y1="105" x2="188" y2="122.8" stroke="#222c3d"></line><line x1="110" y1="105" x2="144.7" y2="177.1" stroke="#222c3d"></line><line x1="110" y1="105" x2="75.3" y2="177.1" stroke="#222c3d"></line><line x1="110" y1="105" x2="32" y2="122.8" stroke="#222c3d"></line><line x1="110" y1="105" x2="47.5" y2="55.1" stroke="#222c3d"></line>
+      <polygon points="110,65 141.3,80.1 149,113.9 127.4,141 92.6,141 71,113.9 78.7,80.1" fill="none" stroke="#66738c" stroke-dasharray="4 3"></polygon>
+      <polygon points="110,54.6 146.3,76.1 165.4,117.6 121.8,129.5 95.8,134.6 69.4,114.3 81.9,82.6" fill="rgba(200,170,110,.12)" stroke="#c8aa6e" stroke-width="2"></polygon>
+      <g font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" fill="#e6e9ef">
+        <text x="110" y="14" text-anchor="middle">Early pressure <tspan fill="#3ccf8e">63</tspan></text>
+        <text x="180" y="48" text-anchor="start">Fighting <tspan fill="#3ccf8e">58</tspan></text>
+        <text x="196" y="127" text-anchor="start">Farming <tspan fill="#3ccf8e">71</tspan></text>
+        <text x="150" y="198" text-anchor="start">Vision <tspan fill="#ffb86b">34</tspan></text>
+        <text x="70" y="198" text-anchor="end">Risk control <tspan fill="#ffb86b">41</tspan></text>
+        <text x="24" y="127" text-anchor="end">Objectives <tspan fill="#e6e9ef">52</tspan></text>
+        <text x="40" y="48" text-anchor="end">Roaming <tspan fill="#ffb86b">45</tspan></text>
+      </g>
+    </svg>
+    <span class="t-caption text">You out-farm your rank and win lane early. Vision and early deaths hold you back.</span>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Your numbers vs your rank</span><span class="rule"></span><span class="t-micro">● you · | rank average</span></div>
+    <div class="bl"><span>KDA</span><span class="bt"><span class="avg"></span><span class="me" style="left: 67%; background: #3ccf8e"></span></span><span class="t-caption" style="text-align: right"><b class="t-heading pos">3.4</b> vs 2.9</span></div>
+    <div class="bl"><span>Kill participation</span><span class="bt"><span class="avg"></span><span class="me" style="left: 55%; background: #e6e9ef"></span></span><span class="t-caption" style="text-align: right"><b class="t-heading text">58%</b> vs 55%</span></div>
+    <div class="bl"><span>CS per min</span><span class="bt"><span class="avg"></span><span class="me" style="left: 61%; background: #3ccf8e"></span></span><span class="t-caption" style="text-align: right"><b class="t-heading pos">7.9</b> vs 7.1</span></div>
+    <div class="bl"><span>Damage per min</span><span class="bt"><span class="avg"></span><span class="me" style="left: 53%; background: #e6e9ef"></span></span><span class="t-caption" style="text-align: right"><b class="t-heading text">712</b> vs 690</span></div>
+    <div class="bl"><span>Vision per min</span><span class="bt"><span class="avg"></span><span class="me" style="left: 20%; background: #ffb86b"></span></span><span class="t-caption" style="text-align: right"><b class="t-heading neg">0.62</b> vs 0.88</span></div>
+    <div class="bl"><span>Deaths per min</span><span class="bt"><span class="avg"></span><span class="me" style="left: 33%; background: #ffb86b"></span></span><span class="t-caption" style="text-align: right"><b class="t-heading neg">0.21</b> vs 0.18</span></div>
+    <span class="t-micro">Right of the line is better, even for deaths.</span>
+  </section>
+
+  <footer class="foot">
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><span class="t-micro text" style="flex: 1">EzekielSalad#EUW</span><button class="foot-link">Sign out</button><button class="foot-link">Delete my data</button></div>
+    <span class="t-legal">LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

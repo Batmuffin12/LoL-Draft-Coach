@@ -15,6 +15,9 @@ export interface FocusViewDeps {
   positionLabel: (role: string) => string;
 }
 
+/** A run of met goals this long is worth saying ("the last 5 in a row"). */
+const STREAK_MIN = 3;
+
 /** The focus card's view: the focus metric with formatted numbers and why it was chosen. */
 export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null {
   const f = g.focus;
@@ -29,10 +32,18 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
   const why = explain.templates[`growth.why.${f.metric}`] !== undefined ? say(`growth.why.${f.metric}`, {}) : "";
   const whyHover = say(f.importanceFrom === "band" && deps.bandName ? "growth.why.hover" : "growth.why.hover.games", { band: deps.bandName ?? "", role: g.role, gap: Math.abs(f.importance) });
   const dir = f.lowerIsBetter ? "less" : "more";
+  const goalText = renderReason({ id: `growth.goal.${dir}`, slots: { target: fmt(f.target) } }, explain.templates, deps.championName);
+  const met = f.recent.filter(Boolean).length;
+  // The run of met goals up to your last game (recent is oldest first).
+  const run = f.recent.length - 1 - f.recent.lastIndexOf(false);
   return {
     label: capital(label),
     title: renderReason({ id: `growth.title.${dir}`, slots: { metric: label } }, explain.templates, deps.championName),
-    goalText: renderReason({ id: `growth.goal.${dir}`, slots: { target: fmt(f.target) } }, explain.templates, deps.championName),
+    goalText,
+    metLine: say("focus.met", { goal: goalText }),
+    missedLine: say("focus.missed", { goal: goalText }),
+    averageLine: say("focus.average", { you: fmt(f.you) }),
+    streak: say(run >= STREAK_MIN ? "focus.streak.run" : "focus.streak", { met, n: f.recent.length, run }),
     goalHint: renderReason({ id: "growth.goalHint", slots: { step: deps.targetStep } }, explain.templates, deps.championName),
     on:
       g.scope === "few"

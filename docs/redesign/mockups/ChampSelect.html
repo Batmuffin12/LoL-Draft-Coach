@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Champ select</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.t-call{text-transform:uppercase;letter-spacing:.04em}
+.t-legal{font-size:11px;line-height:14px;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.chip{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;padding:1px 8px;border:1px solid var(--line-strong);border-radius:999px;color:var(--muted)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.section{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.section+.section{border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:center;gap:10px;min-height:22px;flex-wrap:wrap}
+.section-head .rule{flex:1;height:1px;background:var(--line);min-width:16px}
+.card{background:var(--card);border-radius:4px}
+.you{border:1px solid var(--frame);background:var(--gold-tint);border-radius:4px}
+.icon{display:grid;place-items:center;border-radius:4px;background:var(--track);font-family:var(--font-display);font-weight:700;color:var(--muted);flex-shrink:0;box-sizing:border-box}
+.icon.framed{border:1px solid var(--gold);color:var(--gold)}
+.reasons{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:17px}
+.reasons li{display:flex;gap:8px}
+.reasons b{font-family:var(--font-display);width:10px;flex-shrink:0;text-align:center}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.alt{all:unset;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px;border-radius:4px;border:1px solid var(--line-strong);cursor:pointer;text-align:center}
+.alt:hover{background:var(--card)}
+.alt:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="Connected"></span><span class="app">Draft Coach</span><span class="chip">16.20</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+
+  <section aria-live="polite" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(200,170,110,.12); border-bottom: 1px solid #7a6640">
+    <div style="position: relative; width: 64px; height: 64px; flex-shrink: 0">
+      <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="#1c2433" stroke-width="4"></circle><circle cx="32" cy="32" r="29" fill="none" stroke="#c8aa6e" stroke-width="4" stroke-dasharray="182" stroke-dashoffset="49" stroke-linecap="round" transform="rotate(-90 32 32)"></circle></svg>
+      <span class="t-hero" style="position: absolute; inset: 0; display: grid; place-items: center">22</span>
+    </div>
+    <div style="display: flex; flex-direction: column; flex: 1">
+      <span class="t-label">Champ select</span>
+      <span class="t-title t-call gold-bright">Your pick</span>
+      <span class="t-caption text">Bot · against Caitlyn</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">We suggest</span><span class="rule"></span><span class="chip" style="border-color: #3ccf8e; color: #3ccf8e">Clear pick</span></div>
+    <div class="you" style="display: flex; align-items: center; gap: 12px; padding: 12px">
+      <span class="icon framed" style="width: 64px; height: 64px; font-size: 22px">SA</span>
+      <div style="display: flex; flex-direction: column; flex: 1">
+        <span class="t-title">Samira</span>
+        <span class="t-micro">Your main · 24 games · 56.3% WR</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span class="t-number pos">51%</span>
+        <span class="t-micro">win chance</span>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <div class="card" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px"><span class="t-label">You</span><span class="t-heading pos">+2.6</span></div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px"><span class="t-label">Meta</span><span class="t-heading pos">+1.1</span></div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px"><span class="t-label">Lane</span><span class="t-heading neg">−0.8</span></div>
+    </div>
+    <ul class="reasons">
+      <li><b class="pos">+</b><span>Your best bot champion: 24 games, 56.3% WR</span></li>
+      <li><b class="pos">+</b><span>Strong in your rank this patch: 51.8% WR (9,810 games)</span></li>
+      <li><b class="pos">+</b><span>Your team needs physical damage: two magic-damage picks so far</span></li>
+      <li><b class="neg">−</b><span>Caitlyn wins lane: −0.8 (1,240 games)</span></li>
+      <li><b class="gold">›</b><span class="gold">Picked over Jinx: your record on Samira is twice as strong</span></li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label">If not Samira</span><span class="rule"></span></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <button class="alt"><span class="icon" style="width: 34px; height: 34px; font-size: 13px">JI</span><span class="t-heading">Jinx</span><span class="t-micro">50% · safer lane</span></button>
+      <button class="alt"><span class="icon" style="width: 34px; height: 34px; font-size: 13px">KA</span><span class="t-heading">Kai’Sa</span><span class="t-micro">49% · adds magic damage</span></button>
+      <button class="alt"><span class="icon" style="width: 34px; height: 34px; font-size: 13px">EZ</span><span class="t-heading">Ezreal</span><span class="t-micro">49% · safe vs Caitlyn</span></button>
+    </div>
+  </section>
+
+  <footer class="foot"><span class="t-micro">Suggestions only. You choose and lock your champion.</span></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

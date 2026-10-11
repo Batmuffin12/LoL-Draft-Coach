@@ -24,7 +24,7 @@ const snapshot: MetaSnapshot = {
   champions: [stat(1, 2000, 0.5), stat(2, 2000, 0.5), stat(3, 800, 0.5), stat(4, 1500, 0.54), stat(5, 1500, 0.5), stat(6, 50, 0.6)],
   matchups: [], duos: [], attributes: [], references: {},
 };
-const pool = (over: Partial<RolePool> = {}): RolePool => ({ role: "middle", champions: [{ championId: 1, tier: "main", games: 40, winRate: 0.55, comfort: 0.8 }], holes: [], ...over });
+const pool = (over: Partial<RolePool> = {}): RolePool => ({ role: "middle", champions: [{ championId: 1, tier: "main", games: 40, winRate: 0.55, comfort: 0.8 }], holes: [], needs: ["magic", "physical", "frontline", "engage"], ...over });
 const input = (over: Partial<NewChampInput> = {}): NewChampInput => ({
   role: "middle",
   pool: pool(),

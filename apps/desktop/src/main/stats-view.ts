@@ -33,6 +33,8 @@ export function draftMatchups(
   me: ChampionId,
   myRole: Position | null,
   lookup: ChampionLookup,
+  /** Positions that share a lane (config app.sharedLanes): an ally there is your lane partner. */
+  sharedLanes: string[][] = [],
 ): { against: MatchupRowView[]; with: MatchupRowView[] } | null {
   const role = myRole ?? index.mainRole(me);
   if (!role) return null;
@@ -45,6 +47,7 @@ export function draftMatchups(
       champion: champView(c.championId, lookup),
       role: c.role,
       lane: !ally && c.role === role,
+      partner: ally && c.role !== role && sharedLanes.some((l) => l.includes(role) && l.includes(c.role)),
       winRate: rate(s),
       delta: s.games > 0 ? deltaWin(d.delta) : null,
       games: s.n,

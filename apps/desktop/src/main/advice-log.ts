@@ -59,6 +59,18 @@ export class AdviceRecorder {
   }
 }
 
+/** How many parts of the win chance the post-game card shows. */
+const POSTGAME_TERMS = 3;
+
+/** Your pick's win-chance parts when you locked in, biggest first (the log keeps them with the pick). */
+export function lockInTerms(record: AdviceRecord, templates: Record<string, string>): PostGameView["terms"] {
+  return (record.pick.terms ?? [])
+    .filter((t) => t.deltaWin !== 0 && templates[`postgame.term.${t.name}`] !== undefined)
+    .sort((a, b) => Math.abs(b.deltaWin) - Math.abs(a.deltaWin))
+    .slice(0, POSTGAME_TERMS)
+    .map((t) => ({ label: templates[`postgame.term.${t.name}`]!, deltaWin: t.deltaWin }));
+}
+
 /** The post-game card for a logged game: its result from your history, what was shown, and the largest term. */
 export function postGameView(
   record: AdviceRecord,
@@ -94,6 +106,7 @@ export function postGameView(
     verdict: say(verdict),
     followed: o.rank > 0,
     lines: o.lines.filter((r) => !r.id.startsWith("postgame.predicted")).map((r) => reasonView(r, say)),
+    terms: lockInTerms(record, opts.templates),
     prediction: predicted && !repeats ? say(predicted) : null,
     focus: o.game && opts.focus ? opts.focus(o.game.matchId) : null,
   };
