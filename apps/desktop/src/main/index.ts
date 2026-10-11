@@ -125,7 +125,8 @@ function scheduleScreenshot(coach: Coach): void {
   if (!path) return;
   setTimeout(async () => {
     // The design size: 440 × 720 at zoom 1 (Electron keeps the last docked zoom in the profile).
-    win?.setSize(PANEL_WIDTH, 720);
+    // LDC_SCREENSHOT_HEIGHT: a shorter panel, to check how a screen copes when it doesn't fit.
+    win?.setSize(PANEL_WIDTH, Number(process.env.LDC_SCREENSHOT_HEIGHT ?? 720));
     win?.webContents.setZoomFactor(1);
     await new Promise((r) => setTimeout(r, 400));
     // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
