@@ -5,8 +5,9 @@ import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
 import { ChampIcon } from "../components/ChampIcon";
-import { PlaystyleAxis } from "../components/PlaystyleAxis";
-import { HowYouPlay, NumberGrid } from "../components/StyleNumbers";
+import { howLines, NumberRows } from "../components/StyleNumbers";
+import { Pills } from "../components/Pills";
+import { StyleRadar } from "../components/StyleRadar";
 import { DraftTerms, ResultBand } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
@@ -218,7 +219,7 @@ function Lines({ lines }: { lines: string[] }) {
   );
 }
 
-/** Your style per role, a sub-tab each. */
+/** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
 function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useSubTab(state.playstyle.map((p) => p.role));
   if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
@@ -227,27 +228,28 @@ function Style({ state }: { state: ViewState }) {
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
     return [`${p.games} games`, high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
   };
+  const p = state.playstyle.find((x) => x.role === sub) ?? state.playstyle[0]!;
+  // How you play (pool, classes, damage) and the side split are on hover over the numbers' head.
+  const how = [...(p.how ? howLines(p.how) : []), ...(state.side ? [state.side] : [])].join("\n");
   return (
     <>
-      <SubTabs options={state.playstyle.map((p) => ({ value: p.role, label: positionLabel(p.role), title: summary(p) }))} value={sub} onChange={setSub} />
-      {state.playstyle
-        .filter((p) => p.role === sub)
-        .map((p) => (
-          <div key={p.role} className="stylerole">
-            <Section title={`Your ${roleName(p.role)} style`} aside={<span className="micro">{`50 = typical in your rank · ${p.games} games`}</span>}>
-              {p.axes.map((a) => (
-                <PlaystyleAxis key={a.axis} axis={a} showDetail={a.level !== "mid"} />
-              ))}
-            </Section>
-            {(p.numbers.length > 0 || p.how) && (
-              <Section title="Your numbers" aside={p.how ? <span className="micro">{`pool and damage: last ${p.how.games} games`}</span> : undefined}>
-                {p.numbers.length > 0 && <NumberGrid items={p.numbers} />}
-                {p.how && <HowYouPlay how={p.how} />}
-                {state.side && <span className="caption">{state.side}</span>}
-              </Section>
-            )}
-          </div>
-        ))}
+      <section className="section style-top">
+        <Pills
+          label="Role"
+          options={state.playstyle.map((x) => ({ value: x.role, label: `${positionLabel(x.role)} · ${x.games}`, title: summary(x) }))}
+          value={p.role}
+          onChange={setSub}
+          end={t("style.dashed")}
+        />
+        <StyleRadar axes={p.axes} role={roleName(p.role)} />
+        {p.summary && <span className="caption text">{p.summary}</span>}
+      </section>
+      {p.numbers.length > 0 && (
+        <Section title={t("style.numbers")} aside={<span className="micro" title={how || undefined}>{t("style.legend")}</span>}>
+          <NumberRows items={p.numbers} />
+          <span className="micro">{t("style.numbersNote")}</span>
+        </Section>
+      )}
     </>
   );
 }

@@ -338,6 +338,7 @@
     "ui.style.dashed": "dashed = rank average",
     "ui.style.numbers": "Your numbers vs your rank",
     "ui.style.numbersNote": "Right of the line is better, even for deaths.",
+    "ui.style.legend": "● you · | rank average",
     "ui.month.champions": "Champions this month",
     "ui.pool.legend": "● covers it · ○ doesn’t. Rusty: no games lately.",
     "ui.pool.next": "Your next step",
