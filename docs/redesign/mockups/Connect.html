@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Connect</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.t-legal{font-size:11px;line-height:14px;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.btn{font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;min-height:32px;padding:0 12px;border-radius:3px;border:1px solid var(--line-strong);background:transparent;color:var(--text);cursor:pointer}
+.btn.primary{border-color:var(--gold);background:var(--gold-tint);color:var(--gold-bright)}
+.btn.wide{width:100%;min-height:44px}
+.btn:focus-visible,.box:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.box{width:96px;height:44px;box-sizing:border-box;border:1px solid var(--line-strong);border-radius:4px;background:var(--card);font-family:var(--font-mono);font-size:16px;letter-spacing:.16em;color:var(--text);text-align:center;text-transform:uppercase}
+.vp{display:flex;gap:12px;align-items:flex-start}
+.vp b{font-family:var(--font-display);color:var(--gold);font-size:16px;line-height:20px;width:12px;flex-shrink:0}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.foot-link{all:unset;font-size:12px;line-height:16px;color:var(--gold);cursor:pointer;text-decoration:underline}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="League client connected"></span><span class="app">Draft Coach</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+
+  <section style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 24px 24px; text-align: center">
+    <span class="t-title">Connect to your coach</span>
+    <span class="t-caption text">Picks from your own pool, with the reasons.</span>
+  </section>
+
+  <form style="display: flex; flex-direction: column; gap: 12px; padding: 0 24px 24px">
+    <label class="t-label" for="c1" style="text-align: center">Invite code</label>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 8px">
+      <input id="c1" class="box" maxlength="4" aria-label="Invite code, part 1" placeholder="····">
+      <span class="t-heading muted">–</span>
+      <input class="box" maxlength="4" aria-label="Invite code, part 2" placeholder="····">
+      <span class="t-heading muted">–</span>
+      <input class="box" maxlength="4" aria-label="Invite code, part 3" placeholder="····">
+    </div>
+    <span class="t-caption" style="text-align: center"><span class="pos">●</span> League client found: <span class="text">EzekielSalad#EUW</span></span>
+    <button class="btn primary wide" type="submit">Connect</button>
+  </form>
+
+  <section style="display: flex; flex-direction: column; gap: 12px; margin: 0 24px; padding: 16px 0; border-top: 1px solid #222c3d">
+    <div class="vp"><b>1</b><span><span class="text">In champ select</span> <span class="t-caption">it suggests bans and picks you already play.</span></span></div>
+    <div class="vp"><b>2</b><span><span class="text">When you lock in</span> <span class="t-caption">import runes, spells and items in one click.</span></span></div>
+    <div class="vp"><b>3</b><span><span class="text">After the game</span> <span class="t-caption">see what decided it and one goal to work on.</span></span></div>
+  </section>
+
+  <footer class="foot">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="t-micro">Server: coach.example.app</span><button class="foot-link" type="button">Change</button></div>
+    <span class="t-legal">LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
