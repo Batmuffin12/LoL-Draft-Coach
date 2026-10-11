@@ -10,6 +10,8 @@ const BOTTOM = H - 8;
 /** The score scale at least spans this (rank average 50 in the middle); wider when the data is. */
 const SCALE_LO = 30;
 const SCALE_HI = 75;
+/** Style scores are percentiles in your role and rank: 50 is the rank's average. */
+export const RANK_AVERAGE = 50;
 /** Labels closer than this are nudged apart. */
 const MIN_GAP = 14;
 

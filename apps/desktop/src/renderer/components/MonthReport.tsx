@@ -2,7 +2,7 @@ import type { MonthView } from "../../shared/view";
 import { cx, pct, t, winTone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
-import { SlopeChart } from "./SlopeChart";
+import { RANK_AVERAGE, SlopeChart } from "./SlopeChart";
 
 /** Number trends shown under the chart (only real changes); the rest go in "+n more". */
 const TRENDS = 2;
@@ -64,7 +64,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
     <>
       <Header m={m} />
       {m.role && m.axes.length > 0 && (
-        <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={<span className="micro">{t("month.average")}</span>}>
+        <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={<span className="micro">{t("month.average", { avg: RANK_AVERAGE })}</span>}>
           {m.axes.some((a) => a.from !== null) ? (
             <>
               <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />

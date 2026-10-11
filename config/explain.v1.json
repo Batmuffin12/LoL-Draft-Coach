@@ -333,7 +333,7 @@
     "ui.style.legend": "● you · | rank average",
     "ui.month.champions": "Champions this month",
     "ui.month.style": "Your {role} style, before → now",
-    "ui.month.average": "50 = rank average",
+    "ui.month.average": "{avg} = rank average",
     "ui.month.noBefore": "Your style before → now shows once you have games in the period before this one.",
     "ui.month.more": "+{n} more",
     "ui.month.goalsMet": "{n} {n|goal|goals} met",
