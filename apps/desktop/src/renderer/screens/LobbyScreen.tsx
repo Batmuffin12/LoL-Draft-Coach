@@ -17,7 +17,7 @@ import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { cx, pct, positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
-import { AccountFooter, Header, Notices } from "./common";
+import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 
 type LobbyTab = "last" | "style" | "pool" | "new" | "month";
 
@@ -108,6 +108,11 @@ function LastGame({ state }: { state: ViewState }) {
   const g = state.lastGame;
   return (
     <>
+      {state.lastGamePending && (
+        <div className="notices">
+          <ProgressRow text={t("last.pending")} />
+        </div>
+      )}
       {g ? (
         <>
           <ResultBand game={g} now={now} />

@@ -488,6 +488,11 @@ export const AppConfigSchema = z.object({
     callsPerSync: z.number().int().positive().optional(),
     /** The same, for each user still loading their history during the hourly wake-up (it fills a long history in a few hours). */
     backfillCallsPerWake: z.number().int().positive().optional(),
+    /**
+     * After a game, Riot publishes the match a little later: the panel asks the server to sync
+     * again after each of these delays (seconds) until the game is in your history.
+     */
+    newGameRetrySeconds: z.array(z.number().positive()).optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */

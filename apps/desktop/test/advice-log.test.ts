@@ -171,3 +171,42 @@ describe("FileProfileSource (LDC_PROFILE_FILE)", () => {
     expect(statuses).toEqual(["ready"]);
   });
 });
+
+describe("a game Riot hasn't published yet", () => {
+  it("keeps asking for a game the client shows but your history doesn't have, until it arrives", async () => {
+    const scenario = await loadScenario("full-game");
+    server = new MockLcuServer(scenario.draft, {
+      "/lol-summoner/v1/current-summoner": { gameName: "Me", tagLine: "EUW" },
+      // The client's own last game: played while the panel was closed.
+      "/lol-match-history/v1/products/lol/current-summoner/matches": { games: { games: [{ gameId: 555, queueId: 420, gameCreation: 3_000_000, gameDuration: 1800 }] } },
+    });
+    const creds = await server.start();
+    const profiles = new FakeProfiles();
+    let refreshes = 0;
+    // Riot publishes the game only by the second sync.
+    profiles.refresh = async () => {
+      refreshes++;
+      if (refreshes >= 2) profiles.matches = [game("EUW1_555", 245, true, 3_000_000), ...history];
+      await profiles.load();
+    };
+    const fast = { ...config, app: { ...config.app, history: { ...config.app.history, newGameRetrySeconds: [0.05, 0.05, 0.05, 0.05] } } };
+    coach = new PersonalCoach({
+      connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
+      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      config: fast,
+      profiles,
+      riotId: null,
+      meta: new MetaSource({ client: () => null, cacheDir: tmp("ldc-meta-"), fixed: scenario.meta }),
+    });
+    const pending: boolean[] = [];
+    coach.on("state", (s) => pending.push(s.lastGamePending));
+    await coach.start();
+    await waitFor(() => coach!.state.lastGame?.lockedAt !== undefined && coach!.state.lastGame.endedAt === 3_000_000);
+    // It asked again until the game was there, said it was waiting meanwhile, and then stopped.
+    expect(refreshes).toBe(2);
+    expect(pending).toContain(true);
+    await waitFor(() => coach!.state.lastGamePending === false);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(refreshes).toBe(2);
+  });
+});

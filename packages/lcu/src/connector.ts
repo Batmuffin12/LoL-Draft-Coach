@@ -15,6 +15,7 @@ import {
   type Perk,
   RankedStatsSchema,
   RecommendedPositionsSchema,
+  RecentGamesSchema,
   parseLcu,
   type ChampSelectSession,
   type CurrentSummoner,
@@ -33,6 +34,7 @@ export const LCU_PATHS = {
   perks: "/lol-perks/v1/perks",
   perkStyles: "/lol-perks/v1/styles",
   ownedChampions: "/lol-champions/v1/owned-champions-minimal",
+  recentGames: "/lol-match-history/v1/products/lol/current-summoner/matches",
 } as const;
 
 export interface ConnectorEvents {
@@ -193,6 +195,19 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   async getGameflowSession(): Promise<GameflowSession | null> {
     const data = await this.requireHttp().get(LCU_PATHS.gameflowSession);
     return data == null ? null : parseLcu(GameflowSessionSchema, LCU_PATHS.gameflowSession, data);
+  }
+
+  /**
+   * The local player's own last games as the client lists them, newest first: game id, queue and
+   * when it ended. Used only to notice a finished game the history doesn't have yet.
+   */
+  async getRecentGames(count = 3): Promise<{ gameId: number; queueId: number; endedAt: number }[]> {
+    const path = `${LCU_PATHS.recentGames}?begIndex=0&endIndex=${Math.max(0, count - 1)}`;
+    const data = await this.requireHttp().get(path);
+    if (data == null) return [];
+    return parseLcu(RecentGamesSchema, LCU_PATHS.recentGames, data)
+      .games.games.map((g) => ({ gameId: g.gameId, queueId: g.queueId, endedAt: g.gameCreation + g.gameDuration * 1000 }))
+      .sort((a, b) => b.endedAt - a.endedAt);
   }
 
   /** The local player's own ranked stats (used only to pick their rank band). */

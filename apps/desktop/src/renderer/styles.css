@@ -427,8 +427,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 
 /* Last game: the result band, what decided the draft, your goal */
 .result-band { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
-.result-band.loss { background: var(--warn-tint); }
-.result-band.win { background: var(--gold-tint); }
+.result-band.is-loss { background: var(--warn-tint); }
+.result-band.is-win { background: var(--gold-tint); }
 .result-band .who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .terms { display: flex; flex-direction: column; gap: 8px; }
 .fx { display: grid; grid-template-columns: 120px minmax(0, 1fr) 48px; align-items: center; gap: 10px; min-height: 24px; }

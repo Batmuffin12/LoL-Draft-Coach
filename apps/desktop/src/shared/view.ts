@@ -503,6 +503,8 @@ export interface ViewState {
   side: string | null;
   /** Your most recent game with logged advice, or null. */
   lastGame: PostGameView | null;
+  /** A game you just played isn't in your history yet (Riot publishes it a little later): the panel is asking for it. */
+  lastGamePending: boolean;
   /** Your growth focus, or null without enough games. */
   focus: FocusView | null;
   /** New champions per role (needs the band's live meta), roles in the lobby's order. */
@@ -538,6 +540,7 @@ export function emptyViewState(): ViewState {
     playstyle: [],
     side: null,
     lastGame: null,
+    lastGamePending: false,
     focus: null,
     newChamps: [],
     month: null,

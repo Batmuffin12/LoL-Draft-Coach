@@ -57,6 +57,17 @@ export const GameflowSessionSchema = z.looseObject({
 });
 export type GameflowSession = z.infer<typeof GameflowSessionSchema>;
 
+/**
+ * The local player's own recent games from the client's match history: only the ids we use to
+ * find a game in their Match-V5 history (no other players, no stats).
+ */
+export const RecentGamesSchema = z.looseObject({
+  games: z.looseObject({
+    games: z.array(z.looseObject({ gameId: z.number().int(), queueId: z.number().int(), gameCreation: z.number(), gameDuration: z.number() })),
+  }),
+});
+export type RecentGames = z.infer<typeof RecentGamesSchema>;
+
 /** Ranked stats of the local player only. Tier strings stay strings; bands come from config. */
 export const RankedStatsSchema = z.looseObject({
   queues: z

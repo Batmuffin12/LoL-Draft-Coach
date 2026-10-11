@@ -94,3 +94,13 @@ describe("real recorded fixture", () => {
     expect([...d.myTeam, ...d.theirTeam].every((s) => s.championId > 0)).toBe(true);
   });
 });
+
+describe("recent games schema", () => {
+  it("reads the ids, queue and timing of your own last games and tolerates the rest", async () => {
+    const { RecentGamesSchema } = await import("../src/index");
+    const body = { accountId: 1, platformId: "EUW1", games: { gameCount: 1, games: [{ gameId: 8010886498, queueId: 420, gameCreation: 1_791_750_038_398, gameDuration: 1594, participants: [{}], newField: true }] } };
+    const parsed = parseLcu(RecentGamesSchema, "/lol-match-history/v1/products/lol/current-summoner/matches", body);
+    expect(parsed.games.games[0]).toMatchObject({ gameId: 8010886498, queueId: 420 });
+    expect(() => parseLcu(RecentGamesSchema, "x", { games: { games: [{ gameId: "x" }] } })).toThrow(LcuSchemaError);
+  });
+});

@@ -187,6 +187,8 @@ export class PersonalCoach extends Coach {
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
   private importMessage: string | null = null;
+  /** Increments for each wait for a new game; an older wait stops when it changes. */
+  private gameWait = 0;
   /** The Riot ID logged into the League client (the local player's own), or null. */
   private clientRiotId: string | null = null;
   /**
@@ -339,7 +341,45 @@ export class PersonalCoach extends Coach {
   private async onGameEnded(): Promise<void> {
     const record = this.recorder.gameEnded();
     if (record) await this.p.profiles?.recordAdvice(record).catch(() => {});
-    await this.p.profiles?.refresh();
+    // The game just played: from the advice log, else the client's own last game.
+    const gameId = record?.gameId ?? (await this.lastClientGame())?.gameId ?? null;
+    if (gameId !== null) await this.awaitGame(gameId);
+    else await this.p.profiles?.refresh();
+  }
+
+  /** The client's own last game in a queue the history keeps, or null. */
+  private async lastClientGame(): Promise<{ gameId: number; endedAt: number } | null> {
+    const games = await this.p.connector.getRecentGames(1).catch(() => []);
+    const g = games[0];
+    return g && this.config.app.history.queues.includes(g.queueId) ? g : null;
+  }
+
+  private hasGame(gameId: number): boolean {
+    return this.profile?.matches.some((m) => m.match.matchId.endsWith(`_${gameId}`)) ?? false;
+  }
+
+  /**
+   * Riot publishes a match a little after it ends, so one sync right after the game often finds
+   * nothing new. Asks the server to sync again on a backoff (config history.newGameRetrySeconds)
+   * until that game is in your history; the panel says it's waiting meanwhile. A newer wait
+   * replaces this one.
+   */
+  private async awaitGame(gameId: number): Promise<void> {
+    const profiles = this.p.profiles;
+    if (!profiles) return;
+    const run = ++this.gameWait;
+    this.update({ lastGamePending: true });
+    try {
+      await profiles.refresh();
+      for (const s of this.config.app.history.newGameRetrySeconds ?? []) {
+        if (run !== this.gameWait || this.hasGame(gameId)) return;
+        await new Promise((r) => setTimeout(r, s * 1000));
+        if (run !== this.gameWait || this.hasGame(gameId)) return;
+        await profiles.refresh();
+      }
+    } finally {
+      if (run === this.gameWait) this.update({ lastGamePending: false });
+    }
   }
 
   /** A champion from Data Dragon (undefined when it isn't loaded or unknown). */
@@ -514,6 +554,9 @@ export class PersonalCoach extends Coach {
         this.clientRiotId = `${me.gameName}#${me.tagLine}`;
         if (this.view.account) this.update({ account: { ...this.view.account, clientRiotId: this.clientRiotId } });
         await this.p.profiles?.load(this.identity, { bandFromApi: !ranked });
+        // A game that ended while the panel was closed (or before Riot published it) isn't in the history yet: wait for it.
+        const last = await this.lastClientGame();
+        if (last && this.profile && !this.hasGame(last.gameId)) void this.awaitGame(last.gameId);
       } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
       this.notice(`Could not read your account from the client: ${(err as Error).message}`);

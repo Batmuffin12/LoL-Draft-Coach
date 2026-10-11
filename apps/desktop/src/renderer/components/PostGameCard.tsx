@@ -24,7 +24,7 @@ export function ResultBand({ game: g, now }: { game: PostGameView; now: number }
   const line = [g.verdict, chance].filter(Boolean).join(" · ");
   const hover = [g.prediction, g.shown.length ? `Coach suggested: ${g.shown.map((s) => `${s.champion.name}${s.expectedWin === null ? "" : ` ${pct(s.expectedWin)}`}`).join(", ")}` : null].filter(Boolean).join("\n");
   return (
-    <section className={cx("result-band", g.result ?? "pending")}>
+    <section className={cx("result-band", `is-${g.result ?? "pending"}`)}>
       <ChampIcon champ={g.champion} size={44} framed />
       <div className="who">
         <span className={cx("t-title t-call", g.result === "win" ? "pos" : g.result === "loss" ? "neg" : "muted")} title={g.result ? undefined : "The result arrives once the server has synced your game"}>
