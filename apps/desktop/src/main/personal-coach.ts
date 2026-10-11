@@ -1,5 +1,5 @@
 import { communityDragonAsset } from "@ldc/ddragon";
-import { LcuImporter, unavailableChampions } from "@ldc/lcu";
+import { LcuImporter, unavailableChampions, type LobbyRoles } from "@ldc/lcu";
 import {
   adviseRoles,
   bandFromRankedEntries,
@@ -142,6 +142,28 @@ export function poolAdvice(
   };
 }
 
+/** Client phases where a game is starting or running: the locked-in loadout stays only then. */
+const GAME_PHASES = new Set(["ChampSelect", "GameStart", "InProgress", "Reconnect"]);
+/** Client phases in the lobby before a game: your queued roles get a preview of picks. */
+const QUEUE_PHASES = new Set(["Lobby", "Matchmaking", "ReadyCheck"]);
+/** Picks shown per queued role. */
+const PREVIEW_PICKS = 3;
+
+/** A champ select with only you in it, at a position: a blind pick, to rank your pool before the queue pops. */
+export function blindDraft(position: Position): DraftState {
+  return {
+    timerPhase: "PLANNING",
+    timeLeftMs: 0,
+    isCustomGame: false,
+    localCellId: 0,
+    myTeam: [{ cellId: 0, championId: 0, pickIntentId: 0, position, isLocalPlayer: true }],
+    theirTeam: [],
+    myBans: [],
+    theirBans: [],
+    actions: [],
+  };
+}
+
 /** The champion the local player has locked in (their pick action is completed), or null. */
 export function lockedPick(draft: DraftState): ChampionId | null {
   const action = draft.actions.find((a) => a.type === "pick" && a.actorCellId === draft.localCellId && a.completed && a.championId > 0);
@@ -188,6 +210,10 @@ export class PersonalCoach extends Coach {
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
   private importMessage: string | null = null;
+  /** The client's gameflow phase, as this coach last heard it ("" before the first). */
+  private clientPhase = "";
+  /** Your role choices in the lobby before a queue (from the client), or null. */
+  private lobby: LobbyRoles | null = null;
   /** Increments for each wait for a new game; an older wait stops when it changes. */
   private gameWait = 0;
   /** The Riot ID logged into the League client (the local player's own), or null. */
@@ -322,11 +348,15 @@ export class PersonalCoach extends Coach {
       if (["Lobby", "None", "Matchmaking", "ReadyCheck"].includes(phase)) this.recorder.leftChampSelect();
       // New games are in the player's history once a game has ended (the advice for it is sent first).
       if (phase === "EndOfGame") void this.onGameEnded();
-      // The kept loadout is for the game being played: drop it once that game is over or left.
-      if (["EndOfGame", "Lobby", "None"].includes(phase) && this.keptPick) {
-        this.keptPick = null;
-        this.onDraft();
-      }
+      this.clientPhase = phase;
+      // The kept loadout is for the game being played: drop it as soon as the client is anywhere else.
+      if (!GAME_PHASES.has(phase)) this.keptPick = null;
+      this.onDraft();
+      this.updateQueuePreview();
+    });
+    this.p.connector.on("lobby", (lobby) => {
+      this.lobby = lobby;
+      this.updateQueuePreview();
     });
     await super.start();
     // Without the League client, fall back to the Riot ID from .env.
@@ -763,6 +793,7 @@ export class PersonalCoach extends Coach {
       };
     });
     this.update({ roles, newChamps });
+    this.updateQueuePreview();
   }
 
   /** Comfort for a role, cached until the profile changes. */
@@ -791,6 +822,56 @@ export class PersonalCoach extends Coach {
 
   private hadDraft = false;
 
+  /**
+   * In the lobby with roles chosen: your best picks for each, ranked as a blind pick (nobody else
+   * has picked yet), so you can plan before the queue pops. Champ select replaces it with the real draft.
+   */
+  private updateQueuePreview(): void {
+    const l = this.lobby;
+    const phase = this.clientPhase;
+    const profile = this.profile;
+    const supported = l?.isCustom || (l?.queueId != null && this.config.app.supportedQueues.includes(l.queueId));
+    if (!l || !l.positions.length || !QUEUE_PHASES.has(phase) || !profile || !supported || this.draft) {
+      if (this.view.queuePreview) this.update({ queuePreview: null });
+      return;
+    }
+    const { engine, explain } = this.config;
+    const lookup = this.championLookup;
+    const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
+    const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, explain.templates, nameOf);
+    const roles = l.positions.map((position) => {
+      const draft = blindDraft(position);
+      const input = {
+        draft,
+        pickable: this.owned ? [...this.owned] : [],
+        unavailable: new Set<ChampionId>(),
+        comfort: this.comfortFor(position),
+        attributes: this.attributes,
+        intendedPositions: this.intendedPositions,
+        role: position,
+        weights: weightsForBand(this.band, engine),
+        config: engine,
+      };
+      const advice: PickAdvice = this.metaIndex ? adviseLivePicks({ ...input, index: this.metaIndex, band: this.band, filled: false }) : advisePicks(input, explain.settings);
+      const picks: PickView[] = advice.picks.slice(0, PREVIEW_PICKS).map((p) => ({
+        champion: champView(p.championId, lookup)!,
+        score: p.score,
+        expectedWin: p.expectedWin ?? null,
+        factors: p.factors,
+        terms: p.terms ?? [],
+        reasons: p.reasons.map((r) => reasonView(r, say)),
+        offMeta: p.offMeta,
+      }));
+      return {
+        role: position,
+        picks,
+        whyNot: advice.whyNot ? say(advice.whyNot) : null,
+        confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
+      };
+    });
+    this.update({ queuePreview: { roles: roles.filter((r) => r.picks.length) } });
+  }
+
   protected override onDraft(): void {
     super.onDraft();
     if (this.draft && !this.hadDraft) {
@@ -805,7 +886,8 @@ export class PersonalCoach extends Coach {
     if (!this.draft || !profile || !this.queueSupported) {
       this.shownLoadout = null;
       // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
-      const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
+      const inGame = GAME_PHASES.has(this.clientPhase);
+      const kept = this.draft || !inGame ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
       this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [], filledNote: null });
       return;
     }

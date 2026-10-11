@@ -4,6 +4,7 @@ import { ChampSelectScreen } from "./screens/ChampSelectScreen";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
+import { QueueScreen } from "./screens/QueueScreen";
 import { setCopy, setRoleLabels } from "./format";
 
 /** Picks the screen for the moment: connect, champ select (ban or pick), locked in, or the lobby. */
@@ -19,5 +20,7 @@ export function App() {
   if (draft && myPick) return <LockedInScreen state={state} pick={myPick} />;
   if (draft) return <ChampSelectScreen state={state} draft={draft} />;
   if (myPick) return <LockedInScreen state={state} pick={myPick} note="Champ select is over: your loadout stays here until the game ends." />;
+  // In a lobby with roles chosen: your picks for the next game first.
+  if (state.queuePreview?.roles.length) return <QueueScreen state={state} preview={state.queuePreview} />;
   return <LobbyScreen state={state} />;
 }

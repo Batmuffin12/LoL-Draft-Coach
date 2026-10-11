@@ -503,6 +503,8 @@ export interface ViewState {
   side: string | null;
   /** Your most recent game with logged advice, or null. */
   lastGame: PostGameView | null;
+  /** In the lobby with roles chosen (before the queue pops): your best blind picks per role, primary first. */
+  queuePreview: { roles: { role: string; picks: PickView[]; whyNot: string | null; confidence: PickAdviceView["confidence"] }[] } | null;
   /** A game you just played isn't in your history yet (Riot publishes it a little later): the panel is asking for it. */
   lastGamePending: boolean;
   /** Your growth focus, or null without enough games. */
@@ -541,6 +543,7 @@ export function emptyViewState(): ViewState {
     side: null,
     lastGame: null,
     lastGamePending: false,
+    queuePreview: null,
     focus: null,
     newChamps: [],
     month: null,

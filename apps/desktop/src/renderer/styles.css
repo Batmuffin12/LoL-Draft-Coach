@@ -510,3 +510,4 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .next-step .who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .missing { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .missing .caption { flex: 1; min-width: 180px; }
+.back-row { padding: 6px 16px 0; }

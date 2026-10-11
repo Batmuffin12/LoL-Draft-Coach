@@ -68,6 +68,16 @@ export const RecentGamesSchema = z.looseObject({
 });
 export type RecentGames = z.infer<typeof RecentGamesSchema>;
 
+/**
+ * The lobby before a queue, reduced to what the panel uses: the local player's own two role
+ * choices and the queue. No other member, no names.
+ */
+export const LobbySchema = z.looseObject({
+  localMember: z.looseObject({ firstPositionPreference: z.string().optional(), secondPositionPreference: z.string().optional() }).optional(),
+  gameConfig: z.looseObject({ queueId: z.number().int().optional(), isCustom: z.boolean().optional() }).optional(),
+});
+export type Lobby = z.infer<typeof LobbySchema>;
+
 /** Ranked stats of the local player only. Tier strings stay strings; bands come from config. */
 export const RankedStatsSchema = z.looseObject({
   queues: z

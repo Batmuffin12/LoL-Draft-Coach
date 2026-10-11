@@ -104,3 +104,13 @@ describe("recent games schema", () => {
     expect(() => parseLcu(RecentGamesSchema, "x", { games: { games: [{ gameId: "x" }] } })).toThrow(LcuSchemaError);
   });
 });
+
+describe("lobby roles", () => {
+  it("keeps your own two role choices (primary first), drops fill and unset, and reads the queue", async () => {
+    const { LobbySchema, lobbyRoles } = await import("../src/index");
+    const l = parseLcu(LobbySchema, "/lol-lobby/v2/lobby", { localMember: { firstPositionPreference: "BOTTOM", secondPositionPreference: "JUNGLE", summonerName: "x" }, members: [{}], gameConfig: { queueId: 420, isCustom: false } });
+    expect(lobbyRoles(l)).toEqual({ positions: ["bottom", "jungle"], queueId: 420, isCustom: false });
+    expect(lobbyRoles(parseLcu(LobbySchema, "x", { localMember: { firstPositionPreference: "TOP", secondPositionPreference: "FILL" } })).positions).toEqual(["top"]);
+    expect(lobbyRoles(parseLcu(LobbySchema, "x", {})).positions).toEqual([]);
+  });
+});

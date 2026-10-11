@@ -210,3 +210,53 @@ describe("a game Riot hasn't published yet", () => {
     expect(refreshes).toBe(2);
   });
 });
+
+describe("the client's state", () => {
+  const start = async (extra: Record<string, unknown> = {}) => {
+    const scenario = await loadScenario("locked-solid");
+    server = new MockLcuServer(scenario.draft, { "/lol-summoner/v1/current-summoner": { gameName: "Me", tagLine: "EUW" }, ...extra });
+    const creds = await server.start();
+    coach = new PersonalCoach({
+      connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
+      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      config,
+      profiles: new FakeProfiles(),
+      riotId: null,
+      meta: new MetaSource({ client: () => null, cacheDir: tmp("ldc-meta-"), fixed: scenario.meta }),
+    });
+    await coach.start();
+    await waitFor(() => coach!.state.status.profile.state === "ready");
+    return server;
+  };
+
+  it("drops the locked-in loadout when you leave champ select for the lobby, even if a late draft update comes after", async () => {
+    const s = await start();
+    s.push("/lol-gameflow/v1/gameflow-phase", "ChampSelect");
+    while (s.remainingFrames > 0) {
+      s.step();
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    await waitFor(() => coach!.state.myPick !== null);
+    // You leave the custom: the client goes to the lobby, and the draft ends after that.
+    s.push("/lol-gameflow/v1/gameflow-phase", "Lobby");
+    await new Promise((r) => setTimeout(r, 60));
+    s.push("/lol-champ-select/v1/session", null, "Delete");
+    await waitFor(() => coach!.state.draft === null);
+    await new Promise((r) => setTimeout(r, 60));
+    expect(coach!.state.myPick).toBeNull();
+  });
+
+  it("previews your best blind picks for the roles you chose in the lobby, primary first", async () => {
+    const s = await start({ "/lol-lobby/v2/lobby": { localMember: { firstPositionPreference: "MIDDLE", secondPositionPreference: "FILL" }, gameConfig: { queueId: 420, isCustom: false } } });
+    s.push("/lol-champ-select/v1/session", null, "Delete");
+    s.push("/lol-gameflow/v1/gameflow-phase", "Lobby");
+    await waitFor(() => (coach!.state.queuePreview?.roles.length ?? 0) > 0);
+    const p = coach!.state.queuePreview!;
+    // "Fill" is no role: only mid.
+    expect(p.roles.map((r) => r.role)).toEqual(["middle"]);
+    expect(p.roles[0]!.picks.length).toBeGreaterThan(0);
+    // Champ select replaces the preview.
+    s.push("/lol-gameflow/v1/gameflow-phase", "ChampSelect");
+    await waitFor(() => coach!.state.queuePreview === null);
+  });
+});

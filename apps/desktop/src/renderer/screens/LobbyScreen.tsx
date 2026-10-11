@@ -25,11 +25,11 @@ type LobbyTab = "last" | "style" | "pool" | "new" | "month";
 const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
-export function LobbyScreen({ state }: { state: ViewState }) {
-  return <Lobby state={state} />;
+export function LobbyScreen({ state, onBack }: { state: ViewState; onBack?: () => void }) {
+  return <Lobby state={state} onBack={onBack} />;
 }
 
-function Lobby({ state }: { state: ViewState }) {
+function Lobby({ state, onBack }: { state: ViewState; onBack?: (() => void) | undefined }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
   // A newly logged game (it arrives after the panel opens): show it first.
@@ -42,6 +42,14 @@ function Lobby({ state }: { state: ViewState }) {
       variant="lobby"
       header={<Header state={state} />}
       band={
+        <>
+        {onBack && (
+          <div className="back-row">
+            <button type="button" className="foot-link gold" onClick={onBack}>
+              {t("queue.back")}
+            </button>
+          </div>
+        )}
         <Segmented<LobbyTab>
           value={tab}
           onChange={setTab}
@@ -53,6 +61,7 @@ function Lobby({ state }: { state: ViewState }) {
             { value: "month", label: "This month" },
           ]}
         />
+        </>
       }
       footer={<AccountFooter account={state.account} />}
     >
