@@ -184,19 +184,33 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .win.row .n { font-size: var(--fs-number); line-height: var(--lh-number); }
 .win .vs { font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 500; white-space: nowrap; }
 
-/* Phase band: full-bleed, not a card */
-.phase { position: relative; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 8px 16px 10px; border-bottom: 1px solid var(--line); }
-.phase.mine { background: var(--gold-tint); }
-.phase .what { display: flex; flex-direction: column; gap: 0; flex: 1; min-width: 0; }
-.phase .call { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); line-height: var(--lh-title); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text); }
+/* Phase band: full-bleed, tinted on your turn only */
+.phase { flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.phase.mine { background: var(--gold-tint); border-bottom-color: var(--frame); }
+.phase .what { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.phase .call { color: var(--text); }
 .phase.mine .call { color: var(--gold-bright); }
-.phase .ctx { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .phase.mine .ctx { color: var(--text); }
-.phase .timer { font-family: var(--font-display); font-size: var(--fs-hero); line-height: var(--lh-hero); font-weight: 600; }
-.phase .timer.urgent { color: var(--red); }
-.phase .drain { position: absolute; left: 0; bottom: -1px; height: 3px; background: var(--line-strong); }
-.phase.mine .drain { background: var(--gold); }
-.phase .drain.urgent { background: var(--red); }
+.ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; }
+.ring .track { stroke: var(--track); }
+.ring .left { stroke: var(--gold); }
+.ring.urgent .left { stroke: var(--red); }
+.ring.urgent .n { color: var(--red); }
+
+/* The suggested pick: card, term tiles, the other suggestions */
+.pick-card { display: flex; align-items: center; gap: 12px; padding: 12px; }
+.pick-card .who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pick-card .nm { overflow-wrap: break-word; }
+.pick-card .chance { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tiles .tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--card); border-radius: var(--radius-sm); }
+.tiles .flat { color: var(--text); }
+.alts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.alt { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); cursor: pointer; text-align: center; min-width: 0; }
+.alt:hover { background: var(--card); }
+.alt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.alt .t-heading { overflow-wrap: break-word; max-width: 100%; }
 
 /* Tables: fixed columns, numbers right-aligned, the same shape everywhere */
 .table { display: flex; flex-direction: column; }

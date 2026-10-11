@@ -4,11 +4,11 @@ import { BanTable, type BanRow } from "../components/BanTable";
 import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
 import { PhaseBar } from "../components/PhaseBar";
-import { PickTable } from "../components/PickTable";
+import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { positionLabel, roleName } from "../format";
+import { positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
 import { Header, Notices } from "./common";
 import { LoadoutBody, LoadoutSource } from "./LockedInScreen";
@@ -41,8 +41,10 @@ type PickTab = "picks" | "runes" | "build";
 
 /** Ban rows that fit 720px: the suggested bans, then the ones that protect your hover fill the rest. */
 const BAN_ROWS = 5;
-/** Pick rows (3–4) so the selected row's reasons fit under the table. */
-const PICK_ROWS = 4;
+/** The suggested pick and the three under it. */
+const PICKS = 4;
+/** Reason lines on the card; one fewer when a draft note (filled, their team) takes a line, or the hover tabs show. */
+const REASONS = 5;
 
 function banRows(state: ViewState): BanRow[] {
   const hover = (state.hoverBans?.bans ?? []).map((b) => ({ ...b, forHover: true }));
@@ -53,6 +55,10 @@ function banRows(state: ViewState): BanRow[] {
 export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: DraftView }) {
   const now = useNow(250);
   const [tab, setTab] = useState<PickTab>("picks");
+  const [sel, setSel] = useState(0);
+  // A new #1 (the draft moved on) is selected again.
+  const firstId = state.picks[0]?.champion.id;
+  useEffect(() => setSel(0), [firstId]);
   const banning = state.bans.length > 0 || draft.localAction === "ban";
   const hover = !banning && state.hoverPick?.loadout ? state.hoverPick : null;
   // Back to the picks when the hovered champion goes away.
@@ -94,6 +100,11 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
     <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
   );
   const profile = state.status.profile;
+  const picks = state.picks.slice(0, PICKS);
+  const cur = picks[sel] ?? picks[0];
+  const at = cur ? picks.indexOf(cur) : -1;
+  const notes = [state.filledNote, state.enemyNotes.length ? `Their team: ${state.enemyNotes.join(" · ")}` : null].filter(Boolean).join(" ");
+  const record = cur ? (state.roles.find((r) => r.role === state.pickRole)?.pool.find((c) => c.champion.id === cur.champion.id) ?? null) : null;
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
       <Notices state={state} />
@@ -104,15 +115,21 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
           {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{state.meta?.state === "ready" ? "Ban suggestions appear once your match history has loaded." : "Ban suggestions need the live meta for your rank."}</p>}
         </Section>
       ) : (
-        <Section title="Suggested picks" aside={state.picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
-          {state.filledNote && <p className="caption">{state.filledNote}</p>}
-          {state.enemyNotes.length > 0 && <p className="caption enemy-notes">{`Their team: ${state.enemyNotes.join(" · ")}`}</p>}
-          {state.picks.length > 0 ? (
-            <PickTable picks={state.picks.slice(0, PICK_ROWS)} whyNot={state.pickAdvice.whyNot} />
-          ) : (
-            <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
+        <>
+          <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
+            {notes && <p className="caption">{notes}</p>}
+            {cur ? (
+              <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={REASONS - (notes ? 1 : 0) - (hover ? 1 : 0)} />
+            ) : (
+              <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
+            )}
+          </Section>
+          {cur && picks.length > 1 && (
+            <Section title={t("pick.ifNot", { champion: cur.champion.name })} gold={false}>
+              <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} />
+            </Section>
           )}
-        </Section>
+        </>
       )}
       {!state.docked && (
         <Section title="Draft" gold={false}>

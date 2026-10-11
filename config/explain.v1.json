@@ -294,6 +294,7 @@
     "ui.pick.head": "We suggest",
     "ui.pick.ifNot": "If not {champion}",
     "ui.pick.chance": "win chance",
+    "ui.pick.record": "{tier} · {games} {games|game|games} · {wr} WR",
     "ui.build.head": "Build path",
     "ui.build.note": "pick rate · ★ adds the most",
     "ui.build.noteThin": "most common path",
