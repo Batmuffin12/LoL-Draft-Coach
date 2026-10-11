@@ -46,6 +46,7 @@
   --fs-label: 12px;   --lh-label: 16px;
   --fs-micro: 12px;   --lh-micro: 16px;
   --fs-key: 15px;
+  --fs-legal: 11px;   --lh-legal: 14px;
 
   /* Spacing, radius, shadow */
   --space-1: 2px;
@@ -89,18 +90,35 @@ p { margin: 0; }
 .pos { color: var(--positive); }
 .neg { color: var(--negative); }
 .text { color: var(--text); }
+.gold { color: var(--gold); }
+.gold-bright { color: var(--gold-bright); }
+/* Display sizes: one hero number per screen */
+.t-hero, .t-number, .t-title, .t-heading { font-family: var(--font-display); font-weight: 600; }
+.t-hero { font-size: var(--fs-hero); line-height: var(--lh-hero); }
+.t-number { font-size: var(--fs-number); line-height: var(--lh-number); }
+.t-title { font-size: var(--fs-title); line-height: var(--lh-title); }
+.t-heading { font-size: var(--fs-heading); line-height: var(--lh-heading); }
+.t-call { text-transform: uppercase; letter-spacing: 0.04em; }
+/* You: the suggested pick, your lane row, your next step */
+.you { border: 1px solid var(--frame); background: var(--gold-tint); border-radius: var(--radius-sm); }
+/* Everything focusable gets the gold ring */
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Window: flat, framed like the client's edge */
 .window { height: 100vh; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--frame); overflow: hidden; }
 .window .scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.window .foot { flex-shrink: 0; padding: 6px 16px 8px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.window .foot { flex-shrink: 0; padding: 8px 16px 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
 .window.loading { align-items: center; justify-content: center; color: var(--muted); }
 
 /* Section: flat, a head with a hairline rule, no card */
 .section { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
 .section + .section { border-top: 1px solid var(--line); }
 .section-head { display: flex; align-items: center; gap: 10px; min-height: 22px; }
-.section-head .rule { flex: 1; height: 1px; background: var(--line); }
+.section-head .rule { flex: 1; height: 1px; background: var(--line); min-width: 16px; }
+.section-head { flex-wrap: wrap; }
+/* Lobby screens: more air (champ select and locked in keep 10px) */
+.window.lobby .section { padding: 12px 16px; }
+.window.lobby .notices { padding: 12px 16px 0; }
 .notices { padding: 10px 16px 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* Header */
@@ -315,9 +333,9 @@ p { margin: 0; }
 .key.max { border: 2px solid var(--gold); color: var(--gold-bright); }
 
 /* Locked-in strip */
-.you { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
-.you .who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.you .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }
+.you-strip { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.you-strip .who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.you-strip .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }
 
 /* Playstyle */
 .axis { display: grid; grid-template-columns: 128px 1fr 36px; gap: 12px; align-items: center; min-height: 34px; font-size: var(--fs-body); line-height: var(--lh-body); }
@@ -337,6 +355,20 @@ p { margin: 0; }
 .notice .g { font-weight: 700; font-family: var(--font-display); }
 .notice strong { color: var(--text); font-weight: 600; }
 
+/* Progress: a micro line and a thin bar instead of a boxed notice */
+.progress { display: flex; flex-direction: column; gap: 4px; }
+.progress .p-text { display: flex; gap: 8px; justify-content: space-between; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
+.progress .p-bar { height: 3px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.progress .p-bar span { display: block; height: 100%; background: var(--gold); }
+
+/* Pills: role switches in the lobby */
+.pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pills .end { margin-left: auto; text-align: right; }
+.pill { all: unset; box-sizing: border-box; font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer; }
+.pill:hover { color: var(--text); }
+.pill.on { border-color: var(--gold); color: var(--gold-bright); background: var(--gold-tint); }
+.pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
 /* Forms (connect screen) */
 .form { display: flex; flex-direction: column; gap: 6px; }
 .form label { margin-top: 6px; }
@@ -345,13 +377,14 @@ p { margin: 0; }
 .form .btn { margin-top: 12px; }
 
 /* Footer pieces */
-.foot-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.foot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.foot-row .who { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--text); }
 .foot-row .actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
-.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
+.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); text-decoration: underline; }
 .foot-link:hover { color: var(--text); text-decoration: underline; }
 .foot-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .foot-link.danger { color: var(--red); }
-.legal { font-size: 11px; line-height: 14px; color: var(--muted); opacity: 0.85; }
+.legal { font-size: var(--fs-legal); line-height: var(--lh-legal); color: var(--muted); }
 
 /* Thin, dark scrollbar (lobby and undocked only: champ-select screens fit without one) */
 ::-webkit-scrollbar { width: 8px; }

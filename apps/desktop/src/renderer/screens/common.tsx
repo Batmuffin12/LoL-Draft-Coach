@@ -34,22 +34,44 @@ export function Header({ state }: { state: ViewState }) {
   );
 }
 
-/** One notice per problem, at the top of the scrolling area. */
+/** Something loading: a micro line, and a thin gold bar when how far along is known. Not a boxed notice. */
+export function ProgressRow({ text, done, total }: { text: string; done?: number; total?: number }) {
+  const known = done !== undefined && total !== undefined && total > 0;
+  const share = known ? Math.max(0, Math.min(1, done / total)) : 0;
+  return (
+    <div className="progress" role="status">
+      <span className="p-text">
+        <span>{text}</span>
+        {known && <span>{`${Math.round(share * 100)}%`}</span>}
+      </span>
+      {known && (
+        <span className="p-bar" aria-hidden="true">
+          <span style={{ width: `${share * 100}%` }} />
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** One notice per problem, at the top of the scrolling area; loading shows as a progress row. */
 export function Notices({ state, extra }: { state: ViewState; extra?: string | null }) {
   const { profile } = state.status;
   const items: { tone: "warn" | "info"; text: string }[] = [
     ...state.notices.map((text) => ({ tone: "warn" as const, text })),
-    ...(profile.state === "loading" ? [{ tone: "info" as const, text: `Loading your match history: ${profile.done} of ${profile.total}` }] : []),
     ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message }] : []),
-    ...(profile.state === "ready" && profile.backlog
-      ? [{ tone: "info" as const, text: `Loading your older games in the background: ${profile.backlog} to go. Your stats get more accurate as they arrive.` }]
-      : []),
     ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
     ...(extra ? [{ tone: "info" as const, text: extra }] : []),
   ];
-  if (!items.length) return null;
+  const progress =
+    profile.state === "loading" ? (
+      <ProgressRow text={`Loading your match history: ${profile.done} of ${profile.total}`} done={profile.done} total={profile.total} />
+    ) : profile.state === "ready" && profile.backlog ? (
+      <ProgressRow text={`Loading your older games: ${profile.backlog} to go`} />
+    ) : null;
+  if (!items.length && !progress) return null;
   return (
     <div className="notices">
+      {progress}
       {items.map((n) => (
         <Notice key={n.text} tone={n.tone}>
           {n.text}
@@ -68,7 +90,7 @@ function FootLink({ onClick, danger, children }: { onClick: () => void; danger?:
   );
 }
 
-/** Who the app is connected as, sign out and data deletion (confirmed in the panel), and the Riot notice: kept short. */
+/** Who the app is connected as, sign out and data deletion (confirmed in place), then the full Riot notice. */
 export function AccountFooter({ account }: { account: AccountView | null }) {
   const [confirming, setConfirming] = useState(false);
   return (
@@ -78,23 +100,19 @@ export function AccountFooter({ account }: { account: AccountView | null }) {
       ) : account.state === "registered" ? (
         confirming ? (
           <div className="foot-row">
-            <span className="micro one-line">Delete everything the coach stores about you?</span>
-            <span className="actions">
-              <FootLink danger onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
-                Delete
-              </FootLink>
-              <FootLink onClick={() => setConfirming(false)}>Keep</FootLink>
-            </span>
+            <span className="micro who">Delete everything the coach stores about you?</span>
+            <FootLink danger onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
+              Delete
+            </FootLink>
+            <FootLink onClick={() => setConfirming(false)}>Keep</FootLink>
           </div>
         ) : (
           <div className="foot-row">
-            <span className="micro one-line" title={`Connected as ${account.riotId}`}>
+            <span className="micro who" title={`Connected as ${account.riotId}`}>
               {account.riotId}
             </span>
-            <span className="actions">
-              <FootLink onClick={() => void window.coach.signOut()}>Sign out</FootLink>
-              <FootLink onClick={() => setConfirming(true)}>Delete my data</FootLink>
-            </span>
+            <FootLink onClick={() => void window.coach.signOut()}>Sign out</FootLink>
+            <FootLink onClick={() => setConfirming(true)}>Delete my data</FootLink>
           </div>
         )
       ) : null}

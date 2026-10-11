@@ -36,6 +36,7 @@ function Lobby({ state }: { state: ViewState }) {
   }, [latest]);
   return (
     <Window
+      variant="lobby"
       header={<Header state={state} />}
       band={
         <Segmented<LobbyTab>

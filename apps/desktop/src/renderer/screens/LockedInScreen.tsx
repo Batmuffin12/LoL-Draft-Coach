@@ -53,7 +53,7 @@ export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }
 function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: string | null }) {
   const where = [pick.role && positionLabel(pick.role), laneOpponent && `vs ${laneOpponent}`].filter(Boolean).join(" ");
   return (
-    <div className="you" title={pick.reasons.map((r) => r.text).join("\n") || undefined}>
+    <div className="you-strip" title={pick.reasons.map((r) => r.text).join("\n") || undefined}>
       <ChampIcon champ={pick.champion} size={44} framed />
       <div className="who">
         <span className="label gold">{`${pick.hovering ? "Hovering" : "Locked in"}${where ? ` · ${where}` : ""}`}</span>
