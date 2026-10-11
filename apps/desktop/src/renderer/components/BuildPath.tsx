@@ -18,8 +18,8 @@ interface Step {
   core: boolean;
   /** Null: no pick rates to show (the start, the common path with thin data). */
   alternatives: ItemOptionView[] | null;
-  /** The start's other items: "+1 Health Potion". */
-  extras: string[];
+  /** The start's other items with how many (2 potions, a ward), shown as icons. */
+  extras: { item: IconView; count: number }[];
 }
 
 const tip = (o: Option) =>
@@ -44,7 +44,7 @@ function steps(l: LoadoutView): Step[] {
       main: { ...s.items[0], reasons: [s.items.map((i, k) => `${s.counts[k] ?? 1} × ${i.name}`).join(", "), ...(s.reason ? [s.reason] : [])] },
       core: false,
       alternatives: null,
-      extras: s.items.slice(1).map((i, k) => `+${s.counts[k + 1] ?? 1} ${i.name}`),
+      extras: s.items.slice(1).map((item, k) => ({ item, count: s.counts[k + 1] ?? 1 })),
     });
   }
   if (l.boots) out.push({ key: "boots", label: t("build.boots"), minute: null, main: l.boots.top, core: false, alternatives: l.boots.alternatives.slice(0, ALTERNATIVES), extras: [] });
@@ -98,11 +98,6 @@ export function BuildPath({ loadout }: { loadout: LoadoutView }) {
               <ChampIcon champ={c.main} kind="game" size={32} lit={c.core} title="" />
               <span className="nm">
                 <span className="text">{c.main.name}</span>
-                {c.extras.map((e) => (
-                  <span key={e} className="micro">
-                    {e}
-                  </span>
-                ))}
               </span>
             </span>
             <span className={cx("rate", star === 0 && "best")}>
@@ -114,6 +109,11 @@ export function BuildPath({ loadout }: { loadout: LoadoutView }) {
               )}
             </span>
             <span className="alts-col">
+              {c.extras.map((e) => (
+                <span key={e.item.id} className="opt" tabIndex={0} aria-label={`${e.count} × ${e.item.name}`} title={`${e.count} × ${e.item.name}`}>
+                  <ChampIcon champ={e.item} kind="game" size={22} count={e.count} title="" />
+                </span>
+              ))}
               {c.alternatives &&
                 (c.alternatives.length ? (
                   c.alternatives.map((a, i) => (
