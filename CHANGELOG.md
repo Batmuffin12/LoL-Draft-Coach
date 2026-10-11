@@ -2,22 +2,28 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
-## [0.7.7] — 2026-10-11 — Panel redesign v2
+## [0.7.7] — 2026-10-12 — Panel redesign v2
 
 ### Changed
-- **The panel is rebuilt to the approved redesign** (docs/redesign/): every screen fits 440 × 720 with no scrollbar, no text is ever cut (no ellipsis anywhere), and the Riot notice shows in full.
+- **The panel is rebuilt to the approved redesign** (docs/redesign/), then tuned in the owner's review: every screen fits 440 × 720 with no scrollbar, no text is ever cut (no ellipsis anywhere), the Riot notice shows in full, the type is one step bigger across the scale and muted text is brighter.
   - **Champ select**: a timer ring in the band (tinted on your turn only, red at 10 s), the suggested pick as one gold card with its chance, You · Meta · Lane tiles and reasons; the next three as buttons that switch the card.
-  - **Locked in**: three tabs, Runes · Build · Matchups & plan. Runes and the skill grid as before; the build as one row (Start, Boots, Items 1–3) with up to two other picks and their pick rates under each item and one ★ per column; the game plan first on Matchups, your lane opponent as a gold row with the verdict and its points. One import button for runes, spells and items (still only on your click).
+  - **Locked in**: three tabs, Runes · Build · Matchups & plan. Runes and the skill grid as before; the build as one row per step (Start with its potions and ward as icons, Boots, Items 1–4) with item names, pick rates, two other picks each and a ★ for what adds the most; Later: pick by situation under it. The game plan leads Matchups, your lane opponent a gold row with the verdict and its points ("Hard −0.8"). One import button for runes, spells and items (still only on your click).
+  - **Lobby › Next game** (new): in a lobby with roles chosen, your best blind picks for each role, primary first, from your own lobby role choices (read only); champ select replaces them with the real draft.
   - **Last game**: a result band, what decided the draft as signed points on a bar, your goal as a ring with this game's value, your last ten games and one thing for the next.
-  - **Style**: role pills, a radar against the rank average with a one-line summary, your numbers as dots on a track around your rank's average.
-  - **This month**: your win rate before → now, your roles as one bar with the full legend, your style before → now as a slope chart, three champion cards.
-  - **Pool**: a coverage matrix (what each champion brings against what a team needs, gaps in amber) and your next step.
+  - **Style**: role pills (games in words beside them), a radar against the rank average with a one-line summary, your numbers as dots on a track around your rank's average.
+  - **This month**: your win rate before → now, your roles as one bar with the full legend, your style before → now as a row per axis (hollow dot before, filled dot now, green up and amber down, bold for a real change), three champion cards.
+  - **Pool**: a coverage matrix of your pool against what champions in the role usually bring (a bot laner isn't judged on frontline), gaps in amber, and your next step.
   - **Connect**: the invite code as three boxes (paste fills all three), the client's Riot ID, how it works in three lines, the server behind "Change".
-- Loading shows as a slim progress row instead of a boxed notice. The panel's new wording lives in `explain.v1.json` (`ui.*` and the new templates).
+- Loading shows as a slim progress row instead of a boxed notice. Role pills replace the sub-tabs on Style, Pool and New. New wording lives in `explain.v1.json` (`ui.*` and the new templates).
+- **This month compares with the games right before it** (as many as the month has, from up to `report.beforeLookbackDays`, 180), not only the 30 days before, so a break no longer leaves nothing to compare.
+
+### Fixed
+- **The last game refreshes once Riot publishes it**: the panel reads your own last game from the client and asks the server to sync on a backoff (`history.newGameRetrySeconds`) until it's in your history, saying it's waiting meanwhile. One sync right after the game usually ran before Riot had the match, and a game played with the panel closed waited 30 minutes.
+- **The panel follows the client's state**: the locked-in loadout shows only while a game is starting or running, so leaving a custom after locking in goes back to the lobby.
 
 ### Added
-- View data behind it, built in the main process: your pick's win-chance parts at lock-in on the post-game card, where you sit against your rank on each number, a style summary, the month's win rate, games before, role split and rank as fields, the pool's coverage and next step (engine `covers()` / `poolCoverage()`), your lane partner (`app.sharedLanes`).
-- Dev aid: `LDC_SCREENSHOT` always renders at 440 × 720, zoom 1, and logs each block's height.
+- View data behind it, built in the main process: your pick's win-chance parts at lock-in, where you sit against your rank on each number, a style summary, the month's win rate, games before, role split and rank as fields, the pool's coverage, role needs and next step (engine `covers()`, `poolCoverage()`, `RolePool.needs`), your lane partner (`app.sharedLanes`), the queue preview.
+- Dev aids: `LDC_SCREENSHOT` always renders at 440 × 720, zoom 1, and logs each block's height; `LDC_SCREENSHOT_HEIGHT` renders a shorter panel.
 
 ## [0.7.6] — 2026-10-11 — Backups
 
