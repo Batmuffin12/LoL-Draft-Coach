@@ -1,8 +1,9 @@
 import type { MonthView } from "../../shared/view";
 import { cx, pct, t, winTone } from "../format";
+import { useFits } from "../hooks";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
-import { RANK_AVERAGE, SlopeChart } from "./SlopeChart";
+import { SlopeChart } from "./SlopeChart";
 
 /** Number trends shown under the chart (only real changes); the rest go in "+n more". */
 const TRENDS = 3;
@@ -10,6 +11,9 @@ const TRENDS = 3;
 const CHAMPIONS = 3;
 /** The role bar's colours, most played first. */
 const ROLE_FILLS = ["var(--gold)", "var(--frame)", "var(--line-strong)", "var(--card-raised)", "var(--line)"];
+
+/** A met goal by its name: "Deaths before 14 min: 3.5 → 2.7, goal met" → "Deaths before 14 min" (the numbers are on hover). */
+const goalName = (s: string) => (s.includes(":") ? s.slice(0, s.indexOf(":")) : s);
 
 /** The month at a glance: games, your win rate before → now, and your roles as one bar with its legend. */
 function Header({ m }: { m: MonthView }) {
@@ -60,14 +64,18 @@ export function MonthReport({ month: m }: { month: MonthView }) {
   const shown = moved.slice(0, TRENDS);
   const rest = moved.slice(TRENDS);
   const met = m.focus.met;
+  // Long months (many axes, long names): the trend and goal lines move to hover so nothing scrolls.
+  const fits = useFits(m);
+  // What the compact form shows on hover instead: the trends, the goals met and the current goal.
+  const hidden = [...moved.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`), ...met, ...(m.focus.current ? [m.focus.current] : [])];
   return (
     <>
       <Header m={m} />
       {m.role && m.axes.length > 0 && (
-        <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={<span className="micro">{t("month.average", { avg: RANK_AVERAGE })}</span>}>
+        <Section title={t("month.style", { role: m.role.toLowerCase() })}>
           <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />
-          <span className="micro">{m.steadyNote}</span>
-          {shown.length > 0 && (
+          <span className="micro" title={fits ? undefined : hidden.join("\n") || undefined}>{`${t("month.average")} · ${m.steadyNote}`}</span>
+          {fits && shown.length > 0 && (
             <span className="caption trends">
               {shown.map((s, i) => (
                 <span key={s.label} title={s.title}>
@@ -100,11 +108,11 @@ export function MonthReport({ month: m }: { month: MonthView }) {
               );
             })}
           </div>
-          {(met.length > 0 || m.focus.current) && (
+          {fits && (met.length > 0 || m.focus.current) && (
             <span className="caption goals">
               {met.length > 0 && (
                 <span title={met.join("\n")}>
-                  {t("month.goalsMet", { first: met[0]! })}
+                  {t("month.goalsMet", { first: goalName(met[0]!) })}
                   {met.length > 1 ? ` ${t("month.goalsMore", { n: met.length - 1 })}` : ""}
                 </span>
               )}

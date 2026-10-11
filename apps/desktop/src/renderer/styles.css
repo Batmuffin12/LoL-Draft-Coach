@@ -476,18 +476,21 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .winline { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .roles { display: flex; flex-direction: column; gap: 4px; }
 .rolebar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; gap: 2px; }
-.slope { display: block; height: auto; }
-.slope .col { font-family: var(--font-display); font-size: var(--fs-label); font-weight: 600; letter-spacing: 0.08em; fill: var(--muted); }
-.slope .axis { stroke: var(--line); }
-.slope .ln line { stroke: var(--line-strong); stroke-width: 1.5; opacity: 0.7; }
-.slope .ln.changed line { stroke-width: 2.5; opacity: 1; }
-.slope .ln.pos line { stroke: var(--positive); }
-.slope .ln.neg line { stroke: var(--negative); }
-.slope .ln.pos circle { fill: var(--positive); }
-.slope .ln.neg circle { fill: var(--negative); }
-.slope .lbl { font-family: var(--font-display); font-size: var(--fs-caption); font-weight: 600; fill: var(--muted); }
-.slope .lbl.pos { fill: var(--positive); }
-.slope .lbl.neg { fill: var(--negative); }
+.shifts { display: flex; flex-direction: column; }
+.shift { display: grid; grid-template-columns: 112px minmax(0, 1fr) 66px 30px; align-items: center; gap: 8px; min-height: 20px; }
+.shift .nm { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
+.shift.real .nm { font-weight: 600; }
+.shift .track { position: relative; height: 6px; border-radius: 3px; background: var(--track); }
+.shift .avg { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--line-strong); }
+.shift .gap { position: absolute; top: 0; bottom: 0; border-radius: 3px; opacity: 0.45; background: var(--line-strong); }
+.shift.real .gap { opacity: 1; }
+.shift .gap.pos, .shift .dot.pos { background: var(--positive); }
+.shift .gap.neg, .shift .dot.neg { background: var(--negative); }
+.shift .dot { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--text); border: 2px solid var(--bg); }
+.shift .dot.before, .shift .dot.before.pos, .shift .dot.before.neg { width: 12px; height: 12px; top: -3px; margin-left: -6px; background: var(--bg); border: 2px solid var(--line-strong); }
+.shift .val { text-align: right; font-size: var(--fs-caption); white-space: nowrap; }
+.shift .chg { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-caption); }
+.shift .chg.faint { opacity: 0.6; }
 .champcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .champcard { display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
 .champcard .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
