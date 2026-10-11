@@ -333,8 +333,10 @@ export interface MonthView {
   /** "Sep 7 – Oct 6". */
   period: string;
   games: number;
-  /** "Trends over 64 games. One game moves these numbers very little." */
-  footer: string;
+  /** "Grey lines: no real change over 64 games." */
+  steadyNote: string;
+  /** "Rank: Gold IV, from Silver I", or null without a rank. */
+  rank: string | null;
   /** Your win rate this period against the period before (from null: no games then), and the line under it. */
   winRate: { from: number | null; to: number; text: string };
   /** Games in the period before, and "38 games before". */
@@ -342,8 +344,6 @@ export interface MonthView {
   gamesBeforeText: string;
   /** Your roles this period as shares of its games, most first; `text`: "Bot 34%". */
   roles: { role: string; share: number; text: string }[];
-  /** The summary tiles: games, win rate, rank, focus. */
-  strip: { label: string; value: string; sub?: string; tone?: "pos" | "neg" }[];
   /** The role whose style trends are shown ("Mid"), or null. */
   role: string | null;
   /** changed: a real change between last period and this one (statistical test), else "steady" or null (too few games). */

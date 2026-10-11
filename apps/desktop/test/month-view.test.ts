@@ -27,17 +27,13 @@ const deps = {
 };
 
 describe("month view", () => {
-  it("summarises the month in tiles, with axis labels and the rank in Riot's words", () => {
+  it("summarises the month, with axis labels and the rank in Riot's words", () => {
     const v = monthView(report, deps)!;
-    expect(v.strip).toEqual([
-      { label: "Games", value: "20", sub: "mostly mid" },
-      { label: "Win rate", value: "55%", sub: "+10.0 vs before", tone: "pos" },
-      { label: "Rank", value: "Gold IV", sub: "from Silver I", tone: "pos" },
-      { label: "Goals met", value: "0" },
-    ]);
+    expect(v.rank).toBe("Rank: Gold IV, from Silver I");
+    expect(monthView({ ...report, rank: { start: null, now: { tier: "GOLD", rank: "IV" }, direction: null } }, deps)!.rank).toBe("Rank: Gold IV");
     expect(v.axes).toEqual([{ label: "Farming", from: 40, to: 47, changed: "up" }]);
     expect(v.role).toBe("Mid");
-    expect(v.footer).toBe("Trends over 20 games, not single games.");
+    expect(v.steadyNote).toBe("Grey lines: no real change over 20 games.");
     expect(v.winRate).toEqual({ from: 0.45, to: 0.55, text: "win rate, up 10 points on the 30 days before" });
     expect(v.gamesBefore).toBe(16);
     expect(v.gamesBeforeText).toBe("16 games before");
@@ -77,7 +73,7 @@ describe("month view", () => {
       { label: "Deaths/min", title: "Deaths per minute", from: "0.20", to: "0.26", changed: "up", tone: "neg" },
       { label: "KDA", title: "KDA", from: null, to: "2.5", changed: null, tone: null },
     ]);
-    expect(v.strip[0]).toEqual({ label: "Games", value: "20", sub: "mid 60% · jungle 30%" });
+    expect(v.roles.map((r) => r.text)).toEqual(["Mid 60%", "jungle 30%", "top 10%"]);
     expect(v.focusLine).toBe("Top 3: 72% of games, 58% before");
     expect(monthView({ ...report, focus: { n: 3, now: 0.5, before: null } }, deps)!.focusLine).toBe("Top 3: 50% of games");
   });

@@ -258,14 +258,7 @@ function Style({ state }: { state: ViewState }) {
 function Month({ state }: { state: ViewState }) {
   const m = state.month;
   if (!m) return <Section title="This month">{<p className="caption">Your month shows here once your recent games are loaded.</p>}</Section>;
-  return (
-    <>
-      <div className="section">
-        <span className="micro">{`${m.period} · ${m.footer}`}</span>
-      </div>
-      <MonthReport month={m} />
-    </>
-  );
+  return <MonthReport month={m} />;
 }
 
 function Pool({ state }: { state: ViewState }) {
