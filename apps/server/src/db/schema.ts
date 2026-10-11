@@ -156,3 +156,15 @@ export const invites = sqliteTable("invites", {
   usedBy: integer("used_by").references(() => users.id, { onDelete: "set null" }),
   usedAt: integer("used_at"),
 });
+
+/** One backup of the user data (users, invites, advice log, rank history) to off-site storage. */
+export const backups = sqliteTable("backups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  startedAt: integer("started_at").notNull(),
+  finishedAt: integer("finished_at"),
+  /** The stored object's name; null until the upload succeeded. */
+  objectKey: text("object_key"),
+  bytes: integer("bytes"),
+  users: integer("users"),
+  error: text("error"),
+});

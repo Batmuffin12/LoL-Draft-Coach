@@ -145,6 +145,21 @@ export const MIGRATIONS: Migration[] = [
     name: "users.history_backlog: games still to load in a long history (filled over several syncs)",
     sql: `ALTER TABLE users ADD COLUMN history_backlog INTEGER;`,
   },
+  {
+    version: 8,
+    name: "backups: each daily copy of the user data sent to off-site storage",
+    sql: `
+      CREATE TABLE backups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at INTEGER NOT NULL,
+        finished_at INTEGER,
+        object_key TEXT,
+        bytes INTEGER,
+        users INTEGER,
+        error TEXT
+      );
+    `,
+  },
 ];
 
 /** Applies every migration newer than the database's version. Returns the versions applied. */

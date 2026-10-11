@@ -8,6 +8,7 @@ import { gunzipSync } from "node:zlib";
 import { eq } from "drizzle-orm";
 import { newestPatch } from "@ldc/meta";
 import { AdviceRecordSchema, saveAdvice } from "./advice";
+import type { BackupJob } from "./backup";
 import { AccountError, createInvite, deleteUser, publicUser, registerUser, touchUser, userByToken, type AccountLookup, type User } from "./accounts";
 import { bearerToken, sha256 } from "./auth";
 import type { Db } from "./db";
@@ -40,6 +41,8 @@ export interface AppDeps {
   meta?: Pick<MetaJob, "run" | "running" | "lastRun"> | null;
   /** /health reports the collector as stale when it stored no new game for this long (ms). */
   collectorStaleAfterMs?: number;
+  /** The daily off-site backup of the user data; null when not configured. */
+  backup?: Pick<BackupJob, "runIfDue" | "health"> | null;
   /** Served by GET /config (scoring weights, thresholds and wording); absent: no route. */
   publicConfig?: Record<string, unknown> | null;
 }
@@ -119,7 +122,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
         database,
         // "missing": no key configured; "rejected": Riot refused it (dev keys expire every 24 h).
         riotKey: !deps.riot ? "missing" : deps.riotKeyRejected?.() ? "rejected" : "ok",
-        ...(database === "ok" ? metaHealth(deps) : {}),
+        ...(database === "ok" ? { ...metaHealth(deps), backup: deps.backup?.health() ?? null } : {}),
       },
       database === "ok" ? 200 : 503,
     );
@@ -151,6 +154,8 @@ export function createApp(deps: AppDeps): Hono<Env> {
       if (!deps.meta) return c.json({ error: "meta_unavailable", message: "The meta job isn't configured." }, 503);
       const alreadyRunning = deps.meta.running;
       const { stale } = collectorFreshness(deps);
+      // Once a day, the same wake-up backs up the user data first (a small copy, seconds).
+      void deps.backup?.runIfDue().catch((err: unknown) => console.error("backup failed:", err));
       deps.meta.run().catch((err: unknown) => console.error("meta run failed:", err));
       // Same wake-up: continue loading long user histories (their calls go first in the rate limiter).
       void deps.sync?.backfill?.().catch((err: unknown) => console.error("backfill failed:", err));
