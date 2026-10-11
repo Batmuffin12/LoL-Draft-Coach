@@ -218,7 +218,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table.picks .thead, .table.picks .trow { grid-template-columns: minmax(0, 1fr) 46px 58px 46px 46px; column-gap: 4px; }
 .table.picks .trow .c-num { font-size: var(--fs-body); }
 .table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 90px 50px; column-gap: 8px; }
-.table.matchups .thead, .table.matchups .trow { grid-template-columns: minmax(0, 1fr) 60px 70px 50px; }
 .table.pool .thead, .table.pool .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 50px; }
 .table .thead { white-space: nowrap; padding: 0 6px 4px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
 .table .thead .c-num, .table .thead .c-win { text-align: right; font-size: var(--fs-label); color: var(--muted); }
@@ -243,7 +242,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table.bans .trow { min-height: 0; padding: 5px 6px; }
 .table .c-bar { height: 8px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
 .table .c-bar .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
-.table.matchups .trow { min-height: 30px; padding: 1px 6px; }
 .table.pool .trow { min-height: 48px; padding: 4px 6px; }
 .table.pool .c-num.big { font-size: var(--fs-number); line-height: var(--lh-number); }
 .table.pool .nm { font-size: var(--fs-heading); line-height: var(--lh-heading); }
@@ -253,6 +251,15 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table .legend { padding: 4px 6px 0; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
 .table .open { padding: 8px 6px 0; font-size: var(--fs-caption); color: var(--muted); }
 
+/* Matchup rows: your lane opponent as a gold row, the verdict with its points */
+.matchups { display: flex; flex-direction: column; gap: 4px; }
+.mrow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; }
+.mrow.you { padding: 8px 10px; }
+.mrow .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
+.mrow .v { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.no-games { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.no-games .icons { gap: 4px; }
+
 /* Reasons: + green, − amber, › gold for why-not */
 .reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
 .reasons li { padding-left: 14px; position: relative; }
@@ -260,6 +267,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .reasons li.but { color: var(--warn); }
 .reasons li.but::before { content: "\2212"; color: var(--warn); }
 .reasons li.why { color: var(--gold); }
+.reasons.plan-lines li.why { color: var(--text); }
 .reasons li.why::before { content: "\203A"; color: var(--gold); }
 
 /* Numbers beside a head: "53.2% · 1,980" */
@@ -294,28 +302,15 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .skillgrid .g-cell.on { background: var(--gold); }
 .skillgrid .g-cell.ult { background: var(--gold-bright); }
 
-/* Start and boots */
-.path2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.path2 .stage { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; row-gap: 4px; column-gap: 8px; align-items: center; padding: 6px 8px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
-.path2 .stage .lbl { grid-column: 1 / -1; }
-.path2 .stage .caption { grid-column: 1 / -1; }
-
-/* Items by slot */
-.matrix { display: grid; row-gap: 4px; column-gap: 10px; }
-.matrix .mh { display: flex; justify-content: space-between; align-items: baseline; gap: 4px; padding: 0 2px 2px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.matrix .mh .m { font-size: var(--fs-micro); color: var(--muted); }
-.matrix .cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 2px; border-radius: var(--radius-sm); text-align: center; min-width: 0; }
-.matrix .cell.top { background: var(--card); }
-.matrix .cell.empty { justify-content: center; border: 1px dashed var(--line); font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); opacity: 0.8; }
-.matrix .cell .nm { font-size: 11px; line-height: 14px; overflow-wrap: normal; word-break: normal; hyphens: manual; }
-.matrix .cell:not(.top) .nm { color: var(--muted); min-height: 0; }
-.matrix .cell .nums { margin-top: auto; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); white-space: nowrap; }
-.matrix .cell .nums b { font-family: var(--font-display); font-size: var(--fs-caption); color: var(--text); }
-.later { display: flex; flex-direction: column; gap: 4px; }
+/* Build path: one row of columns, the main items on a connector, the other picks under them */
+.path { position: relative; display: flex; align-items: flex-start; }
+.path .connector { position: absolute; left: 40px; right: 40px; top: 52px; height: 2px; background: var(--line); }
+.path .col { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1; min-width: 0; text-align: center; }
+.path .main { background: var(--bg); padding: 0 4px; margin: 2px 0; }
+.path .opt { display: flex; align-items: center; gap: 4px; min-height: 24px; }
 .later-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.item-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.item-row .k { flex-shrink: 0; white-space: nowrap; }
-.item-row .icons { flex-shrink: 0; gap: 4px; }
+.item-line { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.item-line .icons { flex-shrink: 0; gap: 4px; }
 
 /* Draft board (undocked only) */
 .board { display: flex; flex-direction: column; gap: 12px; }
@@ -527,7 +522,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .focus .f-tips { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .focus .f-tips .notes { margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
 .focus .f-tips .notes li::marker { color: var(--muted); }
-.table .open.no-games { display: flex; align-items: center; gap: 8px; padding-top: 6px; }
 .tree.shards { gap: 3px; }
 
 /* Style tab: headline numbers three to a row, then how you play (pool, classes, damage) */

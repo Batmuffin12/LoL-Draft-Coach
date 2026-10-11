@@ -1,5 +1,5 @@
 import type { MatchupRowView } from "../../shared/view";
-import { cx, games, positionLabel, rate, signedPctOrDash, tone } from "../format";
+import { cx, positionLabel, rate, signedOrDash, t, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** Within this (points of win chance either way) a pair plays as expected: "Even". */
@@ -11,55 +11,63 @@ function verdict(delta: number | null): string {
   return delta > 0 ? "Favoured" : "Hard";
 }
 
+/** "Hard −0.8", "Favoured +0.6", "Even": the verdict with its signed points (none inside the dead zone). */
+function verdictText(delta: number | null): string {
+  const word = verdict(delta);
+  return word === "Even" ? word : `${word} ${signedOrDash(delta)}`;
+}
+
+function Row({ m }: { m: MatchupRowView }) {
+  const where = [positionLabel(m.role), m.lane ? t("matchups.yourLane") : null, m.partner ? t("matchups.partner") : null].filter(Boolean).join(" · ");
+  const v = tone(m.delta, VERDICT_DEAD_ZONE);
+  return (
+    <div className={cx("mrow", m.lane && "you")} title={m.games ? `${signedOrDash(m.delta)} points vs what both champions' usual win rates predict` : undefined}>
+      <ChampIcon champ={m.champion} size={28} framed={m.lane} />
+      <span className="who">
+        <span className="t-heading">{m.champion!.name}</span>
+        <span className="micro">{where}</span>
+      </span>
+      <span className="v">
+        {m.games ? (
+          <>
+            <span className={cx("t-heading", v === "flat" ? "text" : v)}>{verdictText(m.delta)}</span>
+            <span className="micro">{`${rate(m.winRate, 1)} WR · ${m.games.toLocaleString("en-US")} ${m.games === 1 ? "game" : "games"}`}</span>
+          </>
+        ) : (
+          <span className="micro">{t("matchups.none")}</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 /**
- * Your champion against (or with) each champion in the draft. Champions with games for the pair
- * get a row (your lane first); the ones without, and seats not picked yet, are one line each.
+ * Your champion against (or with) each champion in the draft: your lane opponent first as a gold
+ * row, then the others with games for the pair; pairs without games and seats not picked yet
+ * are one line each.
  */
-export function MatchupTable({ rows, title }: { rows: MatchupRowView[]; title: string }) {
+export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
   const picked = rows.filter((r) => r.champion);
   const open = rows.filter((r) => !r.champion);
   // Your lane opponent keeps its row even without games; other pairs without games are listed by name.
-  const shown = picked.filter((r) => r.games || r.lane);
+  const shown = picked.filter((r) => r.games || r.lane).sort((a, b) => Number(b.lane) - Number(a.lane) || Number(b.partner ?? false) - Number(a.partner ?? false));
   const noGames = picked.filter((r) => !r.games && !r.lane);
   return (
-    <div className="table matchups" role="table">
-      <div className="thead" role="row">
-        <span className="c-champ">{title}</span>
-        <span className="c-num" title="Your champion's win rate in games with this pair">
-          Win %
-        </span>
-        <span className="c-num" title="Better or worse than both champions' usual win rates predict (exact number on hover)">
-          Verdict
-        </span>
-        <span className="c-num">Games</span>
-      </div>
+    <div className="matchups">
       {shown.map((m) => (
-        <div key={m.champion!.id} className={cx("trow", m.lane && "sel")} role="row">
-          <span className="c-champ">
-            <ChampIcon champ={m.champion} size={28} framed={m.lane} />
-            <span className="nm col">
-              <span className="one-line">{m.champion!.name}</span>
-              <span className="why">{`${positionLabel(m.role)}${m.lane ? " · your lane" : ""}`}</span>
-            </span>
-          </span>
-          <span className="c-num big">{m.games ? rate(m.winRate, 1) : "—"}</span>
-          <span className={cx("c-num", tone(m.delta, VERDICT_DEAD_ZONE))} title={m.games ? `${signedPctOrDash(m.delta)} vs what both champions' usual win rates predict` : undefined}>
-            {m.games ? verdict(m.delta) : "—"}
-          </span>
-          <span className="c-num muted">{m.games ? games(m.games) : "—"}</span>
-        </div>
+        <Row key={m.champion!.id} m={m} />
       ))}
       {noGames.length > 0 && (
-        <div className="open no-games">
+        <div className="no-games">
           <span className="icons">
             {noGames.map((m) => (
               <ChampIcon key={m.champion!.id} champ={m.champion} size={20} />
             ))}
           </span>
-          <span className="one-line" title={noGames.map((m) => m.champion!.name).join(", ")}>No games yet with these</span>
+          <span className="micro">{t("matchups.noGames", { names: noGames.map((m) => m.champion!.name).join(", ") })}</span>
         </div>
       )}
-      {open.length > 0 && <div className="open">{`${open.map((m) => positionLabel(m.role)).join(", ")}: not picked yet`}</div>}
+      {open.length > 0 && <span className="micro">{t("matchups.open", { roles: open.map((m) => positionLabel(m.role)).join(", ") })}</span>}
     </div>
   );
 }

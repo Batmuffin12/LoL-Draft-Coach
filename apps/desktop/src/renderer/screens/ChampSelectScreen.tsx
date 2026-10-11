@@ -11,7 +11,7 @@ import { Window } from "../components/Window";
 import { positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
 import { Header, Notices } from "./common";
-import { LoadoutBody, LoadoutSource } from "./LockedInScreen";
+import { LoadoutBody, LoadoutFooter } from "./LockedInScreen";
 
 /** The call when it isn't your turn: who is acting, from the seats (no names). */
 function waitingText(draft: DraftView): string {
@@ -95,7 +95,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
   );
   const showLoadout = hover && tab !== "picks";
   const footer = showLoadout ? (
-    <LoadoutSource pick={hover} />
+    <LoadoutFooter pick={hover} />
   ) : (
     <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
   );
