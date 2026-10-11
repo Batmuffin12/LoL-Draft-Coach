@@ -111,7 +111,8 @@ export function poolAdvice(
   const tiers = [...new Set(extra.map((c) => c.tier))];
   return {
     coverage: {
-      needs: POOL_NEEDS.map((need) => ({ need, label: say(`pool.need.${need}`), gap: gaps.has(need) })),
+      // Only what champions in this role usually bring (a bot laner isn't judged on frontline).
+      needs: pool.needs.map((need) => ({ need, label: say(`pool.need.${need}`), gap: gaps.has(need) })),
       covers: Object.fromEntries(covers),
     },
     nextStep:

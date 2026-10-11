@@ -97,11 +97,6 @@ function useSubTab(keys: string[]): [string, (key: string) => void] {
   return [keys.includes(chosen) ? chosen : (keys[0] ?? ""), setChosen];
 }
 
-/** The small tab row under a main tab; a tab's hover gives its one-line summary. */
-function SubTabs({ options, value, onChange }: { options: { value: string; label: string; title?: string }[]; value: string; onChange: (v: string) => void }) {
-  return options.length > 1 ? <Segmented sub options={options} value={value} onChange={onChange} /> : null;
-}
-
 /** Your last game against the advice the coach gave (the advice log). */
 function LastGame({ state }: { state: ViewState }) {
   const now = useNow(60_000);
@@ -150,7 +145,9 @@ function NewChamps({ state }: { state: ViewState }) {
   const summary = (r: (typeof list)[number]) => (r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", "));
   return (
     <>
-      <SubTabs options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+      <section className="section pills-row">
+        <Pills label="Role" options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+      </section>
       {list.filter((r) => r.role === sub).map((r) => {
         const title = `New for ${positionLabel(r.role).toLowerCase()}`;
         const l = r.learning;
@@ -243,10 +240,10 @@ function Style({ state }: { state: ViewState }) {
       <section className="section style-top">
         <Pills
           label="Role"
-          options={state.playstyle.map((x) => ({ value: x.role, label: `${positionLabel(x.role)} · ${x.games}`, title: summary(x) }))}
+          options={state.playstyle.map((x) => ({ value: x.role, label: positionLabel(x.role), title: summary(x) }))}
           value={p.role}
           onChange={setSub}
-          end={t("style.dashed")}
+          end={`${p.games} ${p.games === 1 ? "game" : "games"} · ${t("style.dashed")}`}
         />
         <StyleRadar axes={p.axes} role={roleName(p.role)} />
         {p.summary && <span className="caption text">{p.summary}</span>}

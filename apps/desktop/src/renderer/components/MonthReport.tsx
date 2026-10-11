@@ -5,7 +5,7 @@ import { Section } from "./Section";
 import { RANK_AVERAGE, SlopeChart } from "./SlopeChart";
 
 /** Number trends shown under the chart (only real changes); the rest go in "+n more". */
-const TRENDS = 2;
+const TRENDS = 3;
 /** Champion cards. */
 const CHAMPIONS = 3;
 /** The role bar's colours, most played first. */
@@ -65,14 +65,8 @@ export function MonthReport({ month: m }: { month: MonthView }) {
       <Header m={m} />
       {m.role && m.axes.length > 0 && (
         <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={<span className="micro">{t("month.average", { avg: RANK_AVERAGE })}</span>}>
-          {m.axes.some((a) => a.from !== null) ? (
-            <>
-              <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />
-              <span className="micro">{m.steadyNote}</span>
-            </>
-          ) : (
-            <span className="caption">{t("month.noBefore")}</span>
-          )}
+          <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />
+          <span className="micro">{m.steadyNote}</span>
           {shown.length > 0 && (
             <span className="caption trends">
               {shown.map((s, i) => (
@@ -108,8 +102,12 @@ export function MonthReport({ month: m }: { month: MonthView }) {
           </div>
           {(met.length > 0 || m.focus.current) && (
             <span className="caption goals">
-              {/* The goals you met are listed on hover, so the line stays one line. */}
-              {met.length > 0 && <span title={met.join("\n")}>{t("month.goalsMet", { n: met.length })}</span>}
+              {met.length > 0 && (
+                <span title={met.join("\n")}>
+                  {t("month.goalsMet", { first: met[0]! })}
+                  {met.length > 1 ? ` ${t("month.goalsMore", { n: met.length - 1 })}` : ""}
+                </span>
+              )}
               {met.length > 0 && m.focus.current && " · "}
               {m.focus.current && <span className="gold">{m.focus.current}</span>}
             </span>

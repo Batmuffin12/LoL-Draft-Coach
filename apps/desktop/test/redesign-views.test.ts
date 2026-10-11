@@ -39,8 +39,9 @@ describe("post-game terms", () => {
 });
 
 describe("pool advice", () => {
-  const pool = (holes: RolePool["holes"]): RolePool => ({
+  const pool = (holes: RolePool["holes"], needs: RolePool["needs"] = ["magic", "physical", "frontline", "engage"]): RolePool => ({
     role: "top",
+    needs,
     champions: [
       { championId: 1, tier: "main", games: 4, winRate: 0.5, comfort: 0.6 },
       { championId: 2, tier: "rusty", games: 0, winRate: null, comfort: 0.2 },
@@ -93,6 +94,8 @@ describe("pool advice", () => {
     expect(none.missing).toBeNull();
     expect(none.noGaps).toBe("No gap in your top pool shows up in your losses.");
     expect(poolAdvice("top", null, attributes, cov, templates, lookup).coverage).toBeNull();
+    // Only the needs the role usually fills are rows: a bot laner isn't judged on frontline.
+    expect(poolAdvice("bottom", pool([], ["physical"]), attributes, cov, templates, lookup).coverage!.needs.map((n) => n.need)).toEqual(["physical"]);
   });
 });
 

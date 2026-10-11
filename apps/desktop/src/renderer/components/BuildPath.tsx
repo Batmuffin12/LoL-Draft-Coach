@@ -1,15 +1,15 @@
 import type { IconView, ItemOptionView, LoadoutView } from "../../shared/view";
-import { rate, signedPctOrDash, t } from "../format";
+import { cx, rate, signedPctOrDash, t } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
-/** Item columns after Start and Boots (the core). */
-const CORE_SLOTS = 3;
-/** Other picks under each main item. */
+/** Core item rows after Start and Boots. */
+const CORE_SLOTS = 4;
+/** Other picks beside each main item. */
 const ALTERNATIVES = 2;
 
 type Option = IconView & { reasons?: string[]; share?: number; winAdded?: number | null };
 
-interface Column {
+interface Step {
   key: string;
   label: string;
   minute: number | null;
@@ -32,9 +32,9 @@ const tip = (o: Option) =>
     .filter(Boolean)
     .join("\n");
 
-/** The columns of the path: Start, Boots, then the core items (ranked, or the common path with thin data). */
-function columns(l: LoadoutView): Column[] {
-  const out: Column[] = [];
+/** The steps of the path: Start, Boots, then the core items (ranked, or the common path with thin data). */
+function steps(l: LoadoutView): Step[] {
+  const out: Step[] = [];
   const s = l.starting;
   if (s?.items[0]) {
     out.push({
@@ -58,9 +58,8 @@ function columns(l: LoadoutView): Column[] {
   return out;
 }
 
-/** The option in a column that adds the most (positive win added only): one ★ per column at most. */
-function starOf(c: Column): number | null {
-  // A star compares options: none for a column without other picks.
+/** The option in a step that adds the most (positive win added, and only when there's something to compare): one ★ per step at most. */
+function starOf(c: Step): number | null {
   if (!c.alternatives?.length) return null;
   const options = [c.main as ItemOptionView, ...c.alternatives];
   let best: number | null = null;
@@ -79,52 +78,57 @@ function Star() {
 }
 
 /**
- * The build as one row of columns (Start, Boots, Item 1–3): each with its minute, the main item
- * and its pick rate, then up to two other picks with theirs. ★ marks what adds the most in a column.
+ * The build, one row per step (Start, Boots, Items 1–4): when, the main item with its name and
+ * pick rate, then up to two other picks with theirs. ★ marks what adds the most in a step.
  */
 export function BuildPath({ loadout }: { loadout: LoadoutView }) {
-  const cols = columns(loadout);
-  if (!cols.length) return <span className="caption">Not enough purchases to rank items yet.</span>;
+  const rows = steps(loadout);
+  if (!rows.length) return <span className="caption">Not enough purchases to rank items yet.</span>;
   return (
-    <div className="path">
-      <span className="connector" aria-hidden="true" />
-      {cols.map((c) => {
+    <div className="path" role="table" aria-label="Build path">
+      {rows.map((c) => {
         const star = starOf(c);
         return (
-          <div key={c.key} className="col">
-            <span className="micro text">{c.label}</span>
-            <span className="micro">{c.minute === null ? " " : t("build.minutes", { n: Math.round(c.minute) })}</span>
-            <span className="main" tabIndex={0} aria-label={tip(c.main)}>
-              <ChampIcon champ={c.main} kind="game" size={32} lit={c.core} title={tip(c.main)} />
+          <div key={c.key} className="step" role="row">
+            <span className="when">
+              <span className="micro text">{c.label}</span>
+              {c.minute !== null && <span className="micro">{t("build.minutes", { n: Math.round(c.minute) })}</span>}
             </span>
-            {c.main.share !== undefined && c.alternatives && (
-              <span className="micro text">
-                {rate(c.main.share)}
-                {star === 0 && <Star />}
+            <span className="main" tabIndex={0} aria-label={tip(c.main)} title={tip(c.main)}>
+              <ChampIcon champ={c.main} kind="game" size={32} lit={c.core} title="" />
+              <span className="nm">
+                <span className="text">{c.main.name}</span>
+                {c.extras.map((e) => (
+                  <span key={e} className="micro">
+                    {e}
+                  </span>
+                ))}
               </span>
-            )}
-            {c.extras.map((e) => (
-              <span key={e} className="micro text">
-                {e}
-              </span>
-            ))}
-            {c.alternatives &&
-              (c.alternatives.length ? (
+            </span>
+            <span className={cx("rate", star === 0 && "best")}>
+              {c.main.share !== undefined && c.alternatives && (
                 <>
-                  <span className="micro">{t("build.or")}</span>
-                  {c.alternatives.map((a, i) => (
-                    <span key={a.id} className="opt" tabIndex={0} aria-label={tip(a)}>
-                      <ChampIcon champ={a} kind="game" size={22} title={tip(a)} />
+                  {rate(c.main.share)}
+                  {star === 0 && <Star />}
+                </>
+              )}
+            </span>
+            <span className="alts-col">
+              {c.alternatives &&
+                (c.alternatives.length ? (
+                  c.alternatives.map((a, i) => (
+                    <span key={a.id} className="opt" tabIndex={0} aria-label={tip(a)} title={tip(a)}>
+                      <ChampIcon champ={a} kind="game" size={22} title="" />
                       <span className="micro">
                         {rate(a.share)}
                         {star === i + 1 && <Star />}
                       </span>
                     </span>
-                  ))}
-                </>
-              ) : (
-                <span className="micro">{t("build.noAlt")}</span>
-              ))}
+                  ))
+                ) : (
+                  <span className="micro">{t("build.noAlt")}</span>
+                ))}
+            </span>
           </div>
         );
       })}

@@ -149,3 +149,12 @@ describe("poolCoverage", () => {
     expect(covers(attributes.get(50)!, "frontline", cfg.pool.coverage)).toBe(true);
   });
 });
+
+describe("the needs a role is judged on", () => {
+  it("keeps only the needs the role's champions usually bring, and all four without the meta", () => {
+    const base = { role: "bottom" as const, comfort: new Map(), masteries: [], matches: [], attributes, intendedPositions: new Map(), now: NOW, config: cfg };
+    // Every bot game in the band is on a physical champion with no frontline or engage.
+    expect(analyzePool({ ...base, rolePicks: [{ championId: MAIN, games: 100 }] }).needs).toEqual(["physical"]);
+    expect(analyzePool(base).needs).toEqual(["magic", "physical", "frontline", "engage"]);
+  });
+});

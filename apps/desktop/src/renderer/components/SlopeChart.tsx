@@ -2,10 +2,10 @@ import type { MonthView } from "../../shared/view";
 import { cx } from "../format";
 
 const W = 406;
-const H = 154;
+const H = 168;
 const X_BEFORE = 110;
 const X_NOW = 250;
-const TOP = 22;
+const TOP = 24;
 const BOTTOM = H - 8;
 /** The score scale at least spans this (rank average 50 in the middle); wider when the data is. */
 const SCALE_LO = 30;

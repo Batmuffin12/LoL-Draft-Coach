@@ -45,6 +45,11 @@ export interface RolePool {
    * that the player's losses back up; most frequent in losses first.
    */
   holes: PoolHole[];
+  /**
+   * The needs champions in this role usually bring (config pool.minRoleNeedShare of the band's
+   * games in the role; all four without the meta): what the role is judged on.
+   */
+  needs: PoolNeed[];
 }
 
 /** Whether a champion's measured attributes bring a draft need (thresholds from config pool.coverage). */
@@ -133,6 +138,18 @@ export function analyzePool(input: {
     champions.filter((c) => c.tier === t).slice(0, cfg.maxPerTier),
   );
 
+  const rolePicksTotal = input.rolePicks?.reduce((s, c) => s + c.games, 0) ?? 0;
+  /** Whether champions in this role usually bring the need (all needs count without the meta). */
+  const roleFills = (need: PoolNeed) => {
+    if (!input.rolePicks || rolePicksTotal <= 0) return true;
+    const filled = input.rolePicks.reduce((s, c) => {
+      const a = attributes.get(c.championId);
+      return s + (a && covers(a, need, cfg.coverage) ? c.games : 0);
+    }, 0);
+    return filled / rolePicksTotal >= cfg.minRoleNeedShare;
+  };
+  const needs = NEEDS.filter(roleFills);
+
   // Holes: judged only on main + comfortable champions with measured attributes.
   const reliable = limited.filter((c) => c.tier === "main" || c.tier === "comfortable").map((c) => attributes.get(c.championId)).filter((a): a is ChampionAttributes => !!a);
   const holes: PoolHole[] = [];
@@ -141,15 +158,6 @@ export function analyzePool(input: {
       const p = m.match.participants[m.me];
       return p && p.position === role && !p.win;
     });
-    const total = input.rolePicks?.reduce((s, c) => s + c.games, 0) ?? 0;
-    const roleFills = (need: PoolNeed) => {
-      if (!input.rolePicks || total <= 0) return true;
-      const filled = input.rolePicks.reduce((s, c) => {
-        const a = attributes.get(c.championId);
-        return s + (a && covers(a, need, cfg.coverage) ? c.games : 0);
-      }, 0);
-      return filled / total >= cfg.minRoleNeedShare;
-    };
     for (const need of NEEDS) {
       if (reliable.some((a) => covers(a, need, cfg.coverage)) || !roleFills(need)) continue;
       const lossesLacking = losses.filter((m) => {
@@ -180,5 +188,5 @@ export function analyzePool(input: {
     }
     holes.sort((a, b) => b.lossesLacking / Math.max(1, b.losses) - a.lossesLacking / Math.max(1, a.losses));
   }
-  return { role, champions: limited, holes };
+  return { role, champions: limited, holes, needs };
 }
