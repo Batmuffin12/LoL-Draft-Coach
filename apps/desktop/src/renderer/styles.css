@@ -323,6 +323,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .seg { display: flex; border-bottom: 1px solid var(--line); padding: 0 16px; gap: 20px; flex-shrink: 0; }
 .seg button { all: unset; cursor: pointer; padding: 8px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-button); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
+.seg.dense { gap: 10px; }
+.seg.dense button { letter-spacing: 0.03em; }
 .seg button.on { color: var(--gold-bright); border-bottom-color: var(--gold); }
 
 /* Keycaps */
@@ -510,4 +512,3 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .next-step .who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .missing { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .missing .caption { flex: 1; min-width: 180px; }
-.back-row { padding: 6px 16px 0; }

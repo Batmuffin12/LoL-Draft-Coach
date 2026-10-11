@@ -18,42 +18,44 @@ import { Window } from "../components/Window";
 import { cx, pct, positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
+import { Suggestion } from "./Suggestion";
 
-type LobbyTab = "last" | "style" | "pool" | "new" | "month";
+type LobbyTab = "suggestion" | "last" | "style" | "pool" | "new" | "month";
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
-export function LobbyScreen({ state, onBack }: { state: ViewState; onBack?: () => void }) {
-  return <Lobby state={state} onBack={onBack} />;
+export function LobbyScreen({ state }: { state: ViewState }) {
+  return <Lobby state={state} />;
 }
 
-function Lobby({ state, onBack }: { state: ViewState; onBack?: (() => void) | undefined }) {
+function Lobby({ state }: { state: ViewState }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
   // A newly logged game (it arrives after the panel opens): show it first.
   const latest = state.lastGame?.lockedAt ?? 0;
+  // In a lobby with roles chosen: the Suggestion tab appears and opens; it goes when the lobby does.
+  const preview = state.queuePreview?.roles.length ? state.queuePreview : null;
   useEffect(() => {
-    if (recent) setTab("last");
+    if (recent && !preview) setTab("last");
   }, [latest]);
+  const queued = preview ? preview.roles.map((r) => r.role).join(",") : "";
+  useEffect(() => {
+    if (queued) setTab("suggestion");
+  }, [queued]);
+  const shown: LobbyTab = tab === "suggestion" && !preview ? (recent ? "last" : "style") : tab;
   return (
     <Window
       variant="lobby"
       header={<Header state={state} />}
       band={
-        <>
-        {onBack && (
-          <div className="back-row">
-            <button type="button" className="foot-link gold" onClick={onBack}>
-              {t("queue.back")}
-            </button>
-          </div>
-        )}
         <Segmented<LobbyTab>
-          value={tab}
+          dense={preview !== null}
+          value={shown}
           onChange={setTab}
           options={[
+            ...(preview ? [{ value: "suggestion" as const, label: t("queue.tab") }] : []),
             { value: "last", label: "Last game" },
             { value: "style", label: "Style" },
             { value: "pool", label: "Pool" },
@@ -61,19 +63,20 @@ function Lobby({ state, onBack }: { state: ViewState; onBack?: (() => void) | un
             { value: "month", label: "This month" },
           ]}
         />
-        </>
       }
       footer={<AccountFooter account={state.account} />}
     >
       <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
       <SessionNotice state={state} />
-      {tab === "last" ? (
+      {shown === "suggestion" && preview ? (
+        <Suggestion state={state} preview={preview} />
+      ) : shown === "last" ? (
         <LastGame state={state} />
-      ) : tab === "style" ? (
+      ) : shown === "style" ? (
         <Style state={state} />
-      ) : tab === "pool" ? (
+      ) : shown === "pool" ? (
         <Pool state={state} onNewChamps={() => setTab("new")} />
-      ) : tab === "new" ? (
+      ) : shown === "new" ? (
         <NewChamps state={state} />
       ) : (
         <Month state={state} />
