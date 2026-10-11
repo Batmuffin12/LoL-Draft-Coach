@@ -9,7 +9,9 @@ import { howLines, NumberRows } from "../components/StyleNumbers";
 import { Pills } from "../components/Pills";
 import { StyleRadar } from "../components/StyleRadar";
 import { DraftTerms, ResultBand } from "../components/PostGameCard";
-import { PoolTable } from "../components/PoolTable";
+import { PoolCoverage, PoolLegend } from "../components/PoolCoverage";
+import { Button } from "../components/Button";
+import { POOL_COLUMNS } from "../../shared/view";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
@@ -61,7 +63,7 @@ function Lobby({ state }: { state: ViewState }) {
       ) : tab === "style" ? (
         <Style state={state} />
       ) : tab === "pool" ? (
-        <Pool state={state} />
+        <Pool state={state} onNewChamps={() => setTab("new")} />
       ) : tab === "new" ? (
         <NewChamps state={state} />
       ) : (
@@ -261,41 +263,55 @@ function Month({ state }: { state: ViewState }) {
   return <MonthReport month={m} />;
 }
 
-function Pool({ state }: { state: ViewState }) {
+/** Your pool per role: what each champion covers against what a team needs, then your next step. */
+function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => void }) {
   // Roles with too few games to judge have no pool to show: left out, so the others fit.
   const list = state.roles.filter((r) => r.enoughData);
   const [sub, setSub] = useSubTab(list.map((r) => r.role));
   if (!list.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
-  const stats = (r: ViewState["roles"][number]) => `${r.games} game${r.games === 1 ? "" : "s"} · ${pct(r.winRate)} WR`;
+  const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
+  const r = list.find((x) => x.role === sub) ?? list[0]!;
+  const columns = r.pool.slice(0, POOL_COLUMNS);
+  const next = r.nextStep;
   return (
     <>
-      <SubTabs
-        options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: [stats(r), r.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
-        value={sub}
-        onChange={setSub}
-      />
-      {list
-        .filter((r) => r.role === sub)
-        .map((r) => (
-          <Section key={r.role} title={`${positionLabel(r.role)} pool`} aside={<span className="micro" title="Roles ranked by your recent results. Information only: you choose your positions.">{stats(r)}</span>}>
-            {r.enoughData ? (
-              <>
-                {r.pool.length > 0 && <PoolTable rows={r.pool} />}
-                {r.holes.map((h) => (
-                  // The evidence (how often your team lacked it in your losses) is on hover, so the pool fits.
-                  <span key={h.text} title={h.evidence ?? undefined}>
-                    <Notice>
-                      <strong>{h.text}</strong>
-                      {h.coveredBy ? ` · ${h.coveredBy}` : ""}
-                    </Notice>
-                  </span>
-                ))}
-              </>
-            ) : (
-              <p className="caption">Not enough games to judge.</p>
-            )}
-          </Section>
-        ))}
+      <section className="section">
+        <Pills
+          label="Role"
+          options={list.map((x) => ({ value: x.role, label: positionLabel(x.role), title: [stats(x), x.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
+          value={r.role}
+          onChange={setSub}
+          end={stats(r)}
+        />
+        {columns.length > 0 && r.coverage ? (
+          <>
+            <PoolCoverage pool={columns} coverage={r.coverage} />
+            {r.also && <span className="micro">{r.also}</span>}
+            <PoolLegend />
+          </>
+        ) : (
+          <p className="caption">No champions in your {roleName(r.role)} pool yet.</p>
+        )}
+      </section>
+      <Section title={t("pool.next")}>
+        {next && (
+          <div className="you next-step" title={next.evidence ?? undefined}>
+            <ChampIcon champ={next.champion} size={34} />
+            <span className="who">
+              <span className="t-heading gold-bright">{next.title}</span>
+              <span className="caption text">{next.text}</span>
+            </span>
+          </div>
+        )}
+        {r.missing ? (
+          <div className="missing">
+            <span className="caption">{r.missing}</span>
+            <Button onClick={onNewChamps}>{t("pool.seeNew")}</Button>
+          </div>
+        ) : (
+          !next && <span className="caption">{r.noGaps}</span>
+        )}
+      </Section>
     </>
   );
 }

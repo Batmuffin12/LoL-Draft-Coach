@@ -91,7 +91,7 @@ describe("pool advice", () => {
     const none = poolAdvice("top", pool([]), attributes, cov, templates, lookup);
     expect(none.nextStep).toBeNull();
     expect(none.missing).toBeNull();
-    expect(none.noGaps).toBe("Your pool covers what your team usually needs in top.");
+    expect(none.noGaps).toBe("No gap in your top pool shows up in your losses.");
     expect(poolAdvice("top", null, attributes, cov, templates, lookup).coverage).toBeNull();
   });
 });

@@ -268,7 +268,7 @@
     "pool.next.learning": "Keep playing {champion}",
     "pool.next.why": "It adds {needs} to your {role} pool, and you already have games on it.",
     "pool.missing": "Still missing: {needs}. None of your {role} champions bring {n|it|them}.",
-    "pool.noGaps": "Your pool covers what your team usually needs in {role}.",
+    "pool.noGaps": "No gap in your {role} pool shows up in your losses.",
     "pool.also": "Also {tier}: {champions}",
     "ui.connect.title": "Connect to your coach",
     "ui.connect.intro": "Picks from your own pool, with the reasons.",
