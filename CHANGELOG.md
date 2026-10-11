@@ -2,6 +2,15 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.7.6] — 2026-10-11 — Backups
+
+### Added
+- **Daily backup of the user data to Cloudflare R2**: once a day, inside the hourly wake-up, the server copies users, invites, the advice log and rank history (a working database with the full schema), encrypts it (AES-256-GCM) and uploads it to a bucket at a different provider than Railway. 30 days are kept. `/health` shows the last good backup; `pnpm --filter @ldc/server backup list|restore` lists and restores (with an integrity check). See docs/CLOUD.md "Backups".
+- The October research answers (`research/answers/`) are on `main`.
+
+### Fixed
+- **CI no longer fails at random**: the League client connector missed a client that closed while the first reads after connecting were still running, so the status stayed "connected" (the flaky reconnect test).
+
 ## [0.7.5] — 2026-10-09 — Your numbers, an honest chance
 
 ### Added

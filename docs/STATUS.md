@@ -1,10 +1,11 @@
 # Status (one place to look)
 
-Updated 2026-10-09 (v0.7.5). Started 2026-10-08 when three Claude sessions were consolidated into one. The roadmap and task list are in the tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD (M9 friends release v1.0.0, M10 in game, M11 personal engine, M12 meta signal quality).
+Updated 2026-10-11 (v0.7.6). Started 2026-10-08 when three Claude sessions were consolidated into one. The roadmap and task list are in the tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD (M9 friends release v1.0.0, M10 in game, M11 personal engine, M12 meta signal quality).
 
 ## Live
 
-- **v0.7.5** on `main` and in production (2026-10-09): your numbers vs your rank on Style, This month as its own tab with number trends, an honest chance, off-role mode, and the snapshot build no longer blocks the API (CHANGELOG.md).
+- **v0.7.6** on `main` and in production (2026-10-11): daily encrypted backup of the user data to Cloudflare R2 (docs/CLOUD.md "Backups"), the flaky CI test fixed, the research answers on `main`.
+- **v0.7.5** (2026-10-09): your numbers vs your rank on Style, This month as its own tab with number trends, an honest chance, off-role mode, and the snapshot build no longer blocks the API (CHANGELOG.md).
 - **v0.7.4** before it: 1,000-game history loaded in the background, four timeline goals, how a champion wins, comfort fixes, the audit fixes and the collector boost (CHANGELOG.md). v0.7.3 before it.
 
 ## Committed, not released
