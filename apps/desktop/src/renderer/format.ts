@@ -58,6 +58,26 @@ export function count(n: number): string {
   return n.toLocaleString("en-US");
 }
 
+let copy: Record<string, string> = {};
+
+/** Sets the panel's fixed wording from the view state (the explain config's "ui.*" templates). */
+export function setCopy(c: Record<string, string>): void {
+  copy = c;
+}
+
+/**
+ * Fixed panel wording by key ("connect.title"), with {slot} values filled in and {n|one|many}
+ * plurals. The key itself when the config doesn't have it (it shows, rather than nothing).
+ */
+export function t(key: string, slots: Record<string, string | number> = {}): string {
+  const text = copy[key] ?? key;
+  return text.replace(/\{(\w+)(?:\|([^|}]*)\|([^}]*))?\}/g, (_all, k: string, one?: string, many?: string) => {
+    const v = slots[k];
+    if (one !== undefined) return v === 1 ? one : (many ?? "");
+    return v === undefined ? "" : String(v);
+  });
+}
+
 let roleNames: Record<string, string> = {};
 
 /** Sets the position names from the view state (the explain config's "role.<id>" templates). */

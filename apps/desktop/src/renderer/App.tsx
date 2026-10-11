@@ -4,7 +4,7 @@ import { ChampSelectScreen } from "./screens/ChampSelectScreen";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
-import { setRoleLabels } from "./format";
+import { setCopy, setRoleLabels } from "./format";
 
 /** Picks the screen for the moment: connect, champ select (ban or pick), locked in, or the lobby. */
 export function App() {
@@ -13,6 +13,7 @@ export function App() {
 
   if (!state) return <div className="window loading">Starting…</div>;
   setRoleLabels(state.roleLabels);
+  setCopy(state.copy);
   const { account, draft, myPick } = state;
   if (account && account.state !== "registered") return <ConnectScreen state={state} account={account} />;
   if (draft && myPick) return <LockedInScreen state={state} pick={myPick} />;
