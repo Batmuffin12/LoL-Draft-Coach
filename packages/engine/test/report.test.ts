@@ -67,3 +67,17 @@ describe("monthlyReport", () => {
     expect(monthlyReport(matches, NOW, cfg, { bands }).rank).toEqual({ start: null, now: null, direction: null });
   });
 });
+
+describe("monthly report after a break", () => {
+  it("compares with the games right before the period, even when the 30 days before are empty", () => {
+    // 6 games this month, none 30–60 days ago, 8 games 70–77 days ago.
+    const ms = [...Array.from({ length: 6 }, (_, i) => game(i + 1, 10, true, 80)), ...Array.from({ length: 8 }, (_, i) => game(70 + i, 10, i % 2 === 0, 50))];
+    const strict = monthlyReport(ms, NOW, cfg, { bands });
+    expect(strict.gamesBefore).toBe(0);
+    const r = monthlyReport(ms, NOW, { ...cfg, report: { ...cfg.report, beforeLookbackDays: 180 } }, { bands });
+    // As many games as the period has (at least enough to judge a trend), newest first: 6 of the 8.
+    expect(r.gamesBefore).toBe(6);
+    expect(r.winRateBefore).not.toBeNull();
+    expect(r.axes.find((a) => a.axis === "farming")?.from).not.toBeNull();
+  });
+});

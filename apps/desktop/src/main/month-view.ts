@@ -19,12 +19,11 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
   const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, deps.explain.templates, String);
   const winChange = r.winRate !== null && r.winRateBefore !== null ? r.winRate - r.winRateBefore : null;
   const f = deps.growth?.focus;
-  const days = Math.max(1, Math.round((r.to - r.from) / 86_400_000));
   const points = winChange === null ? 0 : Math.round(Math.abs(winChange) * 100);
   return {
     period: `${shortDate(r.from)} – ${shortDate(r.to)}`,
     games: r.games,
-    steadyNote: say("month.steady", { games: r.games }),
+    steadyNote: say("month.steady", { games: r.games, before: r.gamesBefore }),
     rank: r.rank.now
       ? r.rank.start && rankText(r.rank.start) !== rankText(r.rank.now)
         ? say("month.rank.from", { now: rankText(r.rank.now), start: rankText(r.rank.start) })
@@ -37,8 +36,8 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
         winChange === null
           ? say("month.win.first", {})
           : points === 0
-            ? say("month.win.same", { days })
-            : say(winChange > 0 ? "month.win.up" : "month.win.down", { points, days }),
+            ? say("month.win.same", { before: r.gamesBefore })
+            : say(winChange > 0 ? "month.win.up" : "month.win.down", { points, before: r.gamesBefore }),
     },
     gamesBefore: r.gamesBefore,
     gamesBeforeText: say("month.gamesBefore", { games: r.gamesBefore }),

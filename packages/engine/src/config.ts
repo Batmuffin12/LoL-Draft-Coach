@@ -137,8 +137,14 @@ export const EngineConfigSchema = z.object({
   }),
   /** Monthly report (DESIGN §7, F8). */
   report: z.object({
-    /** The period, in days, compared with the same length of time before it. */
+    /** The period, in days, compared with the games before it. */
     days: z.number().int().min(1),
+    /**
+     * How far back the games before the period may come from (days). The comparison takes the
+     * games right before the period, as many as the period has (at least trend.minGamesPerSide),
+     * so a break between them doesn't leave nothing to compare. Absent: the same length of time before.
+     */
+    beforeLookbackDays: z.number().int().min(1).optional(),
     maxChampions: z.number().int().min(1),
     /** Games on a champion before the period needed to show its change. */
     minPriorGames: z.number().int().min(1),
