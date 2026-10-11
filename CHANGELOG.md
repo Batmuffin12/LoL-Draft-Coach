@@ -2,6 +2,23 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.7.7] — 2026-10-11 — Panel redesign v2
+
+### Changed
+- **The panel is rebuilt to the approved redesign** (docs/redesign/): every screen fits 440 × 720 with no scrollbar, no text is ever cut (no ellipsis anywhere), and the Riot notice shows in full.
+  - **Champ select**: a timer ring in the band (tinted on your turn only, red at 10 s), the suggested pick as one gold card with its chance, You · Meta · Lane tiles and reasons; the next three as buttons that switch the card.
+  - **Locked in**: three tabs, Runes · Build · Matchups & plan. Runes and the skill grid as before; the build as one row (Start, Boots, Items 1–3) with up to two other picks and their pick rates under each item and one ★ per column; the game plan first on Matchups, your lane opponent as a gold row with the verdict and its points. One import button for runes, spells and items (still only on your click).
+  - **Last game**: a result band, what decided the draft as signed points on a bar, your goal as a ring with this game's value, your last ten games and one thing for the next.
+  - **Style**: role pills, a radar against the rank average with a one-line summary, your numbers as dots on a track around your rank's average.
+  - **This month**: your win rate before → now, your roles as one bar with the full legend, your style before → now as a slope chart, three champion cards.
+  - **Pool**: a coverage matrix (what each champion brings against what a team needs, gaps in amber) and your next step.
+  - **Connect**: the invite code as three boxes (paste fills all three), the client's Riot ID, how it works in three lines, the server behind "Change".
+- Loading shows as a slim progress row instead of a boxed notice. The panel's new wording lives in `explain.v1.json` (`ui.*` and the new templates).
+
+### Added
+- View data behind it, built in the main process: your pick's win-chance parts at lock-in on the post-game card, where you sit against your rank on each number, a style summary, the month's win rate, games before, role split and rank as fields, the pool's coverage and next step (engine `covers()` / `poolCoverage()`), your lane partner (`app.sharedLanes`).
+- Dev aid: `LDC_SCREENSHOT` always renders at 440 × 720, zoom 1, and logs each block's height.
+
 ## [0.7.6] — 2026-10-11 — Backups
 
 ### Added
