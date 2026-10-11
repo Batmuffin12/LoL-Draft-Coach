@@ -215,40 +215,26 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* Tables: fixed columns, numbers right-aligned, the same shape everywhere */
 .table { display: flex; flex-direction: column; }
 .table .thead, .table .trow { display: grid; align-items: center; column-gap: 6px; }
-.table.picks .thead, .table.picks .trow { grid-template-columns: minmax(0, 1fr) 46px 58px 46px 46px; column-gap: 4px; }
-.table.picks .trow .c-num { font-size: var(--fs-body); }
 .table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 90px 50px; column-gap: 8px; }
-.table.pool .thead, .table.pool .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 50px; }
 .table .thead { white-space: nowrap; padding: 0 6px 4px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
-.table .thead .c-num, .table .thead .c-win { text-align: right; font-size: var(--fs-label); color: var(--muted); }
 .table .trow { all: unset; box-sizing: border-box; display: grid; align-items: center; column-gap: 6px; min-height: 44px; padding: 4px 6px; border-bottom: 1px solid var(--line); border-radius: var(--radius-xs); }
-.table.picks .trow { cursor: pointer; }
+.table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
+.table .trow .sub b { color: var(--text); font-weight: 600; }
 .table .trow:hover { background: var(--card-raised); }
 .table .trow.sel { background: var(--card); }
 .table .c-champ { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .table .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); line-height: var(--lh-heading); min-width: 0; overflow-wrap: break-word; }
 .table .nm.col { display: flex; flex-direction: column; gap: 0; line-height: 18px; }
 .table .nm .why { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: 14px; color: var(--muted); }
-.table .c-num, .table .c-win { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); white-space: nowrap; }
-.table .c-win { font-size: var(--fs-number); }
+.table .thead .c-num { text-align: right; font-size: var(--fs-label); color: var(--muted); }
+.table .c-num { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); white-space: nowrap; }
 .table .c-num.big { font-size: var(--fs-title); }
 .table .pos { color: var(--positive); }
 .table .neg { color: var(--negative); }
 .table .flat, .table .muted { color: var(--muted); }
-.table .c-num.tier { font-size: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.table .main .tier { color: var(--gold); }
-.table .learning .tier { color: var(--ally); }
-.table .rusty .nm { color: var(--muted); }
 .table.bans .trow { min-height: 0; padding: 5px 6px; }
 .table .c-bar { height: 8px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
 .table .c-bar .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
-.table.pool .trow { min-height: 48px; padding: 4px 6px; }
-.table.pool .c-num.big { font-size: var(--fs-number); line-height: var(--lh-number); }
-.table.pool .nm { font-size: var(--fs-heading); line-height: var(--lh-heading); }
-.table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
-.table .trow .sub b { color: var(--text); font-weight: 600; }
-.table .detail { padding: 6px 6px 0; }
-.table .legend { padding: 4px 6px 0; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
 .table .open { padding: 8px 6px 0; font-size: var(--fs-caption); color: var(--muted); }
 
 /* Matchup rows: your lane opponent as a gold row, the verdict with its points */
@@ -346,17 +332,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .you-strip .who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .you-strip .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); line-height: var(--lh-title); }
 
-/* Playstyle */
-.axis { display: grid; grid-template-columns: 128px 1fr 36px; gap: 12px; align-items: center; min-height: 34px; font-size: var(--fs-body); line-height: var(--lh-body); }
-.axis .track { position: relative; height: 14px; border-radius: 7px; background: var(--track); }
-.axis .mid { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--line-strong); }
-.axis .fill { position: absolute; top: 0; bottom: 0; border-radius: 7px; background: var(--muted); }
-.axis.high .fill { background: var(--positive); }
-.axis.low .fill { background: var(--red); }
-.axis .val { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-number); line-height: var(--lh-number); }
-.axis.high .val { color: var(--positive); }
-.axis.low .val { color: var(--red); }
-.axis-detail { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); margin: -6px 0 2px 140px; }
 
 /* Notice: one per problem, at the top of the scrolling area */
 .notice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); background: var(--warn-tint); color: var(--warn); }
@@ -410,15 +385,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
 /* Text is never cut: what used to be one line wraps when it doesn't fit. */
-.one-line { min-width: 0; overflow-wrap: break-word; }
-.clamp2 { min-width: 0; }
-.section-head.closed { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 22px; cursor: pointer; width: 100%; }
-.section-head.closed:hover .label, .section-head.closed:hover .micro { color: var(--text); }
-.section-head.closed:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.section-head.closed .rule { flex: 0 0 16px; }
-.section-head.closed .micro { flex: 1; line-height: 15px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.section-head.closed { align-items: center; }
-.section-head .chev { color: var(--muted); font-size: var(--fs-heading); }
+.wrap { min-width: 0; overflow-wrap: break-word; }
 
 
 
@@ -443,52 +410,13 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .learn-focus .games { display: flex; gap: 3px; }
 .learn-focus .games .g { width: 10px; height: 10px; border-radius: 2px; background: var(--card); border: 1px solid var(--line-strong); }
 .learn-focus .games .g.met { background: var(--gold); border-color: var(--gold); }
-.section:has(> .section-head.closed) { padding-block: 6px; }
 
-/* Monthly report */
-/* Stat strip: a row of fixed tiles, label on top, value under (monthly report) */
-.strip { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
-.strip .tile { background: var(--bg); padding: 4px 8px; display: flex; flex-direction: column; gap: 0; min-width: 0; }
-.strip .k { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.strip .v { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-number); line-height: var(--lh-number); white-space: nowrap; }
-.strip .s { font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
-.strip .pos .v { color: var(--positive); }
-.strip .neg .v { color: var(--negative); }
-.table.trends .thead, .table.trends .trow { grid-template-columns: minmax(0, 1fr) 44px 20px 44px 52px; }
-.table.trends .trow { min-height: 0; padding: 1px 6px; }
-.table.champform .thead, .table.champform .trow { grid-template-columns: minmax(0, 1fr) 50px 50px 64px; }
-.table.champform .trow { min-height: 0; padding: 2px 6px; }
-.table .arrow { text-align: center; font-weight: 700; }
-.table .arrow.pos::before { content: "\25B2"; font-size: 10px; }
-.table .arrow.neg::before { content: "\25BC"; font-size: 10px; }
-.table .arrow.flat::before { content: "\2013"; }
-.table .axis-nm { font-size: var(--fs-caption); color: var(--text); }
-.trends2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
-.trends2 .tr { display: grid; grid-template-columns: minmax(0, 1fr) 20px 10px 20px 28px; column-gap: 3px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-caption); line-height: var(--lh-caption); }
-.trends2 .num { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); }
-.trends2 .pos { color: var(--positive); }
-.trends2 .neg { color: var(--negative); }
-.trends2 .muted, .trends2 .flat { color: var(--muted); }
-.trends2 .arrow { text-align: center; font-size: 9px; }
-.table.champform .trow .nm, .table.champform .trow .c-num { font-size: var(--fs-heading); }
-.table.champform .trow { height: 34px; padding: 0 6px; }
-.trends2 .axis-nm { font-size: var(--fs-caption); line-height: var(--lh-caption); }
-.monthreport .section { padding-block: 5px; }
 .tree.shards { gap: 3px; }
 
-/* Style tab: headline numbers three to a row, then how you play (pool, classes, damage) */
-.stylerole .section { padding-block: 6px; }
-.stylerole .section:first-child { gap: 2px; }
-.stylerole button.axis { min-height: 32px; }
-.strip.numgrid .vrow { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.strip.numgrid .vrow .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.strip.numgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.strip.numgrid .tile { padding: 2px 8px; }
-.strip.numgrid .neg .v { color: var(--red); }
 .how { display: flex; flex-direction: column; gap: 2px; }
 .how-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: center; font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .how-k { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.how-v { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.how-v { min-width: 0; overflow-wrap: break-word; }
 .how-v.dmg { display: flex; align-items: center; gap: 8px; }
 .dmgbar { display: flex; flex: 0 0 72px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--track); }
 .dmgbar .physical, .dmg-l.physical::before { background: var(--dmg-physical); }
@@ -496,16 +424,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .dmgbar .true, .dmg-l.true::before { background: var(--dmg-true); }
 .dmg-l { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .dmg-l::before { content: ""; width: 8px; height: 8px; border-radius: 2px; }
-/* An axis is a button: a click lists the metrics behind it */
-button.axis { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 128px 1fr 36px; gap: 12px; align-items: center; min-height: 34px; font-size: var(--fs-body); line-height: var(--lh-body); cursor: pointer; width: 100%; }
-button.axis:hover > span:first-child { color: var(--gold); }
-button.axis:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.axis-metrics { list-style: none; margin: -2px 0 2px 12px; padding: 0; display: flex; flex-direction: column; gap: 1px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
-.numtrends { margin-bottom: 4px; }
-.axis-metrics li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.monthreport .strip .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.monthreport .trends2 .tr { padding: 2px 0; }
-.numtrends .tr { grid-template-columns: minmax(0, 1fr) 40px 12px 40px; }
 
 /* Last game: the result band, what decided the draft, your goal */
 .result-band { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }

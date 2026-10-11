@@ -35,7 +35,7 @@ export function NewChampTable({ rows }: { rows: NewChampView[] }) {
             {c.like ? (
               <>
                 <ChampIcon champ={c.like} size={24} title={`Plays like your ${c.like.name}`} />
-                <span className="one-line">{c.like.name}</span>
+                <span className="wrap">{c.like.name}</span>
               </>
             ) : (
               "—"

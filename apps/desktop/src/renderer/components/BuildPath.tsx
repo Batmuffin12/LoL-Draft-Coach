@@ -94,7 +94,7 @@ export function BuildPath({ loadout }: { loadout: LoadoutView }) {
           <div key={c.key} className="col">
             <span className="micro text">{c.label}</span>
             <span className="micro">{c.minute === null ? " " : t("build.minutes", { n: Math.round(c.minute) })}</span>
-            <span className="main">
+            <span className="main" tabIndex={0} aria-label={tip(c.main)}>
               <ChampIcon champ={c.main} kind="game" size={32} lit={c.core} title={tip(c.main)} />
             </span>
             {c.main.share !== undefined && c.alternatives && (
@@ -113,7 +113,7 @@ export function BuildPath({ loadout }: { loadout: LoadoutView }) {
                 <>
                   <span className="micro">{t("build.or")}</span>
                   {c.alternatives.map((a, i) => (
-                    <span key={a.id} className="opt">
+                    <span key={a.id} className="opt" tabIndex={0} aria-label={tip(a)}>
                       <ChampIcon champ={a} kind="game" size={22} title={tip(a)} />
                       <span className="micro">
                         {rate(a.share)}
