@@ -44,10 +44,25 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
     { label: "Goals met", value: String(deps.growth?.met.length ?? 0) },
   ];
   const f = deps.growth?.focus;
+  const days = Math.max(1, Math.round((r.to - r.from) / 86_400_000));
+  const points = winChange === null ? 0 : Math.round(Math.abs(winChange) * 100);
   return {
     period: `${shortDate(r.from)} – ${shortDate(r.to)}`,
     games: r.games,
     footer: say("month.footer", { games: r.games }),
+    winRate: {
+      from: r.winRateBefore,
+      to: r.winRate ?? 0,
+      text:
+        winChange === null
+          ? say("month.win.first", {})
+          : points === 0
+            ? say("month.win.same", { days })
+            : say(winChange > 0 ? "month.win.up" : "month.win.down", { points, days }),
+    },
+    gamesBefore: r.gamesBefore,
+    gamesBeforeText: say("month.gamesBefore", { games: r.gamesBefore }),
+    roles: r.roles.map((x) => ({ role: deps.positionLabel(x.role), share: x.share, text: say("month.role.share", { role: deps.positionLabel(x.role), share: x.share }) })),
     strip,
     role: r.role ? deps.positionLabel(r.role) : null,
     axes: r.axes.map((a) => ({ label: deps.explain.axes[a.axis] ?? a.axis, from: a.from, to: a.to, changed: a.changed })),

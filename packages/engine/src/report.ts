@@ -20,6 +20,8 @@ export interface MonthlyReport {
   winRate: number | null;
   /** Your win rate in the same length of time before the period (null without games then). */
   winRateBefore: number | null;
+  /** Games in the same length of time before the period. */
+  gamesBefore: number;
   /** The role you played most in the period, whose style trends are shown. */
   role: Position | null;
   /**
@@ -175,6 +177,7 @@ export function monthlyReport(
     games: inPeriod.length,
     winRate: win(inPeriod),
     winRateBefore: win(before),
+    gamesBefore: before.length,
     role,
     axes,
     stats: numbers,

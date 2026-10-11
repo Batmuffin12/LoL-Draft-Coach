@@ -47,7 +47,8 @@ export interface RolePool {
   holes: PoolHole[];
 }
 
-const covers = (a: ChampionAttributes, need: PoolNeed, cov: EngineConfig["pool"]["coverage"]) =>
+/** Whether a champion's measured attributes bring a draft need (thresholds from config pool.coverage). */
+export const covers = (a: ChampionAttributes, need: PoolNeed, cov: EngineConfig["pool"]["coverage"]) =>
   need === "magic"
     ? a.magicShare >= cov.damageShare
     : need === "physical"
@@ -56,7 +57,21 @@ const covers = (a: ChampionAttributes, need: PoolNeed, cov: EngineConfig["pool"]
         ? a.frontline >= cov.frontline
         : a.engage >= cov.engage;
 
-const NEEDS: PoolNeed[] = ["magic", "physical", "frontline", "engage"];
+export const POOL_NEEDS: readonly PoolNeed[] = ["magic", "physical", "frontline", "engage"];
+const NEEDS = POOL_NEEDS;
+
+/**
+ * Which needs each pool champion brings, from its measured attributes. A champion without
+ * measured attributes is left out (unknown, never guessed).
+ */
+export function poolCoverage(champions: PoolChampion[], attributes: Map<ChampionId, ChampionAttributes>, cov: EngineConfig["pool"]["coverage"]): Map<ChampionId, PoolNeed[]> {
+  const out = new Map<ChampionId, PoolNeed[]>();
+  for (const c of champions) {
+    const a = attributes.get(c.championId);
+    if (a) out.set(c.championId, POOL_NEEDS.filter((n) => covers(a, n, cov)));
+  }
+  return out;
+}
 
 /**
  * The player's champion pool for one role, in tiers, and the draft needs it doesn't

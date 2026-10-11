@@ -32,6 +32,7 @@ describe("monthlyReport", () => {
     expect(r.games).toBe(10);
     expect(r.winRate).toBeCloseTo(0.7);
     expect(r.winRateBefore).toBeCloseTo(0.4);
+    expect(r.gamesBefore).toBeGreaterThan(0);
     expect(r.role).toBe("middle");
     expect(r.champions).toEqual([
       { championId: 103, games: 8, winRate: 0.75, change: expect.closeTo(0.35) },

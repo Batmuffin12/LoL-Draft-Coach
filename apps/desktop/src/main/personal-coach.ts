@@ -35,21 +35,25 @@ import {
   placeDraft,
   MetaIndex,
   type ChampionAttributes,
+  poolCoverage,
+  POOL_NEEDS,
+  type RolePool,
+  type EngineConfig,
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
 import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
-import type { BanView, MyPickView, NewChampRoleView, PickView, PlaystyleView } from "../shared/view";
+import { POOL_COLUMNS, type BanView, type MyPickView, type NewChampRoleView, type PickView, type PlaystyleView, type PoolNeed, type RoleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
 import { importLoadout } from "./loadout-import";
 import { focusInGame, focusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
 import { monthView } from "./month-view";
-import { howView, metricSentence, numberViews, sideView } from "./style-view";
+import { howView, listText, metricSentence, numberViews, sideView, styleSummary } from "./style-view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
-import { champView } from "./draft-view";
+import { champView, type ChampionLookup } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
 import { capital, reasonView } from "./reason-view";
 import { banNumbers, draftMatchups } from "./stats-view";
@@ -68,9 +72,73 @@ export interface PersonalCoachDeps extends CoachDeps {
   meta?: MetaSource | null;
 }
 
+/** The panel's fixed wording: explain templates "ui.*", without the prefix. */
+export function uiCopy(templates: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("ui.") ? [[k.slice(3), v]] : [])));
+}
+
 /** Position names from the explain templates ("role.utility": "support"). */
 export function roleLabels(templates: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("role.") ? [[k.slice(5), v]] : [])));
+}
+
+/**
+ * The Pool tab's matrix and next step for one role: which needs each champion in the pool brings
+ * (measured attributes only), the gaps (the role's holes), the champion you know that fills the
+ * biggest one, what nothing you know covers, and the champions that didn't fit in the matrix.
+ */
+export function poolAdvice(
+  role: Position,
+  pool: RolePool | null,
+  attributes: Map<ChampionId, ChampionAttributes>,
+  coverage: EngineConfig["pool"]["coverage"],
+  templates: Record<string, string>,
+  lookup: ChampionLookup,
+): Pick<RoleView, "coverage" | "nextStep" | "missing" | "noGaps" | "also"> {
+  const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, (id) => lookup(id)?.name ?? `#${id}`);
+  const noGaps = say("pool.noGaps", { role });
+  if (!pool || !pool.champions.length) return { coverage: null, nextStep: null, missing: null, noGaps, also: null };
+  const holes = pool.holes;
+  const gaps = new Set(holes.map((h) => h.need));
+  const covers = poolCoverage(pool.champions.slice(0, POOL_COLUMNS), attributes, coverage);
+  const words = (needs: PoolNeed[]) => listText(needs.map((n) => say(`pool.needWord.${n}`)), templates);
+  const first = holes.find((h) => h.coveredBy.length);
+  const champ = first ? pool.champions.find((c) => c.championId === first.coveredBy[0]) : undefined;
+  const view = champ ? champView(champ.championId, lookup) : null;
+  const fills = champ ? holes.filter((h) => h.coveredBy.includes(champ.championId)).map((h) => h.need) : [];
+  const open = holes.filter((h) => !h.coveredBy.length).map((h) => h.need);
+  const extra = pool.champions.slice(POOL_COLUMNS);
+  const tiers = [...new Set(extra.map((c) => c.tier))];
+  return {
+    coverage: {
+      needs: POOL_NEEDS.map((need) => ({ need, label: say(`pool.need.${need}`), gap: gaps.has(need) })),
+      covers: Object.fromEntries(covers),
+    },
+    nextStep:
+      champ && view
+        ? {
+            champion: view,
+            title: say(champ.tier === "learning" ? "pool.next.learning" : "pool.next.rusty", { champion: view.name }),
+            text: say("pool.next.why", { needs: words(fills), role }),
+            evidence: first && first.losses > 0 ? say("pool.hole.evidence", { lacking: first.lossesLacking, losses: first.losses, role }) : null,
+          }
+        : null,
+    missing: open.length ? say("pool.missing", { needs: words(open), role, n: open.length }) : null,
+    noGaps,
+    also: tiers.length
+      ? tiers
+          .map((t) =>
+            say("pool.also", {
+              tier: say(`pool.tier.${t}`).toLowerCase(),
+              champions: extra
+                .filter((c) => c.tier === t)
+                .map((c) => lookup(c.championId)?.name ?? `#${c.championId}`)
+                .join(", "),
+            }),
+          )
+          .join(". ")
+      : null,
+  };
 }
 
 /** The champion the local player has locked in (their pick action is completed), or null. */
@@ -119,6 +187,8 @@ export class PersonalCoach extends Coach {
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
   private importMessage: string | null = null;
+  /** The Riot ID logged into the League client (the local player's own), or null. */
+  private clientRiotId: string | null = null;
   /**
    * The last "Your pick" card, kept after champ select ends (champ select often closes
    * seconds after you lock in, e.g. in custom games) until the game is over.
@@ -146,10 +216,11 @@ export class PersonalCoach extends Coach {
 
   /**
    * Writes the shown loadout into the League client: "runes" = the rune page and your two
-   * summoner spells (one button), "items" = the item set. Called only from the player's click on
-   * an import button (CLAUDE.md: the single approved LCU write exception).
+   * summoner spells, "items" = the item set, "all" = both, one after the other (the panel's one
+   * import button). Called only from the player's click on an import button (CLAUDE.md: the single
+   * approved LCU write exception).
    */
-  async importLoadout(kind: "runes" | "items"): Promise<void> {
+  async importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     const shown = this.shownLoadout;
     const creds = this.p.connector.credentials;
     if (!shown || !creds || !this.config.app.import.enabled) return;
@@ -157,7 +228,11 @@ export class PersonalCoach extends Coach {
     const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, String);
     const importer = new LcuImporter(creds);
     try {
-      this.importMessage = await importLoadout(kind, shown, importer, { say, mapId: Number(this.config.engine.loadout.items.mapId) });
+      const opts = { say, mapId: Number(this.config.engine.loadout.items.mapId) };
+      const kinds = kind === "all" ? (["runes", "items"] as const) : [kind];
+      const done: string[] = [];
+      for (const k of kinds) done.push(await importLoadout(k, shown, importer, opts));
+      this.importMessage = done.filter(Boolean).join(" · ");
     } finally {
       importer.close();
     }
@@ -170,7 +245,7 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
-    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates) };
+    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates) };
   }
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
@@ -179,7 +254,7 @@ export class PersonalCoach extends Coach {
     const local = this.p.config.explain;
     this.config = { ...config, explain: { ...config.explain, templates: { ...local.templates, ...config.explain.templates }, tips: { ...local.tips, ...config.explain.tips } } };
     this.comfortByRole.clear();
-    this.update({ roleLabels: roleLabels(this.config.explain.templates) });
+    this.update({ roleLabels: roleLabels(this.config.explain.templates), copy: uiCopy(this.config.explain.templates) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
     this.updateRoleAdvice();
@@ -209,12 +284,12 @@ export class PersonalCoach extends Coach {
       profiles.on("profile", (profile) => this.setProfile(profile));
       profiles.on("status", (profile) => this.update({ status: { ...this.view.status, profile } }));
       profiles.on("band", (band) => this.setBand(band));
-      profiles.on("account", (account) => this.update({ account }));
+      profiles.on("account", (account) => this.update({ account: { ...account, clientRiotId: this.clientRiotId } }));
       profiles.on("advice", (advice) => {
         this.advice = advice;
         this.updateLastGame();
       });
-      if (profiles.account) this.update({ account: profiles.account });
+      if (profiles.account) this.update({ account: { ...profiles.account, clientRiotId: this.clientRiotId } });
     }
     const { meta } = this.p;
     if (meta) {
@@ -395,6 +470,7 @@ export class PersonalCoach extends Coach {
           verdict: "",
           followed: false,
           lines: [],
+          terms: [],
           prediction: null,
           focus: focusInGame(this.growth, newest.match.matchId, matches, this.config.explain),
         },
@@ -434,6 +510,9 @@ export class PersonalCoach extends Coach {
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
       if (me?.gameName && me.tagLine) {
         this.identity = { gameName: me.gameName, tagLine: me.tagLine };
+        // Your own Riot ID from the client, shown on the connect screen before you register.
+        this.clientRiotId = `${me.gameName}#${me.tagLine}`;
+        if (this.view.account) this.update({ account: { ...this.view.account, clientRiotId: this.clientRiotId } });
         await this.p.profiles?.load(this.identity, { bandFromApi: !ranked });
       } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
@@ -533,6 +612,7 @@ export class PersonalCoach extends Coach {
           };
         }),
         numbers: profile && engine.style ? numberViews(profile.headline, explain, engine.style.toneGap) : [],
+        summary: styleSummary(ps.axes.map((a) => ({ axis: a.axis, level: level(a.score) })), explain.templates),
         how: profile ? howView(profile, explain) : null,
       });
     }
@@ -615,20 +695,27 @@ export class PersonalCoach extends Coach {
           games: c.games,
           winRate: c.winRate,
         })),
-        holes: (pool?.holes ?? []).map((h) => ({
-          text: say(`pool.hole.${h.need}`),
-          evidence: h.losses > 0 ? say("pool.hole.evidence", { lacking: h.lossesLacking, losses: h.losses, role: r.role }) : null,
-          coveredBy: h.coveredBy.length
-            ? say("pool.hole.coveredBy", {
-                champions: h.coveredBy
-                  .map((id) => {
-                    const c = pool!.champions.find((x) => x.championId === id)!;
-                    return `${champView(id, lookup)!.name} (${say(`pool.tier.${c.tier}`).toLowerCase()})`;
-                  })
-                  .join(" and "),
-              })
-            : null,
-        })),
+        holes: (pool?.holes ?? []).map((h) => {
+          const first = h.coveredBy[0];
+          return {
+            need: h.need,
+            text: say(`pool.hole.${h.need}`),
+            evidence: h.losses > 0 ? say("pool.hole.evidence", { lacking: h.lossesLacking, losses: h.losses, role: r.role }) : null,
+            coveredBy: h.coveredBy.length
+              ? say("pool.hole.coveredBy", {
+                  champions: h.coveredBy
+                    .map((id) => {
+                      const c = pool!.champions.find((x) => x.championId === id)!;
+                      return `${champView(id, lookup)!.name} (${say(`pool.tier.${c.tier}`).toLowerCase()})`;
+                    })
+                    .join(" and "),
+                })
+              : null,
+            coveredByChampion: first !== undefined ? champView(first, lookup) : null,
+            fills: first !== undefined ? (pool?.holes ?? []).filter((x) => x.coveredBy.includes(first)).map((x) => x.need) : [],
+          };
+        }),
+        ...poolAdvice(r.role, pool, this.attrs, this.config.engine.pool.coverage, explain.templates, lookup),
       };
     });
     this.update({ roles, newChamps });
@@ -748,7 +835,7 @@ export class PersonalCoach extends Coach {
           : null,
         importMessage: this.importMessage,
         hovering,
-        matchups: this.metaIndex && this.draft ? draftMatchups(this.draft, this.metaIndex, championId, role, lookup) : null,
+        matchups: this.metaIndex && this.draft ? draftMatchups(this.draft, this.metaIndex, championId, role, lookup, this.config.app.sharedLanes) : null,
         plan: [...(live ? gamePlan(live, championId) : []), ...this.recordVsLane(profile, championId, role)].map(say),
       };
     };

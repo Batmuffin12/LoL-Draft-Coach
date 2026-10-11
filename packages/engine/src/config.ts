@@ -492,6 +492,8 @@ export const AppConfigSchema = z.object({
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */
   import: z.object({ enabled: z.boolean() }).default({ enabled: false }),
+  /** Positions that share a lane (bot and support): an ally there is your lane partner. */
+  sharedLanes: z.array(z.array(z.string())).default([]),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 

@@ -136,3 +136,16 @@ describe("champion pool", () => {
     expect(analyze({ attributes: new Map() }).holes).toEqual([]);
   });
 });
+
+describe("poolCoverage", () => {
+  it("lists the needs each champion brings from its measured attributes, and leaves unmeasured ones out", async () => {
+    const { poolCoverage, covers } = await import("../src/index");
+    const champions = [MAIN, OLD, 99].map((championId) => ({ championId, tier: "main" as const, games: 5, winRate: 0.5, comfort: 0.5 }));
+    const out = poolCoverage(champions, attributes, cfg.pool.coverage);
+    expect(out.get(MAIN)).toEqual(["physical"]);
+    expect(out.get(OLD)).toEqual(["magic"]);
+    // No measured attributes: unknown, never guessed.
+    expect(out.has(99)).toBe(false);
+    expect(covers(attributes.get(50)!, "frontline", cfg.pool.coverage)).toBe(true);
+  });
+});

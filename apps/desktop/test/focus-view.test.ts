@@ -75,6 +75,18 @@ describe("focus view", () => {
   });
 });
 
+describe("focus lines for the last game", () => {
+  it("says met or not, your average, and how many of your last games met it", () => {
+    const v = focusView({ ...growth, focus: { ...growth.focus!, recent: [false, true, false, true, true, true] } }, deps)!;
+    expect(v.metLine).toBe("Goal met: 6.8 or more");
+    expect(v.missedLine).toBe("Goal not met: 6.8 or more");
+    expect(v.averageLine).toBe("Your average is 6.1.");
+    expect(v.streak).toBe("4 of your last 6 met it, the last 3 in a row");
+    // A short run isn't called a streak.
+    expect(focusView(growth, deps)!.streak).toBe("1 of your last 3 met it");
+  });
+});
+
 describe("goal mechanic lines", () => {
   it("every goal metric in the shipped config has its game-mechanic reason", () => {
     const { growth } = config.engine;

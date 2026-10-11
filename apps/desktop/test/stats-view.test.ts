@@ -94,6 +94,13 @@ describe("draftMatchups", () => {
     expect(["middle", "jungle"]).not.toContain(m.with[1]!.role);
   });
 
+  it("marks an ally in a lane you share (config app.sharedLanes) as your lane partner", () => {
+    const d = draft([seat(1, 0, "jungle", 254)], [seat(5, 86)]);
+    expect(draftMatchups(d, index(), 103, "middle", lookup, [["middle", "jungle"]])!.with[0]).toMatchObject({ champion: { name: "Vi" }, partner: true });
+    expect(draftMatchups(d, index(), 103, "middle", lookup, config.app.sharedLanes)!.with[0]).toMatchObject({ partner: false });
+    expect(config.app.sharedLanes.length).toBeGreaterThan(0);
+  });
+
   it("is null without a role for you or your champion", () => {
     expect(draftMatchups(draft([], []), index(), 999, null, lookup)).toBeNull();
   });
