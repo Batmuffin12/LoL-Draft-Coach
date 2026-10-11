@@ -7,12 +7,12 @@ import { NewChampTable } from "../components/NewChampTable";
 import { ChampIcon } from "../components/ChampIcon";
 import { PlaystyleAxis } from "../components/PlaystyleAxis";
 import { HowYouPlay, NumberGrid } from "../components/StyleNumbers";
-import { PostGameCard } from "../components/PostGameCard";
+import { DraftTerms, ResultBand } from "../components/PostGameCard";
 import { PoolTable } from "../components/PoolTable";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { cx, pct, positionLabel, roleName } from "../format";
+import { cx, pct, positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices } from "./common";
 
@@ -102,18 +102,26 @@ function SubTabs({ options, value, onChange }: { options: { value: string; label
 /** Your last game against the advice the coach gave (the advice log). */
 function LastGame({ state }: { state: ViewState }) {
   const now = useNow(60_000);
+  const g = state.lastGame;
   return (
     <>
-      <Section title="Last game">
-        {state.lastGame ? (
-          <PostGameCard game={state.lastGame} now={now} />
-        ) : (
+      {g ? (
+        <>
+          <ResultBand game={g} now={now} />
+          {(g.terms.length > 0 || g.lines.length > 0) && (
+            <Section title={t("last.decided")}>
+              <DraftTerms game={g} />
+            </Section>
+          )}
+        </>
+      ) : (
+        <Section title="Last game">
           <p className="caption">After your next game, how it went against the advice you were shown appears here: your pick, the suggestions, the result and what mattered most in the draft.</p>
-        )}
-      </Section>
+        </Section>
+      )}
       {state.focus && (
-        <Section title="Your goal">
-          <FocusCard focus={state.focus} />
+        <Section title={t("last.goal")} aside={<span className="micro">{state.focus.on}</span>}>
+          <FocusCard focus={state.focus} game={g?.focus ?? null} />
         </Section>
       )}
     </>

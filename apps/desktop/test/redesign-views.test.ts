@@ -29,7 +29,7 @@ describe("post-game terms", () => {
       },
     } as unknown as AdviceRecord;
     expect(lockInTerms(record, templates)).toEqual([
-      { label: "What your team needed", deltaWin: -0.012 },
+      { label: "Team needs", deltaWin: -0.012 },
       { label: "Your comfort", deltaWin: 0.009 },
       { label: "Lane matchup", deltaWin: -0.008 },
     ]);
