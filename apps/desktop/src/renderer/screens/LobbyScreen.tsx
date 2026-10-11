@@ -35,7 +35,7 @@ function Lobby({ state }: { state: ViewState }) {
   const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
   // A newly logged game (it arrives after the panel opens): show it first.
   const latest = state.lastGame?.lockedAt ?? 0;
-  // In a lobby with roles chosen: the Suggestion tab appears and opens; it goes when the lobby does.
+  // In a lobby with roles chosen: the Next game tab appears and opens; it goes when the lobby does.
   const preview = state.queuePreview?.roles.length ? state.queuePreview : null;
   useEffect(() => {
     if (recent && !preview) setTab("last");

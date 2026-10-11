@@ -9,7 +9,7 @@ import { positionLabel, t } from "../format";
 type Preview = NonNullable<ViewState["queuePreview"]>;
 
 /**
- * The lobby's Suggestion tab, in a lobby with roles chosen before the queue pops: your best picks
+ * The lobby's Next game tab, in a lobby with roles chosen before the queue pops: your best picks
  * for each role as a blind pick (primary role first), so you can plan. Champ select replaces it
  * with the real draft.
  */
