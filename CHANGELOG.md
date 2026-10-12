@@ -2,6 +2,26 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [Unreleased] — Performance
+
+### Changed
+- **The panel starts faster**: process start to the first full screen 724 → 422 ms on a 1,000-game history (local measurement). Loading your history or a new meta snapshot in the main process is ~6× faster (423 → 69 ms, 298 → 45 ms): the playstyle percentile now uses a binary search, with the same results, and a new meta snapshot reuses your games' metric values (45 → 7.5 ms).
+- **Your matches are kept on disk** (`profile-matches.json` in the app's profile, cleared on sign-out): a start asks the server only for new or changed games instead of downloading the whole history again (next start: 14 MB → 37 kB, 274 → 83 ms against a local server).
+- **Fewer state updates to the panel**: at most one per event-loop turn and never the same twice (pushes −57% in champ select, 57 → 9 until the first screen).
+- Server: `GET /me/profile` sends stored match JSON as is (alone 207 → 150 ms; with 10 at once p99 2.3 s → 0.9 s); new optional `?ids=` (up to 100 of your match ids) and `?timelines=1` (which of your matches have a complete timeline). Older panels are unaffected.
+
+### Fixed
+- **`/config` answers 304** when the panel's copy is current: the gzipped response carried a weak ETag that the server never matched, so the config was downloaded again at every start and every champ select.
+
+### Added
+- `pnpm perf`, `pnpm perf:compare`, `pnpm perf:screens`, `pnpm perf:guard`: local, offline performance measurements with budgets and a screen-by-screen regression guard (docs/perf/). Dev aid `LDC_PERF=out.json` (development builds only). `history()` in packages/sim: a synthetic match history.
+
+### Removed
+- Dead code found by fallow: 14 needless exports, the unused `HowYouPlay` component, unused dependencies (`zod` in shared and jev, `selfsigned` in the desktop app).
+
+### Internal
+- Code health (fallow) 80.6 → 90.5: `PersonalCoach` keeps its state and events while its view builders live in small pure modules (`role-view`, `pick-card`, `draft-facts`, `last-game-view`, `game-wait`, `client-state`); long functions split (`createApp`, the panel's `main`); the perf harness is its own private package (`@ldc/perf`). No behaviour change.
+
 ## [0.7.8] — 2026-10-12
 
 ### Fixed

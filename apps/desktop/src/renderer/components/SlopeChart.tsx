@@ -2,7 +2,7 @@ import type { MonthView } from "../../shared/view";
 import { cx } from "../format";
 
 /** Style scores are percentiles in your role and rank: 50 is the rank's average. */
-export const RANK_AVERAGE = 50;
+const RANK_AVERAGE = 50;
 
 type Axis = MonthView["axes"][number];
 

@@ -1,0 +1,13 @@
+{
+  // Code health for `pnpm perf` (fallow). Tests, benches, scenarios, fixtures scripts and the perf harness are entry points; the redesign mockups and research are not code.
+  "entry": [
+    "**/test/**/*.test.ts",
+    "**/bench/**/*.bench.ts",
+    "packages/sim/scenarios/*.ts",
+    "packages/lcu/scripts/*.mjs",
+    "scripts/**/*.{mjs,cjs,ts}",
+    ".railway/railway.ts"
+  ],
+  // .railway/railway.ts (the infrastructure as code) is analysed too: fallow skips hidden folders otherwise.
+  "ignorePatterns": ["docs/**", "research/**", "!.railway/**"]
+}

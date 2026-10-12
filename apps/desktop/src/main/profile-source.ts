@@ -1,4 +1,7 @@
 import { EventEmitter } from "node:events";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { z } from "zod";
 import { bandFromRankedEntries, mainRole, type AppConfig, type PlayerGame, type RankBandConfig } from "@ldc/engine";
 import { RiotKeyError, type RiotApi } from "@ldc/riot-api";
 import type { AdviceRecord, CoachStatus, RankBandId, UserMatch } from "@ldc/shared";
@@ -168,7 +171,25 @@ export interface ServerProfileSourceDeps {
   sleep?: (ms: number) => Promise<void>;
   /** Advice records not yet confirmed by the server, kept across restarts (none: posted once). */
   outbox?: AdviceStore;
+  /**
+   * Your matches kept on disk between starts (none: each start downloads the whole history again).
+   * With them, a start asks the server only for what is new or changed.
+   */
+  cacheFile?: string;
 }
+
+/** The match cache file: whose matches they are, and the matches as the server sent them. */
+const MatchCacheSchema = z.object({
+  serverUrl: z.string(),
+  riotId: z.string(),
+  matches: z.array(z.looseObject({ match: z.looseObject({ matchId: z.string(), endedAt: z.number() }), me: z.number().int() })),
+});
+
+/** Match ids asked for by name in one request (the server's PROFILE_IDS_MAX); more: the whole history. */
+const IDS_PER_REQUEST = 100;
+
+/** The stored summary has a complete timeline (the server fetches one again for a match that lacks it). */
+const hasTimeline = (m: UserMatch | undefined) => (m?.match.timeline as { monsters?: unknown } | undefined)?.monsters !== undefined;
 
 /**
  * Default mode: the player's history comes from our server, which holds the only Riot
@@ -188,6 +209,10 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private polling = false;
   private stopped = false;
   private view: AccountView;
+  /** The disk cache was read (once per registration). */
+  private cacheRead = false;
+  /** Cache writes, one after another. */
+  private cacheWrite: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: ServerProfileSourceDeps) {
     super();
@@ -307,6 +332,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.client = client;
       this.registeredAs = r.riotId;
       this.matches.clear();
+      await this.clearCache();
       this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null });
       this.emit("status", { state: "loading", done: 0, total: 0 });
       await this.waitForSync();
@@ -321,6 +347,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.client = null;
     this.registeredAs = null;
     this.matches.clear();
+    await this.clearCache();
     this.advice = [];
     // Unsent records belong to this registration: never post them under another one.
     this.pending = this.deps.outbox ? await this.deps.outbox.remove(this.pending.map((r) => r.gameId)) : [];
@@ -343,9 +370,23 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private async fetchProfile(): Promise<void> {
     if (!this.client) return;
     try {
+      await this.readCache();
+      const client = this.client;
       const newest = Math.max(0, ...[...this.matches.values()].map((m) => m.match.endedAt));
-      const p = await this.client.profile(this.matches.size ? newest : undefined);
-      this.apply(p);
+      const cached = this.matches.size > 0;
+      let p = await client.profile(cached ? newest : undefined, cached ? { timelines: true } : {});
+      if (cached) {
+        // Matches the server has that we lack (e.g. older games loaded in the background) or that it
+        // has updated since (a timeline added): asked for by name, or the whole history when many.
+        const missing = this.missingMatches(p);
+        if (missing === null || missing.length > IDS_PER_REQUEST) p = await client.profile();
+        else if (missing.length) {
+          p = await client.profile(newest, { ids: missing });
+          const got = new Set(p.matches.map((m) => m.match.matchId));
+          if (missing.some((id) => !got.has(id))) p = await client.profile();
+        }
+      }
+      if (this.apply(p)) this.saveCache();
       await this.flushOutbox();
       if (p.sync.state === "running") await this.waitForSync();
     } catch (err) {
@@ -353,10 +394,66 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     }
   }
 
-  private apply(p: ServerProfile): void {
+  /** Ids to ask for by name, or null when the server can't say which of ours are out of date (an older server). */
+  private missingMatches(p: ServerProfile): string[] | null {
+    if (!p.timelineIds) return null;
+    const got = new Set(p.matches.map((m) => m.match.matchId));
+    const timelined = new Set(p.timelineIds);
+    return p.matchIds.filter((id) => !got.has(id) && (!this.matches.has(id) || (timelined.has(id) && !hasTimeline(this.matches.get(id)))));
+  }
+
+  /** Fills the matches from the disk cache, once, when it belongs to this registration. */
+  private async readCache(): Promise<void> {
+    const file = this.deps.cacheFile;
+    if (this.cacheRead || !file) return;
+    this.cacheRead = true;
+    if (this.matches.size || !this.registeredAs) return;
+    try {
+      const c = MatchCacheSchema.parse(JSON.parse(await readFile(file, "utf8")));
+      if (c.serverUrl !== this.view.serverUrl || !sameRiotId(c.riotId, this.registeredAs)) return;
+      for (const m of c.matches as unknown as UserMatch[]) this.matches.set(m.match.matchId, m);
+    } catch {
+      // No cache yet, or an unreadable one: the whole history comes from the server.
+    }
+  }
+
+  private saveCache(): void {
+    const file = this.deps.cacheFile;
+    const serverUrl = this.view.serverUrl;
+    const riotId = this.registeredAs;
+    if (!file || !serverUrl || !riotId) return;
+    const body = JSON.stringify({ serverUrl, riotId, matches: [...this.matches.values()] });
+    // Written next to it, then renamed: an app closed mid-write leaves the old cache, never half a file.
+    this.cacheWrite = this.cacheWrite
+      .then(() => mkdir(dirname(file), { recursive: true }))
+      .then(() => writeFile(`${file}.tmp`, body))
+      .then(() => rename(`${file}.tmp`, file))
+      .catch(() => {});
+  }
+
+  /** Resolves once the match cache on disk is up to date. */
+  cacheSaved(): Promise<void> {
+    return this.cacheWrite;
+  }
+
+  private async clearCache(): Promise<void> {
+    this.cacheRead = true;
+    const file = this.deps.cacheFile;
+    if (!file) return;
+    await this.cacheWrite;
+    await rm(file, { force: true }).catch(() => {});
+  }
+
+  /** Applies a profile response; true when the matches changed. */
+  private apply(p: ServerProfile): boolean {
     for (const m of p.matches) this.matches.set(m.match.matchId, m);
     const keep = new Set(p.matchIds);
-    for (const id of this.matches.keys()) if (!keep.has(id)) this.matches.delete(id);
+    let dropped = 0;
+    for (const id of this.matches.keys()) {
+      if (keep.has(id)) continue;
+      this.matches.delete(id);
+      dropped++;
+    }
 
     const profile = profileFromMatches(
       [...this.matches.values()],
@@ -380,6 +477,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
     else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });
     else this.emit("status", readyStatus(profile.games, p.user.historyBacklog));
+    return p.matches.length > 0 || dropped > 0;
   }
 
   /** Polls the server's sync for this player until it finishes, then fetches the new games. */
@@ -406,6 +504,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private onServerError(err: unknown): void {
     if (err instanceof ServerError && err.status === 401) {
       void this.deps.accounts.clear();
+      this.matches.clear();
+      void this.clearCache();
       this.client = null;
       this.registeredAs = null;
       this.setAccount({

@@ -85,6 +85,26 @@ describe("playstyle", () => {
     expect(empiricalPercentile(2, [1, 2, 2, 3])).toBe(0.5);
   });
 
+  it("finds the same percentile as counting every value (binary search)", () => {
+    const scan = (v: number, sorted: number[]) => {
+      let below = 0;
+      let equal = 0;
+      for (const x of sorted) {
+        if (x < v) below++;
+        else if (x === v) equal++;
+        else break;
+      }
+      return (below + equal / 2) / sorted.length;
+    };
+    let seed = 7;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (let t = 0; t < 200; t++) {
+      const sorted = Array.from({ length: 1 + Math.floor(rand() * 60) }, () => Math.floor(rand() * 20) / 2).sort((a, b) => a - b);
+      for (const v of [...sorted, -1, 0.25, 7.3, 50, sorted[0]!]) expect(empiricalPercentile(v, sorted)).toBe(scan(v, sorted));
+    }
+    expect(empiricalPercentile(Number.NaN, [1, 2])).toBe(scan(Number.NaN, [1, 2]));
+  });
+
   it("scores a fighter who rarely dies high on fighting and risk control, against their lane opponents", () => {
     const ps = computePlaystyle(games(30), "jungle", NOW, cfg)!;
     expect(ps).toMatchObject({ role: "jungle", games: 30, referenceSamples: 30 });
@@ -108,6 +128,17 @@ describe("playstyle", () => {
     expect(computePlaystyle(games(cfg.minGamesPerRole - 1), "jungle", NOW, cfg)).toBeNull();
     expect(computePlaystyle(games(30), "bottom", NOW, cfg)).toBeNull();
     expect(computePlaystyle(games(30), "", NOW, cfg)).toBeNull();
+  });
+
+  it("gives the same result from its per-matches cache as from a fresh computation", () => {
+    const all = games(40);
+    const fewer = all.slice(5);
+    // A copy is another key: computed before anything is cached for `all`.
+    const fresh = computePlaystyle(structuredClone(fewer), "jungle", NOW, cfg);
+    const first = computePlaystyle(all, "jungle", NOW, cfg);
+    expect(computePlaystyle(all, "jungle", NOW, cfg)).toEqual(first);
+    expect(computePlaystyle(fewer, "jungle", NOW, cfg)).toEqual(fresh);
+    expect(fresh).not.toEqual(first);
   });
 
   it("lists the roles with enough games, most played first", () => {

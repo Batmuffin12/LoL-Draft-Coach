@@ -28,9 +28,9 @@ export const AdviceRecordSchema = z.object({
 });
 
 /** Advice kept per user (newest); older rows are removed when a new one arrives. */
-export const ADVICE_KEPT = 200;
+const ADVICE_KEPT = 200;
 /** Advice sent with the profile (newest first). */
-export const ADVICE_IN_PROFILE = 20;
+const ADVICE_IN_PROFILE = 20;
 
 /** Stores what the coach showed for one game; a repeat for the same game replaces it. */
 export function saveAdvice(db: Db, userId: number, record: AdviceRecord, now: number): void {

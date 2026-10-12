@@ -1,0 +1,2018 @@
+{
+  "account": null,
+  "status": {
+    "lcu": "connected",
+    "gameflowPhase": "ChampSelect",
+    "patch": "16.20.1",
+    "band": 2,
+    "profile": {
+      "state": "ready",
+      "games": 1000,
+      "role": "middle"
+    }
+  },
+  "draft": {
+    "timerPhase": "FINALIZATION",
+    "timeLeftMs": 30000,
+    "totalSeconds": 30,
+    "receivedAt": 1791797279404,
+    "myTeam": [
+      {
+        "cellId": 5,
+        "position": "top",
+        "champion": {
+          "id": 122,
+          "name": "Darius",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Darius.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 6,
+        "position": "jungle",
+        "champion": {
+          "id": 32,
+          "name": "Amumu",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Amumu.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 7,
+        "position": "bottom",
+        "champion": {
+          "id": 222,
+          "name": "Jinx",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Jinx.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 8,
+        "position": "utility",
+        "champion": {
+          "id": 412,
+          "name": "Thresh",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Thresh.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 9,
+        "position": "middle",
+        "champion": {
+          "id": 103,
+          "name": "Ahri",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png"
+        },
+        "hover": null,
+        "isLocalPlayer": true,
+        "actingType": null
+      }
+    ],
+    "theirTeam": [
+      {
+        "cellId": 0,
+        "position": "",
+        "champion": {
+          "id": 64,
+          "name": "Lee Sin",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/LeeSin.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 1,
+        "position": "",
+        "champion": {
+          "id": 86,
+          "name": "Garen",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Garen.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 2,
+        "position": "",
+        "champion": {
+          "id": 51,
+          "name": "Caitlyn",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Caitlyn.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 3,
+        "position": "",
+        "champion": {
+          "id": 111,
+          "name": "Nautilus",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Nautilus.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      },
+      {
+        "cellId": 4,
+        "position": "",
+        "champion": {
+          "id": 238,
+          "name": "Zed",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Zed.png"
+        },
+        "hover": null,
+        "isLocalPlayer": false,
+        "actingType": null
+      }
+    ],
+    "myBans": [],
+    "theirBans": [],
+    "localAction": null
+  },
+  "picks": [],
+  "pickAdvice": {
+    "whyNot": null,
+    "confidence": null
+  },
+  "bans": [],
+  "hoverBans": null,
+  "myPick": {
+    "champion": {
+      "id": 103,
+      "name": "Ahri",
+      "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png"
+    },
+    "role": "middle",
+    "expectedWin": 0.5512788353152916,
+    "reasons": [
+      {
+        "text": "277 recent mid games, 60% win rate",
+        "negative": false
+      },
+      {
+        "text": "Mastery 10, 667k points, grades A+ A-",
+        "negative": false
+      },
+      {
+        "text": "Strong in mid in your rank: 52.1% win rate (1,900 games)",
+        "negative": false
+      },
+      {
+        "text": "Weak against their Lee Sin: 1 fewer wins per 100 (900 games)",
+        "negative": true
+      }
+    ],
+    "loadout": {
+      "games": 600,
+      "source": "Gold to Diamond",
+      "thinNote": null,
+      "page": {
+        "primary": {
+          "id": 8100,
+          "name": "Domination",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7200_Domination.png"
+        },
+        "secondary": {
+          "id": 8200,
+          "name": "Sorcery",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7202_Sorcery.png"
+        },
+        "runes": [
+          {
+            "id": 8112,
+            "name": "Electrocute",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Electrocute/Electrocute.png"
+          },
+          {
+            "id": 8139,
+            "name": "Taste of Blood",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png"
+          },
+          {
+            "id": 8140,
+            "name": "Grisly Mementos",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/GrislyMementos/GrislyMementos.png"
+          },
+          {
+            "id": 8106,
+            "name": "Ultimate Hunter",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/UltimateHunter/UltimateHunter.png"
+          },
+          {
+            "id": 8226,
+            "name": "Manaflow Band",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/ManaflowBand/ManaflowBand.png"
+          },
+          {
+            "id": 8210,
+            "name": "Transcendence",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/Transcendence/Transcendence.png"
+          }
+        ],
+        "shards": [
+          {
+            "id": 5011,
+            "name": "Health",
+            "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodshealthscalingicon.png"
+          },
+          {
+            "id": 5008,
+            "name": "Adaptive Force",
+            "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png"
+          },
+          {
+            "id": 5008,
+            "name": "Adaptive Force",
+            "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png"
+          }
+        ],
+        "reason": "Most successful common page: 53.0% win rate (360 games, 60% take it)",
+        "primaryTree": {
+          "style": {
+            "id": 8100,
+            "name": "Domination",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7200_Domination.png"
+          },
+          "rows": [
+            [
+              {
+                "id": 8112,
+                "name": "Electrocute",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/Electrocute/Electrocute.png"
+              },
+              {
+                "id": 8128,
+                "name": "Dark Harvest",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/DarkHarvest/DarkHarvest.png"
+              },
+              {
+                "id": 9923,
+                "name": "Hail of Blades",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/HailOfBlades/HailOfBlades.png"
+              }
+            ],
+            [
+              {
+                "id": 8126,
+                "name": "Cheap Shot",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/CheapShot/CheapShot.png"
+              },
+              {
+                "id": 8139,
+                "name": "Taste of Blood",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png"
+              },
+              {
+                "id": 8143,
+                "name": "Sudden Impact",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/SuddenImpact/SuddenImpact.png"
+              }
+            ],
+            [
+              {
+                "id": 8137,
+                "name": "Sixth Sense",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/SixthSense/SixthSense.png"
+              },
+              {
+                "id": 8140,
+                "name": "Grisly Mementos",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/GrislyMementos/GrislyMementos.png"
+              },
+              {
+                "id": 8141,
+                "name": "Deep Ward",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/DeepWard/DeepWard.png"
+              }
+            ],
+            [
+              {
+                "id": 8135,
+                "name": "Treasure Hunter",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/TreasureHunter/TreasureHunter.png"
+              },
+              {
+                "id": 8105,
+                "name": "Relentless Hunter",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/RelentlessHunter/RelentlessHunter.png"
+              },
+              {
+                "id": 8106,
+                "name": "Ultimate Hunter",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Domination/UltimateHunter/UltimateHunter.png"
+              }
+            ]
+          ]
+        },
+        "secondaryTree": {
+          "style": {
+            "id": 8200,
+            "name": "Sorcery",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/7202_Sorcery.png"
+          },
+          "rows": [
+            [
+              {
+                "id": 8224,
+                "name": "Axiom Arcanist",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/NullifyingOrb/Axiom_Arcanist.png"
+              },
+              {
+                "id": 8226,
+                "name": "Manaflow Band",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/ManaflowBand/ManaflowBand.png"
+              },
+              {
+                "id": 8275,
+                "name": "Nimbus Cloak",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/NimbusCloak/6361.png"
+              }
+            ],
+            [
+              {
+                "id": 8210,
+                "name": "Transcendence",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/Transcendence/Transcendence.png"
+              },
+              {
+                "id": 8234,
+                "name": "Celerity",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/Celerity/CelerityTemp.png"
+              },
+              {
+                "id": 8233,
+                "name": "Absolute Focus",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/AbsoluteFocus/AbsoluteFocus.png"
+              }
+            ],
+            [
+              {
+                "id": 8237,
+                "name": "Scorch",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/Scorch/Scorch.png"
+              },
+              {
+                "id": 8232,
+                "name": "Waterwalking",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/Waterwalking/Waterwalking.png"
+              },
+              {
+                "id": 8236,
+                "name": "Gathering Storm",
+                "iconUrl": "https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Sorcery/GatheringStorm/GatheringStorm.png"
+              }
+            ]
+          ]
+        },
+        "shardRows": {
+          "rows": [
+            [
+              {
+                "id": 5008,
+                "name": "Adaptive Force",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png"
+              },
+              {
+                "id": 5005,
+                "name": "Attack Speed",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsattackspeedicon.png"
+              },
+              {
+                "id": 5007,
+                "name": "Ability Haste",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodscdrscalingicon.png"
+              }
+            ],
+            [
+              {
+                "id": 5008,
+                "name": "Adaptive Force",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsadaptiveforceicon.png"
+              },
+              {
+                "id": 5010,
+                "name": "Move Speed",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodsmovementspeedicon.png"
+              },
+              {
+                "id": 5001,
+                "name": "Health Scaling",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodshealthplusicon.png"
+              }
+            ],
+            [
+              {
+                "id": 5011,
+                "name": "Health",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodshealthscalingicon.png"
+              },
+              {
+                "id": 5013,
+                "name": "Tenacity and Slow Resist",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodstenacityicon.png"
+              },
+              {
+                "id": 5001,
+                "name": "Health Scaling",
+                "iconUrl": "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/statmods/statmodshealthplusicon.png"
+              }
+            ]
+          ],
+          "chosen": [
+            -1,
+            0,
+            -1
+          ]
+        },
+        "winRate": 0.53,
+        "games": 360
+      },
+      "situationalRunes": [],
+      "spells": {
+        "spells": [
+          {
+            "id": 4,
+            "name": "Flash",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/spell/SummonerFlash.png"
+          },
+          {
+            "id": 14,
+            "name": "Ignite",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/spell/SummonerDot.png"
+          }
+        ],
+        "reason": "53.0% win rate (360 games, 60% take them)",
+        "winRate": 0.53,
+        "games": 360
+      },
+      "skills": {
+        "first": [
+          "Q",
+          "E",
+          "W"
+        ],
+        "order": [
+          "Q",
+          "W",
+          "E"
+        ],
+        "basic": [
+          "Q",
+          "W",
+          "E"
+        ],
+        "ult": "R",
+        "reason": "100% of players level up this way (600 games)",
+        "winRate": 0.52,
+        "games": 600
+      },
+      "starting": {
+        "items": [
+          {
+            "id": 1056,
+            "name": "Doran's Ring",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/1056.png"
+          },
+          {
+            "id": 2003,
+            "name": "Health Potion",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/2003.png"
+          }
+        ],
+        "counts": [
+          1,
+          2
+        ],
+        "reason": "100% of players start with this (600 games)",
+        "winRate": 0.52,
+        "games": 600
+      },
+      "quest": [],
+      "situational": [],
+      "laterPool": [],
+      "laterNote": null,
+      "boots": {
+        "top": {
+          "id": 3020,
+          "name": "Sorcerer's Shoes",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/3020.png",
+          "reasons": [
+            "100% of boots bought (366 games); +0.6 points vs what the game state predicted"
+          ],
+          "share": 1,
+          "winAdded": 0.006
+        },
+        "alternatives": []
+      },
+      "items": [
+        {
+          "slot": 1,
+          "minute": 11.31764705882353,
+          "top": {
+            "id": 6655,
+            "name": "Luden's Echo",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/6655.png",
+            "reasons": [
+              "58% buy it as item 1; it helps +1.4 points (348 games)"
+            ],
+            "share": 0.58,
+            "winAdded": 0.014
+          },
+          "alternatives": [
+            {
+              "id": 3118,
+              "name": "Malignance",
+              "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/3118.png",
+              "reasons": [
+                "27% buy it as item 1; it helps +0.4 points (162 games)"
+              ],
+              "share": 0.27,
+              "winAdded": 0.004
+            }
+          ]
+        },
+        {
+          "slot": 2,
+          "minute": 16.433823529411764,
+          "top": {
+            "id": 4645,
+            "name": "Shadowflame",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/4645.png",
+            "reasons": [
+              "44% buy it as item 2; it helps +0.9 points (264 games)"
+            ],
+            "share": 0.44,
+            "winAdded": 0.009
+          },
+          "alternatives": [
+            {
+              "id": 4646,
+              "name": "Stormsurge",
+              "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/4646.png",
+              "reasons": [
+                "31% buy it as item 2; it helps +0.6 points (186 games)"
+              ],
+              "share": 0.31,
+              "winAdded": 0.006
+            }
+          ]
+        },
+        {
+          "slot": 3,
+          "minute": 24.47945205479452,
+          "top": {
+            "id": 3157,
+            "name": "Zhonya's Hourglass",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/3157.png",
+            "reasons": [
+              "38% buy it as item 3; it helps +1.1 points (228 games)"
+            ],
+            "share": 0.38,
+            "winAdded": 0.011
+          },
+          "alternatives": [
+            {
+              "id": 3089,
+              "name": "Rabadon's Deathcap",
+              "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/3089.png",
+              "reasons": [
+                "35% buy it as item 3; it helps +0.8 points (210 games)"
+              ],
+              "share": 0.35,
+              "winAdded": 0.008
+            }
+          ]
+        },
+        {
+          "slot": 4,
+          "minute": 29,
+          "top": {
+            "id": 3135,
+            "name": "Void Staff",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/item/3135.png",
+            "reasons": [
+              "41% buy it as item 4; it helps +0.7 points (246 games)"
+            ],
+            "share": 0.41,
+            "winAdded": 0.007
+          },
+          "alternatives": []
+        }
+      ],
+      "commonPath": null,
+      "canImport": true
+    },
+    "importMessage": null,
+    "hovering": false,
+    "matchups": {
+      "against": [
+        {
+          "champion": {
+            "id": 238,
+            "name": "Zed",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Zed.png"
+          },
+          "role": "middle",
+          "lane": true,
+          "partner": false,
+          "winRate": 0.531,
+          "delta": 0.01724941629811738,
+          "games": 1240
+        },
+        {
+          "champion": {
+            "id": 64,
+            "name": "Lee Sin",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/LeeSin.png"
+          },
+          "role": "jungle",
+          "lane": false,
+          "partner": false,
+          "winRate": 0.514,
+          "delta": -0.012914603836831184,
+          "games": 900
+        },
+        {
+          "champion": {
+            "id": 86,
+            "name": "Garen",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Garen.png"
+          },
+          "role": "top",
+          "lane": false,
+          "partner": false,
+          "winRate": null,
+          "delta": null,
+          "games": 0
+        },
+        {
+          "champion": {
+            "id": 51,
+            "name": "Caitlyn",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Caitlyn.png"
+          },
+          "role": "bottom",
+          "lane": false,
+          "partner": false,
+          "winRate": null,
+          "delta": null,
+          "games": 0
+        },
+        {
+          "champion": {
+            "id": 111,
+            "name": "Nautilus",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Nautilus.png"
+          },
+          "role": "utility",
+          "lane": false,
+          "partner": false,
+          "winRate": null,
+          "delta": null,
+          "games": 0
+        }
+      ],
+      "with": [
+        {
+          "champion": {
+            "id": 122,
+            "name": "Darius",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Darius.png"
+          },
+          "role": "top",
+          "lane": false,
+          "partner": false,
+          "winRate": null,
+          "delta": null,
+          "games": 0
+        },
+        {
+          "champion": {
+            "id": 32,
+            "name": "Amumu",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Amumu.png"
+          },
+          "role": "jungle",
+          "lane": false,
+          "partner": false,
+          "winRate": 0.537,
+          "delta": -0.0019644557903349957,
+          "games": 640
+        },
+        {
+          "champion": {
+            "id": 222,
+            "name": "Jinx",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Jinx.png"
+          },
+          "role": "bottom",
+          "lane": false,
+          "partner": false,
+          "winRate": null,
+          "delta": null,
+          "games": 0
+        },
+        {
+          "champion": {
+            "id": 412,
+            "name": "Thresh",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Thresh.png"
+          },
+          "role": "utility",
+          "lane": false,
+          "partner": false,
+          "winRate": null,
+          "delta": null,
+          "games": 0
+        }
+      ]
+    },
+    "plan": [
+      "Lane: favoured into Zed (+1.7% vs what both usually win, 1,240 games)",
+      "Their damage is about 80% physical: armor pays off",
+      "Nautilus is their main engage: keep vision and don't group in narrow spaces",
+      "Your games vs Zed in this role: 34 won, 29 lost"
+    ]
+  },
+  "hoverPick": null,
+  "meta": {
+    "state": "ready",
+    "band": 2,
+    "patch": "16.19",
+    "matches": 21400,
+    "createdAt": 1791797264352,
+    "offline": false
+  },
+  "pickRole": "middle",
+  "enemyNotes": [
+    "80% physical damage",
+    "Nautilus is their engage"
+  ],
+  "laneOpponent": {
+    "role": "middle",
+    "champion": {
+      "id": 238,
+      "name": "Zed",
+      "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Zed.png"
+    }
+  },
+  "roles": [
+    {
+      "role": "middle",
+      "games": 598,
+      "winRate": 0.5551839464882943,
+      "score": 0.7529362614702189,
+      "enoughData": true,
+      "pool": [
+        {
+          "champion": {
+            "id": 103,
+            "name": "Ahri",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 277,
+          "winRate": 0.5992779783393501
+        },
+        {
+          "champion": {
+            "id": 245,
+            "name": "Ekko",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ekko.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 145,
+          "winRate": 0.5586206896551724
+        },
+        {
+          "champion": {
+            "id": 99,
+            "name": "Lux",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Lux.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 101,
+          "winRate": 0.45544554455445546
+        },
+        {
+          "champion": {
+            "id": 238,
+            "name": "Zed",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Zed.png"
+          },
+          "tier": "comfortable",
+          "tierLabel": "Comfortable",
+          "games": 75,
+          "winRate": 0.52
+        }
+      ],
+      "holes": [],
+      "coverage": {
+        "needs": [
+          {
+            "need": "magic",
+            "label": "Magic damage",
+            "gap": false
+          },
+          {
+            "need": "physical",
+            "label": "Physical damage",
+            "gap": false
+          },
+          {
+            "need": "frontline",
+            "label": "Frontline",
+            "gap": false
+          },
+          {
+            "need": "engage",
+            "label": "Crowd control",
+            "gap": false
+          }
+        ],
+        "covers": {
+          "99": [
+            "magic",
+            "engage"
+          ],
+          "103": [
+            "magic",
+            "engage"
+          ],
+          "238": [
+            "physical"
+          ],
+          "245": [
+            "magic"
+          ]
+        }
+      },
+      "nextStep": null,
+      "missing": null,
+      "noGaps": "No gap in your mid pool shows up in your losses.",
+      "also": null
+    },
+    {
+      "role": "top",
+      "games": 269,
+      "winRate": 0.5204460966542751,
+      "score": 0.6893437354487041,
+      "enoughData": true,
+      "pool": [
+        {
+          "champion": {
+            "id": 86,
+            "name": "Garen",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Garen.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 155,
+          "winRate": 0.5870967741935483
+        },
+        {
+          "champion": {
+            "id": 122,
+            "name": "Darius",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Darius.png"
+          },
+          "tier": "comfortable",
+          "tierLabel": "Comfortable",
+          "games": 114,
+          "winRate": 0.4298245614035088
+        }
+      ],
+      "holes": [],
+      "coverage": {
+        "needs": [
+          {
+            "need": "physical",
+            "label": "Physical damage",
+            "gap": false
+          },
+          {
+            "need": "frontline",
+            "label": "Frontline",
+            "gap": false
+          },
+          {
+            "need": "engage",
+            "label": "Crowd control",
+            "gap": false
+          }
+        ],
+        "covers": {
+          "86": [
+            "physical",
+            "frontline"
+          ],
+          "122": [
+            "physical"
+          ]
+        }
+      },
+      "nextStep": null,
+      "missing": null,
+      "noGaps": "No gap in your top pool shows up in your losses.",
+      "also": null
+    },
+    {
+      "role": "jungle",
+      "games": 133,
+      "winRate": 0.43609022556390975,
+      "score": 0.4991525764720185,
+      "enoughData": true,
+      "pool": [
+        {
+          "champion": {
+            "id": 32,
+            "name": "Amumu",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Amumu.png"
+          },
+          "tier": "comfortable",
+          "tierLabel": "Comfortable",
+          "games": 133,
+          "winRate": 0.43609022556390975
+        }
+      ],
+      "holes": [],
+      "coverage": {
+        "needs": [
+          {
+            "need": "physical",
+            "label": "Physical damage",
+            "gap": false
+          },
+          {
+            "need": "frontline",
+            "label": "Frontline",
+            "gap": false
+          },
+          {
+            "need": "engage",
+            "label": "Crowd control",
+            "gap": false
+          }
+        ],
+        "covers": {
+          "32": [
+            "physical",
+            "frontline"
+          ]
+        }
+      },
+      "nextStep": null,
+      "missing": null,
+      "noGaps": "No gap in your jungle pool shows up in your losses.",
+      "also": null
+    }
+  ],
+  "playstyle": [
+    {
+      "role": "middle",
+      "games": 598,
+      "axes": [
+        {
+          "axis": "earlyPressure",
+          "label": "Early pressure",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "turret plates: you 1.9, typical in your rank 2.0",
+          "games": 598,
+          "metrics": [
+            "turret plates: you 1.9, typical in your rank 2.0",
+            "lane lead at 14 min: you 0.4, typical in your rank 1.0",
+            "early lane lead: you 0.5, typical in your rank 1.0",
+            "biggest CS lead: you 10, typical in your rank 10",
+            "enemy jungle camps taken: you 1.5, typical in your rank 1.0",
+            "takedowns before 10 min: you 2.0, typical in your rank 2.0",
+            "early gank kills: you 0.0, typical in your rank 0.0"
+          ]
+        },
+        {
+          "axis": "fighting",
+          "label": "Fighting",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "kill participation: you 52%, typical in your rank 53%",
+          "games": 598,
+          "metrics": [
+            "kill participation: you 52%, typical in your rank 53%",
+            "solo kills: you 1.5, typical in your rank 1.0",
+            "share of team damage: you 23%, typical in your rank 23%",
+            "damage per minute: you 857, typical in your rank 826"
+          ]
+        },
+        {
+          "axis": "farming",
+          "label": "Farming",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "CS at 10 min: you 68, typical in your rank 67",
+          "games": 598,
+          "metrics": [
+            "CS at 10 min: you 68, typical in your rank 67",
+            "CS per minute: you 6.8, typical in your rank 6.7",
+            "gold per minute: you 390, typical in your rank 389",
+            "jungle CS at 10 min: you 0, typical in your rank 0"
+          ]
+        },
+        {
+          "axis": "vision",
+          "label": "Vision",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "wards cleared: you 4.2, typical in your rank 4.0",
+          "games": 598,
+          "metrics": [
+            "wards cleared: you 4.2, typical in your rank 4.0",
+            "control wards: you 1.5, typical in your rank 1.0",
+            "vision lead over your opponent: you 1%, typical in your rank 1%",
+            "vision score per minute: you 0.9, typical in your rank 0.8"
+          ]
+        },
+        {
+          "axis": "riskControl",
+          "label": "Staying alive",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "deaths to champions: you 4.3, typical in your rank 4.0",
+          "games": 598,
+          "metrics": [
+            "deaths to champions: you 4.3, typical in your rank 4.0",
+            "deaths per minute: you 0.15, typical in your rank 0.15",
+            "deaths before 14 min: you 1.0, typical in your rank 1.0"
+          ]
+        },
+        {
+          "axis": "objectives",
+          "label": "Objectives",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "heralds: you 0.9, typical in your rank 1.0",
+          "games": 598,
+          "metrics": [
+            "heralds: you 0.9, typical in your rank 1.0",
+            "barons: you 0.5, typical in your rank 0.0",
+            "turrets: you 2.4, typical in your rank 2.0",
+            "dragons: you 2.1, typical in your rank 2.0",
+            "objective damage per minute: you 306, typical in your rank 300"
+          ]
+        },
+        {
+          "axis": "roaming",
+          "label": "Roaming",
+          "score": 49,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "early kills in other lanes: you 0.9, typical in your rank 1.0",
+          "games": 598,
+          "metrics": [
+            "early kills in other lanes: you 0.9, typical in your rank 1.0",
+            "early takedowns in every lane: you 0.5, typical in your rank 1.0",
+            "enemy jungle taken vs opponent: you -0.1, typical in your rank 0.2"
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "label": "KDA",
+          "you": "5.6",
+          "typical": "3.3",
+          "tone": null,
+          "relative": 0.044653842190979676,
+          "title": "KDA: you 5.6, typical in your rank 3.3, from 598 games"
+        },
+        {
+          "label": "KP",
+          "you": "52%",
+          "typical": "53%",
+          "tone": null,
+          "relative": -0.05394971920467273,
+          "title": "kill participation: you 52%, typical in your rank 53%, from 598 games"
+        },
+        {
+          "label": "CS/min",
+          "you": "6.8",
+          "typical": "6.7",
+          "tone": null,
+          "relative": 0.012744130588072444,
+          "title": "CS per minute: you 6.8, typical in your rank 6.7, from 598 games"
+        },
+        {
+          "label": "Dmg/min",
+          "you": "857",
+          "typical": "826",
+          "tone": null,
+          "relative": 0.019475700830486886,
+          "title": "damage per minute: you 857, typical in your rank 826, from 598 games"
+        },
+        {
+          "label": "Vision/min",
+          "you": "0.9",
+          "typical": "0.8",
+          "tone": null,
+          "relative": 0.009901514496460484,
+          "title": "vision score per minute: you 0.9, typical in your rank 0.8, from 598 games"
+        },
+        {
+          "label": "Deaths/min",
+          "you": "0.15",
+          "typical": "0.15",
+          "tone": null,
+          "relative": 0.02693735698900923,
+          "title": "deaths per minute: you 0.15, typical in your rank 0.15, from 598 games"
+        }
+      ],
+      "summary": "You play close to your rank on every axis.",
+      "how": {
+        "games": 100,
+        "focus": "top 1 41% · top 3 85% · top 5 100%",
+        "champions": "4 champions",
+        "classes": [
+          {
+            "label": "Mage",
+            "share": 0.61
+          },
+          {
+            "label": "Assassin",
+            "share": 0.39
+          }
+        ],
+        "damage": [
+          {
+            "kind": "physical",
+            "label": "physical",
+            "share": 0.14985687355466037
+          },
+          {
+            "kind": "magic",
+            "label": "magic",
+            "share": 0.7949879317252003
+          },
+          {
+            "kind": "true",
+            "label": "true",
+            "share": 0.05515519472013935
+          }
+        ]
+      }
+    },
+    {
+      "role": "top",
+      "games": 269,
+      "axes": [
+        {
+          "axis": "earlyPressure",
+          "label": "Early pressure",
+          "score": 49,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "takedowns before 10 min: you 1.9, typical in your rank 2.0",
+          "games": 269,
+          "metrics": [
+            "takedowns before 10 min: you 1.9, typical in your rank 2.0",
+            "early lane lead: you 0.5, typical in your rank 0.0",
+            "enemy jungle camps taken: you 1.5, typical in your rank 1.0",
+            "lane lead at 14 min: you 0.5, typical in your rank 0.0",
+            "turret plates: you 2.0, typical in your rank 2.0",
+            "biggest CS lead: you 9, typical in your rank 9",
+            "early gank kills: you 0.0, typical in your rank 0.0"
+          ]
+        },
+        {
+          "axis": "fighting",
+          "label": "Fighting",
+          "score": 52,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "kill participation: you 55%, typical in your rank 52%",
+          "games": 269,
+          "metrics": [
+            "kill participation: you 55%, typical in your rank 52%",
+            "damage per minute: you 648, typical in your rank 658",
+            "share of team damage: you 23%, typical in your rank 23%",
+            "solo kills: you 1.5, typical in your rank 1.0"
+          ]
+        },
+        {
+          "axis": "farming",
+          "label": "Farming",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "gold per minute: you 397, typical in your rank 390",
+          "games": 269,
+          "metrics": [
+            "gold per minute: you 397, typical in your rank 390",
+            "CS at 10 min: you 67, typical in your rank 67",
+            "CS per minute: you 6.8, typical in your rank 6.8",
+            "jungle CS at 10 min: you 0, typical in your rank 0"
+          ]
+        },
+        {
+          "axis": "vision",
+          "label": "Vision",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "wards cleared: you 4.1, typical in your rank 4.0",
+          "games": 269,
+          "metrics": [
+            "wards cleared: you 4.1, typical in your rank 4.0",
+            "vision score per minute: you 0.9, typical in your rank 0.9",
+            "control wards: you 1.5, typical in your rank 2.0",
+            "vision lead over your opponent: you -1%, typical in your rank 0%"
+          ]
+        },
+        {
+          "axis": "riskControl",
+          "label": "Staying alive",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "deaths before 14 min: you 0.9, typical in your rank 1.0",
+          "games": 269,
+          "metrics": [
+            "deaths before 14 min: you 0.9, typical in your rank 1.0",
+            "deaths per minute: you 0.15, typical in your rank 0.16",
+            "deaths to champions: you 4.5, typical in your rank 5.0"
+          ]
+        },
+        {
+          "axis": "objectives",
+          "label": "Objectives",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "heralds: you 1.1, typical in your rank 1.0",
+          "games": 269,
+          "metrics": [
+            "heralds: you 1.1, typical in your rank 1.0",
+            "barons: you 0.5, typical in your rank 1.0",
+            "objective damage per minute: you 284, typical in your rank 285",
+            "turrets: you 2.4, typical in your rank 2.0",
+            "dragons: you 2.0, typical in your rank 2.0"
+          ]
+        },
+        {
+          "axis": "roaming",
+          "label": "Roaming",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "early kills in other lanes: you 1.1, typical in your rank 1.0",
+          "games": 269,
+          "metrics": [
+            "early kills in other lanes: you 1.1, typical in your rank 1.0",
+            "early takedowns in every lane: you 0.5, typical in your rank 1.0",
+            "enemy jungle taken vs opponent: you -0.1, typical in your rank -0.2"
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "label": "KDA",
+          "you": "5.0",
+          "typical": "3.3",
+          "tone": null,
+          "relative": 0.008285507215767485,
+          "title": "KDA: you 5.0, typical in your rank 3.3, from 269 games"
+        },
+        {
+          "label": "KP",
+          "you": "55%",
+          "typical": "52%",
+          "tone": "pos",
+          "relative": 0.10978520900273847,
+          "title": "kill participation: you 55%, typical in your rank 52%, from 269 games"
+        },
+        {
+          "label": "CS/min",
+          "you": "6.8",
+          "typical": "6.8",
+          "tone": null,
+          "relative": 0.025205967421871422,
+          "title": "CS per minute: you 6.8, typical in your rank 6.8, from 269 games"
+        },
+        {
+          "label": "Dmg/min",
+          "you": "648",
+          "typical": "658",
+          "tone": null,
+          "relative": -0.06208631696137057,
+          "title": "damage per minute: you 648, typical in your rank 658, from 269 games"
+        },
+        {
+          "label": "Vision/min",
+          "you": "0.9",
+          "typical": "0.9",
+          "tone": null,
+          "relative": 0.03510302102374396,
+          "title": "vision score per minute: you 0.9, typical in your rank 0.9, from 269 games"
+        },
+        {
+          "label": "Deaths/min",
+          "you": "0.15",
+          "typical": "0.16",
+          "tone": null,
+          "relative": 0.03002643254791293,
+          "title": "deaths per minute: you 0.15, typical in your rank 0.16, from 269 games"
+        }
+      ],
+      "summary": "You play close to your rank on every axis.",
+      "how": {
+        "games": 100,
+        "focus": "top 1 61% · top 3 100% · top 5 100%",
+        "champions": "2 champions",
+        "classes": [
+          {
+            "label": "Fighter",
+            "share": 1
+          }
+        ],
+        "damage": [
+          {
+            "kind": "physical",
+            "label": "physical",
+            "share": 0.7157909943439191
+          },
+          {
+            "kind": "magic",
+            "label": "magic",
+            "share": 0.2144545921990157
+          },
+          {
+            "kind": "true",
+            "label": "true",
+            "share": 0.0697544134570652
+          }
+        ]
+      }
+    },
+    {
+      "role": "jungle",
+      "games": 133,
+      "axes": [
+        {
+          "axis": "earlyPressure",
+          "label": "Early pressure",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "early lane lead: you 0.4, typical in your rank 0.0",
+          "games": 133,
+          "metrics": [
+            "early lane lead: you 0.4, typical in your rank 0.0",
+            "early gank kills: you 2.2, typical in your rank 2.0",
+            "enemy jungle camps taken: you 10.6, typical in your rank 10.0",
+            "lane lead at 14 min: you 0.5, typical in your rank 0.0",
+            "takedowns before 10 min: you 1.9, typical in your rank 2.0",
+            "turret plates: you 2.0, typical in your rank 2.0",
+            "biggest CS lead: you 10, typical in your rank 10"
+          ]
+        },
+        {
+          "axis": "fighting",
+          "label": "Fighting",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "kill participation: you 54%, typical in your rank 52%",
+          "games": 133,
+          "metrics": [
+            "kill participation: you 54%, typical in your rank 52%",
+            "damage per minute: you 655, typical in your rank 652",
+            "share of team damage: you 24%, typical in your rank 23%",
+            "solo kills: you 1.5, typical in your rank 2.0"
+          ]
+        },
+        {
+          "axis": "farming",
+          "label": "Farming",
+          "score": 48,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "CS at 10 min: you 5, typical in your rank 5",
+          "games": 133,
+          "metrics": [
+            "CS at 10 min: you 5, typical in your rank 5",
+            "gold per minute: you 387, typical in your rank 391",
+            "jungle CS at 10 min: you 54, typical in your rank 55",
+            "CS per minute: you 6.8, typical in your rank 6.8"
+          ]
+        },
+        {
+          "axis": "vision",
+          "label": "Vision",
+          "score": 48,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "wards cleared: you 3.5, typical in your rank 4.0",
+          "games": 133,
+          "metrics": [
+            "wards cleared: you 3.5, typical in your rank 4.0",
+            "vision lead over your opponent: you -1%, typical in your rank 0%",
+            "vision score per minute: you 0.9, typical in your rank 0.9",
+            "control wards: you 1.5, typical in your rank 1.0"
+          ]
+        },
+        {
+          "axis": "riskControl",
+          "label": "Staying alive",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "deaths before 14 min: you 1.1, typical in your rank 1.0",
+          "games": 133,
+          "metrics": [
+            "deaths before 14 min: you 1.1, typical in your rank 1.0",
+            "deaths per minute: you 0.16, typical in your rank 0.15",
+            "deaths to champions: you 4.5, typical in your rank 4.0"
+          ]
+        },
+        {
+          "axis": "objectives",
+          "label": "Objectives",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "heralds: you 1.2, typical in your rank 1.0",
+          "games": 133,
+          "metrics": [
+            "heralds: you 1.2, typical in your rank 1.0",
+            "dragons: you 2.2, typical in your rank 2.0",
+            "turrets: you 2.3, typical in your rank 3.0",
+            "barons: you 0.5, typical in your rank 1.0",
+            "objective damage per minute: you 1389, typical in your rank 1373"
+          ]
+        },
+        {
+          "axis": "roaming",
+          "label": "Roaming",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "enemy jungle taken vs opponent: you -0.1, typical in your rank 0.0",
+          "games": 133,
+          "metrics": [
+            "enemy jungle taken vs opponent: you -0.1, typical in your rank 0.0",
+            "early kills in other lanes: you 1.0, typical in your rank 1.0",
+            "early takedowns in every lane: you 0.5, typical in your rank 0.0"
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "label": "KDA",
+          "you": "5.5",
+          "typical": "3.3",
+          "tone": null,
+          "relative": -0.03319861239550703,
+          "title": "KDA: you 5.5, typical in your rank 3.3, from 133 games"
+        },
+        {
+          "label": "KP",
+          "you": "54%",
+          "typical": "52%",
+          "tone": null,
+          "relative": 0.05496814957295326,
+          "title": "kill participation: you 54%, typical in your rank 52%, from 133 games"
+        },
+        {
+          "label": "CS/min",
+          "you": "6.8",
+          "typical": "6.8",
+          "tone": null,
+          "relative": 0.016469310404733317,
+          "title": "CS per minute: you 6.8, typical in your rank 6.8, from 133 games"
+        },
+        {
+          "label": "Dmg/min",
+          "you": "655",
+          "typical": "652",
+          "tone": null,
+          "relative": -0.03568756012292862,
+          "title": "damage per minute: you 655, typical in your rank 652, from 133 games"
+        },
+        {
+          "label": "Obj dmg/min",
+          "you": "1389",
+          "typical": "1373",
+          "tone": null,
+          "relative": -0.021114025869954034,
+          "title": "objective damage per minute: you 1389, typical in your rank 1373, from 133 games"
+        },
+        {
+          "label": "Deaths/min",
+          "you": "0.16",
+          "typical": "0.15",
+          "tone": null,
+          "relative": 0.008124492024740748,
+          "title": "deaths per minute: you 0.16, typical in your rank 0.15, from 133 games"
+        }
+      ],
+      "summary": "You play close to your rank on every axis.",
+      "how": {
+        "games": 100,
+        "focus": "top 1 100% · top 3 100% · top 5 100%",
+        "champions": "1 champion",
+        "classes": [
+          {
+            "label": "Tank",
+            "share": 1
+          }
+        ],
+        "damage": [
+          {
+            "kind": "physical",
+            "label": "physical",
+            "share": 0.7309729945142502
+          },
+          {
+            "kind": "magic",
+            "label": "magic",
+            "share": 0.19876385011644782
+          },
+          {
+            "kind": "true",
+            "label": "true",
+            "share": 0.07026315536930193
+          }
+        ]
+      }
+    }
+  ],
+  "side": null,
+  "lastGame": {
+    "champion": {
+      "id": 86,
+      "name": "Garen",
+      "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Garen.png"
+    },
+    "role": "top",
+    "lockedAt": 1791791903919,
+    "endedAt": 1791793678919,
+    "minutes": 30,
+    "result": "win",
+    "shown": [],
+    "verdict": "",
+    "followed": false,
+    "lines": [],
+    "terms": [],
+    "prediction": null,
+    "focus": {
+      "label": "Control wards",
+      "value": "3",
+      "target": "1.8",
+      "met": true
+    }
+  },
+  "lastGamePending": false,
+  "queuePreview": null,
+  "focus": {
+    "label": "Control wards",
+    "title": "More control wards",
+    "goalText": "1.8 or more",
+    "metLine": "Goal met: 1.8 or more",
+    "missedLine": "Goal not met: 1.8 or more",
+    "averageLine": "Your average is 1.6.",
+    "streak": "6 of your last 10 met it, the last 3 in a row",
+    "goalHint": "Your next step: 50% of the way to the average",
+    "on": "Garen · Top",
+    "you": 1.6,
+    "target": 1.8181818181818183,
+    "typical": 2,
+    "youText": "1.6",
+    "targetText": "1.8",
+    "typicalText": "2.0",
+    "typicalLine": "Typical top player in your games: 2.0",
+    "lowerIsBetter": false,
+    "checkGames": 10,
+    "recent": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true
+    ],
+    "why": "A control ward shows and disables enemy wards near it until it's killed",
+    "whyHover": "In your games, top players above typical here won 2 more games per 100 (a link, not a cause)",
+    "tips": [
+      "Buy one control ward on your first back and put it in river or tri-brush."
+    ],
+    "met": []
+  },
+  "newChamps": [
+    {
+      "role": "middle",
+      "picks": [
+        {
+          "champion": {
+            "id": 84,
+            "name": "Akali",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Akali.png"
+          },
+          "like": null,
+          "winRate": 0.4990995475113122,
+          "games": 1500,
+          "ease": 3,
+          "easeLabel": "Hard",
+          "owned": null,
+          "reasons": []
+        },
+        {
+          "champion": {
+            "id": 157,
+            "name": "Yasuo",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Yasuo.png"
+          },
+          "like": null,
+          "winRate": 0.49588186813186813,
+          "games": 2600,
+          "ease": 3,
+          "easeLabel": "Hard",
+          "owned": null,
+          "reasons": []
+        }
+      ],
+      "learning": null,
+      "plan": "Try Akali in 3 to 5 Normal Draft games.",
+      "planLearn": {
+        "stage": "First game on it",
+        "focus": {
+          "text": "Keep your deaths before 14 min at 0.8 or fewer, your usual",
+          "recent": []
+        },
+        "lines": [
+          "Good first matchups: Ahri (+3.6%)"
+        ]
+      }
+    },
+    {
+      "role": "top",
+      "picks": [
+        {
+          "champion": {
+            "id": 54,
+            "name": "Malphite",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Malphite.png"
+          },
+          "like": null,
+          "winRate": 0.5182627218934911,
+          "games": 1100,
+          "ease": 1,
+          "easeLabel": "Easy",
+          "owned": null,
+          "reasons": []
+        },
+        {
+          "champion": {
+            "id": 266,
+            "name": "Aatrox",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Aatrox.png"
+          },
+          "like": null,
+          "winRate": 0.4974119658119658,
+          "games": 1600,
+          "ease": 2,
+          "easeLabel": "Medium",
+          "owned": null,
+          "reasons": []
+        }
+      ],
+      "learning": null,
+      "plan": "Try Malphite in 3 to 5 Normal Draft games.",
+      "planLearn": {
+        "stage": "First game on it",
+        "focus": {
+          "text": "Your top goal applies here too: control wards 1.8 or more",
+          "recent": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "role": "jungle",
+      "picks": [
+        {
+          "champion": {
+            "id": 59,
+            "name": "Jarvan IV",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/JarvanIV.png"
+          },
+          "like": null,
+          "winRate": 0.5045471698113208,
+          "games": 1500,
+          "ease": 2,
+          "easeLabel": "Medium",
+          "owned": null,
+          "reasons": []
+        },
+        {
+          "champion": {
+            "id": 64,
+            "name": "Lee Sin",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/LeeSin.png"
+          },
+          "like": null,
+          "winRate": 0.487165457184325,
+          "games": 2400,
+          "ease": 2,
+          "easeLabel": "Medium",
+          "owned": null,
+          "reasons": []
+        }
+      ],
+      "learning": null,
+      "plan": "Try Jarvan IV in 3 to 5 Normal Draft games.",
+      "planLearn": {
+        "stage": "First game on it",
+        "focus": {
+          "text": "Keep your jungle CS at 10 min at 54 or more, your usual",
+          "recent": []
+        },
+        "lines": []
+      }
+    }
+  ],
+  "month": {
+    "period": "Sep 12 – Oct 12",
+    "games": 104,
+    "steadyNote": "bold = a real change over 104 games",
+    "rank": null,
+    "winRate": {
+      "from": 0.5192307692307693,
+      "to": 0.5576923076923077,
+      "text": "win rate, up 4 points on your 104 games before"
+    },
+    "gamesBefore": 104,
+    "gamesBeforeText": "104 games before",
+    "roles": [
+      {
+        "role": "Mid",
+        "share": 0.6153846153846154,
+        "text": "Mid 62%"
+      },
+      {
+        "role": "Top",
+        "share": 0.25,
+        "text": "Top 25%"
+      },
+      {
+        "role": "Jungle",
+        "share": 0.1346153846153846,
+        "text": "Jungle 13%"
+      }
+    ],
+    "role": "Mid",
+    "axes": [
+      {
+        "label": "Early pressure",
+        "from": 49,
+        "to": 49,
+        "changed": "steady"
+      },
+      {
+        "label": "Fighting",
+        "from": 51,
+        "to": 48,
+        "changed": "steady"
+      },
+      {
+        "label": "Farming",
+        "from": 53,
+        "to": 51,
+        "changed": "steady"
+      },
+      {
+        "label": "Vision",
+        "from": 56,
+        "to": 50,
+        "changed": "steady"
+      },
+      {
+        "label": "Staying alive",
+        "from": 55,
+        "to": 49,
+        "changed": "steady"
+      },
+      {
+        "label": "Objectives",
+        "from": 50,
+        "to": 50,
+        "changed": "steady"
+      },
+      {
+        "label": "Roaming",
+        "from": 51,
+        "to": 46,
+        "changed": "steady"
+      }
+    ],
+    "stats": [
+      {
+        "label": "KDA",
+        "title": "KDA",
+        "from": "7.0",
+        "to": "5.4",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "KP",
+        "title": "Kill participation",
+        "from": "50%",
+        "to": "52%",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "CS/min",
+        "title": "CS per minute",
+        "from": "6.9",
+        "to": "6.8",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "Dmg/min",
+        "title": "Damage per minute",
+        "from": "908",
+        "to": "833",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "Deaths/min",
+        "title": "Deaths per minute",
+        "from": "0.14",
+        "to": "0.16",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "Vision/min",
+        "title": "Vision score per minute",
+        "from": "0.9",
+        "to": "0.8",
+        "changed": "steady",
+        "tone": null
+      }
+    ],
+    "focusLine": "Top 3: 56% of games, 60% before",
+    "champions": [
+      {
+        "champion": {
+          "id": 103,
+          "name": "Ahri",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ahri.png"
+        },
+        "games": 27,
+        "winRate": 0.5925925925925926,
+        "change": -0.007407407407407418
+      },
+      {
+        "champion": {
+          "id": 245,
+          "name": "Ekko",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Ekko.png"
+        },
+        "games": 16,
+        "winRate": 0.5,
+        "change": -0.06589147286821706
+      },
+      {
+        "champion": {
+          "id": 86,
+          "name": "Garen",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.20.1/img/champion/Garen.png"
+        },
+        "games": 15,
+        "winRate": 0.6,
+        "change": 0.014285714285714235
+      }
+    ],
+    "focus": {
+      "met": [],
+      "current": "Now: Control wards, 1.6 → 1.8"
+    }
+  },
+  "session": null,
+  "notices": [],
+  "docked": true,
+  "roleLabels": {
+    "top": "top",
+    "jungle": "jungle",
+    "middle": "mid",
+    "bottom": "bot",
+    "utility": "support"
+  },
+  "copy": {
+    "connect.title": "Connect to your coach",
+    "connect.intro": "Picks from your own pool, with the reasons.",
+    "connect.code": "Invite code",
+    "connect.found": "League client found:",
+    "connect.noClient": "Open the League client and log in first.",
+    "connect.server": "Server:",
+    "connect.change": "Change",
+    "connect.step1.lead": "In champ select",
+    "connect.step1": "it suggests bans and picks you already play.",
+    "connect.step2.lead": "When you lock in",
+    "connect.step2": "import runes, spells and items in one click.",
+    "connect.step3.lead": "After the game",
+    "connect.step3": "see what decided it and one goal to work on.",
+    "pick.head": "We suggest",
+    "queue.tab": "Next game",
+    "queue.context": "blind pick until champ select",
+    "queue.primary": "Your first role",
+    "queue.secondary": "Your second role",
+    "pick.ifNot": "If not {champion}",
+    "pick.chance": "win chance",
+    "pick.record": "{tier} · {games} {games|game|games} · {wr} WR",
+    "build.head": "Build path",
+    "build.note": "pick rate · ★ adds the most",
+    "build.noteThin": "most common path",
+    "build.noteRate": "pick rate",
+    "build.start": "Start",
+    "build.boots": "Boots",
+    "build.item": "Item {n}",
+    "build.or": "or",
+    "build.noAlt": "No other common pick",
+    "build.minutes": "{n} min",
+    "build.vsTeam": "Vs this team",
+    "build.quest": "Role quest",
+    "import.all": "Import runes, spells & items",
+    "import.runes": "Import runes & spells",
+    "import.items": "Import item set",
+    "import.busy": "Importing…",
+    "matchups.tab": "Matchups & plan",
+    "matchups.note": "vs what both champions predict",
+    "matchups.yourLane": "your lane",
+    "matchups.partner": "your lane partner",
+    "matchups.noGames": "No games yet with {names}",
+    "matchups.none": "No games yet",
+    "plan.head": "Game plan",
+    "plan.empty": "The plan needs the live meta for your rank and your lane opponent's pick.",
+    "matchups.against": "Against their team",
+    "matchups.with": "With your team",
+    "matchups.empty": "Matchups need the live meta for your rank.",
+    "loadout.none": "No build data for {champion} in this role yet.",
+    "loadout.source": "From {games} games in {source}",
+    "loadout.rough": "rough guide",
+    "build.later": "Later: pick by situation",
+    "matchups.open": "{roles}: not picked yet",
+    "matchups.source": "Matchups from {games} recent ranked games in your rank.",
+    "last.decided": "What decided the draft",
+    "last.goal": "Your goal",
+    "last.thisGame": "this game",
+    "last.yourAverage": "your average",
+    "last.next": "Next game",
+    "last.pending": "Your last game shows here once Riot publishes it, usually within a few minutes.",
+    "last.lockedChance": "{chance} when you locked in",
+    "last.goalIs": "Goal: {goal}",
+    "style.dashed": "dashed = rank average",
+    "style.numbers": "Your numbers vs your rank",
+    "style.numbersNote": "Right of the line is better, even for deaths.",
+    "style.legend": "● you · | rank average",
+    "month.champions": "Champions this month",
+    "month.style": "Your {role} style, before → now",
+    "month.average": "○ before · ● now · | rank average",
+    "month.more": "+{n} more",
+    "month.goalsMet": "Goals met: {first}",
+    "month.goalsMore": "and {n} more",
+    "pool.legend": "● covers it · ○ doesn’t. Rusty: no games lately.",
+    "pool.next": "Your next step",
+    "pool.seeNew": "See new champions"
+  },
+  "filledNote": null
+}

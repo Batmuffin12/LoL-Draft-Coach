@@ -45,7 +45,7 @@ export interface CollectResult {
 }
 
 /** Drops `challenges` fields the engine doesn't read, to keep collected matches small. */
-export function trimChallenges(summary: MatchSummary, keep: ReadonlySet<string>): MatchSummary {
+function trimChallenges(summary: MatchSummary, keep: ReadonlySet<string>): MatchSummary {
   return {
     ...summary,
     participants: summary.participants.map((p) => ({

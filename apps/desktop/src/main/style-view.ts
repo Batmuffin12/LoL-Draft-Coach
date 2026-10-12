@@ -1,4 +1,5 @@
-import { formatMetric, metricLabel, metricShort, renderReason, type ExplainConfig, type MetricResult, type SideSplit, type StyleProfile } from "@ldc/engine";
+import { computePlaystyle, formatMetric, metricLabel, metricShort, playstyleRoles, renderReason, styleProfile, type EngineConfig, type ExplainConfig, type MetricReference, type MetricResult, type SideSplit, type StyleProfile } from "@ldc/engine";
+import type { ChampionId, Position, UserMatch } from "@ldc/shared";
 import type { NumberView, PlaystyleView } from "../shared/view";
 
 /** One metric as a sentence:"CS at 10 min: you 56, typical in your rank 61". */
@@ -83,4 +84,48 @@ export function styleSummary(axes: { axis: string; level: "high" | "mid" | "low"
     out.push(t.charAt(0).toUpperCase() + t.slice(1));
   }
   return out.length ? out.join(" ") : say("style.summary.even", {});
+}
+
+/**
+ * Playstyle per role (lobby Style tab), for your three most played roles: axes as percentiles against
+ * others in the role, the headline numbers behind them, and how you play the role (pool focus, classes, damage).
+ */
+export function playstyleViews(
+  matches: UserMatch[],
+  now: number,
+  engine: EngineConfig,
+  explain: ExplainConfig,
+  references: (role: Position) => Record<string, MetricReference> | undefined,
+  tagsOf: (id: ChampionId) => string[] | undefined,
+): PlaystyleView[] {
+  const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
+  const views: PlaystyleView[] = [];
+  for (const role of playstyleRoles(matches, engine.playstyle).slice(0, 3)) {
+    const refs = references(role);
+    const ps = computePlaystyle(matches, role, now, engine.playstyle, refs);
+    if (!ps) continue;
+    const profile = engine.style ? styleProfile(matches, role, now, { playstyle: engine.playstyle, style: engine.style }, tagsOf, refs) : null;
+    views.push({
+      role,
+      games: ps.games,
+      axes: ps.axes.map((a) => {
+        const m = a.metrics[0];
+        const lv = level(a.score);
+        return {
+          axis: a.axis,
+          label: explain.axes[a.axis] ?? a.axis,
+          score: Math.round(a.score * 100),
+          level: lv,
+          levelLabel: renderReason({ id: `playstyle.level.${lv}`, slots: {} }, explain.templates, String),
+          detail: m ? metricSentence(m, explain) : null,
+          games: a.games,
+          metrics: a.metrics.map((x) => metricSentence(x, explain)),
+        };
+      }),
+      numbers: profile && engine.style ? numberViews(profile.headline, explain, engine.style.toneGap) : [],
+      summary: styleSummary(ps.axes.map((a) => ({ axis: a.axis, level: level(a.score) })), explain.templates),
+      how: profile ? howView(profile, explain) : null,
+    });
+  }
+  return views;
 }

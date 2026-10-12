@@ -1,15 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import type { ViewState } from "../shared/view";
 import { ChampSelectScreen } from "./screens/ChampSelectScreen";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
 import { setCopy, setRoleLabels } from "./format";
+import { perfCommitted, perfReceived } from "./perf";
 
 /** Picks the screen for the moment: connect, champ select (ban or pick), locked in, or the lobby. */
 export function App() {
   const [state, setState] = useState<ViewState | null>(null);
-  useEffect(() => window.coach.onState(setState), []);
+  useEffect(
+    () =>
+      window.coach.onState((s) => {
+        perfReceived(s);
+        setState(s);
+      }),
+    [],
+  );
+  // Dev aid LDC_PERF: when each state was committed and painted (does nothing otherwise).
+  useLayoutEffect(() => perfCommitted(state), [state]);
 
   if (!state) return <div className="window loading">Starting…</div>;
   setRoleLabels(state.roleLabels);

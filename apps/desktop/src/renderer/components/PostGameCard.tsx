@@ -3,7 +3,7 @@ import { cx, pct, positionLabel, signedOrDash, t, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** "12 min ago", "3 h ago", "yesterday", "4 days ago". */
-export function ago(at: number, now: number): string {
+function ago(at: number, now: number): string {
   const min = Math.max(0, Math.round((now - at) / 60_000));
   if (min < 60) return `${min} min ago`;
   const h = Math.round(min / 60);

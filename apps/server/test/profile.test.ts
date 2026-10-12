@@ -1,7 +1,9 @@
+import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { MatchSchema } from "@ldc/riot-api";
 import { createApp } from "../src/app";
-import { createInvite } from "../src/accounts";
+import { createInvite, userByToken } from "../src/accounts";
+import { loadProfile, PROFILE_IDS_MAX, profileJson } from "../src/profile";
 import { openDb } from "../src/db";
 import { findConfigDir, loadServerConfig } from "../src/config";
 import { SyncScheduler } from "../src/sync-scheduler";
@@ -57,7 +59,7 @@ function setup() {
     return body.token;
   };
   const get = (path: string, token: string, method = "GET") => app.request(path, { method, headers: { authorization: `Bearer ${token}` } });
-  return { app, sync, register, get };
+  return { app, db, sync, register, get };
 }
 
 describe("GET /me/profile", () => {
@@ -90,6 +92,60 @@ describe("GET /me/profile", () => {
     expect(body.matches).toHaveLength(1);
     expect(body.matchIds).toEqual(["EUW1_3", "EUW1_2"]);
     expect((await get("/me/profile?since=yesterday", token)).status).toBe(400);
+  });
+
+  it("sends the same JSON as the profile object, matches included as stored", async () => {
+    const { db, register } = setup();
+    const token = await register("Ofek#EUW");
+    const user = userByToken(db, token)!;
+    for (const since of [undefined, NOW - 90 * 60_000]) {
+      for (const opts of [{}, { ids: ["EUW1_2"], timelines: true }]) {
+        const extra = { sync: { state: "idle" } };
+        expect(profileJson(db, user, since, NOW, extra, opts)).toBe(JSON.stringify({ ...loadProfile(db, user, since, NOW, opts), ...extra }));
+      }
+    }
+  });
+
+  it("is the same JSON gzipped, and new advice shows", async () => {
+    const { app, register } = setup();
+    const token = await register("Ofek#EUW");
+    const gz = async () => {
+      const res = await app.request("/me/profile", { headers: { authorization: `Bearer ${token}`, "accept-encoding": "gzip" } });
+      expect(res.headers.get("content-encoding")).toBe("gzip");
+      return JSON.parse(gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8")) as { advice: unknown[]; matches: unknown[] };
+    };
+    const first = await gz();
+    expect(await gz()).toEqual(first);
+    expect(first.matches).toHaveLength(2);
+    const record = { gameId: 3, queueId: 420, role: "middle", band: 2, lockedAt: NOW - HOUR, pick: { championId: 100, expectedWin: 0.5, terms: [] }, shown: [] };
+    const post = await app.request("/advice", { method: "POST", body: JSON.stringify(record), headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
+    expect(post.status).toBe(204);
+    expect((await gz()).advice).toHaveLength(1);
+  });
+
+  it("adds named matches to ?since (own ones only) and lists the matches with a complete timeline", async () => {
+    const { db, register, get } = setup();
+    const token = await register("Ofek#EUW");
+    await register("Friend#EUW");
+    db.$client.prepare("UPDATE matches SET summary = json_set(summary, '$.timeline', json('{\"monsters\":[]}')) WHERE match_id = 'EUW1_2'").run();
+    type Body = { matches: { match: { matchId: string } }[]; matchIds: string[]; timelineIds?: string[] };
+    const since = NOW - 90 * 60_000;
+    const body = (await (await get(`/me/profile?since=${since}&ids=EUW1_2,EUW1_1&timelines=1`, token)).json()) as Body;
+    // EUW1_3 is newer than since, EUW1_2 is asked for; EUW1_1 is the friend's and never shown.
+    expect(body.matches.map((m) => m.match.matchId)).toEqual(["EUW1_3", "EUW1_2"]);
+    expect(body.timelineIds).toEqual(["EUW1_2"]);
+    // Without the new parameters the response is as before (no timelineIds).
+    expect(((await (await get(`/me/profile?since=${since}`, token)).json()) as Body).timelineIds).toBeUndefined();
+  });
+
+  it("refuses too many or malformed match ids", async () => {
+    const { app, register, get } = setup();
+    const token = await register("Ofek#EUW");
+    const many = Array.from({ length: PROFILE_IDS_MAX + 1 }, (_, i) => `EUW1_${i}`).join(",");
+    expect((await get(`/me/profile?since=0&ids=${many}`, token)).status).toBe(400);
+    expect((await get("/me/profile?since=0&ids=EUW1_1;DROP", token)).status).toBe(400);
+    expect((await get("/me/profile?timelines=yes", token)).status).toBe(400);
+    expect((await app.request("/me/profile?ids=EUW1_1")).status).toBe(401);
   });
 
   it("is compressed when the client accepts gzip", async () => {

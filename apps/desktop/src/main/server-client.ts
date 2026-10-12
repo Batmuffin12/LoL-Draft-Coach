@@ -54,6 +54,8 @@ const ProfileSchema = z.looseObject({
   advice: z.array(AdviceRecordSchema).default([]),
   // Your rank per day (servers before 0.7 don't send it).
   rankHistory: z.array(z.looseObject({ day: z.string(), queueType: z.string(), tier: z.string(), rank: z.string().nullable() })).default([]),
+  // Matches with a complete timeline, when asked for (?timelines=1; servers before 0.8 don't send it).
+  timelineIds: z.array(z.string()).optional(),
   sync: SyncStateSchema,
 });
 type Parsed = z.infer<typeof ProfileSchema>;
@@ -65,6 +67,7 @@ export interface ServerProfile {
   matchIds: string[];
   advice: AdviceRecord[];
   rankHistory: { day: string; queueType: string; tier: string; rank: string | null }[];
+  timelineIds?: string[];
   sync: ServerSyncState;
 }
 
@@ -237,8 +240,17 @@ export class ServerClient {
     return { token: r.token, riotId: r.user.riotId };
   }
 
-  async profile(since?: number): Promise<ServerProfile> {
-    const r = await this.request("GET", `/me/profile${since !== undefined ? `?since=${since}` : ""}`, ProfileSchema);
+  /**
+   * The player's profile: every match, or with `since` only newer ones (plus `ids` by name). `timelines`
+   * asks which matches have a complete timeline (to notice a stored match the server has updated since).
+   */
+  async profile(since?: number, opts: { ids?: string[]; timelines?: boolean } = {}): Promise<ServerProfile> {
+    const query = new URLSearchParams();
+    if (since !== undefined) query.set("since", String(since));
+    if (opts.ids?.length) query.set("ids", opts.ids.join(","));
+    if (opts.timelines) query.set("timelines", "1");
+    const q = query.toString().replace(/%2C/g, ",");
+    const r = await this.request("GET", `/me/profile${q ? `?${q}` : ""}`, ProfileSchema);
     return r as unknown as ServerProfile;
   }
 

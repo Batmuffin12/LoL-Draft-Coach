@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -177,6 +177,96 @@ describe("ServerProfileSource against the real server API", () => {
     await s.load({ gameName: "Me", tagLine: "EUW" }, { bandFromApi: false });
     await s.register("coach.example", "AAAA-BBBB-CCCC");
     expect(s.account.message).toMatch(/Can't reach the coach server at https:\/\/coach.example/);
+  });
+});
+
+describe("ServerProfileSource match cache (kept on disk between starts)", () => {
+  const ME = { gameName: "Me", tagLine: "EUW" };
+  const history = { ...config.app.history, timelineCount: 0 };
+
+  /** A source with its match cache in `dir`; `edit` may change the server's responses. */
+  function cached(server: ReturnType<typeof startServer>, dir: string, edit?: (path: string, body: Record<string, unknown>) => void) {
+    const paths: string[] = [];
+    const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input));
+      paths.push(url.pathname + url.search);
+      const res = await server.fetchFn(input, init);
+      if (!edit || url.pathname !== "/me/profile" || !res.ok) return res;
+      const body = (await res.json()) as Record<string, unknown>;
+      edit(url.pathname, body);
+      return Response.json(body);
+    }) as typeof fetch;
+    const s = new ServerProfileSource({ accounts: new AccountStore(join(dir, "account.json"), box), defaultServerUrl: BASE, fetch: fetchFn, pollMs: 5, cacheFile: join(dir, "matches.json") });
+    let games = -1;
+    s.on("profile", (p) => (games = p.games.length));
+    return { s, paths, games: () => games, profileCalls: () => paths.filter((p) => p.startsWith("/me/profile")) };
+  }
+
+  /** Registers (the whole history comes down once) and waits for the cache file. */
+  async function firstStart(server: ReturnType<typeof startServer>) {
+    const dir = tmp("ldc-cache-");
+    const a = cached(server, dir);
+    await a.s.init();
+    await a.s.load(ME, { bandFromApi: false });
+    await a.s.register(BASE, server.invite());
+    expect(a.games()).toBe(23);
+    await waitFor(() => existsSync(join(dir, "matches.json")));
+    return { dir, first: a };
+  }
+  const cacheOf = (dir: string) => JSON.parse(readFileSync(join(dir, "matches.json"), "utf8")) as { riotId: string; matches: { match: { matchId: string; timeline?: unknown } }[] };
+
+  it("asks only for new games on the next start, with the same profile", async () => {
+    const server = startServer(history);
+    const { dir } = await firstStart(server);
+    expect(cacheOf(dir)).toMatchObject({ riotId: "Me#EUW" });
+    const b = cached(server, dir);
+    await b.s.init();
+    await b.s.load(ME, { bandFromApi: false });
+    expect(b.games()).toBe(23);
+    expect(b.profileCalls()).toHaveLength(1);
+    expect(b.profileCalls()[0]).toMatch(/since=\d+&timelines=1$/);
+  });
+
+  it("asks by name for a game the cache lacks (e.g. an older game loaded in the background)", async () => {
+    const server = startServer(history);
+    const { dir } = await firstStart(server);
+    const c = cacheOf(dir);
+    const dropped = c.matches.at(-1)!.match.matchId;
+    writeFileSync(join(dir, "matches.json"), JSON.stringify({ ...c, matches: c.matches.slice(0, -1) }));
+    const b = cached(server, dir);
+    await b.s.init();
+    await b.s.load(ME, { bandFromApi: false });
+    expect(b.games()).toBe(23);
+    expect(b.profileCalls().at(-1)).toContain(`ids=${dropped}`);
+  });
+
+  it("asks again for a game the server has given a timeline since", async () => {
+    const server = startServer(history);
+    const { dir } = await firstStart(server);
+    const id = cacheOf(dir).matches[0]!.match.matchId;
+    server.db.$client.prepare(`UPDATE matches SET summary = json_set(summary, '$.timeline', json('{"gold":[],"items":[],"skills":[],"monsters":[]}')) WHERE match_id = ?`).run(id);
+    const b = cached(server, dir);
+    await b.s.init();
+    await b.s.load(ME, { bandFromApi: false });
+    expect(b.profileCalls().at(-1)).toContain(`ids=${id}`);
+    await waitFor(() => cacheOf(dir).matches.find((m) => m.match.matchId === id)?.match.timeline !== undefined);
+  });
+
+  it("downloads the whole history from a server that can't say what changed (an older server)", async () => {
+    const server = startServer(history);
+    const { dir } = await firstStart(server);
+    const b = cached(server, dir, (_path, body) => delete body.timelineIds);
+    await b.s.init();
+    await b.s.load(ME, { bandFromApi: false });
+    expect(b.games()).toBe(23);
+    expect(b.profileCalls().at(-1)).toBe("/me/profile");
+  });
+
+  it("forgets the cache on sign out", async () => {
+    const server = startServer(history);
+    const { dir, first } = await firstStart(server);
+    await first.s.signOut();
+    expect(existsSync(join(dir, "matches.json"))).toBe(false);
   });
 });
 
