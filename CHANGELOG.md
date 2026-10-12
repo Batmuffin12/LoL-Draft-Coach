@@ -2,10 +2,10 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
-## [Unreleased] — Performance
+## [0.7.9] — 2026-10-12 — Performance and code health
 
 ### Changed
-- **The panel starts faster**: process start to the first full screen 724 → 422 ms on a 1,000-game history (local measurement). Loading your history or a new meta snapshot in the main process is ~6× faster (423 → 69 ms, 298 → 45 ms): the playstyle percentile now uses a binary search, with the same results, and a new meta snapshot reuses your games' metric values (45 → 7.5 ms).
+- **The panel starts faster**: process start to the first full screen 724 → 426 ms on a 1,000-game history (local measurement). Loading your history or a new meta snapshot in the main process is ~6× faster (423 → 69 ms, 298 → 45 ms): the playstyle percentile now uses a binary search, with the same results, and a new meta snapshot reuses your games' metric values (45 → 7.5 ms).
 - **Your matches are kept on disk** (`profile-matches.json` in the app's profile, cleared on sign-out): a start asks the server only for new or changed games instead of downloading the whole history again (next start: 14 MB → 37 kB, 274 → 83 ms against a local server).
 - **Fewer state updates to the panel**: at most one per event-loop turn and never the same twice (pushes −57% in champ select, 57 → 9 until the first screen).
 - Server: `GET /me/profile` sends stored match JSON as is (alone 207 → 150 ms; with 10 at once p99 2.3 s → 0.9 s); new optional `?ids=` (up to 100 of your match ids) and `?timelines=1` (which of your matches have a complete timeline). Older panels are unaffected.
