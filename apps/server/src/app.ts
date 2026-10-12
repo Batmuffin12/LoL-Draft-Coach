@@ -92,6 +92,17 @@ const RegisterBody = z.object({
 
 const ACCOUNT_ERROR_STATUS = { invalid_riot_id: 400, invite_invalid: 403, riot_id_not_found: 404 } as const;
 
+/**
+ * If-None-Match against an ETag, compared weakly as HTTP says (RFC 9110 13.1.2): the compress
+ * middleware sends gzipped bodies with the ETag made weak (W/"…"), and clients send that back.
+ */
+export function etagMatches(ifNoneMatch: string | undefined, etag: string): boolean {
+  if (!ifNoneMatch) return false;
+  const strip = (t: string) => t.trim().replace(/^W\//, "");
+  const want = strip(etag);
+  return ifNoneMatch.split(",").some((t) => t.trim() === "*" || strip(t) === want);
+}
+
 /** Client address behind Railway's proxy (first X-Forwarded-For hop), for rate limiting only. */
 function clientKey(c: Context): string {
   return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "local";
@@ -171,7 +182,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
     const body = JSON.stringify(deps.publicConfig);
     const etag = `"${sha256(body).slice(0, 32)}"`;
     app.get("/config", (c) => {
-      if (c.req.header("if-none-match") === etag) return c.body(null, 304, { etag });
+      if (etagMatches(c.req.header("if-none-match"), etag)) return c.body(null, 304, { etag });
       return c.body(body, 200, { "content-type": "application/json", etag });
     });
   }
@@ -238,7 +249,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
     const row = deps.db.select().from(metaSnapshots).where(eq(metaSnapshots.band, band)).get();
     if (!row) return c.json({ error: "no_snapshot", message: `No meta snapshot for band ${band} yet.` }, 404);
     const headers = { etag: row.etag, "cache-control": "private, no-cache" };
-    if (c.req.header("if-none-match") === row.etag) return c.body(null, 304, headers);
+    if (etagMatches(c.req.header("if-none-match"), row.etag)) return c.body(null, 304, headers);
     // Stored gzipped; sent as is to clients that accept gzip (every real one does).
     if (/\bgzip\b/.test(c.req.header("accept-encoding") ?? "")) {
       return c.body(new Uint8Array(row.body), 200, { ...headers, "content-type": "application/json", "content-encoding": "gzip" });

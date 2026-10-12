@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { MatchSchema, TimelineSchema, RiotApiError, RiotKeyError, type LeaguePlayer, type Match } from "@ldc/riot-api";
 import type { MetaSnapshot } from "@ldc/shared";
-import { createApp } from "../src/app";
+import { createApp, etagMatches } from "../src/app";
 import { sha256 } from "../src/auth";
 import { collect, nextCursor, pruneCollected, type CollectorRiot, type CollectOptions } from "../src/collector";
 import { findConfigDir, loadServerConfig } from "../src/config";
@@ -436,5 +436,28 @@ describe("meta routes", () => {
     const res = await app.request("/config");
     expect(((await res.json()) as { engine: { topN: number } }).engine.topN).toBe(config.engine.topN);
     expect((await app.request("/config", { headers: { "if-none-match": res.headers.get("etag")! } })).status).toBe(304);
+  });
+
+  it("answers 304 to a gzip client sending back the weak ETag the compressed body carried", async () => {
+    const { app } = setup();
+    const res = await app.request("/config", { headers: { "accept-encoding": "gzip" } });
+    expect(res.headers.get("content-encoding")).toBe("gzip");
+    const etag = res.headers.get("etag")!;
+    expect(etag).toMatch(/^W\//);
+    const again = await app.request("/config", { headers: { "accept-encoding": "gzip", "if-none-match": etag } });
+    expect(again.status).toBe(304);
+    // A changed config (another ETag) is still sent in full.
+    expect((await app.request("/config", { headers: { "accept-encoding": "gzip", "if-none-match": 'W/"other"' } })).status).toBe(200);
+  });
+});
+
+describe("etagMatches", () => {
+  it("compares weakly and reads lists", () => {
+    expect(etagMatches('W/"a"', '"a"')).toBe(true);
+    expect(etagMatches('"a"', '"a"')).toBe(true);
+    expect(etagMatches('"b", W/"a"', '"a"')).toBe(true);
+    expect(etagMatches("*", '"a"')).toBe(true);
+    expect(etagMatches('"b"', '"a"')).toBe(false);
+    expect(etagMatches(undefined, '"a"')).toBe(false);
   });
 });
