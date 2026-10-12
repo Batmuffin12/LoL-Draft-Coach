@@ -78,7 +78,7 @@ Elsewhere instead (for example if the repo goes private): build with `LDC_UPDATE
 
 ## 4. What a friend does
 
-Send them [INSTALL.md](INSTALL.md) with the download link and their invite code. In short:
+Send them the landing page (`site/`, published to GitHub Pages by `.github/workflows/pages.yml` on pushes to `main`; one-time: repo Settings → Pages → Source: GitHub Actions) or [INSTALL.md](INSTALL.md), plus their invite code. The page's download button points at the newest release's installer and says "Coming soon" until the first release is published. In short:
 
 1. Download and run `LoL-Draft-Coach-Setup-<version>.exe`. The installer isn't code-signed yet, so Windows SmartScreen will warn: click **More info → Run anyway**. Tell friends this in advance.
 2. Open League of Legends and log in.
