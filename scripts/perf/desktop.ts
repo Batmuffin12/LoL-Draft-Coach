@@ -110,7 +110,11 @@ interface LaunchResult {
   stdout: string;
 }
 
+/** App state the panel keeps between runs (advice log, account, caches): wiped so every run starts the same. Data Dragon's cache stays. */
+const APP_STATE = ["advice.json", "advice-outbox.json", "account.json", "profile-matches.json", "meta", "config"];
+
 function launch(env: Record<string, string>): Promise<LaunchResult> {
+  for (const f of APP_STATE) rmSync(join(profileDir, f), { recursive: true, force: true });
   return new Promise((resolve) => {
     const child = spawn(electron, ["."], {
       cwd: desktop,
