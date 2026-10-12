@@ -130,6 +130,17 @@ describe("playstyle", () => {
     expect(computePlaystyle(games(30), "", NOW, cfg)).toBeNull();
   });
 
+  it("gives the same result from its per-matches cache as from a fresh computation", () => {
+    const all = games(40);
+    const fewer = all.slice(5);
+    // A copy is another key: computed before anything is cached for `all`.
+    const fresh = computePlaystyle(structuredClone(fewer), "jungle", NOW, cfg);
+    const first = computePlaystyle(all, "jungle", NOW, cfg);
+    expect(computePlaystyle(all, "jungle", NOW, cfg)).toEqual(first);
+    expect(computePlaystyle(fewer, "jungle", NOW, cfg)).toEqual(fresh);
+    expect(fresh).not.toEqual(first);
+  });
+
   it("lists the roles with enough games, most played first", () => {
     expect(playstyleRoles([...games(10, "middle"), ...games(20, "jungle"), ...games(2, "top")], cfg)).toEqual(["jungle", "middle"]);
   });

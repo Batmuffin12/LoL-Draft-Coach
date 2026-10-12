@@ -215,8 +215,38 @@ interface MetricContext {
   band: Record<string, MetricReference> | null;
   now: number;
   cfg: PlaystyleConfig;
-  /** Sorted reference values per metric (from your games). */
-  cache: Map<string, number[]>;
+  /** Per metric: the reference values sorted, and your games' values (in `mine`'s order). Shared by every call on the same matches and role. */
+  cache: RoleCache["metrics"];
+}
+
+/** What only depends on a matches array and a role: your games in it, the others in your role, and each metric's values. */
+interface RoleCache {
+  mine: UserMatch[];
+  refs: MetricContext["refs"];
+  metrics: Map<string, { ref: number[]; yours: (number | null)[] }>;
+}
+
+/**
+ * Per matches array (the profile's, which is replaced, never changed, when your games change), per role.
+ * The style, its numbers, the focus and the month all read the same metrics from the same games.
+ */
+const roleCaches = new WeakMap<UserMatch[], Map<Position, RoleCache>>();
+
+function roleCache(matches: UserMatch[], role: Position): RoleCache {
+  let byRole = roleCaches.get(matches);
+  if (!byRole) roleCaches.set(matches, (byRole = new Map()));
+  let c = byRole.get(role);
+  if (!c) {
+    c = {
+      mine: matches.filter((m) => m.match.participants[m.me]?.position === role),
+      refs: matches.flatMap((m) =>
+        m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec, match: m.match })),
+      ),
+      metrics: new Map(),
+    };
+    byRole.set(role, c);
+  }
+  return c;
 }
 
 /**
@@ -228,21 +258,26 @@ function measure(raw: string, ctx: MetricContext): { result: MetricResult; perGa
   const lowerIsBetter = raw.startsWith("-");
   const metric = lowerIsBetter ? raw.slice(1) : raw;
   const bandRef = ctx.band?.[metric];
-  let ref: number[] = [];
-  if (!bandRef) {
-    // A metric the band lacks falls back to the others in your games.
-    ref = ctx.cache.get(metric) ?? ctx.refs.map((r) => readMetric(r.p, r.durationSec, metric, r.match)).filter((x): x is number => x !== null).sort((a, b) => a - b);
-    ctx.cache.set(metric, ref);
-    if (ref.length < ctx.cfg.minReferenceSamples) return null;
+  let values = ctx.cache.get(metric);
+  if (!values) {
+    values = {
+      ref: ctx.refs.map((r) => readMetric(r.p, r.durationSec, metric, r.match)).filter((x): x is number => x !== null).sort((a, b) => a - b),
+      yours: ctx.mine.map((m) => readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match)),
+    };
+    ctx.cache.set(metric, values);
   }
+  // A metric the band lacks falls back to the others in your games.
+  const ref = bandRef ? [] : values.ref;
+  if (!bandRef && ref.length < ctx.cfg.minReferenceSamples) return null;
   const pctOf = (v: number) => (bandRef ? percentileFromQuantiles(v, bandRef.quantiles) : empiricalPercentile(v, ref));
   let wSum = 0;
   let youSum = 0;
   let pctSum = 0;
   let n = 0;
   const perGame = new Map<UserMatch, number>();
-  for (const m of ctx.mine) {
-    const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
+  for (let i = 0; i < ctx.mine.length; i++) {
+    const m = ctx.mine[i]!;
+    const v = values.yours[i]!;
     if (v === null) continue;
     const w = halfLifeWeight(ctx.now - m.match.endedAt, ctx.cfg.halfLifeDays);
     const pct = lowerIsBetter ? 1 - pctOf(v) : pctOf(v);
@@ -279,15 +314,13 @@ export function measureMetrics(
 }
 
 function context(matches: UserMatch[], role: Position, now: number, cfg: PlaystyleConfig, bandReferences?: Record<string, MetricReference>): MetricContext | null {
-  const mine = matches.filter((m) => m.match.participants[m.me]?.position === role);
-  if (!role || mine.length < cfg.minGamesPerRole) return null;
-  const refs = matches.flatMap((m) =>
-    m.match.participants.filter((p, i) => i !== m.me && p.position === role).map((p) => ({ p, durationSec: m.match.durationSec, match: m.match })),
-  );
+  if (!role) return null;
+  const { mine, refs, metrics } = roleCache(matches, role);
+  if (mine.length < cfg.minGamesPerRole) return null;
   const band = Object.fromEntries(Object.entries(bandReferences ?? {}).filter(([, r]) => r.n >= cfg.minReferenceSamples && r.quantiles.length > 1));
   const useBand = Object.keys(band).length > 0;
   if (!useBand && refs.length < cfg.minReferenceSamples) return null;
-  return { mine, refs, band: useBand ? band : null, now, cfg, cache: new Map() };
+  return { mine, refs, band: useBand ? band : null, now, cfg, cache: metrics };
 }
 
 /** Roles the player has enough games in for a playstyle read, most played first. */
