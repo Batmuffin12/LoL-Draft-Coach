@@ -45,7 +45,7 @@ async function start(dir: string, serverUrl: string, token: string, riotId: stri
   const t0 = performance.now();
   const accounts = new AccountStore(join(dir, "account.json"), plain);
   if (!(await accounts.load())) await accounts.save({ serverUrl, token, riotId });
-  const profiles = new ServerProfileSource({ accounts, defaultServerUrl: serverUrl, fetch: counting, outbox: new AdviceStore(join(dir, "advice-outbox.json")), cacheDir: dir } as ConstructorParameters<typeof ServerProfileSource>[0]);
+  const profiles = new ServerProfileSource({ accounts, defaultServerUrl: serverUrl, fetch: counting, outbox: new AdviceStore(join(dir, "advice-outbox.json")), cacheFile: join(dir, "profile-matches.json") });
   await profiles.init();
   const config = new ConfigSource({ client: () => profiles.serverClient, cacheFile: join(dir, "config", "server-config.json"), retryMs: 0 });
   const meta = new MetaSource({ client: () => profiles.serverClient, cacheDir: join(dir, "meta") });
@@ -63,8 +63,11 @@ async function start(dir: string, serverUrl: string, token: string, riotId: stri
   const [gameName, tagLine] = riotId.split("#") as [string, string];
   await profiles.load({ gameName, tagLine }, { bandFromApi: false });
   await Promise.all([configDone, profileIn, metaDone]);
+  const totalMs = performance.now() - t0;
+  // The match cache is written after the profile is in (not part of the start); wait for it before the next start.
+  await profiles.cacheSaved();
   profiles.stop();
-  return { requests, totalMs: performance.now() - t0, profileMs };
+  return { requests, totalMs, profileMs };
 }
 
 /** A first start and the next start of the panel against `serverUrl`. */

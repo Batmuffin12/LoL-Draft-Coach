@@ -221,6 +221,7 @@ async function main(): Promise<void> {
       accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
       defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
       outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
+      cacheFile: join(app.getPath("userData"), "profile-matches.json"),
     });
     await profiles.init();
   }
