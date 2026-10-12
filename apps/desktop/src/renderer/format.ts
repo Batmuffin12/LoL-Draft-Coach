@@ -145,3 +145,9 @@ export function pickReasons(reasons: ReasonView[], max: number): ReasonView[] {
   if (!caveat || max < 2) return reasons.slice(0, max);
   return [...reasons.filter((r) => !r.negative).slice(0, max - 1), caveat];
 }
+
+/** "v1.0.0", or "v1.0.0 → 1.0.1 on restart" once an update is downloaded; "" without a version. */
+export function versionText(app: { version: string; updateReady: string | null }): string {
+  if (!app.version) return "";
+  return app.updateReady ? `v${app.version} → ${app.updateReady} on restart` : `v${app.version}`;
+}

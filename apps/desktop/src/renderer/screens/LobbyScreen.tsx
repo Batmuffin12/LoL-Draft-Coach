@@ -64,7 +64,7 @@ function Lobby({ state }: { state: ViewState }) {
           ]}
         />
       }
-      footer={<AccountFooter account={state.account} />}
+      footer={<AccountFooter account={state.account} app={state.app} />}
     >
       <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
       <SessionNotice state={state} />

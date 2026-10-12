@@ -346,7 +346,8 @@ async function main(): Promise<void> {
   ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
-  startAutoUpdate((m) => coach.announce(m));
+  coach.setAppVersion(app.getVersion());
+  startAutoUpdate((version) => coach.updateReady(version));
   // Screenshots and perf runs are of the panel at its design size (440 × 720, zoom 1), wherever the client is.
   if (!process.env.LDC_SCREENSHOT && !perf) void startDocking(coach);
   scheduleScreenshot(coach);

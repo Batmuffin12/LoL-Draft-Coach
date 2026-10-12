@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { AccountView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count } from "../format";
+import { count, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
@@ -91,8 +91,8 @@ function FootLink({ onClick, danger, children }: { onClick: () => void; danger?:
   );
 }
 
-/** Who the app is connected as, sign out and data deletion (confirmed in place), then the full Riot notice. */
-export function AccountFooter({ account }: { account: AccountView | null }) {
+/** Who the app is connected as, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
+export function AccountFooter({ account, app }: { account: AccountView | null; app: ViewState["app"] }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <>
@@ -118,7 +118,10 @@ export function AccountFooter({ account }: { account: AccountView | null }) {
         )
       ) : null}
       {account?.state === "registered" && account.message && <span className="micro neg">{account.message}</span>}
-      <span className="legal">{RIOT_NOTICE}</span>
+      <span className="legal">
+        {app.version && <span className={app.updateReady ? "ver ready" : "ver"}>{versionText(app)} · </span>}
+        {RIOT_NOTICE}
+      </span>
     </>
   );
 }
