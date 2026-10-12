@@ -6,7 +6,7 @@ const known = (c: PoolChampView) => c.tier === "main" || c.tier === "comfortable
 
 /**
  * Your pool against what a team needs: a column per champion (main and comfortable first,
- * learning and rusty dimmed), a row per need, a filled dot where the champion brings it.
+ * learning and rusty dimmed, with their record when they have games), a row per need, a filled dot where the champion brings it.
  * A need nothing you know well brings is in amber; a champion without measured attributes shows "—".
  */
 export function PoolCoverage({ pool, coverage }: { pool: PoolChampView[]; coverage: PoolCoverageView }) {
@@ -17,7 +17,9 @@ export function PoolCoverage({ pool, coverage }: { pool: PoolChampView[]; covera
         <span key={c.champion.id} className={cx("mx-head", !known(c) && "dim")} role="columnheader">
           <ChampIcon champ={c.champion} size={34} framed={c.tier === "main"} />
           <span className="t-heading">{c.champion.name}</span>
-          <span className="micro">{known(c) ? `${c.games} · ${rate(c.winRate)}` : c.tierLabel.toLowerCase()}</span>
+          {!known(c) && <span className="micro">{c.tierLabel.toLowerCase()}</span>}
+          {/* Learning (or getting back into) a champion: its record so far, too. */}
+          {(known(c) || c.games > 0) && <span className="micro">{`${c.games} · ${rate(c.winRate)}`}</span>}
         </span>
       ))}
       {coverage.needs.map((n) => [
