@@ -17,7 +17,10 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 - `pnpm perf`, `pnpm perf:compare`, `pnpm perf:screens`, `pnpm perf:guard`: local, offline performance measurements with budgets and a screen-by-screen regression guard (docs/perf/). Dev aid `LDC_PERF=out.json` (development builds only). `history()` in packages/sim: a synthetic match history.
 
 ### Removed
-- Dead code found by fallow: 14 needless exports, the unused `HowYouPlay` component, `shared`'s unused zod dependency.
+- Dead code found by fallow: 14 needless exports, the unused `HowYouPlay` component, unused dependencies (`zod` in shared and jev, `selfsigned` in the desktop app).
+
+### Internal
+- Code health (fallow) 80.6 → 90.5: `PersonalCoach` keeps its state and events while its view builders live in small pure modules (`role-view`, `pick-card`, `draft-facts`, `last-game-view`, `game-wait`, `client-state`); long functions split (`createApp`, the panel's `main`); the perf harness is its own private package (`@ldc/perf`). No behaviour change.
 
 ## [0.7.8] — 2026-10-12
 

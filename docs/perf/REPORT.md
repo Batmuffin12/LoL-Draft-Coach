@@ -92,6 +92,20 @@ Two items from "What's left" done, measured as `final` (`pnpm perf:compare after
 
 Budgets met with the new one: 23/24. Draft-update medians in this run read ~18 ms (10–12 before) while p95 stayed 20–22 ms and click medians fell: both are aligned to the 60 Hz frame and flip between runs; neither change touches the draft path. Not done, on purpose: the timer isolation (0.2 ms a commit) and the full-profile cache (memory on the server).
 
+## Code health: fallow 80.6 → 90.5 (owner's request)
+
+Measured with `npx fallow health` (fallow 3.33.1, formula v3: 100 minus capped penalties). No code was excluded from the analysis to get there; `.railway/railway.ts` was added to it.
+
+| Penalty | Before | After | What changed |
+| --- | --- | --- | --- |
+| Unused / misplaced dependencies | 5.9 | 0 | The perf harness became its own private package (`@ldc/perf`, scripts/perf) declaring what it imports; `selfsigned` dropped from apps/desktop (only packages/lcu uses it); jev's unused `zod` dropped (manifest only); fallow now reads `.railway/railway.ts`, which uses the `railway` SDK. |
+| Hotspot (`personal-coach.ts`: most changed and complex) | 3.3 | 0 | Its view builders moved, verbatim, into pure modules (role-view, pick-card, draft-facts, last-game-view, game-wait, client-state, plus style/focus/loadout-import): 1,015 → 639 lines, complexity density 0.42 → 0.33, hotspot score 61.8 → 48.5 (fallow counts 50 and up). |
+| Functions over 60 lines (per 1,000) | 7.9 (15.8) | 7.2 (14.4) | `onDraft`, `updateRoleAdvice`, `createApp`, the panel's `main`, sim `history`, the mock client's `start` split into named parts. |
+| Critical complexity / coupling | 0.4 / 1.9 | 0.4 / 1.9 | Not touched: `buildLoadout`, `scoreCandidate` and `learningPlan` are core engine logic; coupling is a few widely imported modules (`shared/view.ts`, `ChampIcon`). |
+| **Score** | **80.6 (B)** | **90.5 (A)** | |
+
+Same behaviour throughout: 552 tests (5 new for the extracted helpers), the regression guard on every screen after each step, a live replay with clicks, and the coach bench unchanged (history 63 ms, snapshot 8 ms).
+
 ## What's left
 
 - **The full profile at 10 connections stays over budget** (925 ms p99). Gzip of 14 MB costs ~105 ms per request and the JSON ~15 ms; to get under 200 ms with 10 at once it would take a cache of compressed responses (memory on a small server) or precompressed match summaries. With the panel's disk cache a full download happens only on registration, after sign-out, or against an older server, one request at a time (150 ms alone, within budget), so I left it.
