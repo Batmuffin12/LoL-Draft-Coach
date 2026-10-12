@@ -59,6 +59,7 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
   const items: { tone: "warn" | "info"; text: string }[] = [
     ...state.notices.map((text) => ({ tone: "warn" as const, text })),
     ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message }] : []),
+    ...(profile.state === "ready" && profile.problem ? [{ tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.` }] : []),
     ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
     ...(extra ? [{ tone: "info" as const, text: extra }] : []),
   ];

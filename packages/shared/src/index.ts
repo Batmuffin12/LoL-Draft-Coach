@@ -526,6 +526,8 @@ export interface CoachStatus {
         role: Position | null;
         /** Server mode: older games still loading in the background (absent or 0: the history is complete). */
         backlog?: number;
+        /** Server mode: the server failed and these are your games saved on this PC; what went wrong. */
+        problem?: string;
       }
     | { state: "error"; message: string };
 }

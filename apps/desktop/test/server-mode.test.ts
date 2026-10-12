@@ -311,6 +311,71 @@ describe("ServerProfileSource match cache (kept on disk between starts)", () => 
     expect(b.profileCalls().at(-1)).toBe("/me/profile");
   });
 
+  describe("when the server fails", () => {
+    type Status = { state: string; games?: number; problem?: string; message?: string };
+    /** A registered source whose server can be switched off; retries come after `retryMs`. */
+    function flaky(server: ReturnType<typeof startServer>, dir: string, fail: () => Response | Error, retryMs = [30, 60]) {
+      const down = { on: true, calls: 0 };
+      const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
+        down.calls++;
+        if (!down.on) return server.fetchFn(input, init);
+        const f = fail();
+        if (f instanceof Error) throw f;
+        return f;
+      }) as typeof fetch;
+      const s = new ServerProfileSource({ accounts: new AccountStore(join(dir, "account.json"), box), defaultServerUrl: BASE, fetch: fetchFn, sleep: async () => {}, pollMs: 5, cacheFile: join(dir, "matches.json"), retryDelaysMs: retryMs });
+      const statuses: Status[] = [];
+      s.on("status", (st) => statuses.push(st as Status));
+      let masteries = -1;
+      let games = -1;
+      s.on("profile", (p) => ((games = p.games.length), (masteries = p.masteries.length)));
+      return { s, down, statuses, games: () => games, masteries: () => masteries };
+    }
+
+    it("keeps coaching from the games saved on this PC, says why, and recovers by itself", async () => {
+      const server = startServer(history);
+      const { dir } = await firstStart(server);
+      const b = flaky(server, dir, () => new Response("oops", { status: 500 }));
+      await b.s.init();
+      await b.s.load(ME, { bandFromApi: false });
+      expect(b.games()).toBe(23);
+      expect(b.masteries()).toBeGreaterThan(0);
+      expect(b.statuses.at(-1)).toMatchObject({ state: "ready", games: 23, problem: expect.stringMatching(/had a problem \(HTTP 500\)\. Trying again in/) });
+      b.down.on = false;
+      await waitFor(() => b.statuses.at(-1)?.state === "ready" && !b.statuses.at(-1)?.problem);
+      b.s.stop();
+    });
+
+    it("without saved games, says what went wrong and tries again, later each time", async () => {
+      const dir = tmp("ldc-down-");
+      await new AccountStore(join(dir, "account.json"), box).save({ serverUrl: BASE, token: "t", riotId: "Me#EUW" });
+      const b = flaky(startServer(history), dir, () => new Error("ECONNREFUSED"), [20, 2_000]);
+      await b.s.init();
+      await b.s.load(ME, { bandFromApi: false });
+      expect(b.statuses.at(-1)).toMatchObject({ state: "error", message: expect.stringMatching(/^Can't reach the coach server: check your internet connection\. Trying again in 0 s\./) });
+      const first = b.down.calls;
+      await waitFor(() => b.statuses.filter((x) => x.state === "error").length === 2);
+      expect(b.down.calls).toBe(first * 2);
+      expect(b.statuses.at(-1)!.message).toMatch(/Trying again in 2 s\./);
+      // Stopping cancels the next try.
+      b.s.stop();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(b.down.calls).toBe(first * 2);
+    });
+
+    it("signing out cancels the retry", async () => {
+      const dir = tmp("ldc-down-");
+      await new AccountStore(join(dir, "account.json"), box).save({ serverUrl: BASE, token: "t", riotId: "Me#EUW" });
+      const b = flaky(startServer(history), dir, () => new Error("ECONNREFUSED"), [20]);
+      await b.s.init();
+      await b.s.load(ME, { bandFromApi: false });
+      const calls = b.down.calls;
+      await b.s.signOut();
+      await new Promise((r) => setTimeout(r, 60));
+      expect(b.down.calls).toBe(calls);
+    });
+  });
+
   it("forgets the cache on sign out", async () => {
     const server = startServer(history);
     const { dir, first } = await firstStart(server);
