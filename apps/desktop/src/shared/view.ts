@@ -267,6 +267,8 @@ export interface AccountView {
   defaultServerUrl: string | null;
   /** The Riot ID logged into the League client right now (your own), before registering; null without a client. */
   clientRiotId?: string | null;
+  /** An invite code from a join link (lol-draft-coach://join/…), prefilled on the connect screen. */
+  inviteCode?: string | null;
   message: string | null;
 }
 
@@ -518,6 +520,8 @@ export interface ViewState {
   /** A break suggestion after a losing streak or a long session (your games only), until the session is over. */
   session: SessionView | null;
   notices: string[];
+  /** This app's version, and a newer one already downloaded that installs when the app closes. */
+  app: { version: string; updateReady: string | null };
   docked: boolean;
   /** Position names as the client shows them, by Riot's id ("utility" → "support"), from the explain config. */
   roleLabels: Record<string, string>;
@@ -551,6 +555,7 @@ export function emptyViewState(): ViewState {
     month: null,
     session: null,
     notices: [],
+    app: { version: "", updateReady: null },
     docked: true,
     roleLabels: {},
     copy: {},

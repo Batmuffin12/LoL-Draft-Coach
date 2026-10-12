@@ -15,4 +15,6 @@ const common = {
 await Promise.all([
   build({ ...common, entryPoints: ["src/main/index.ts"], outfile: "dist/main/index.cjs" }),
   build({ ...common, entryPoints: ["src/preload/index.ts"], outfile: "dist/preload/index.cjs" }),
+  // Crash reports (Sentry), required only when they start: keeps the SDK out of the startup bundle.
+  build({ ...common, entryPoints: ["src/main/sentry.ts"], outfile: "dist/main/sentry.cjs" }),
 ]);

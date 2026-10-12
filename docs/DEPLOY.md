@@ -25,7 +25,9 @@ Swapping the Riot key (daily for a development key; once for the personal key): 
 
 ## 2. Create an invite for each friend
 
-Each invite works once and lasts 14 days. Only a hash of each code is stored, so copy the code when it's printed. Your own account works the same way: create an invite for yourself.
+Each invite works once and lasts 14 days. Only a hash of each code is stored, so copy the code when it's printed. Your own account works the same way: create an invite for yourself. The server accepts at most `app.accounts.maxUsers` accounts (10, `config/app.v1.json`): past that, a new player is refused even with a valid code; returning players always get back in.
+
+**The easy way:** `pnpm invite "Dana"` (optionally `--days 30`) creates the invite on the live server and prints a message to paste to them, with their join link: `https://batmuffin12.github.io/LoL-Draft-Coach/join.html#CODE`. That page (`site/join.html`) walks them through download and install, then its button opens the app with the code filled in (`lol-draft-coach://join/CODE`, registered by the installer); they only click Connect. The code sits after the `#`, so it never reaches GitHub's servers.
 
 **From your PC (recommended).** Set `ADMIN_TOKEN` (at least 32 random characters) in the Railway variables and the same value in your local `.env`, then:
 
@@ -48,28 +50,37 @@ On your Windows PC:
 
 ```powershell
 $env:LDC_SERVER_URL = "https://<your-domain>"   # prefilled in the app, so friends only paste the code
+$env:LDC_SENTRY_DSN = "https://<key>@<org>.ingest.sentry.io/<project>"   # crash reports (optional, below)
 pnpm --filter @ldc/desktop dist:win
 ```
 
 The installer is written to `apps/desktop/release/LoL-Draft-Coach-Setup-<version>.exe`.
 
+### Crash reports (Sentry)
+
+Installers built with `LDC_SENTRY_DSN` send crash reports to Sentry; without it they send nothing. One-time setup: a free Sentry account (Developer plan), a project of type **Electron**, and its DSN from Project Settings → Client Keys (the DSN isn't a secret: it only allows sending events).
+
+- What is sent: uncaught errors in the app (main process, plus renderer and native crashes), a "server config rejected" warning when the server's scoring config doesn't fit this app version, and release-health sessions. Every string is scrubbed before it leaves the PC (`apps/desktop/src/main/crash-reports.ts`): Riot IDs, PUUIDs, app tokens, Riot keys and the Windows user name in paths; the user, host name and request headers are dropped.
+- Cost: the SDK starts before the window (Electron requires it), ~60 ms on the owner's PC, only in builds with a DSN. The server has no Sentry: loading the SDK there takes ~0.7 s on every wake-up; Railway's logs and `/health` cover it.
+- Test it: start a development build with `LDC_SENTRY_DSN=<dsn>` and `LDC_CRASH_TEST=1`; ~8 s after the panel opens it sends a "test crash" error. Check that it appears in Sentry with no Riot ID or user name in it.
+
 ### Releases and automatic updates
 
-Nothing is published yet. The first build shared with friends will be **v1.0.0**; until then, versions stay 0.x (one per milestone) and installers are local test builds. Decide where releases are published (below) when preparing v1.0.0.
+Nothing is published yet. The first build shared with friends is **v1.0.0**; until then versions stay 0.x and installers are local test builds (`dist:win` never publishes). **Never publish a GitHub Release before v1.0.0**: installed apps take any published release as an update.
 
-#### Automatic updates
+Updates come from this repo's **GitHub Releases** (the repo is public, so installed apps read releases without a token; no token ships in the app). Every installer carries that location in `resources/app-update.yml`. To release a version (1.0.0 or later), after merging and tagging it:
 
-The repo is private, and a GitHub token must never ship inside the app, so updates need a public download location:
+```powershell
+pnpm --filter @ldc/desktop release
+```
 
-- **Option A (simplest):** create a separate **public** GitHub repo, for example `LoL-Draft-Coach-releases`, that holds only releases. Build with
-  `$env:LDC_UPDATE_URL = "https://github.com/<you>/LoL-Draft-Coach-releases/releases/latest/download"`, then attach the installer, its `.blockmap` and `latest.yml` (all in `release/`) to a new release in that repo.
-- **Option B:** a Cloudflare R2 bucket with public access (free up to 10 GB). Upload the same three files and set `LDC_UPDATE_URL` to the bucket's public URL.
+The script refuses a version below 1.0.0, uncommitted changes, a HEAD without the `v<version>` tag, or a missing GitHub token (it takes `gh auth token`; the token is only used to upload). It builds the installer and uploads it with its `.blockmap` and `latest.yml` as a **draft** release. Check the draft on GitHub (release notes from the changelog), then **Publish**: from then on installed apps download it in the background on their next start and install it when they close.
 
-Apps built with `LDC_UPDATE_URL` check for a new version on start, download it in the background, and install it when the app closes. Apps built without it never check.
+Elsewhere instead (for example if the repo goes private): build with `LDC_UPDATE_URL=<public URL>` (generic provider, e.g. a Cloudflare R2 bucket) and upload the same three files there; the release script refuses to run with it set.
 
 ## 4. What a friend does
 
-Send them the landing page (`site/`, published to GitHub Pages by `.github/workflows/pages.yml` on pushes to `main`; one-time: repo Settings → Pages → Source: GitHub Actions) plus their invite code. The page's download button points at the newest release's installer and says "Coming soon" until the first release is published. In short:
+Send them the landing page (`site/`, published to GitHub Pages by `.github/workflows/pages.yml` on pushes to `main`; one-time: repo Settings → Pages → Source: GitHub Actions) or [INSTALL.md](INSTALL.md), plus their invite code. The page's download button points at the newest release's installer and says "Coming soon" until the first release is published. In short:
 
 1. Download and run `LoL-Draft-Coach-Setup-<version>.exe`. The installer isn't code-signed yet, so Windows SmartScreen will warn: click **More info → Run anyway**. Tell friends this in advance.
 2. Open League of Legends and log in.

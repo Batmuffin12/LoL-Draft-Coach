@@ -30,6 +30,8 @@ export interface AppDeps {
   now?: () => number;
   /** Registration attempts allowed per client per minute. */
   registerPerMinute?: number;
+  /** Accounts accepted at most (config app.accounts.maxUsers); absent: no limit. */
+  maxUsers?: number | null;
   /**
    * When set, GET /me/profile starts a background sync if the user's games are older than
    * this (ms). Keeps data fresh without a timer, so the server can sleep when unused.
@@ -100,7 +102,7 @@ const RegisterBody = z.object({
   riotId: z.string().min(3).max(64),
 });
 
-const ACCOUNT_ERROR_STATUS = { invalid_riot_id: 400, invite_invalid: 403, riot_id_not_found: 404 } as const;
+const ACCOUNT_ERROR_STATUS = { invalid_riot_id: 400, invite_invalid: 403, riot_id_not_found: 404, group_full: 409 } as const;
 
 /**
  * If-None-Match against an ETag, compared weakly as HTTP says (RFC 9110 13.1.2): the compress
@@ -229,7 +231,7 @@ function registrationRoute(app: App, deps: AppDeps, now: () => number): void {
     if (!body.success) return c.json({ error: "invalid_body", message: "Send { inviteCode, riotId }." }, 400);
     if (!deps.riot) return c.json({ error: "riot_unavailable", message: "The server has no Riot API key configured." }, 503);
     try {
-      const { token, user } = await registerUser(deps.db, deps.riot, body.data, now());
+      const { token, user } = await registerUser(deps.db, deps.riot, body.data, now(), { maxUsers: deps.maxUsers ?? null });
       touchUser(deps.db, user, now());
       // First sync runs in the background; the app polls GET /me/sync for progress.
       deps.sync?.request(user.id).catch(() => {});

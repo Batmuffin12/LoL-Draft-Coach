@@ -116,6 +116,19 @@ describe("ServerProfileSource against the real server API", () => {
     expect(loaded).toBe(false);
   });
 
+  it("prefills an invite from a join link, and only says so when this app is already connected", async () => {
+    const server = startServer();
+    const { s } = source(server);
+    await s.init();
+    s.offerInvite("HJ0S-XYFW-G0C6");
+    expect(s.account).toMatchObject({ state: "unregistered", inviteCode: "HJ0S-XYFW-G0C6" });
+    await s.load({ gameName: "Me", tagLine: "EUW" }, { bandFromApi: false });
+    await s.register(BASE, server.invite());
+    expect(s.account).toMatchObject({ state: "registered", inviteCode: null });
+    s.offerInvite("AAAA-BBBB-CCCC");
+    expect(s.account).toMatchObject({ state: "registered", riotId: "Me#EUW", message: expect.stringMatching(/already connected as Me#EUW.*sign out first/) });
+  });
+
   it("explains a bad invite and needs the client open to register", async () => {
     const server = startServer();
     const { s } = source(server);
@@ -168,6 +181,55 @@ describe("ServerProfileSource against the real server API", () => {
     expect(await client.syncState()).toEqual({ state: "idle" });
     expect(calls).toBe(3);
     expect(waits).toEqual(WAKE_RETRY_DELAYS_MS.slice(0, 2));
+  });
+
+  describe("timeouts and failures", () => {
+    const fast = { responseMs: 5, totalMs: 50 };
+    const noWait = async () => {};
+    /** Never answers, but ends when the request's signal fires (as fetch does). */
+    const hang = (_: unknown, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason as Error)));
+    const failure = (p: Promise<unknown>) => p.then(() => null, (err: unknown) => err as ServerError);
+
+    it("gives up on a server that accepts and never answers, after retrying like a dropped connection", async () => {
+      let calls = 0;
+      const client = new ServerClient(BASE, "t", ((u: string, i?: RequestInit) => (calls++, hang(u, i))) as typeof fetch, noWait, fast);
+      expect(await failure(client.syncState())).toMatchObject({ status: 0, code: "timeout", message: expect.stringMatching(/didn't answer within/) });
+      expect(calls).toBe(WAKE_RETRY_DELAYS_MS.length + 1);
+    });
+
+    it("succeeds when a hung first attempt is followed by an answer", async () => {
+      let calls = 0;
+      const fetchFn = ((u: string, i?: RequestInit) => (++calls === 1 ? hang(u, i) : Promise.resolve(Response.json({ sync: { state: "idle" } })))) as typeof fetch;
+      expect(await new ServerClient(BASE, "t", fetchFn, noWait, fast).syncState()).toEqual({ state: "idle" });
+      expect(calls).toBe(2);
+    });
+
+    it("ends a body that stops arriving", async () => {
+      const stalled = (async () => new Response(new ReadableStream({ start: (c) => c.enqueue(new TextEncoder().encode('{"sync":')) }))) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", stalled, noWait, fast).syncState())).toMatchObject({ code: "timeout", message: expect.stringMatching(/stopped sending/) });
+    });
+
+    it("says the connection broke when the body fails", async () => {
+      const broken = (async () => new Response(new ReadableStream({ start: (c) => c.error(new Error("ECONNRESET")) }))) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", broken, noWait, fast).syncState())).toMatchObject({ code: "unreachable", message: expect.stringMatching(/broke \(ECONNRESET\)/) });
+    });
+
+    it("says the server is still starting when it answers 502–504 to every retry", async () => {
+      const asleep = (async () => new Response("Service Unavailable", { status: 503 })) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", asleep, noWait, fast).syncState())).toMatchObject({ status: 503, code: "asleep" });
+    });
+
+    it("tells a server fault from a refused request, also without a JSON body", async () => {
+      const status = (s: number) => (async () => new Response("<html>oops</html>", { status: s })) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", status(500), noWait, fast).syncState())).toMatchObject({ status: 500, code: "server_error", message: expect.stringMatching(/had a problem \(HTTP 500\)/) });
+      expect(await failure(new ServerClient(BASE, "t", status(400), noWait, fast).syncState())).toMatchObject({ status: 400, code: "http_error" });
+    });
+
+    it("rejects a 200 that isn't the expected JSON", async () => {
+      const html = (async () => new Response("<html>captive portal</html>", { status: 200 })) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", html, noWait, fast).syncState())).toMatchObject({ code: "bad_response" });
+    });
   });
 
   it("explains an unreachable server", async () => {
@@ -260,6 +322,71 @@ describe("ServerProfileSource match cache (kept on disk between starts)", () => 
     await b.s.load(ME, { bandFromApi: false });
     expect(b.games()).toBe(23);
     expect(b.profileCalls().at(-1)).toBe("/me/profile");
+  });
+
+  describe("when the server fails", () => {
+    type Status = { state: string; games?: number; problem?: string; message?: string };
+    /** A registered source whose server can be switched off; retries come after `retryMs`. */
+    function flaky(server: ReturnType<typeof startServer>, dir: string, fail: () => Response | Error, retryMs = [30, 60]) {
+      const down = { on: true, calls: 0 };
+      const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
+        down.calls++;
+        if (!down.on) return server.fetchFn(input, init);
+        const f = fail();
+        if (f instanceof Error) throw f;
+        return f;
+      }) as typeof fetch;
+      const s = new ServerProfileSource({ accounts: new AccountStore(join(dir, "account.json"), box), defaultServerUrl: BASE, fetch: fetchFn, sleep: async () => {}, pollMs: 5, cacheFile: join(dir, "matches.json"), retryDelaysMs: retryMs });
+      const statuses: Status[] = [];
+      s.on("status", (st) => statuses.push(st as Status));
+      let masteries = -1;
+      let games = -1;
+      s.on("profile", (p) => ((games = p.games.length), (masteries = p.masteries.length)));
+      return { s, down, statuses, games: () => games, masteries: () => masteries };
+    }
+
+    it("keeps coaching from the games saved on this PC, says why, and recovers by itself", async () => {
+      const server = startServer(history);
+      const { dir } = await firstStart(server);
+      const b = flaky(server, dir, () => new Response("oops", { status: 500 }));
+      await b.s.init();
+      await b.s.load(ME, { bandFromApi: false });
+      expect(b.games()).toBe(23);
+      expect(b.masteries()).toBeGreaterThan(0);
+      expect(b.statuses.at(-1)).toMatchObject({ state: "ready", games: 23, problem: expect.stringMatching(/had a problem \(HTTP 500\)\. Trying again in/) });
+      b.down.on = false;
+      await waitFor(() => b.statuses.at(-1)?.state === "ready" && !b.statuses.at(-1)?.problem);
+      b.s.stop();
+    });
+
+    it("without saved games, says what went wrong and tries again, later each time", async () => {
+      const dir = tmp("ldc-down-");
+      await new AccountStore(join(dir, "account.json"), box).save({ serverUrl: BASE, token: "t", riotId: "Me#EUW" });
+      const b = flaky(startServer(history), dir, () => new Error("ECONNREFUSED"), [20, 2_000]);
+      await b.s.init();
+      await b.s.load(ME, { bandFromApi: false });
+      expect(b.statuses.at(-1)).toMatchObject({ state: "error", message: expect.stringMatching(/^Can't reach the coach server: check your internet connection\. Trying again in 0 s\./) });
+      const first = b.down.calls;
+      await waitFor(() => b.statuses.filter((x) => x.state === "error").length === 2);
+      expect(b.down.calls).toBe(first * 2);
+      expect(b.statuses.at(-1)!.message).toMatch(/Trying again in 2 s\./);
+      // Stopping cancels the next try.
+      b.s.stop();
+      await new Promise((r) => setTimeout(r, 50));
+      expect(b.down.calls).toBe(first * 2);
+    });
+
+    it("signing out cancels the retry", async () => {
+      const dir = tmp("ldc-down-");
+      await new AccountStore(join(dir, "account.json"), box).save({ serverUrl: BASE, token: "t", riotId: "Me#EUW" });
+      const b = flaky(startServer(history), dir, () => new Error("ECONNREFUSED"), [20]);
+      await b.s.init();
+      await b.s.load(ME, { bandFromApi: false });
+      const calls = b.down.calls;
+      await b.s.signOut();
+      await new Promise((r) => setTimeout(r, 60));
+      expect(b.down.calls).toBe(calls);
+    });
   });
 
   it("forgets the cache on sign out", async () => {

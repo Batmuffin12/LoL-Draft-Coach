@@ -74,6 +74,22 @@ describe("registration", () => {
     expect(JSON.stringify(db.select().from(schema.invites).all())).not.toContain(code);
   });
 
+  it("refuses a new player past maxUsers (invite kept), but always lets a returning player back in", async () => {
+    const { db, invite } = setup();
+    await registerUser(db, fakeRiot(), { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW, { maxUsers: 1 });
+    const code = invite();
+    await expect(registerUser(db, fakeRiot(), { inviteCode: code, riotId: "Friend#EUW" }, NOW, { maxUsers: 1 })).rejects.toMatchObject({ code: "group_full" });
+    expect(db.select().from(schema.users).all()).toHaveLength(1);
+    expect(db.select().from(schema.invites).all().filter((i) => i.usedAt === null)).toHaveLength(1);
+    const back = await registerUser(db, fakeRiot(), { inviteCode: code, riotId: "Ofek#EUW" }, NOW, { maxUsers: 1 });
+    expect(back.user.id).toBe(1);
+    // Over HTTP: 409 with the reason.
+    const full = createApp({ db, version: "test", riot: fakeRiot(), now: () => NOW, registerPerMinute: 100, maxUsers: 1 });
+    const res = await full.request("/users", { method: "POST", body: JSON.stringify({ inviteCode: invite(), riotId: "Friend#EUW" }), headers: { "content-type": "application/json" } });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "group_full", message: expect.stringMatching(/full \(1 players\)/) });
+  });
+
   it("keeps the same user when they register again after an API key change (new PUUID)", async () => {
     const { db, invite } = setup();
     const first = await registerUser(db, fakeRiot(), { inviteCode: invite(), riotId: "Ofek#EUW" }, NOW);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Term } from "@ldc/shared";
-import { count, games, initials, pct, pickColumns, pickReasons, positionLabel, rate, roleName, setRoleLabels, signed, signedOrDash, skillPath, tone, winTone } from "../src/renderer/format";
+import { count, games, initials, pct, pickColumns, pickReasons, positionLabel, rate, roleName, setRoleLabels, signed, signedOrDash, skillPath, tone, versionText, winTone } from "../src/renderer/format";
 
 const term = (name: Term["name"], deltaWin: number, games = 100): Term => ({ name, deltaWin, games, rating: 0 });
 
@@ -67,5 +67,13 @@ describe("position names", () => {
     expect(roleName("middle")).toBe("mid");
     expect(positionLabel("jungle")).toBe("Jungle");
     setRoleLabels({});
+  });
+});
+
+describe("versionText", () => {
+  it("shows the version, and the downloaded update until a restart", () => {
+    expect(versionText({ version: "1.0.0", updateReady: null })).toBe("v1.0.0");
+    expect(versionText({ version: "1.0.0", updateReady: "1.0.1" })).toBe("v1.0.0 → 1.0.1 on restart");
+    expect(versionText({ version: "", updateReady: null })).toBe("");
   });
 });

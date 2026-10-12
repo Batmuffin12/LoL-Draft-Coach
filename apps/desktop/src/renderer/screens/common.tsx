@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { AccountView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count } from "../format";
+import { count, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
@@ -59,6 +59,7 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
   const items: { tone: "warn" | "info"; text: string }[] = [
     ...state.notices.map((text) => ({ tone: "warn" as const, text })),
     ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message }] : []),
+    ...(profile.state === "ready" && profile.problem ? [{ tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.` }] : []),
     ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
     ...(extra ? [{ tone: "info" as const, text: extra }] : []),
   ];
@@ -90,8 +91,8 @@ function FootLink({ onClick, danger, children }: { onClick: () => void; danger?:
   );
 }
 
-/** Who the app is connected as, sign out and data deletion (confirmed in place), then the full Riot notice. */
-export function AccountFooter({ account }: { account: AccountView | null }) {
+/** Who the app is connected as, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
+export function AccountFooter({ account, app }: { account: AccountView | null; app: ViewState["app"] }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <>
@@ -117,7 +118,10 @@ export function AccountFooter({ account }: { account: AccountView | null }) {
         )
       ) : null}
       {account?.state === "registered" && account.message && <span className="micro neg">{account.message}</span>}
-      <span className="legal">{RIOT_NOTICE}</span>
+      <span className="legal">
+        {app.version && <span className={app.updateReady ? "ver ready" : "ver"}>{versionText(app)} · </span>}
+        {RIOT_NOTICE}
+      </span>
     </>
   );
 }

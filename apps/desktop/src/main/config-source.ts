@@ -27,6 +27,8 @@ export interface ConfigSourceDeps {
   log?: (msg: string) => void;
   /** After a failed request, try again this much later (ms); 0 = don't. */
   retryMs?: number;
+  /** The server sent a config this app version can't use (e.g. after a server update): reported, and the old one kept. */
+  onRejected?: (err: Error) => void;
 }
 
 /**
@@ -63,7 +65,15 @@ export class ConfigSource extends EventEmitter<{ config: [LoadedConfig] }> {
     try {
       const r = await client.config(this.etag);
       if (r.notModified) return;
-      const config = parseRemoteConfig(r.config);
+      let config: LoadedConfig;
+      try {
+        config = parseRemoteConfig(r.config);
+      } catch (err) {
+        // Asking again returns the same config: no retry, reported once.
+        this.log(`Keeping the current scoring config, the server's doesn't fit this app: ${(err as Error).message}`);
+        this.deps.onRejected?.(err as Error);
+        return;
+      }
       this.etag = r.etag;
       this.emit("config", config);
       await mkdir(dirname(this.deps.cacheFile), { recursive: true });

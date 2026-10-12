@@ -22,6 +22,8 @@ import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
+import { reportError, reportProblem, startCrashReports } from "./crash-reports";
+import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
@@ -52,6 +54,9 @@ const envResult = ((): { env: AppEnv } | { error: Error } => {
 
 let win: BrowserWindow | null = null;
 let latest: ViewState | null = null;
+/** Takes an invite code from a join link; until the server connection exists, the code waits here. */
+let pendingInvite: string | null = inviteFromArgs(process.argv);
+let offerInvite: ((code: string) => void) | null = null;
 
 function createWindow(): BrowserWindow {
   const w = new BrowserWindow({
@@ -102,13 +107,32 @@ async function startDocking(coach: Coach): Promise<void> {
   }, DOCK_POLL_MS);
 }
 
-/** The server address baked into the installer (LDC_SERVER_URL at build time), if any. */
-function builtInServerUrl(): string | null {
+/** A setting baked into the installer at build time (electron-builder extraMetadata), if any. */
+function builtIn(key: "ldcDefaultServerUrl" | "ldcSentryDsn"): string | null {
   try {
-    const pkg = JSON.parse(readFileSync(join(app.getAppPath(), "package.json"), "utf8")) as { ldcDefaultServerUrl?: unknown };
-    return typeof pkg.ldcDefaultServerUrl === "string" ? pkg.ldcDefaultServerUrl : null;
+    const pkg = JSON.parse(readFileSync(join(app.getAppPath(), "package.json"), "utf8")) as Record<string, unknown>;
+    return typeof pkg[key] === "string" ? pkg[key] : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Crash reports: on in installers built with LDC_SENTRY_DSN (LDC_SENTRY_DSN in a development
+ * build too). The SDK must start before Electron's "ready" (~60 ms); builds without a DSN skip
+ * it. LDC_CRASH_TEST=1 sends a test error report once the panel is up.
+ */
+function startCrashReportsEarly(): void {
+  const dsn = builtIn("ldcSentryDsn") ?? (!app.isPackaged ? (process.env.LDC_SENTRY_DSN ?? null) : null);
+  if (!dsn) return;
+  try {
+    startCrashReports(dsn, app.getVersion());
+    console.log("Crash reports on (Sentry)");
+  } catch (err) {
+    return console.warn(`Crash reports off: ${(err as Error).message}`);
+  }
+  if (process.env.LDC_CRASH_TEST === "1") {
+    setTimeout(() => reportError(new Error("LoL Draft Coach test crash (LDC_CRASH_TEST)")), 8_000);
   }
 }
 
@@ -194,7 +218,11 @@ function handleAccountIpc(server: ServerProfileSource, env: AppEnv): void {
 
 /** Scoring config from the server (tuning without a release): the cached copy at once, then checks at start, on registering and at each champ select. */
 async function followServerConfig(serverProfiles: ServerProfileSource, coach: PersonalCoach, connector: LcuConnector): Promise<void> {
-  const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
+  const remoteConfig = new ConfigSource({
+    client: () => serverProfiles.serverClient,
+    cacheFile: join(app.getPath("userData"), "config", "server-config.json"),
+    onRejected: (err) => reportProblem(`Server config rejected: ${err.message}`),
+  });
   remoteConfig.on("config", (c) => coach.setConfig(c));
   await remoteConfig.loadCached();
   void remoteConfig.refresh();
@@ -247,11 +275,14 @@ async function createProfileSource(env: AppEnv, config: ReturnType<typeof loadCo
   };
   const server = new ServerProfileSource({
     accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
-    defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
+    defaultServerUrl: env.serverUrl ?? builtIn("ldcDefaultServerUrl"),
     outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
     cacheFile: join(app.getPath("userData"), "profile-matches.json"),
   });
   await server.init();
+  offerInvite = (code) => server.offerInvite(code);
+  if (pendingInvite) offerInvite(pendingInvite);
+  pendingInvite = null;
   return server;
 }
 
@@ -322,7 +353,8 @@ async function main(): Promise<void> {
   ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
-  startAutoUpdate((m) => coach.announce(m));
+  coach.setAppVersion(app.getVersion());
+  startAutoUpdate((version) => coach.updateReady(version));
   // Screenshots and perf runs are of the panel at its design size (440 × 720, zoom 1), wherever the client is.
   if (!process.env.LDC_SCREENSHOT && !perf) void startDocking(coach);
   scheduleScreenshot(coach);
@@ -343,11 +375,19 @@ async function main(): Promise<void> {
 if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  // Join links (lol-draft-coach://join/CODE) open the app; the installer registers the scheme.
+  if (app.isPackaged) app.setAsDefaultProtocolClient(JOIN_SCHEME);
+  app.on("second-instance", (_event, argv) => {
+    const code = inviteFromArgs(argv);
+    if (code) {
+      if (offerInvite) offerInvite(code);
+      else pendingInvite = code;
+    }
     if (!win || win.isDestroyed()) return;
     if (win.isMinimized()) win.restore();
     win.show();
     win.focus();
   });
+  if (!perf) startCrashReportsEarly();
   void main();
 }

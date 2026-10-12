@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { AccountView, ViewState } from "../../shared/view";
 import { Button } from "../components/Button";
 import { codeLength, InviteCodeInput } from "../components/InviteCodeInput";
@@ -18,7 +18,11 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
   const [serverUrl, setServerUrl] = useState(account.serverUrl ?? account.defaultServerUrl ?? "");
   // The address is prefilled: its field only opens on "Change" (or when there is none).
   const [editServer, setEditServer] = useState(!serverUrl);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(account.inviteCode ?? "");
+  // A join link clicked while this screen is open fills the code in too.
+  useEffect(() => {
+    if (account.inviteCode) setCode(account.inviteCode);
+  }, [account.inviteCode]);
   const busy = account.state === "registering";
   const lcuConnected = state.status.lcu === "connected";
   const ready = codeLength(code) === CODE_LENGTH && serverUrl.trim() !== "" && lcuConnected;

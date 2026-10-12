@@ -519,6 +519,12 @@ export const AppConfigSchema = z.object({
   import: z.object({ enabled: z.boolean() }).default({ enabled: false }),
   /** Positions that share a lane (bot and support): an ally there is your lane partner. */
   sharedLanes: z.array(z.array(z.string())).default([]),
+  /**
+   * Accounts the server accepts at most (the personal Riot key covers a small private group):
+   * a new player past it is refused even with a valid invite; returning players always get in.
+   * Absent: no limit.
+   */
+  accounts: z.object({ maxUsers: z.number().int().positive() }).optional(),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 

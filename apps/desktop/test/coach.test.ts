@@ -70,3 +70,17 @@ describe("readEnv", () => {
     expect(() => readEnv({ RIOT_PLATFORM: "euw1" })).not.toThrow();
   });
 });
+
+describe("Coach app version", () => {
+  it("shows its version, then an update that installs on restart (once, with a notice)", () => {
+    const connector = new LcuConnector({ discover: async () => null, pollIntervalMs: 20 });
+    const ddragon = new DataDragon({ cacheDir: mkdtempSync(join(tmpdir(), "ldc-v-")), fetch: fakeDdragonFetch() });
+    const c = new Coach({ connector, ddragon });
+    c.setAppVersion("1.0.0");
+    expect(c.state.app).toEqual({ version: "1.0.0", updateReady: null });
+    c.updateReady("1.0.1");
+    c.updateReady("1.0.1");
+    expect(c.state.app).toEqual({ version: "1.0.0", updateReady: "1.0.1" });
+    expect(c.state.notices).toEqual(["Version 1.0.1 is ready and installs when you close the app."]);
+  });
+});

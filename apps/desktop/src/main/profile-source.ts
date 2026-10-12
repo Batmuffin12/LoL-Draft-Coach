@@ -11,6 +11,7 @@ import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
 import { loadProfile, profileFromMatches, type PersonalProfile } from "./profile";
 import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile } from "./server-client";
+import { retryDelay, serverProblem } from "./server-problem";
 
 /** The local player's Riot ID, read from the League client (or RIOT_ID in .env for the mock client). */
 export interface Identity {
@@ -176,6 +177,8 @@ export interface ServerProfileSourceDeps {
    * With them, a start asks the server only for what is new or changed.
    */
   cacheFile?: string;
+  /** Waits before trying a failed server again (default SERVER_RETRY_DELAYS_MS). */
+  retryDelaysMs?: number[];
 }
 
 /** The match cache file: whose matches they are, and the matches as the server sent them. */
@@ -183,6 +186,9 @@ const MatchCacheSchema = z.object({
   serverUrl: z.string(),
   riotId: z.string(),
   matches: z.array(z.looseObject({ match: z.looseObject({ matchId: z.string(), endedAt: z.number() }), me: z.number().int() })),
+  // Kept so the coach works from this file while the server is down (caches before 0.9 lack them).
+  masteries: z.array(z.looseObject({ championId: z.number(), level: z.number(), points: z.number() })).optional(),
+  rankHistory: z.array(z.looseObject({ day: z.string(), queueType: z.string(), tier: z.string(), rank: z.string().nullable() })).optional(),
 });
 
 /** Match ids asked for by name in one request (the server's PROFILE_IDS_MAX); more: the whole history. */
@@ -213,6 +219,15 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private cacheRead = false;
   /** Cache writes, one after another. */
   private cacheWrite: Promise<void> = Promise.resolve();
+  private masteries: ServerProfile["masteries"] = [];
+  private rankHistory: ServerProfile["rankHistory"] = [];
+  /** Your games in the last profile emitted. */
+  private games: PlayerGame[] = [];
+  /** The server answered with a profile since the start (or the last sign-in). */
+  private live = false;
+  /** Server failures in a row, and the timer that tries again. */
+  private failures = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly deps: ServerProfileSourceDeps) {
     super();
@@ -230,6 +245,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
 
   stop(): void {
     this.stopped = true;
+    this.cancelRetry();
   }
 
   private setAccount(patch: Partial<AccountView>): void {
@@ -316,6 +332,18 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     }
   }
 
+  /**
+   * An invite code from a join link: prefilled on the connect screen (the player still clicks
+   * Connect). Already connected: said instead, since connecting again would replace this PC's sign-in.
+   */
+  offerInvite(code: string): void {
+    if (this.view.state === "registered") {
+      this.setAccount({ message: `This app is already connected as ${this.view.riotId}. To use the invite code ${code}, sign out first.` });
+      return;
+    }
+    this.setAccount({ inviteCode: code });
+  }
+
   /** Registers the player logged into the client, using an invite code. */
   async register(serverUrlInput: string, inviteCode: string): Promise<void> {
     if (!this.identity) {
@@ -333,7 +361,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.registeredAs = r.riotId;
       this.matches.clear();
       await this.clearCache();
-      this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null });
+      this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null, inviteCode: null });
       this.emit("status", { state: "loading", done: 0, total: 0 });
       await this.waitForSync();
     } catch (err) {
@@ -347,6 +375,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.client = null;
     this.registeredAs = null;
     this.matches.clear();
+    this.forgetSaved();
     await this.clearCache();
     this.advice = [];
     // Unsent records belong to this registration: never post them under another one.
@@ -412,6 +441,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       const c = MatchCacheSchema.parse(JSON.parse(await readFile(file, "utf8")));
       if (c.serverUrl !== this.view.serverUrl || !sameRiotId(c.riotId, this.registeredAs)) return;
       for (const m of c.matches as unknown as UserMatch[]) this.matches.set(m.match.matchId, m);
+      this.masteries = c.masteries ?? [];
+      this.rankHistory = c.rankHistory ?? [];
     } catch {
       // No cache yet, or an unreadable one: the whole history comes from the server.
     }
@@ -422,7 +453,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     const serverUrl = this.view.serverUrl;
     const riotId = this.registeredAs;
     if (!file || !serverUrl || !riotId) return;
-    const body = JSON.stringify({ serverUrl, riotId, matches: [...this.matches.values()] });
+    const body = JSON.stringify({ serverUrl, riotId, matches: [...this.matches.values()], masteries: this.masteries, rankHistory: this.rankHistory });
     // Written next to it, then renamed: an app closed mid-write leaves the old cache, never half a file.
     this.cacheWrite = this.cacheWrite
       .then(() => mkdir(dirname(file), { recursive: true }))
@@ -455,18 +486,13 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       dropped++;
     }
 
-    const profile = profileFromMatches(
-      [...this.matches.values()],
-      p.masteries.map((m) => ({
-        championId: m.championId,
-        level: m.level,
-        points: m.points,
-        ...(m.lastPlayTime !== undefined ? { lastPlayTime: m.lastPlayTime } : {}),
-        ...(m.grades ? { grades: m.grades } : {}),
-      })),
-    );
+    this.masteries = p.masteries;
+    this.rankHistory = p.rankHistory;
+    this.live = true;
+    this.failures = 0;
+    this.cancelRetry();
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
-    this.emit("profile", { ...profile, rankHistory: p.rankHistory });
+    const profile = this.emitProfile();
     // The server's log, plus records still in the outbox (so a card doesn't vanish while unsent).
     // Re-sent on every poll: only a change rebuilds the post-game card.
     const advice = this.pending.reduce(mergeAdvice, p.advice);
@@ -501,10 +527,56 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     await this.fetchProfile();
   }
 
+  /** Emits the profile from the matches, masteries and rank history at hand. */
+  private emitProfile(): PersonalProfile {
+    const profile = profileFromMatches(
+      [...this.matches.values()],
+      this.masteries.map((m) => ({
+        championId: m.championId,
+        level: m.level,
+        points: m.points,
+        ...(m.lastPlayTime !== undefined ? { lastPlayTime: m.lastPlayTime } : {}),
+        ...(m.grades ? { grades: m.grades } : {}),
+      })),
+    );
+    this.games = profile.games;
+    this.emit("profile", { ...profile, rankHistory: this.rankHistory });
+    return profile;
+  }
+
+  private forgetSaved(): void {
+    this.masteries = [];
+    this.rankHistory = [];
+    this.games = [];
+    this.live = false;
+    this.failures = 0;
+    this.cancelRetry();
+  }
+
+  private cancelRetry(): void {
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+  }
+
+  /** Tries the server again after a wait that grows with each failure in a row. */
+  private scheduleRetry(): number {
+    if (!this.retryTimer) this.failures++;
+    const wait = retryDelay(this.failures, this.deps.retryDelaysMs);
+    if (!this.retryTimer && !this.stopped) {
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        void this.fetchProfile();
+      }, wait);
+      this.retryTimer.unref?.();
+    }
+    return wait;
+  }
+
   private onServerError(err: unknown): void {
     if (err instanceof ServerError && err.status === 401) {
       void this.deps.accounts.clear();
       this.matches.clear();
+      this.forgetSaved();
       void this.clearCache();
       this.client = null;
       this.registeredAs = null;
@@ -516,7 +588,14 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "idle" });
       return;
     }
-    this.emit("status", { state: "error", message: (err as Error).message });
+    const problem = serverProblem(err, this.scheduleRetry());
+    if (!this.matches.size) {
+      this.emit("status", { state: "error", message: problem });
+      return;
+    }
+    // Your games saved on this PC keep the coach going; the notice says what's wrong.
+    const games = this.live ? this.games : this.emitProfile().games;
+    this.emit("status", { state: "ready", games: games.length, role: mainRole(games), problem });
   }
 }
 

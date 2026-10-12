@@ -18,7 +18,7 @@ export type AccountLookup = Pick<RiotApi, "accountByRiotId"> & Partial<IdentityR
 
 export class AccountError extends Error {
   constructor(
-    readonly code: "invalid_riot_id" | "invite_invalid" | "riot_id_not_found",
+    readonly code: "invalid_riot_id" | "invite_invalid" | "riot_id_not_found" | "group_full",
     message: string,
   ) {
     super(message);
@@ -56,6 +56,7 @@ export async function registerUser(
   riot: AccountLookup,
   input: { inviteCode: string; riotId: string },
   now: number,
+  opts: { maxUsers?: number | null } = {},
 ): Promise<{ token: string; user: User }> {
   const { gameName, tagLine } = parseRiotId(input.riotId);
   const codeHash = sha256(normalizeInviteCode(input.inviteCode));
@@ -94,6 +95,10 @@ export async function registerUser(
     const existing =
       tx.select().from(users).where(eq(users.puuid, account.puuid)).get() ??
       (returning ? tx.select().from(users).where(eq(users.id, returning.id)).get() : undefined);
+    // A new player past the cap is refused (the invite stays unused); returning players always get in.
+    if (!existing && opts.maxUsers != null && tx.select({ id: users.id }).from(users).all().length >= opts.maxUsers) {
+      throw new AccountError("group_full", `The coach is full (${opts.maxUsers} players). Ask the person who invited you.`);
+    }
     const saved = existing
       ? tx
           .update(users)

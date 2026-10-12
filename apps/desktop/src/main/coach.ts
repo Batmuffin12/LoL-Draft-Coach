@@ -73,9 +73,20 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
     this.update({ draft: this.draft ? toDraftView(this.draft, lookup, this.now(), this.phase.observe(this.draft)) : null });
   }
 
-  /** Shows a short message in the panel (e.g. an update is ready). */
+  /** Shows a short message in the panel. */
   announce(message: string): void {
     this.notice(message);
+  }
+
+  /** The app's own version, shown in the footer. */
+  setAppVersion(version: string): void {
+    this.update({ app: { ...this.view.app, version } });
+  }
+
+  /** A newer version is downloaded and installs when the app closes: footer and a notice. */
+  updateReady(version: string): void {
+    this.update({ app: { ...this.view.app, updateReady: version } });
+    this.notice(`Version ${version} is ready and installs when you close the app.`);
   }
 
   protected notice(message: string): void {
