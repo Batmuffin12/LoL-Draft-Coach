@@ -97,7 +97,7 @@ MSYS_NO_PATHCONV=1 railway ssh -s ldc-server -- "base64 -w0 /tmp/ldc-copy.sqlite
 MSYS_NO_PATHCONV=1 railway ssh -s ldc-server -- "rm -f /tmp/ldc-copy.sqlite.gz"
 ```
 
-The copy holds users' tokens (hashed) and Riot IDs: keep it outside the repo and delete it when done. Then `DATABASE_PATH=path/to/ldc.sqlite pnpm --filter @ldc/server backtest`.
+Run it from a Railway-linked checkout (a git worktree isn't linked: "No linked project found"). On 2026-10-12 the database was 1.7 GB (524 MB compressed, ~3 minutes); the spike and backtest CLIs then need `NODE_OPTIONS=--max-old-space-size=14000`. The copy holds users' tokens (hashed) and Riot IDs: keep it outside the repo and delete it when done. Then `DATABASE_PATH=path/to/ldc.sqlite pnpm --filter @ldc/server backtest`.
 
 ## Riot API key
 

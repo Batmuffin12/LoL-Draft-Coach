@@ -102,3 +102,18 @@ Steps 2–6 are the power-spike feature (one milestone-sized chunk, roughly a we
 - Measured as first built, spikes pass the check from ~7-minute windows, but a placebo (the same player's swing at the role's usual item time) gives nearly the same numbers: that is the champion's **game phase**, not the item. Fixed in fe2d7ab: spikes subtract it (`baselineSec`), and the published check tests the item-specific part.
 - Item-specific spikes are noise at this size (32 of 725 at z ≥ 2 ≈ chance). By Spearman–Brown, r 0.1–0.15 needs ~6–10× the games (60–100k with timelines) to reach 0.5; production adds ~7k a day, capped at 50k per band. Fights won (kill events, collected since v0.7.x) may be more sensitive than gold.
 - What *is* stable today is the game phase itself (r 0.61, 90% same direction at 8 min): when a champion gains most on its lane opponent. It isn't an item spike, but it could be shown honestly as "strongest from about minute X" (owner to decide).
+
+### Re-check on production (2026-10-12, 62,617 games with timelines, 53,464 with kills and levels, all bands)
+
+Same command on a fresh copy (1.7 GB; the CLI now needs `NODE_OPTIONS=--max-old-space-size=14000`; copy deleted afterwards):
+
+| Window | With game phase r | Events | Item-specific r | Same direction (z ≥ 2) | Older→newer r |
+| --- | --- | --- | --- | --- | --- |
+| 2 min | 0.19 | 7,222 | 0.06 | 73% of 1,312 | 0.06 |
+| 3 min (published) | 0.30 | 6,674 | 0.02 | 67% of 1,087 | 0.03 |
+| 5 min | 0.47 | 5,797 | 0.06 | 69% of 896 | 0.05 |
+| 8 min | 0.67 | 4,659 | 0.10 | 73% of 818 | 0.11 |
+
+- **Fails again, with 6× the games.** Item-specific r stayed at 0.02–0.10 (Oct 8: 0.09–0.16 on 10k), and 92 of 1,241 item spikes reach z ≥ 2 (≈ 7%, little over chance). More data did not raise the split-half agreement, so the item-specific part looks like it is near zero for most champions, not just under-sampled.
+- The game phase keeps getting more stable (r 0.67 at 8 min). Level spikes look stronger in the top list (Irelia, Volibear, Darius at level 5, fights z 4–5), but the published check covers items only; testing levels on their own is a next step, not part of v0.8.0.
+- **Exit rule applies (Oct 15):** v0.8.0 ships with spikes hidden behind the check (as built) and your own item timing visible.
