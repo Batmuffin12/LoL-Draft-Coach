@@ -184,6 +184,25 @@ export function normalizeServerUrl(raw: string): string {
 export const WAKE_RETRY_DELAYS_MS = [1_000, 2_000, 3_000, 5_000, 8_000];
 const WAKING_STATUSES = new Set([502, 503, 504]);
 
+/**
+ * How long one attempt may take: `responseMs` until the server answers (a server that accepts
+ * and never answers counts as a dropped connection, so it's retried while waking), `totalMs`
+ * until the whole body has arrived (the full history is the largest, ~14 MB).
+ */
+export interface ServerTimeouts {
+  responseMs: number;
+  totalMs: number;
+}
+export const DEFAULT_TIMEOUTS: ServerTimeouts = { responseMs: 20_000, totalMs: 120_000 };
+
+/** A response and the signal that ends it when the attempt runs out of time. */
+interface Sent {
+  res: Response;
+  signal: AbortSignal;
+}
+
+const timedOut = (err: unknown) => err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError");
+
 export class ServerClient {
   private readonly fetchFn: typeof fetch;
   private readonly sleep: (ms: number) => Promise<void>;
@@ -193,19 +212,23 @@ export class ServerClient {
     private token: string | null,
     fetchFn?: typeof fetch,
     sleep?: (ms: number) => Promise<void>,
+    private readonly timeouts: ServerTimeouts = DEFAULT_TIMEOUTS,
   ) {
     this.fetchFn = fetchFn ?? fetch;
     this.sleep = sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
-  /** Sends a request, retrying while a sleeping server wakes up. */
-  private async send(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Response> {
-    let res: Response | null = null;
-    let lastError: Error | null = null;
+  /** Sends a request, retrying while a sleeping server wakes up (502–504, dropped connections, no answer). */
+  private async send(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Sent> {
+    let sent: Sent | null = null;
+    let lastError: unknown = null;
     for (let attempt = 0; attempt <= WAKE_RETRY_DELAYS_MS.length; attempt++) {
       if (attempt > 0) await this.sleep(WAKE_RETRY_DELAYS_MS[attempt - 1]!);
+      const answer = new AbortController();
+      const timer = setTimeout(() => answer.abort(new DOMException("No answer", "TimeoutError")), this.timeouts.responseMs);
+      const signal = AbortSignal.any([answer.signal, AbortSignal.timeout(this.timeouts.totalMs)]);
       try {
-        res = await this.fetchFn(`${this.baseUrl}${path}`, {
+        const res = await this.fetchFn(`${this.baseUrl}${path}`, {
           method,
           headers: {
             accept: "application/json",
@@ -214,30 +237,64 @@ export class ServerClient {
             ...headers,
           },
           ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+          signal,
         });
+        sent = { res, signal };
         lastError = null;
         if (!WAKING_STATUSES.has(res.status)) break;
       } catch (err) {
-        res = null;
-        lastError = err as Error;
+        sent = null;
+        lastError = err;
+      } finally {
+        clearTimeout(timer);
       }
     }
-    if (!res) {
-      throw new ServerError(0, "unreachable", `Can't reach the coach server at ${this.baseUrl} (${lastError?.message ?? "no response"}).`);
+    if (!sent) {
+      if (timedOut(lastError)) throw new ServerError(0, "timeout", `The coach server at ${this.baseUrl} didn't answer within ${this.timeouts.responseMs / 1000} s.`);
+      throw new ServerError(0, "unreachable", `Can't reach the coach server at ${this.baseUrl} (${(lastError as Error | null)?.message ?? "no response"}).`);
     }
-    return res;
+    if (WAKING_STATUSES.has(sent.res.status)) {
+      throw new ServerError(sent.res.status, "asleep", `The coach server is still starting up (HTTP ${sent.res.status}). It usually takes under a minute.`);
+    }
+    return sent;
   }
 
   private async request<T extends z.ZodType>(method: string, path: string, schema: T, body?: unknown): Promise<z.infer<T>> {
     return this.parse(await this.send(method, path, body), schema);
   }
 
-  private async parse<T extends z.ZodType>(res: Response, schema: T): Promise<z.infer<T>> {
+  /** The body as text, ended by the attempt's signal (a body that stops arriving). */
+  private async text({ res, signal }: Sent): Promise<string> {
+    let onAbort = () => {};
+    const aborted = new Promise<never>((_, reject) => {
+      onAbort = () => reject(signal.reason as Error);
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+    });
+    try {
+      return await Promise.race([res.text(), aborted]);
+    } catch (err) {
+      if (timedOut(err)) throw new ServerError(0, "timeout", `The coach server at ${this.baseUrl} stopped sending (over ${this.timeouts.totalMs / 1000} s).`);
+      throw new ServerError(0, "unreachable", `The connection to the coach server at ${this.baseUrl} broke (${(err as Error).message}).`);
+    } finally {
+      signal.removeEventListener("abort", onAbort);
+    }
+  }
+
+  private async parse<T extends z.ZodType>(sent: Sent, schema: T): Promise<z.infer<T>> {
+    const { res } = sent;
     if (res.status === 204) return schema.parse(undefined);
-    const json = (await res.json().catch(() => null)) as unknown;
+    const raw = await this.text(sent);
+    let json: unknown = null;
+    try {
+      json = raw ? JSON.parse(raw) : null;
+    } catch {
+      // Not JSON (a proxy's error page): handled below as an error or a bad response.
+    }
     if (!res.ok) {
       const e = ErrorBodySchema.safeParse(json);
-      throw new ServerError(res.status, e.success ? e.data.error : "http_error", e.success && e.data.message ? e.data.message : `Server error (HTTP ${res.status}).`);
+      const fallback = res.status >= 500 ? (["server_error", `The coach server had a problem (HTTP ${res.status}).`] as const) : (["http_error", `Server error (HTTP ${res.status}).`] as const);
+      throw new ServerError(res.status, e.success ? e.data.error : fallback[0], e.success && e.data.message ? e.data.message : fallback[1]);
     }
     const parsed = schema.safeParse(json);
     if (!parsed.success) throw new ServerError(res.status, "bad_response", `The server sent an unexpected response:\n${z.prettifyError(parsed.error)}`);
@@ -278,18 +335,18 @@ export class ServerClient {
    * answers 304 and nothing is downloaded.
    */
   async meta(band: number, etag?: string | null): Promise<{ notModified: true } | { notModified: false; snapshot: MetaSnapshot; etag: string | null }> {
-    const res = await this.send("GET", `/meta/${band}`, undefined, etag ? { "if-none-match": etag } : {});
-    if (res.status === 304) return { notModified: true };
-    const snapshot = (await this.parse(res, MetaSnapshotSchema)) as MetaSnapshot;
-    return { notModified: false, snapshot, etag: res.headers.get("etag") };
+    const sent = await this.send("GET", `/meta/${band}`, undefined, etag ? { "if-none-match": etag } : {});
+    if (sent.res.status === 304) return { notModified: true };
+    const snapshot = (await this.parse(sent, MetaSnapshotSchema)) as MetaSnapshot;
+    return { notModified: false, snapshot, etag: sent.res.headers.get("etag") };
   }
 
   /** The server's scoring config (raw JSON; the caller validates it). 304 when the ETag matches. */
   async config(etag?: string | null): Promise<{ notModified: true } | { notModified: false; config: unknown; etag: string | null }> {
-    const res = await this.send("GET", "/config", undefined, etag ? { "if-none-match": etag } : {});
-    if (res.status === 304) return { notModified: true };
-    const config = await this.parse(res, z.unknown());
-    return { notModified: false, config, etag: res.headers.get("etag") };
+    const sent = await this.send("GET", "/config", undefined, etag ? { "if-none-match": etag } : {});
+    if (sent.res.status === 304) return { notModified: true };
+    const config = await this.parse(sent, z.unknown());
+    return { notModified: false, config, etag: sent.res.headers.get("etag") };
   }
 
   /** Sends what the coach showed for one game (after it ended). */

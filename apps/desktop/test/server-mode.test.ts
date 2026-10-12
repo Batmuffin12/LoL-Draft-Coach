@@ -170,6 +170,55 @@ describe("ServerProfileSource against the real server API", () => {
     expect(waits).toEqual(WAKE_RETRY_DELAYS_MS.slice(0, 2));
   });
 
+  describe("timeouts and failures", () => {
+    const fast = { responseMs: 5, totalMs: 50 };
+    const noWait = async () => {};
+    /** Never answers, but ends when the request's signal fires (as fetch does). */
+    const hang = (_: unknown, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason as Error)));
+    const failure = (p: Promise<unknown>) => p.then(() => null, (err: unknown) => err as ServerError);
+
+    it("gives up on a server that accepts and never answers, after retrying like a dropped connection", async () => {
+      let calls = 0;
+      const client = new ServerClient(BASE, "t", ((u: string, i?: RequestInit) => (calls++, hang(u, i))) as typeof fetch, noWait, fast);
+      expect(await failure(client.syncState())).toMatchObject({ status: 0, code: "timeout", message: expect.stringMatching(/didn't answer within/) });
+      expect(calls).toBe(WAKE_RETRY_DELAYS_MS.length + 1);
+    });
+
+    it("succeeds when a hung first attempt is followed by an answer", async () => {
+      let calls = 0;
+      const fetchFn = ((u: string, i?: RequestInit) => (++calls === 1 ? hang(u, i) : Promise.resolve(Response.json({ sync: { state: "idle" } })))) as typeof fetch;
+      expect(await new ServerClient(BASE, "t", fetchFn, noWait, fast).syncState()).toEqual({ state: "idle" });
+      expect(calls).toBe(2);
+    });
+
+    it("ends a body that stops arriving", async () => {
+      const stalled = (async () => new Response(new ReadableStream({ start: (c) => c.enqueue(new TextEncoder().encode('{"sync":')) }))) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", stalled, noWait, fast).syncState())).toMatchObject({ code: "timeout", message: expect.stringMatching(/stopped sending/) });
+    });
+
+    it("says the connection broke when the body fails", async () => {
+      const broken = (async () => new Response(new ReadableStream({ start: (c) => c.error(new Error("ECONNRESET")) }))) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", broken, noWait, fast).syncState())).toMatchObject({ code: "unreachable", message: expect.stringMatching(/broke \(ECONNRESET\)/) });
+    });
+
+    it("says the server is still starting when it answers 502–504 to every retry", async () => {
+      const asleep = (async () => new Response("Service Unavailable", { status: 503 })) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", asleep, noWait, fast).syncState())).toMatchObject({ status: 503, code: "asleep" });
+    });
+
+    it("tells a server fault from a refused request, also without a JSON body", async () => {
+      const status = (s: number) => (async () => new Response("<html>oops</html>", { status: s })) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", status(500), noWait, fast).syncState())).toMatchObject({ status: 500, code: "server_error", message: expect.stringMatching(/had a problem \(HTTP 500\)/) });
+      expect(await failure(new ServerClient(BASE, "t", status(400), noWait, fast).syncState())).toMatchObject({ status: 400, code: "http_error" });
+    });
+
+    it("rejects a 200 that isn't the expected JSON", async () => {
+      const html = (async () => new Response("<html>captive portal</html>", { status: 200 })) as typeof fetch;
+      expect(await failure(new ServerClient(BASE, "t", html, noWait, fast).syncState())).toMatchObject({ code: "bad_response" });
+    });
+  });
+
   it("explains an unreachable server", async () => {
     const offline = (() => Promise.reject(new Error("ECONNREFUSED"))) as typeof fetch;
     const s = new ServerProfileSource({ accounts: new AccountStore(join(tmp("ldc-acct-"), "a.json"), box), defaultServerUrl: null, fetch: offline, sleep: async () => {} });
