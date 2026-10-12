@@ -86,6 +86,8 @@ Steps 2–6 are the power-spike feature (one milestone-sized chunk, roughly a we
 | Spikes and `spikeCheck` in every band's snapshot (one pass per run, all bands) | 267e374 | Done |
 | Shown in the game plan, the New tab and the Build tab, only when `spikeCheck` passes (`engine.v1.json` `spikes`) | 02c5a70 | Done; sim scenario `locked-spikes` |
 | Your first-item timing vs typical (New tab) | 5438184 | Done; needs ≥ 2 of your games on the champion with a timeline |
+| SPEC: spike info is passive | 8fb5d7e | Done |
+| `spikes.publish` (meta.v1.json): the hourly run measures spikes only when on | 30f7cae | Off: the check fails and the pass costs 100 s per run on production data |
 
 **Waiting on data:** M7 shipped (v0.7.0–v0.7.2 on `main`, 2026-10-08) with the timeline change, so production collects kills and levels from that deploy on (`/health` still reports 0.6.2, a known bug: confirm the deploy another way). After a few days, copy the DB (docs/CLOUD.md) and run `pnpm --filter @ldc/server spikes`. If the check passes (correlation ≥ 0.5, ≥ 80% same direction), merge M8 and the spikes appear; if not, try the time-matched comparison or a longer window before showing anything.
 
@@ -116,4 +118,4 @@ Same command on a fresh copy (1.7 GB; the CLI now needs `NODE_OPTIONS=--max-old-
 
 - **Fails again, with 6× the games.** Item-specific r stayed at 0.02–0.10 (Oct 8: 0.09–0.16 on 10k), and 92 of 1,241 item spikes reach z ≥ 2 (≈ 7%, little over chance). More data did not raise the split-half agreement, so the item-specific part looks like it is near zero for most champions, not just under-sampled.
 - The game phase keeps getting more stable (r 0.67 at 8 min). Level spikes look stronger in the top list (Irelia, Volibear, Darius at level 5, fights z 4–5), but the published check covers items only; testing levels on their own is a next step, not part of v0.8.0.
-- **Exit rule applies (Oct 15):** v0.8.0 ships with spikes hidden behind the check (as built) and your own item timing visible.
+- **Exit rule applies (Oct 15):** v0.8.0 ships with spikes hidden behind the check (as built) and your own item timing visible. Measuring them costs 100 s per hourly run on this PC (band 2's whole snapshot: 37 s), so the hourly run skips it (`spikes.publish: false`) until the offline check passes; then switch it on in `config/meta.v1.json`.
