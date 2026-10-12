@@ -69,6 +69,8 @@ Apps built with `LDC_UPDATE_URL` check for a new version on start, download it i
 
 ## 4. What a friend does
 
+Send them the landing page (`site/`, published to GitHub Pages by `.github/workflows/pages.yml` on pushes to `main`; one-time: repo Settings → Pages → Source: GitHub Actions) plus their invite code. The page's download button points at the newest release's installer and says "Coming soon" until the first release is published. In short:
+
 1. Download and run `LoL-Draft-Coach-Setup-<version>.exe`. The installer isn't code-signed yet, so Windows SmartScreen will warn: click **More info → Run anyway**. Tell friends this in advance.
 2. Open League of Legends and log in.
 3. Open LoL Draft Coach, paste the invite code and click **Connect**. The app reads their Riot ID from the client. The first load of their last 200 games takes a few minutes while the server fetches them.
