@@ -15,7 +15,7 @@ import type { Db } from "./db";
 import { metaSnapshots } from "./db/schema";
 import { WindowLimiter } from "./limits";
 import type { MetaJob } from "./meta-job";
-import { profileJson } from "./profile";
+import { PROFILE_IDS_MAX, profileJson } from "./profile";
 import type { SyncScheduler } from "./sync-scheduler";
 
 export interface AppDeps {
@@ -77,6 +77,16 @@ function metaHealth(deps: AppDeps) {
     },
   };
 }
+
+/** GET /me/profile's optional extras (additive: older panels send neither). */
+const ProfileQuery = z.object({
+  ids: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",") : []))
+    .pipe(z.array(z.string().regex(/^[A-Z0-9]{1,8}_[0-9]{1,20}$/)).max(PROFILE_IDS_MAX)),
+  timelines: z.enum(["1"]).optional(),
+});
 
 const InviteBody = z.object({
   note: z.string().max(100).optional(),
@@ -226,11 +236,15 @@ export function createApp(deps: AppDeps): Hono<Env> {
     const raw = c.req.query("since");
     const since = raw === undefined ? undefined : Number(raw);
     if (since !== undefined && !Number.isFinite(since)) return c.json({ error: "invalid_since", message: "since must be epoch milliseconds." }, 400);
+    const query = ProfileQuery.safeParse({ ids: c.req.query("ids"), timelines: c.req.query("timelines") });
+    if (!query.success) return c.json({ error: "invalid_query", message: `ids: up to ${PROFILE_IDS_MAX} match ids, comma-separated; timelines: 1.` }, 400);
     const user = c.get("user");
     if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs)) {
       deps.sync.request(user.id).catch(() => {});
     }
-    const body = profileJson(deps.db, user, since, now(), { sync: deps.sync?.state(user.id) ?? { state: "idle" } });
+    // ids and timelines let a panel that keeps its matches on disk ask for what it lacks (GET /me/profile?since=…&ids=…&timelines=1).
+    const opts = { ids: query.data.ids, timelines: query.data.timelines === "1" };
+    const body = profileJson(deps.db, user, since, now(), { sync: deps.sync?.state(user.id) ?? { state: "idle" } }, opts);
     return c.body(body, 200, { "content-type": "application/json" });
   });
 

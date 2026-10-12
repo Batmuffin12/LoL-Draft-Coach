@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { MatchSchema } from "@ldc/riot-api";
 import { createApp } from "../src/app";
 import { createInvite, userByToken } from "../src/accounts";
-import { loadProfile, profileJson } from "../src/profile";
+import { loadProfile, PROFILE_IDS_MAX, profileJson } from "../src/profile";
 import { openDb } from "../src/db";
 import { findConfigDir, loadServerConfig } from "../src/config";
 import { SyncScheduler } from "../src/sync-scheduler";
@@ -99,8 +99,10 @@ describe("GET /me/profile", () => {
     const token = await register("Ofek#EUW");
     const user = userByToken(db, token)!;
     for (const since of [undefined, NOW - 90 * 60_000]) {
-      const extra = { sync: { state: "idle" } };
-      expect(profileJson(db, user, since, NOW, extra)).toBe(JSON.stringify({ ...loadProfile(db, user, since, NOW), ...extra }));
+      for (const opts of [{}, { ids: ["EUW1_2"], timelines: true }]) {
+        const extra = { sync: { state: "idle" } };
+        expect(profileJson(db, user, since, NOW, extra, opts)).toBe(JSON.stringify({ ...loadProfile(db, user, since, NOW, opts), ...extra }));
+      }
     }
   });
 
@@ -119,6 +121,31 @@ describe("GET /me/profile", () => {
     const post = await app.request("/advice", { method: "POST", body: JSON.stringify(record), headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
     expect(post.status).toBe(204);
     expect((await gz()).advice).toHaveLength(1);
+  });
+
+  it("adds named matches to ?since (own ones only) and lists the matches with a complete timeline", async () => {
+    const { db, register, get } = setup();
+    const token = await register("Ofek#EUW");
+    await register("Friend#EUW");
+    db.$client.prepare("UPDATE matches SET summary = json_set(summary, '$.timeline', json('{\"monsters\":[]}')) WHERE match_id = 'EUW1_2'").run();
+    type Body = { matches: { match: { matchId: string } }[]; matchIds: string[]; timelineIds?: string[] };
+    const since = NOW - 90 * 60_000;
+    const body = (await (await get(`/me/profile?since=${since}&ids=EUW1_2,EUW1_1&timelines=1`, token)).json()) as Body;
+    // EUW1_3 is newer than since, EUW1_2 is asked for; EUW1_1 is the friend's and never shown.
+    expect(body.matches.map((m) => m.match.matchId)).toEqual(["EUW1_3", "EUW1_2"]);
+    expect(body.timelineIds).toEqual(["EUW1_2"]);
+    // Without the new parameters the response is as before (no timelineIds).
+    expect(((await (await get(`/me/profile?since=${since}`, token)).json()) as Body).timelineIds).toBeUndefined();
+  });
+
+  it("refuses too many or malformed match ids", async () => {
+    const { app, register, get } = setup();
+    const token = await register("Ofek#EUW");
+    const many = Array.from({ length: PROFILE_IDS_MAX + 1 }, (_, i) => `EUW1_${i}`).join(",");
+    expect((await get(`/me/profile?since=0&ids=${many}`, token)).status).toBe(400);
+    expect((await get("/me/profile?since=0&ids=EUW1_1;DROP", token)).status).toBe(400);
+    expect((await get("/me/profile?timelines=yes", token)).status).toBe(400);
+    expect((await app.request("/me/profile?ids=EUW1_1")).status).toBe(401);
   });
 
   it("is compressed when the client accepts gzip", async () => {
