@@ -78,6 +78,8 @@ Elsewhere instead (for example if the repo goes private): build with `LDC_UPDATE
 
 ## 4. What a friend does
 
+Send them [INSTALL.md](INSTALL.md) with the download link and their invite code. In short:
+
 1. Download and run `LoL-Draft-Coach-Setup-<version>.exe`. The installer isn't code-signed yet, so Windows SmartScreen will warn: click **More info → Run anyway**. Tell friends this in advance.
 2. Open League of Legends and log in.
 3. Open LoL Draft Coach, paste the invite code and click **Connect**. The app reads their Riot ID from the client. The first load of their last 200 games takes a few minutes while the server fetches them.
