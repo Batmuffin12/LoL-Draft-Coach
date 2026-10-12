@@ -26,6 +26,7 @@
     "@ldc/server": "workspace:*",
     "@ldc/shared": "workspace:*",
     "@ldc/sim": "workspace:*",
+    "@sentry/electron": "7.20.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",

@@ -48,10 +48,19 @@ On your Windows PC:
 
 ```powershell
 $env:LDC_SERVER_URL = "https://<your-domain>"   # prefilled in the app, so friends only paste the code
+$env:LDC_SENTRY_DSN = "https://<key>@<org>.ingest.sentry.io/<project>"   # crash reports (optional, below)
 pnpm --filter @ldc/desktop dist:win
 ```
 
 The installer is written to `apps/desktop/release/LoL-Draft-Coach-Setup-<version>.exe`.
+
+### Crash reports (Sentry)
+
+Installers built with `LDC_SENTRY_DSN` send crash reports to Sentry; without it they send nothing. One-time setup: a free Sentry account (Developer plan), a project of type **Electron**, and its DSN from Project Settings → Client Keys (the DSN isn't a secret: it only allows sending events).
+
+- What is sent: uncaught errors in the app (main process, plus renderer and native crashes), a "server config rejected" warning when the server's scoring config doesn't fit this app version, and release-health sessions. Every string is scrubbed before it leaves the PC (`apps/desktop/src/main/crash-reports.ts`): Riot IDs, PUUIDs, app tokens, Riot keys and the Windows user name in paths; the user, host name and request headers are dropped.
+- Cost: the SDK starts before the window (Electron requires it), ~60 ms on the owner's PC, only in builds with a DSN. The server has no Sentry: loading the SDK there takes ~0.7 s on every wake-up; Railway's logs and `/health` cover it.
+- Test it: start a development build with `LDC_SENTRY_DSN=<dsn>` and `LDC_CRASH_TEST=1`; ~8 s after the panel opens it sends a "test crash" error. Check that it appears in Sentry with no Riot ID or user name in it.
 
 ### Releases and automatic updates
 

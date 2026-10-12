@@ -73,6 +73,17 @@ describe("ConfigSource", () => {
     expect(() => parseRemoteConfig({ engine: bundled.engine })).toThrow();
   });
 
+  it("reports a config it rejects once, without asking for it again", async () => {
+    const broken = { ...bundled, engine: { ...bundled.engine, topN: 0 } };
+    const s = server(broken);
+    const rejected: Error[] = [];
+    const src = new ConfigSource({ client: () => s.client, cacheFile: cacheFile(), log: () => {}, retryMs: 10, onRejected: (e) => rejected.push(e) });
+    await src.refresh();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(rejected).toHaveLength(1);
+    expect(s.etags).toHaveLength(1);
+  });
+
   it("does nothing without a registered server", async () => {
     const src = new ConfigSource({ client: () => null, cacheFile: cacheFile(), log: () => {} });
     const seen: LoadedConfig[] = [];

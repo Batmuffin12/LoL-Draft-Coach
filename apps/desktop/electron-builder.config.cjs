@@ -8,6 +8,8 @@ const updateUrl = process.env.LDC_UPDATE_URL;
 const githubReleases = { provider: "github", owner: "Batmuffin12", repo: "LoL-Draft-Coach", releaseType: "draft" };
 // The coach server address friends connect to, prefilled in the app (they only paste an invite code).
 const serverUrl = process.env.LDC_SERVER_URL;
+// Crash reports (Sentry project DSN; not a secret): off in installers built without it.
+const sentryDsn = process.env.LDC_SENTRY_DSN;
 
 /** @type {import("electron-builder").Configuration} */
 module.exports = {
@@ -19,7 +21,7 @@ module.exports = {
   extraResources: [{ from: "../../config", to: "config", filter: ["*.json"] }],
   asarUnpack: ["**/node_modules/koffi/**"],
   npmRebuild: false,
-  extraMetadata: serverUrl ? { ldcDefaultServerUrl: serverUrl } : {},
+  extraMetadata: { ...(serverUrl ? { ldcDefaultServerUrl: serverUrl } : {}), ...(sentryDsn ? { ldcSentryDsn: sentryDsn } : {}) },
   win: {
     target: [{ target: "nsis", arch: ["x64"] }],
     artifactName: "LoL-Draft-Coach-Setup-${version}.${ext}",
