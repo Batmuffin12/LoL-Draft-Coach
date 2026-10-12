@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MetaIndex } from "@ldc/engine";
 import type { DraftSlot, DraftState, MetaSnapshot } from "@ldc/shared";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { laneOpponent } from "../src/main/personal-coach";
+import { laneOpponent } from "../src/main/draft-facts";
 
 const config = loadConfig(findConfigDir(__dirname));
 

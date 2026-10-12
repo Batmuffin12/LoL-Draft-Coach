@@ -1,5 +1,6 @@
 import { formatMetric, metricLabel, readMetric, renderReason, type ExplainConfig, type FocusMetric, type GrowthFocus } from "@ldc/engine";
-import type { UserMatch } from "@ldc/shared";
+import type { RankBandId, UserMatch } from "@ldc/shared";
+import type { LoadedConfig } from "./config";
 import type { FocusView, PostGameView } from "../shared/view";
 
 import { capital } from "./reason-view";
@@ -91,4 +92,21 @@ export function focusInGame(g: GrowthFocus | null, matchId: string | null, match
     target: formatMetric(f.target, f.metric, explain),
     met: f.lowerIsBetter ? v <= f.target : v >= f.target,
   };
+}
+
+/** Your growth focus as the Last game tab shows it, or null without one; `band` names the rank in the "why" (null without live meta). */
+export function growthFocusView(
+  growth: GrowthFocus | null,
+  o: { config: Pick<LoadedConfig, "engine" | "explain" | "bands">; band: RankBandId | null; championName: (id: number) => string; positionLabel: (role: string) => string },
+): FocusView | null {
+  if (!growth) return null;
+  const { engine, explain, bands } = o.config;
+  return focusView(growth, {
+    explain,
+    targetStep: engine.growth.targetStep,
+    checkGames: engine.growth.checkGames,
+    bandName: o.band !== null ? (bands.bands.find((b) => b.id === o.band)?.name ?? null) : null,
+    championName: o.championName,
+    positionLabel: o.positionLabel,
+  });
 }

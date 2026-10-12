@@ -3,7 +3,8 @@ import type { ChampionAttributes, RolePool } from "@ldc/engine";
 import type { AdviceRecord } from "@ldc/shared";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { lockInTerms } from "../src/main/advice-log";
-import { poolAdvice, uiCopy } from "../src/main/personal-coach";
+import { uiCopy } from "../src/main/personal-coach";
+import { poolAdvice } from "../src/main/role-view";
 
 const config = loadConfig(findConfigDir(__dirname));
 const { templates } = config.explain;
