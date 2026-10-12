@@ -25,6 +25,7 @@ import { startAutoUpdate } from "./updater";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
+import { StatePusher } from "./state-pusher";
 
 const DOCK_POLL_MS = 500;
 
@@ -288,17 +289,19 @@ async function main(): Promise<void> {
 
   win = createWindow();
   perf?.mark("windowCreated");
+  // One event often updates the state several times in a row: the renderer gets the last of them, once.
+  const pusher = new StatePusher<ViewState>((s) => {
+    if (!win || win.isDestroyed()) return;
+    if (perf) perf.send(win, IPC.state, s);
+    else win.webContents.send(IPC.state, s);
+  });
   coach.on("state", (s) => {
     latest = s;
-    if (win && !win.isDestroyed()) {
-      if (perf) perf.send(win, IPC.state, s);
-      else win.webContents.send(IPC.state, s);
-    }
+    pusher.push(s);
   });
-  ipcMain.on(IPC.ready, (e) => {
+  ipcMain.on(IPC.ready, () => {
     perf?.mark("rendererReady");
-    if (latest && perf && win) perf.send(win, IPC.state, latest);
-    else if (latest) e.sender.send(IPC.state, latest);
+    if (latest) pusher.resend(latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
   ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
