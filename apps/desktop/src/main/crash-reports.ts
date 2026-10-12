@@ -3,7 +3,7 @@ import { join } from "node:path";
 /**
  * Crash reports (Sentry), only in installers built with LDC_SENTRY_DSN. Nothing that
  * identifies a player leaves the PC: every string in an event is scrubbed of Riot IDs,
- * PUUIDs, app tokens, Riot keys and the Windows user name in paths, and the user,
+ * PUUIDs, match IDs, app tokens, Riot keys and the Windows user name in paths, and the user,
  * host name and request headers are dropped.
  */
 
@@ -15,6 +15,9 @@ const RULES: [RegExp, string][] = [
   [/\bldc_[A-Za-z0-9_-]+/g, "<token>"],
   // PUUIDs: 78 characters of base64url.
   [/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{78}(?![A-Za-z0-9_-])/g, "<puuid>"],
+  // Match IDs (EUW1_7123456789): anyone can look up who played in a game. No \b in front,
+  // so IDs in an encoded list (%2CEUW1_…) go too.
+  [/(?:[A-Z]{2,3}\d|KR|RU)_\d{6,}\b/g, "<match>"],
   // Riot IDs: name#tag (the name may hold spaces, so take the word before #).
   [/[^\s#"'<>()[\]{}:,;=/\\]{2,16}#[A-Za-z0-9]{2,5}\b/g, "<riot-id>"],
 ];

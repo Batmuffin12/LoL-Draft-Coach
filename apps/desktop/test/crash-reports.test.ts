@@ -10,13 +10,15 @@ describe("crash report scrubbing", () => {
     expect(scrubText('{"path":"C:\\\\Users\\\\dana\\\\x"}')).toBe('{"path":"C:\\\\Users\\\\<user>\\\\x"}');
   });
 
-  it("removes Riot IDs, PUUIDs, app tokens and Riot keys", () => {
+  it("removes Riot IDs, PUUIDs, match IDs, app tokens and Riot keys", () => {
     expect(PUUID).toHaveLength(78);
     expect(scrubText("Registered as Faker#KR1, not Dana#EUW.")).toBe("Registered as <riot-id>, not <riot-id>.");
     expect(scrubText(`puuid=${PUUID}&x=1`)).toBe("puuid=<puuid>&x=1");
     expect(scrubText("Bearer ldc_AbC-123_x")).toBe("Bearer <token>");
     // A made-up key, assembled so the repo's secret scan doesn't flag it.
     expect(scrubText(`key ${"RGAPI-"}${"12345678-abcd-ef01-2345-6789abcdef01"} rejected`)).toBe("key <riot-key> rejected");
+    expect(scrubText("/me/profile?ids=EUW1_7123456789%2CEUW1_7123456790&timelines=1")).toBe("/me/profile?ids=<match>%2C<match>&timelines=1");
+    expect(scrubText("match KR_6912345678 failed")).toBe("match <match> failed");
     // Ordinary messages stay readable.
     expect(scrubText("Can't reach the coach server at https://coach.test (ECONNREFUSED).")).toBe("Can't reach the coach server at https://coach.test (ECONNREFUSED).");
   });
