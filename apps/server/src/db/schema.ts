@@ -22,6 +22,8 @@ export const users = sqliteTable("users", {
   lastSeenAt: integer("last_seen_at"),
   /** The user's own League-V4 entries (queue, tier, division, wins, losses). */
   ranked: text("ranked", { mode: "json" }).$type<RankedEntry[]>(),
+  /** Games (and timelines) of the user's history still to load; 0 = complete, null = never synced. */
+  historyBacklog: integer("history_backlog"),
 });
 
 export interface RankedEntry {
@@ -153,4 +155,16 @@ export const invites = sqliteTable("invites", {
   expiresAt: integer("expires_at").notNull(),
   usedBy: integer("used_by").references(() => users.id, { onDelete: "set null" }),
   usedAt: integer("used_at"),
+});
+
+/** One backup of the user data (users, invites, advice log, rank history) to off-site storage. */
+export const backups = sqliteTable("backups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  startedAt: integer("started_at").notNull(),
+  finishedAt: integer("finished_at"),
+  /** The stored object's name; null until the upload succeeded. */
+  objectKey: text("object_key"),
+  bytes: integer("bytes"),
+  users: integer("users"),
+  error: text("error"),
 });

@@ -1,5 +1,6 @@
-import type { Loadout } from "@ldc/engine";
+import { renderReason, type Loadout } from "@ldc/engine";
 import { LcuWriteError, type LcuImporter } from "@ldc/lcu";
+import type { LoadedConfig } from "./config";
 
 /** What importing needs from the LCU writer (the single approved LCU write exception, CLAUDE.md). */
 export type LoadoutWriter = Pick<LcuImporter, "importRunePage" | "importSpells" | "importItemSet">;
@@ -53,5 +54,28 @@ export async function importLoadout(kind: "runes" | "items", shown: { loadout: L
     return say("import.items.done");
   } catch (err) {
     return failure(err);
+  }
+}
+
+/**
+ * The panel's one import button: "runes" = the rune page and your two summoner spells, "items" =
+ * the item set, "all" = both, one after the other. Returns what to tell the player and closes the
+ * writer. Only ever called from the player's click (CLAUDE.md: the single approved LCU write exception).
+ */
+export async function importShownLoadout(
+  kind: "runes" | "items" | "all",
+  shown: { loadout: Loadout; champion: string },
+  writer: LoadoutWriter & Pick<LcuImporter, "close">,
+  config: Pick<LoadedConfig, "explain" | "engine">,
+): Promise<string> {
+  const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, config.explain.templates, String);
+  try {
+    const opts = { say, mapId: Number(config.engine.loadout.items.mapId) };
+    const kinds = kind === "all" ? (["runes", "items"] as const) : [kind];
+    const done: string[] = [];
+    for (const k of kinds) done.push(await importLoadout(k, shown, writer, opts));
+    return done.filter(Boolean).join(" · ");
+  } finally {
+    writer.close();
   }
 }

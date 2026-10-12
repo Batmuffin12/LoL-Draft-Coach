@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, gt, isNull, or } from "drizzle-orm";
 import { RiotKeyError } from "@ldc/riot-api";
 import type { Db } from "./db";
 import { users } from "./db/schema";
@@ -49,15 +49,16 @@ export class SyncScheduler {
     return this.states.get(userId) ?? { state: "idle" };
   }
 
-  /** Starts (or joins) a sync for one user. */
-  request(userId: number): Promise<SyncResult> {
+  /** Starts (or joins) a sync for one user; `callsPerSync` overrides the configured budget. */
+  request(userId: number, callsPerSync?: number): Promise<SyncResult> {
     const existing = this.running.get(userId);
     if (existing) return existing;
     const user = this.db.select().from(users).where(eq(users.id, userId)).get();
     if (!user) return Promise.reject(new Error(`No user ${userId}`));
 
     this.states.set(userId, { state: "running", done: 0, total: 0, startedAt: this.now() });
-    const p = syncUser(this.db, this.riot, user, this.settings, this.now(), (done, total) =>
+    const settings = callsPerSync ? { ...this.settings, history: { ...this.settings.history, callsPerSync } } : this.settings;
+    const p = syncUser(this.db, this.riot, user, settings, this.now(), (done, total) =>
       this.states.set(userId, { state: "running", done, total, startedAt: this.now() }),
     )
       .then((result) => {
@@ -73,6 +74,29 @@ export class SyncScheduler {
       .finally(() => this.running.delete(userId));
     this.running.set(userId, p);
     return p;
+  }
+
+  /**
+   * The hourly wake-up's share of loading long histories: every user whose history is still
+   * loading gets a sync with `history.backfillCallsPerWake` calls, one after another. Their calls
+   * go before the collector's (rate limiter priorities). No timer: it runs inside the wake-up.
+   */
+  async backfill(): Promise<void> {
+    const calls = this.settings.history.backfillCallsPerWake ?? this.settings.history.callsPerSync;
+    const pending = this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(or(isNull(users.historyBacklog), gt(users.historyBacklog, 0)))
+      .all();
+    for (const { id } of pending) {
+      try {
+        const r = await this.request(id, calls);
+        this.log(`backfill: user ${id} +${r.newMatches} matches, ${r.remaining} to go`);
+      } catch (err) {
+        this.log(`backfill: user ${id} failed: ${(err as Error).message}`);
+        if (err instanceof RiotKeyError) return;
+      }
+    }
   }
 
   /** Forgets a user's state (after DELETE /me). */

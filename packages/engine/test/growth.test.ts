@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { ParticipantSummary, UserMatch } from "@ldc/shared";
-import { metricImportance, parseEngineConfig, pickFocus } from "../src/index";
+import { focusAfterLastGame, metricImportance, parseEngineConfig, pickFocus } from "../src/index";
 
 const engine = parseEngineConfig(JSON.parse(readFileSync(new URL("../../../config/engine.v1.json", import.meta.url), "utf8")));
 // Two metrics only, so each test reads clearly: CS per minute, and deaths per minute (lower is better).
 const cfg = {
-  growth: { ...engine.growth, window: 20, checkGames: 10, targetStep: 0.5, minGames: 8, minImportance: 0.02, metrics: undefined },
+  growth: { ...engine.growth, window: 20, checkGames: 10, targetStep: 0.5, minGames: 8, minImportance: 0.02, metrics: undefined, roles: undefined },
   playstyle: { ...engine.playstyle, minReferenceSamples: 20, axes: { farming: { metrics: ["csPerMinute"] }, risk: { metrics: ["-deathsPerMinute"] } } },
 };
 
@@ -54,6 +54,36 @@ describe("metricImportance", () => {
 });
 
 describe("pickFocus", () => {
+  it("uses the role's own goal list when the config has one", () => {
+    const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60, 9));
+    const perRole = { ...cfg, growth: { ...cfg.growth, roles: { middle: ["-deathsPerMinute"], jungle: ["csPerMinute"] } } };
+    const f = pickFocus(matches, "middle", perRole)!;
+    expect([f.focus, ...f.met].every((m) => m === null || m.metric === "deathsPerMinute")).toBe(true);
+    expect(engine.growth.roles?.utility?.[0]).toBe("challenges.controlWardsPlaced");
+  });
+
+  it("after a game in a role you rarely play: that role's own goals, from the games you have there", () => {
+    const general = { ...cfg, growth: { ...cfg.growth, roles: { middle: ["-deathsPerMinute"], utility: ["csPerMinute"] } } };
+    const refs = () => ({ csPerMinute: { n: 100, quantiles: [4, 6, 7, 8, 9], importance: 0.1 } });
+    // A mid main (20 games) whose last game was a first support game.
+    const ms = [game(0, 412, 20, 3, "utility"), ...Array.from({ length: 20 }, (_, i) => game(i + 1, 103, 60, 3, "middle"))];
+    const f = focusAfterLastGame(ms, "middle", general, refs)!;
+    expect(f).toMatchObject({ role: "utility", scope: "few", games: 1, championId: null });
+    expect(f.focus?.metric).toBe("csPerMinute");
+    // Enough games in the role: its own goals.
+    const own = focusAfterLastGame(ms.slice(1), "middle", general, refs)!;
+    expect(own).toMatchObject({ role: "middle", scope: "role" });
+    expect(focusAfterLastGame([], null, general, refs)).toBeNull();
+  });
+
+  it("takes typical from your rank even when its data has no importance (older servers), and importance from your games", () => {
+    const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60));
+    const f = pickFocus(matches, "middle", cfg, { csPerMinute: { n: 100, quantiles: [5, 7, 9, 10, 11] } })!;
+    expect(f.reference).toBe("band");
+    expect(f.focus).toMatchObject({ metric: "csPerMinute", typical: 9 });
+    expect(f.focus!.importance).toBeGreaterThan(0);
+  });
+
   it("chooses only from growth.metrics when set (early-game metrics and habits, not totals that follow the result)", () => {
     const matches = Array.from({ length: 20 }, (_, i) => game(i, 103, 60, 9));
     expect(pickFocus(matches, "middle", cfg)!.focus?.metric).toBe("csPerMinute");
@@ -104,7 +134,8 @@ describe("pickFocus", () => {
   });
 
   it("needs enough games in the role, and focuses on the whole role without a main champion", () => {
-    expect(pickFocus(Array.from({ length: 5 }, (_, i) => game(i, 103, 60)), "middle", cfg)).toBeNull();
+    expect(pickFocus(Array.from({ length: 5 }, (_, i) => game(i, 103, 60)), "middle", cfg)).toMatchObject({ scope: "few", games: 5, championId: null });
+    expect(pickFocus([], "middle", cfg)).toBeNull();
     const spread = Array.from({ length: 20 }, (_, i) => game(i, 100 + (i % 4), 60));
     expect(pickFocus(spread, "middle", cfg)!.championId).toBeNull();
   });

@@ -3,7 +3,7 @@
  * change it here, then `railway config plan` and `railway config apply` (see docs/CLOUD.md).
  *
  * Cost choices are explained next to each setting and tracked in docs/CLOUD.md.
- * Secrets (RIOT_API_KEY, ADMIN_TOKEN) are never in this file: preserve() keeps the values
+ * Secrets (RIOT_API_KEY, ADMIN_TOKEN, the BACKUP_ keys) are never in this file: preserve() keeps the values
  * already stored in Railway.
  */
 import { defineRailway, github, image, preserve, project, ref, service, volume } from "railway/iac";
@@ -58,11 +58,17 @@ export default defineRailway(() => {
       RIOT_KEY_TYPE: preserve(), // "development" now; "personal" once the personal key arrives
       RIOT_API_KEY: preserve(),
       ADMIN_TOKEN: preserve(),
+      // Daily backup of the user data to Cloudflare R2, inside the hourly wake-up (docs/CLOUD.md "Backups").
+      BACKUP_S3_BUCKET: "ldc-backups",
+      BACKUP_S3_ENDPOINT: preserve(),
+      BACKUP_S3_ACCESS_KEY_ID: preserve(),
+      BACKUP_S3_SECRET_ACCESS_KEY: preserve(),
+      BACKUP_ENCRYPTION_KEY: preserve(),
     },
   });
 
   // No Railway volume backups: they're a Pro-plan feature (this workspace is on Hobby), and the
-  // schedule is silently ignored there. See docs/CLOUD.md "Backups".
+  // schedule is silently ignored there. The server backs up the user data to Cloudflare R2 instead.
 
   // The hourly meta wake-up (research/DECISIONS.md D22). A cron container runs curl for a few
   // seconds and exits; billed only while it runs. The request wakes the server, which collects

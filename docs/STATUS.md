@@ -1,0 +1,48 @@
+# Status (one place to look)
+
+Updated 2026-10-11 (v0.7.6). Started 2026-10-08 when three Claude sessions were consolidated into one. The roadmap and task list are in the tracker: https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD (M9 friends release v1.0.0, M10 in game, M11 personal engine, M12 meta signal quality).
+
+## Live
+
+- **v0.7.6** on `main` and in production (2026-10-11): daily encrypted backup of the user data to Cloudflare R2 (docs/CLOUD.md "Backups"), the flaky CI test fixed, the research answers on `main`.
+- **v0.7.5** (2026-10-09): your numbers vs your rank on Style, This month as its own tab with number trends, an honest chance, off-role mode, and the snapshot build no longer blocks the API (CHANGELOG.md).
+- **v0.7.4** before it: 1,000-game history loaded in the background, four timeline goals, how a champion wins, comfort fixes, the audit fixes and the collector boost (CHANGELOG.md). v0.7.3 before it.
+
+## Committed, not released
+
+### `feat/panel-redesign-v2`: panel redesign v2 (v0.7.7)
+
+- All seven screens rebuilt to docs/redesign/ (CHANGELOG 0.7.7); PR open for the owner, tagged `v0.7.7` on merge. The design system needs a resync from `styles.css`. `milestone-8-spikes` touches the build UI and will need `main` merged in after this lands.
+
+### `milestone-8-spikes` (worktree `C:\fullstack\lol-draft-coach-m8`): power spikes
+
+- **Built:**
+  - SpikeAggregator;
+  - `pnpm --filter @ldc/server spikes` (split-half check, older vs newer, `--windows` sweep);
+  - spikes and spikeCheck in every snapshot;
+  - display gated on the check (game plan, New tab, Build);
+  - your first-item timing vs typical;
+  - item-specific spikes.
+- **Result on 10,336 production games:**
+  - the first version's "item spikes" were really the champion's game phase (placebo r 0.74–0.92);
+  - item-specific spikes are noise today (r 0.07–0.16), so nothing is shown.
+- **Not merged:** it branched before v0.7.3 and before the new timeline fields. Expect conflicts in `packages/riot-api/src/timeline.ts`, `schemas.ts`, shared `MatchTimeline` and `timeline.test.ts`; keep both sets of fields.
+
+## Waiting on the owner
+
+1. **Power spikes:** wait for about 6–10× more games (re-check around Oct 12/15, tracker spk-3, log 058), or show the stable game-phase window now ("strongest from about minute X": r 0.61, 90% same direction at 8 min).
+2. **`pnpm infra:apply`** (between collector runs): `pnpm infra:apply` for "deploy only after CI passes" (`.railway/railway.ts`).
+
+## Next, in order
+
+1. Check that `/health` answers fast during the first hourly run after v0.7.5 (the snapshot-build fix); then check Railway usage after a day.
+2. ops-5: merge `main` into `milestone-8-spikes`, resolving the timeline conflicts.
+3. spk-7: add "spike info is passive, never pushed" to SPEC compliance, before v0.8.0.
+4. ops-7: fix the rest of the SPEC drift (data model, pruning, drop `POST /recommend`).
+5. M9, starting with ops-2 (GitHub Releases on the public repo) and m9-2 (product numbers).
+
+## Later
+
+- Re-run `pnpm --filter @ldc/server spikes` on a fresh production copy around Oct 12 (copy steps: docs/CLOUD.md).
+- Try "fights won" as the spike measure once kill data builds up.
+- Re-run the backtest after a few days of production collection.

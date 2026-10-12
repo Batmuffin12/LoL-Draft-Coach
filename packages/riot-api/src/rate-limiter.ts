@@ -107,13 +107,18 @@ export class RateLimiter {
   private readonly now: () => number;
   private readonly maxRetries: number;
   private readonly fallbackBackoffMs: number;
-  private readonly collectorShare: number;
+  private collectorShare: number;
 
   constructor(opts: LimiterOptions = {}) {
     this.now = opts.now ?? Date.now;
     this.maxRetries = opts.maxRetries ?? 3;
     this.fallbackBackoffMs = opts.fallbackBackoffMs ?? 1_000;
     this.collectorShare = opts.collectorShare ?? 1;
+  }
+
+  /** Changes the collector's share of each limit (a collector run with a temporary boost). */
+  setCollectorShare(share: number): void {
+    this.collectorShare = share;
   }
 
   scope(key: string): Scope {

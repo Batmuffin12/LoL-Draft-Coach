@@ -116,6 +116,8 @@ export interface AggregatorOptions {
   config: AggregationConfig;
   /** Playstyle metric names to publish references for (engine config playstyle axes; a leading "-" is ignored). */
   metrics: string[];
+  /** Per role, the metrics to measure per champion in won and lost games ("how it wins"; engine growth.roles). */
+  championMetrics?: Record<Position, string[]>;
 }
 
 /**
@@ -137,6 +139,10 @@ export class BandAggregator {
   /** Whether each sampled player won, parallel to metricValues (for importance). */
   private readonly metricWins = new Map<Position, Map<string, boolean[]>>();
   private readonly metrics: string[];
+  /** Per champion-role and metric: sums and counts in won and lost games. */
+  /** [sum, sum of squares, count] in won games, then the same in lost games. */
+  private readonly champWins = new Map<string, { championId: ChampionId; role: Position; n: number; metrics: Map<string, [number, number, number, number, number, number]> }>();
+  private readonly champMetrics: Map<Position, string[]>;
   private readonly patches = new Set<string | null>();
   private count = 0;
   private readonly bans = new Map<ChampionId, { bans: number; n: number }>();
@@ -153,6 +159,7 @@ export class BandAggregator {
 
   constructor(private readonly opts: AggregatorOptions) {
     this.metrics = [...new Set(opts.metrics.map((m) => m.replace(/^-/, "")))];
+    this.champMetrics = new Map(Object.entries(opts.championMetrics ?? {}).map(([role, list]) => [role, [...new Set(list.map((m) => m.replace(/^-/, "")))]]));
   }
 
   /** Whether a match counts at all (inside the window, not a remake, every player positioned). */
@@ -249,6 +256,25 @@ export class BandAggregator {
         if (p.win) pc[phase].w++;
       }
 
+      // How each champion wins: its role's goal metrics in won vs lost games.
+      const champList = this.champMetrics.get(p.position);
+      if (champList?.length) {
+        const key = `${p.championId}|${p.position}`;
+        let cw = this.champWins.get(key);
+        if (!cw) this.champWins.set(key, (cw = { championId: p.championId, role: p.position, n: 0, metrics: new Map() }));
+        cw.n++;
+        for (const metric of champList) {
+          const v = readMetric(p, m.durationSec, metric, m);
+          if (v === null) continue;
+          let s = cw.metrics.get(metric);
+          if (!s) cw.metrics.set(metric, (s = [0, 0, 0, 0, 0, 0]));
+          const o = p.win ? 0 : 3;
+          s[o] = s[o]! + v;
+          s[o + 1] = s[o + 1]! + v * v;
+          s[o + 2] = s[o + 2]! + 1;
+        }
+      }
+
       let byMetric = this.metricValues.get(p.position);
       if (!byMetric) this.metricValues.set(p.position, (byMetric = new Map()));
       let winsByMetric = this.metricWins.get(p.position);
@@ -256,7 +282,7 @@ export class BandAggregator {
       for (const metric of this.metrics) {
         let list = byMetric.get(metric);
         if (list && list.length >= cfg.referenceMaxSamples) continue;
-        const v = readMetric(p, m.durationSec, metric);
+        const v = readMetric(p, m.durationSec, metric, m);
         if (v === null) continue;
         if (!list) byMetric.set(metric, (list = []));
         list.push(v);
@@ -335,6 +361,21 @@ export class BandAggregator {
       if (Object.keys(out).length) references[role] = out;
     }
 
+    const championWins: NonNullable<MetaSnapshot["championWins"]> = [];
+    for (const cw of this.champWins.values()) {
+      const metrics: Record<string, [number, number, number]> = {};
+      for (const [metric, [winSum, winSq, wins, lossSum, lossSq, losses]] of cw.metrics) {
+        if (wins < cfg.championWinMinGames || losses < cfg.championWinMinGames) continue;
+        const [wMean, lMean] = [winSum / wins, lossSum / losses];
+        const variance = (sq: number, mean: number, n: number) => Math.max(0, sq / n - mean * mean);
+        const se = Math.sqrt(variance(winSq, wMean, wins) / wins + variance(lossSq, lMean, losses) / losses);
+        // Only a real difference between its wins and losses (Welch's z), never noise from a few games.
+        if (!(se > 0) || Math.abs(wMean - lMean) / se < cfg.championWinMinZ) continue;
+        metrics[metric] = [round(wMean), round(lMean), wins + losses];
+      }
+      if (Object.keys(metrics).length) championWins.push({ championId: cw.championId, role: cw.role, n: cw.n, metrics });
+    }
+
     const attributes = [...attributesFromTotals(this.attributes.values(), cfg.minAttributeSamples).values()]
       .map((a) => ({
         ...a,
@@ -370,6 +411,7 @@ export class BandAggregator {
       duos: this.duos.list(cfg.minPairGames),
       attributes,
       references,
+      ...(championWins.length ? { championWins } : {}),
     };
   }
 }

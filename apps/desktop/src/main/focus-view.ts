@@ -1,5 +1,6 @@
 import { formatMetric, metricLabel, readMetric, renderReason, type ExplainConfig, type FocusMetric, type GrowthFocus } from "@ldc/engine";
-import type { UserMatch } from "@ldc/shared";
+import type { RankBandId, UserMatch } from "@ldc/shared";
+import type { LoadedConfig } from "./config";
 import type { FocusView, PostGameView } from "../shared/view";
 
 import { capital } from "./reason-view";
@@ -15,6 +16,9 @@ export interface FocusViewDeps {
   positionLabel: (role: string) => string;
 }
 
+/** A run of met goals this long is worth saying ("the last 5 in a row"). */
+const STREAK_MIN = 3;
+
 /** The focus card's view: the focus metric with formatted numbers and why it was chosen. */
 export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null {
   const f = g.focus;
@@ -22,18 +26,30 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
   const { explain } = deps;
   const fmt = (v: number) => formatMetric(v, f.metric, explain);
   const label = metricLabel(f.metric, explain);
-  const why = renderReason(
-    { id: g.reference === "band" && deps.bandName ? "growth.why.band" : "growth.why.games", slots: { band: deps.bandName ?? "", role: g.role, metric: label, gap: Math.abs(f.importance), step: deps.targetStep } },
-    explain.templates,
-    deps.championName,
-  );
+  const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, explain.templates, deps.championName);
+  // The reason is the game mechanic (the card already shows your number against typical); empty
+  // without a mechanic line. The win-rate link is only a hover, labelled as a link: a correlation is
+  // never given as the reason.
+  const why = explain.templates[`growth.why.${f.metric}`] !== undefined ? say(`growth.why.${f.metric}`, {}) : "";
+  const whyHover = say(f.importanceFrom === "band" && deps.bandName ? "growth.why.hover" : "growth.why.hover.games", { band: deps.bandName ?? "", role: g.role, gap: Math.abs(f.importance) });
   const dir = f.lowerIsBetter ? "less" : "more";
+  const goalText = renderReason({ id: `growth.goal.${dir}`, slots: { target: fmt(f.target) } }, explain.templates, deps.championName);
+  const met = f.recent.filter(Boolean).length;
+  // The run of met goals up to your last game (recent is oldest first).
+  const run = f.recent.length - 1 - f.recent.lastIndexOf(false);
   return {
     label: capital(label),
     title: renderReason({ id: `growth.title.${dir}`, slots: { metric: label } }, explain.templates, deps.championName),
-    goalText: renderReason({ id: `growth.goal.${dir}`, slots: { target: fmt(f.target) } }, explain.templates, deps.championName),
+    goalText,
+    metLine: say("focus.met", { goal: goalText }),
+    missedLine: say("focus.missed", { goal: goalText }),
+    averageLine: say("focus.average", { you: fmt(f.you) }),
+    streak: say(run >= STREAK_MIN ? "focus.streak.run" : "focus.streak", { met, n: f.recent.length, run }),
     goalHint: renderReason({ id: "growth.goalHint", slots: { step: deps.targetStep } }, explain.templates, deps.championName),
-    on: [g.championId !== null ? deps.championName(g.championId) : null, deps.positionLabel(g.role)].filter(Boolean).join(" · "),
+    on:
+      g.scope === "few"
+        ? renderReason({ id: "growth.on.few", slots: { role: deps.positionLabel(g.role), games: g.games } }, explain.templates, deps.championName)
+        : [g.championId !== null ? deps.championName(g.championId) : null, deps.positionLabel(g.role)].filter(Boolean).join(" · "),
     you: f.you,
     target: f.target,
     typical: f.typical,
@@ -49,6 +65,8 @@ export function focusView(g: GrowthFocus, deps: FocusViewDeps): FocusView | null
     checkGames: deps.checkGames,
     recent: f.recent,
     why,
+    whyHover,
+    tips: explain.tips[`${g.role}:${f.metric}`] ?? [],
     met: g.met.map((m: FocusMetric) =>
       renderReason({ id: "growth.met", slots: { metric: capital(metricLabel(m.metric, explain)), from: formatMetric(m.baseline, m.metric, explain), to: formatMetric(m.you, m.metric, explain) } }, explain.templates, deps.championName),
     ),
@@ -64,7 +82,7 @@ export function focusInGame(g: GrowthFocus | null, matchId: string | null, match
   if (!m || !me) return null;
   // The goal is set on one role (and champion): another role's game says nothing about it.
   if (me.position !== g!.role || (g!.championId !== null && me.championId !== g!.championId)) return null;
-  const v = readMetric(me, m.match.durationSec, f.metric);
+  const v = readMetric(me, m.match.durationSec, f.metric, m.match);
   if (v === null) return null;
   // One game's count (deaths, kills) reads as a whole number: "8", not the averages' "8.0".
   const whole = Number.isInteger(v) && explain.metrics[f.metric]?.count === true;
@@ -74,4 +92,21 @@ export function focusInGame(g: GrowthFocus | null, matchId: string | null, match
     target: formatMetric(f.target, f.metric, explain),
     met: f.lowerIsBetter ? v <= f.target : v >= f.target,
   };
+}
+
+/** Your growth focus as the Last game tab shows it, or null without one; `band` names the rank in the "why" (null without live meta). */
+export function growthFocusView(
+  growth: GrowthFocus | null,
+  o: { config: Pick<LoadedConfig, "engine" | "explain" | "bands">; band: RankBandId | null; championName: (id: number) => string; positionLabel: (role: string) => string },
+): FocusView | null {
+  if (!growth) return null;
+  const { engine, explain, bands } = o.config;
+  return focusView(growth, {
+    explain,
+    targetStep: engine.growth.targetStep,
+    checkGames: engine.growth.checkGames,
+    bandName: o.band !== null ? (bands.bands.find((b) => b.id === o.band)?.name ?? null) : null,
+    championName: o.championName,
+    positionLabel: o.positionLabel,
+  });
 }

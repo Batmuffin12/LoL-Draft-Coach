@@ -8,7 +8,7 @@ const engine = parseEngineConfig(read("engine.v1.json"));
 const bands = parseRankBandConfig(read("rank-bands.v1.json"));
 const DAY = 86_400_000;
 const NOW = 1_800_000_000_000;
-const cfg = { report: { days: 30, maxChampions: 4, minPriorGames: 5 }, playstyle: { ...engine.playstyle, minGamesPerRole: 3, minMetrics: 1, minReferenceSamples: 3, axes: { farming: { metrics: ["csPerMinute"] } } } };
+const cfg = { report: { days: 30, maxChampions: 4, minPriorGames: 5, trend: { minGamesPerSide: 5, z: 2.4, minChange: 5 } }, playstyle: { ...engine.playstyle, minGamesPerRole: 3, minMetrics: 1, minReferenceSamples: 3, axes: { farming: { metrics: ["csPerMinute"] } } } };
 
 const player = (championId: number, win: boolean, cs: number): ParticipantSummary =>
   ({ championId, teamId: 100, position: "middle", win, kills: 0, deaths: 0, assists: 0, cs, gold: 0, visionScore: 0, physicalDamage: 0, magicDamage: 0, trueDamage: 0, damageTaken: 0, selfMitigated: 0, ccSeconds: 0, objectiveDamage: 0, items: [], spells: [], perks: null, challenges: {} }) as ParticipantSummary;
@@ -32,6 +32,7 @@ describe("monthlyReport", () => {
     expect(r.games).toBe(10);
     expect(r.winRate).toBeCloseTo(0.7);
     expect(r.winRateBefore).toBeCloseTo(0.4);
+    expect(r.gamesBefore).toBeGreaterThan(0);
     expect(r.role).toBe("middle");
     expect(r.champions).toEqual([
       { championId: 103, games: 8, winRate: 0.75, change: expect.closeTo(0.35) },
@@ -39,6 +40,19 @@ describe("monthlyReport", () => {
     ]);
     const farming = r.axes.find((a) => a.axis === "farming")!;
     expect(farming.to).toBeGreaterThan(farming.from!);
+    expect(farming.changed).toBe("up");
+  });
+
+  it("calls a style change real only when it is beyond the game-to-game noise, between separate sets of games", () => {
+    // The same farming on average in both months, game to game from 40 to 100: no real change.
+    const noisy = [
+      ...Array.from({ length: 12 }, (_, i) => game(35 + i, 103, i % 2 === 0, i % 2 ? 40 : 100)),
+      ...Array.from({ length: 12 }, (_, i) => game(1 + i, 103, i % 2 === 0, i % 2 ? 100 : 40)),
+    ];
+    expect(monthlyReport(noisy, NOW, cfg, { bands }).axes.find((a) => a.axis === "farming")!.changed).toBe("steady");
+    // Too few games last month to tell.
+    const thin = [game(40, 103, true, 55), ...Array.from({ length: 8 }, (_, i) => game(1 + i, 103, true, 80))];
+    expect(monthlyReport(thin, NOW, cfg, { bands }).axes.find((a) => a.axis === "farming")!.changed).toBeNull();
   });
 
   it("takes your rank at the start and now from the rank history, in your main ranked queue", () => {
@@ -51,5 +65,19 @@ describe("monthlyReport", () => {
     const r = monthlyReport(matches, NOW, cfg, { bands, rankHistory });
     expect(r.rank).toEqual({ start: { tier: "SILVER", rank: "I" }, now: { tier: "GOLD", rank: "IV" }, direction: "up" });
     expect(monthlyReport(matches, NOW, cfg, { bands }).rank).toEqual({ start: null, now: null, direction: null });
+  });
+});
+
+describe("monthly report after a break", () => {
+  it("compares with the games right before the period, even when the 30 days before are empty", () => {
+    // 6 games this month, none 30–60 days ago, 8 games 70–77 days ago.
+    const ms = [...Array.from({ length: 6 }, (_, i) => game(i + 1, 10, true, 80)), ...Array.from({ length: 8 }, (_, i) => game(70 + i, 10, i % 2 === 0, 50))];
+    const strict = monthlyReport(ms, NOW, cfg, { bands });
+    expect(strict.gamesBefore).toBe(0);
+    const r = monthlyReport(ms, NOW, { ...cfg, report: { ...cfg.report, beforeLookbackDays: 180 } }, { bands });
+    // As many games as the period has (at least enough to judge a trend), newest first: 6 of the 8.
+    expect(r.gamesBefore).toBe(6);
+    expect(r.winRateBefore).not.toBeNull();
+    expect(r.axes.find((a) => a.axis === "farming")?.from).not.toBeNull();
   });
 });

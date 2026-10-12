@@ -2,8 +2,11 @@
   "version": 1,
   "description": "App settings. Queue ids are Riot queue ids (see https://static.developer.riotgames.com/docs/lol/queues.json).",
   "history": {
-    "matchCount": 200,
-    "timelineCount": 30,
+    "matchCount": 1000,
+    "timelineCount": 1000,
+    "callsPerSync": 200,
+    "backfillCallsPerWake": 800,
+    "newGameRetrySeconds": [20, 40, 60, 120, 240, 480],
     "queues": [
       420,
       440,
@@ -13,6 +16,9 @@
   "import": {
     "enabled": true
   },
+  "sharedLanes": [
+    ["bottom", "utility"]
+  ],
   "supportedQueues": [
     420,
     440,

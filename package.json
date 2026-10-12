@@ -1,5 +1,6 @@
 {
   "name": "lol-draft-coach",
+  "version": "0.7.9",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.33.0",
@@ -15,7 +16,12 @@
     "infra:apply": "node scripts/railway-iac.mjs apply",
     "riot:key": "node scripts/riot-key.mjs",
     "local:server": "node scripts/local.mjs server",
-    "local:desktop": "node scripts/local.mjs desktop"
+    "local:desktop": "node scripts/local.mjs desktop",
+    "local:prod": "node scripts/local.mjs prod",
+    "perf": "node scripts/perf/run.mjs",
+    "perf:compare": "node scripts/perf/compare.mjs",
+    "perf:screens": "node scripts/perf/screens.mjs",
+    "perf:guard": "node scripts/perf/guard.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

@@ -4,6 +4,7 @@ import type { MetaIndex } from "./meta-index";
 import type { LearningProgress, PoolNeed, RolePool } from "./pool";
 import type { ChampionAttributes, MasteryEntry } from "./types";
 import { readMetric } from "./playstyle";
+import { curveGap } from "./power-curve";
 import { deltaWin } from "./rating";
 import { firstItemTiming, powerSpikes, type ItemTiming, type PowerSpike } from "./spikes";
 
@@ -148,12 +149,14 @@ export function recommendNewChampions(input: NewChampInput): NewChampAdvice {
     // Smoothed toward the role's average, as everywhere else.
     const winRate = (s.wins + cfg.priorGames * meanWin) / (s.games + cfg.priorGames);
     const meta = Math.max(-1, Math.min(1, (winRate - meanWin) / cfg.metaScale));
-    const ease = 1 - info.difficulty / 10;
+    // Data Dragon gives some champions difficulty 0 (Akshan, Rell, Seraphine, Vex in 16.20): unknown, not easy.
+    const known = info.difficulty > 0;
+    const ease = known ? 1 - info.difficulty / 10 : 0.5;
     const overlap = Math.max(0, overlapCos - cfg.cloneCut) / Math.max(1e-9, 1 - cfg.cloneCut);
     const parts = { similarity, gap: filled.length ? 1 : 0, meta, ease, overlap };
     const w = cfg.weights;
     const fit = w.similarity * similarity + w.gap * parts.gap + w.meta * meta + w.ease * ease - w.overlap * overlap;
-    const easeLevel: 1 | 2 | 3 = info.difficulty <= cfg.easyMax ? 1 : info.difficulty >= cfg.hardMin ? 3 : 2;
+    const easeLevel: 1 | 2 | 3 = !known ? 2 : info.difficulty <= cfg.easyMax ? 1 : info.difficulty >= cfg.hardMin ? 3 : 2;
 
     const reasons: Reason[] = [];
     if (like !== null && overlapCos >= cfg.likeMin) reasons.push({ id: "newchamp.like", slots: { like } });
@@ -217,10 +220,36 @@ export interface LearningPlan {
   hard: LearningMatchup[];
   /** Whether it wins more of long or short games (beyond `scalingGap`), when its power curve is measured. */
   curve: { late: boolean; early: number; lateRate: number } | null;
+  /**
+   * How it wins in your rank: the role's goal metrics where its won games differ most from its
+   * lost ones (in spreads of the role), at most `count`; with your own mean on it when you have games.
+   */
+  wins: LearningWin[];
+  /** How it plays, measured: damage split and frontline and crowd control as percentiles of all champions. */
+  profile: { physical: number; magic: number; frontline: number; engage: number } | null;
+  /** Its usual skill order in the role: first three levels and max order (slots 1-3), with the share of games. */
+  skills: { first: number[]; order: number[]; share: number } | null;
+  /** Gold over its lane opponent at 15 minutes, on average (timelines), when measured. */
+  laneGold: { diff: number; games: number } | null;
+  /** Every measured opponent in the role within plan.evenWin: no matchup swings it much. */
+  evenMatchups: number | null;
+  /** Measured, but no real gap between short and long games: as strong early as late. */
+  evenCurve: { early: number; late: number } | null;
   /** Its measured power spikes in the role (empty until the snapshot's spikes pass their check). */
   spikes: PowerSpike[];
   /** Your first-item timing on it against typical, from your games with a timeline (null with too few). */
   timing: ItemTiming | null;
+}
+
+export interface LearningWin {
+  metric: string;
+  lowerIsBetter: boolean;
+  /** Mean in its won and lost games in your rank. */
+  winners: number;
+  losers: number;
+  games: number;
+  /** Your mean on it in the role (null without games). */
+  you: number | null;
 }
 
 export interface LearningPlanInput {
@@ -264,13 +293,14 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
   const record = { games: mine.length, wins: mine.filter((m) => m.match.participants[m.me]!.win).length };
   const stage: LearningStage = mine.length === 0 ? "practice" : mine.length < learn.firstGames ? "first" : "building";
 
-  const difficulty = input.champion?.info?.difficulty;
+  // Difficulty 0 means Riot gave none: unknown, not easy.
+  const difficulty = input.champion?.info?.difficulty || undefined;
   const ease = difficulty === undefined ? null : difficulty <= nc.easyMax ? 1 : difficulty >= nc.hardMin ? 3 : 2;
   const settleGames = learn.settleGames[ease === 1 ? "easy" : ease === 3 ? "hard" : "medium"];
 
   const read = (games: UserMatch[], metric: string) =>
     games.flatMap((m) => {
-      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
       return v === null ? [] : [v];
     });
   const focusOn = (metric: string, lowerIsBetter: boolean, source: LearningFocus["source"], target: number | null): LearningFocus | null => {
@@ -287,7 +317,7 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
   let focus: LearningFocus | null = null;
   if (mine.length >= learn.focusMinGames) {
     let best = learn.dropMin;
-    for (const raw of config.growth.metrics ?? []) {
+    for (const raw of config.growth.roles?.[role] ?? config.growth.metrics ?? []) {
       const { metric, lowerIsBetter } = parseMetric(raw);
       const values = read(mine, metric);
       const usual = read(usualGames, metric);
@@ -328,12 +358,38 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
     .slice(0, count);
 
   const pc = index?.attributes.get(id)?.powerCurve;
-  const minCurve = config.rating.minGames.meta;
-  const curve =
-    pc && pc.early.games >= minCurve && pc.late.games >= minCurve && Math.abs(pc.late.winRate - pc.early.winRate) >= config.plan.scalingGap
-      ? { late: pc.late.winRate > pc.early.winRate, early: pc.early.winRate, lateRate: pc.late.winRate }
-      : null;
+  const gap = curveGap(pc, config.rating.minGames.meta, config.plan.scalingGap, config.rating.explain.powerCurveZ);
+  const curve = pc && gap !== null ? { late: gap > 0, early: pc.early.winRate, lateRate: pc.late.winRate } : null;
+  // How it wins: the role's goal metrics, measured on this champion's won and lost games in the band.
+  const measured = index?.championWins(id, role) ?? null;
+  const refs = index?.snapshot.references[role] ?? {};
+  const wins: LearningWin[] = measured
+    ? (config.growth.roles?.[role] ?? config.growth.metrics ?? [])
+        .map(parseMetric)
+        .flatMap(({ metric, lowerIsBetter }) => {
+          const m = measured[metric];
+          if (!m) return [];
+          const q = refs[metric]?.quantiles;
+          const spread = q && q.length >= 3 ? q[Math.round(0.75 * (q.length - 1))]! - q[Math.round(0.25 * (q.length - 1))]! : 0;
+          const gap = (lowerIsBetter ? m[1] - m[0] : m[0] - m[1]) / (spread > 0 ? spread : Math.max(1e-9, Math.abs(m[0]) + Math.abs(m[1])));
+          if (gap <= 0) return [];
+          const you = read(mine, metric);
+          return [{ gap, win: { metric, lowerIsBetter, winners: m[0], losers: m[1], games: m[2], you: you.length ? avg(you) : null } }];
+        })
+        .sort((a, b) => b.gap - a.gap)
+        .slice(0, count)
+        .map((x) => x.win)
+    : [];
+  const attrs = index?.attributes.get(id);
+  const profile = attrs ? { physical: attrs.physicalShare, magic: attrs.magicShare, frontline: attrs.frontline, engage: attrs.engage } : null;
+  const build = index?.build(id, role);
+  const top = build?.skills[0];
+  const skills = top && top.n >= learn.skillMinGames && build ? { first: top.first, order: top.order, share: top.n / Math.max(1, build.timelineN) } : null;
+  const g15 = pc?.goldAt15;
+  const laneGold = g15 && g15.games >= config.rating.minGames.meta ? { diff: g15.diff, games: g15.games } : null;
+  const evenMatchups = opponents.length >= learn.evenMatchupsMin && !good.length && !hard.length ? opponents.length : null;
+  const evenCurve = pc && gap === null && pc.early.games >= config.rating.minGames.meta && pc.late.games >= config.rating.minGames.meta ? { early: pc.early.winRate, late: pc.late.winRate } : null;
   const spikes = index ? powerSpikes(index, id, role, config.spikes) : [];
   const timing = input.completed ? firstItemTiming(input.matches, id, role, index, input.completed, config.spikes.timingMinGames, config.spikes.timingSlowMinutes) : null;
-  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, spikes, timing };
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, wins, profile, skills, laneGold, evenMatchups, evenCurve, spikes, timing };
 }

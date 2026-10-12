@@ -24,8 +24,19 @@ import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSourc
 import { startAutoUpdate } from "./updater";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
+import { PerfProbe, perfOptions } from "./perf";
+import { StatePusher } from "./state-pusher";
 
 const DOCK_POLL_MS = 500;
+
+// Dev aid: LDC_PERF=out.json measures startup, the state pipeline and the renderer (pnpm perf).
+const perfOpts = perfOptions(app.isPackaged);
+const perf = perfOpts ? new PerfProbe(perfOpts) : null;
+if (perf) {
+  // Memory samples after a full garbage collection, with exact heap sizes.
+  app.commandLine.appendSwitch("js-flags", "--expose-gc");
+  app.commandLine.appendSwitch("enable-precise-memory-info");
+}
 
 // Dev aid: LDC_USER_DATA_DIR keeps a test run (another account, a clean first run) out of your real profile.
 if (process.env.LDC_USER_DATA_DIR) app.setPath("userData", process.env.LDC_USER_DATA_DIR);
@@ -62,7 +73,7 @@ function createWindow(): BrowserWindow {
   w.once("ready-to-show", () => w.show());
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) void w.loadURL(devUrl);
-  else void w.loadFile(join(__dirname, "../renderer/index.html"));
+  else void w.loadFile(join(__dirname, "../renderer/index.html"), perf ? { query: { perf: "1" } } : undefined);
   // Never navigate away or open new windows from the panel.
   w.webContents.on("will-navigate", (e) => e.preventDefault());
   w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -116,13 +127,21 @@ function devMetaFile(): MetaSnapshot | null {
   return snapshot;
 }
 
-/** Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits. */
-function scheduleScreenshot(): void {
+/**
+ * Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits;
+ * LDC_VIEW_DUMP=path.json also saves everything the panel shows (its state), to check the numbers.
+ */
+function scheduleScreenshot(coach: Coach): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
+    // The design size: 440 × 720 at zoom 1 (Electron keeps the last docked zoom in the profile).
+    // LDC_SCREENSHOT_HEIGHT: a shorter panel, to check how a screen copes when it doesn't fit.
+    win?.setSize(PANEL_WIDTH, Number(process.env.LDC_SCREENSHOT_HEIGHT ?? 720));
+    win?.webContents.setZoomFactor(1);
+    await new Promise((r) => setTimeout(r, 400));
     // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
-    // "Style>This month" clicks one after the other.
+    // "Pool>Mid" clicks one after the other.
     for (const click of (process.env.LDC_SCREENSHOT_CLICK ?? "").split(">").filter(Boolean)) {
       await win?.webContents
         .executeJavaScript(
@@ -137,14 +156,108 @@ function scheduleScreenshot(): void {
       .executeJavaScript(`(() => { const s = document.querySelector(".scroll"); return s ? s.scrollHeight - s.clientHeight : 0; })()`)
       .catch(() => null);
     console.log(`LDC_SCREENSHOT: scroll overflow ${overflow}px`);
+    // The height of each block (header, band, sections, footer), to see what to trim when a screen overflows.
+    const layout = await win?.webContents
+      .executeJavaScript(
+        `[...document.querySelectorAll(".window > *, .window .scroll > *, .window .scroll > * > .section")].map((e) => (e.className || e.tagName).toString().split(" ")[0] + " " + Math.round(e.getBoundingClientRect().height)).join(" | ")`,
+      )
+      .catch(() => null);
+    console.log(`LDC_SCREENSHOT: layout ${layout}`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
+    const dump = process.env.LDC_VIEW_DUMP;
+    if (dump) await writeFile(dump, JSON.stringify(coach.state, null, 2));
     app.quit();
   }, Number(process.env.LDC_SCREENSHOT_DELAY_MS ?? 8_000));
 }
 
+/** The connect screen's actions (register, sign out, delete my data), and the dev aid LDC_AUTO_REGISTER. */
+function handleAccountIpc(server: ServerProfileSource, env: AppEnv): void {
+  ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {
+    if (typeof serverUrl !== "string" || typeof inviteCode !== "string") return;
+    await server.register(serverUrl, inviteCode);
+  });
+  ipcMain.handle(IPC.signOut, () => server.signOut());
+  ipcMain.handle(IPC.deleteData, () => server.deleteData());
+  // Dev aid: LDC_AUTO_REGISTER=<invite> registers with SERVER_URL once the League client is
+  // logged in (it gives the Riot ID), retrying every few seconds (`pnpm local:prod` sets it).
+  const invite = !app.isPackaged ? process.env.LDC_AUTO_REGISTER : undefined;
+  if (invite && env.serverUrl) {
+    let tries = 0;
+    const timer = setInterval(() => {
+      const state = server.account.state;
+      if (state === "registered" || ++tries > 120) return clearInterval(timer);
+      if (state === "unregistered" || state === "error") void server.register(env.serverUrl!, invite);
+    }, 5_000);
+  }
+}
+
+/** Scoring config from the server (tuning without a release): the cached copy at once, then checks at start, on registering and at each champ select. */
+async function followServerConfig(serverProfiles: ServerProfileSource, coach: PersonalCoach, connector: LcuConnector): Promise<void> {
+  const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
+  remoteConfig.on("config", (c) => coach.setConfig(c));
+  await remoteConfig.loadCached();
+  void remoteConfig.refresh();
+  serverProfiles.on("account", (a) => {
+    if (a.state === "registered") void remoteConfig.refresh();
+  });
+  // Each champ select re-checks the scoring config (an ETag request: nothing is downloaded when
+  // it's unchanged), so a server update reaches the panel without restarting the app.
+  connector.on("gameflowPhase", (phase) => {
+    if (phase === "ChampSelect") void remoteConfig.refresh();
+  });
+}
+
+/**
+ * Where your history comes from: a saved file (dev aid LDC_PROFILE_FILE), the Riot API with the
+ * local key (development only), or the coach server (always in packaged builds).
+ */
+async function createProfileSource(env: AppEnv, config: ReturnType<typeof loadConfig>): Promise<DirectProfileSource | ServerProfileSource | FileProfileSource> {
+  const mode = profileMode({ packaged: app.isPackaged, riotApiKey: env.riotApiKey, serverUrl: env.serverUrl });
+  const profileFile = !app.isPackaged ? process.env.LDC_PROFILE_FILE : undefined;
+  if (profileFile) {
+    // Dev aid: your history from a saved file, no Riot key needed.
+    const file = new FileProfileSource({
+      read: async () => JSON.parse(await readFile(profileFile, "utf8")) as { matches: UserMatch[]; masteries: [] },
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
+    });
+    console.log(`LDC_PROFILE_FILE: using the saved history in ${profileFile}`);
+    return file;
+  }
+  if (mode === "direct" && env.riotApiKey) {
+    // Development only: the key from the local .env, used here in the main process and
+    // never sent to the renderer. Packaged builds always use the coach server.
+    const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
+    // v2: full anonymised match summaries (0.4+); the older trimmed cache is ignored.
+    const matchesDir = join(app.getPath("userData"), "matches-v2");
+    return new DirectProfileSource({
+      riot,
+      history: config.app.history,
+      bands: config.bands,
+      storeFor: (puuid) => new MatchStore(matchesDir, puuid),
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
+    });
+  }
+  // Default: the coach server, which holds the only Riot API key.
+  const box = {
+    encrypt: (plain: string) =>
+      safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : `raw:${plain}`,
+    decrypt: (sealed: string) =>
+      sealed.startsWith("enc:") ? safeStorage.decryptString(Buffer.from(sealed.slice(4), "base64")) : sealed.replace(/^raw:/, ""),
+  };
+  const server = new ServerProfileSource({
+    accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
+    defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
+    outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
+    cacheFile: join(app.getPath("userData"), "profile-matches.json"),
+  });
+  await server.init();
+  return server;
+}
+
 async function main(): Promise<void> {
   await app.whenReady();
+  perf?.mark("ready");
   if ("error" in envResult) {
     // A broken .env is a setup problem: say exactly what to fix.
     dialog.showErrorBox("LoL Draft Coach: check your .env", envResult.error.message);
@@ -159,43 +272,7 @@ async function main(): Promise<void> {
   });
   const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
-  const mode = profileMode({ packaged: app.isPackaged, riotApiKey: env.riotApiKey, serverUrl: env.serverUrl });
-  let profiles: DirectProfileSource | ServerProfileSource | FileProfileSource | null = null;
-  const profileFile = !app.isPackaged ? process.env.LDC_PROFILE_FILE : undefined;
-  if (profileFile) {
-    // Dev aid: your history from a saved file, no Riot key needed.
-    profiles = new FileProfileSource({
-      read: async () => JSON.parse(await readFile(profileFile, "utf8")) as { matches: UserMatch[]; masteries: [] },
-      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
-    });
-    console.log(`LDC_PROFILE_FILE: using the saved history in ${profileFile}`);
-  } else if (mode === "direct" && env.riotApiKey) {
-    // Development only: the key from the local .env, used here in the main process and
-    // never sent to the renderer. Packaged builds always use the coach server.
-    const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
-    // v2: full anonymised match summaries (0.4+); the older trimmed cache is ignored.
-    const matchesDir = join(app.getPath("userData"), "matches-v2");
-    profiles = new DirectProfileSource({
-      riot,
-      history: config.app.history,
-      bands: config.bands,
-      storeFor: (puuid) => new MatchStore(matchesDir, puuid),
-      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
-    });
-  } else {
-    const box = {
-      encrypt: (plain: string) =>
-        safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : `raw:${plain}`,
-      decrypt: (sealed: string) =>
-        sealed.startsWith("enc:") ? safeStorage.decryptString(Buffer.from(sealed.slice(4), "base64")) : sealed.replace(/^raw:/, ""),
-    };
-    profiles = new ServerProfileSource({
-      accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
-      defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
-      outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
-    });
-    await profiles.init();
-  }
+  const profiles = await createProfileSource(env, config);
   // Live meta snapshots come from the coach server (none in dev-only direct mode).
   const serverProfiles = profiles instanceof ServerProfileSource ? profiles : null;
   const fixedMeta = devMetaFile();
@@ -203,6 +280,12 @@ async function main(): Promise<void> {
     serverProfiles || fixedMeta
       ? new MetaSource({ client: () => serverProfiles?.serverClient ?? null, cacheDir: join(app.getPath("userData"), "meta"), fixed: fixedMeta ?? undefined })
       : null;
+  if (perf) {
+    perf.wrap("lcu", connector);
+    perf.wrap("ddragon", ddragon);
+    if (profiles) perf.wrap("profiles", profiles);
+    if (meta) perf.wrap("meta", meta);
+  }
   const coach = new PersonalCoach({
     connector,
     ddragon,
@@ -212,45 +295,41 @@ async function main(): Promise<void> {
     meta,
   });
   // Scoring config from the server (tuning without a release); the bundled copy until then.
-  if (serverProfiles) {
-    const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
-    remoteConfig.on("config", (c) => coach.setConfig(c));
-    await remoteConfig.loadCached();
-    void remoteConfig.refresh();
-    serverProfiles.on("account", (a) => {
-      if (a.state === "registered") void remoteConfig.refresh();
-    });
-    // Each champ select re-checks the scoring config (an ETag request: nothing is downloaded when
-    // it's unchanged), so a server update reaches the panel without restarting the app.
-    connector.on("gameflowPhase", (phase) => {
-      if (phase === "ChampSelect") void remoteConfig.refresh();
-    });
-  }
-  if (profiles instanceof ServerProfileSource) {
-    const server = profiles;
-    ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {
-      if (typeof serverUrl !== "string" || typeof inviteCode !== "string") return;
-      await server.register(serverUrl, inviteCode);
-    });
-    ipcMain.handle(IPC.signOut, () => server.signOut());
-    ipcMain.handle(IPC.deleteData, () => server.deleteData());
-  }
+  // Dev aid: LDC_BUNDLED_CONFIG=1 keeps this branch's config and wording against any server
+  // (`pnpm local:prod`: the branch's panel on production data).
+  const bundledConfig = !app.isPackaged && process.env.LDC_BUNDLED_CONFIG === "1";
+  if (bundledConfig) console.log("LDC_BUNDLED_CONFIG: using this build's config, not the server's");
+  if (serverProfiles && !bundledConfig) await followServerConfig(serverProfiles, coach, connector);
+  if (profiles instanceof ServerProfileSource) handleAccountIpc(profiles, env);
 
   win = createWindow();
+  perf?.mark("windowCreated");
+  // One event often updates the state several times in a row: the renderer gets the last of them, once.
+  const pusher = new StatePusher<ViewState>((s) => {
+    if (!win || win.isDestroyed()) return;
+    if (perf) perf.send(win, IPC.state, s);
+    else win.webContents.send(IPC.state, s);
+  });
   coach.on("state", (s) => {
     latest = s;
-    if (win && !win.isDestroyed()) win.webContents.send(IPC.state, s);
+    pusher.push(s);
   });
-  ipcMain.on(IPC.ready, (e) => {
-    if (latest) e.sender.send(IPC.state, latest);
+  ipcMain.on(IPC.ready, () => {
+    perf?.mark("rendererReady");
+    if (latest) pusher.resend(latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
-  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" ? coach.importLoadout(kind) : undefined));
+  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
   startAutoUpdate((m) => coach.announce(m));
-  void startDocking(coach);
-  scheduleScreenshot();
+  // Screenshots and perf runs are of the panel at its design size (440 × 720, zoom 1), wherever the client is.
+  if (!process.env.LDC_SCREENSHOT && !perf) void startDocking(coach);
+  scheduleScreenshot(coach);
+  if (perf && win) {
+    win.webContents.setZoomFactor(1);
+    perf.run(win);
+  }
 
   app.on("window-all-closed", () => {
     coach.stop();
@@ -260,8 +339,8 @@ async function main(): Promise<void> {
 
 // A second instance would fight the first over Chromium's cache folders ("Unable to move
 // the cache: Access is denied"), so focus the running panel instead. Screenshot runs are
-// exempt so they can work next to an open panel.
-if (!process.env.LDC_SCREENSHOT && !app.requestSingleInstanceLock()) {
+// and perf runs are exempt so they can work next to an open panel.
+if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => {

@@ -49,6 +49,14 @@ export function summarizeTimeline(timeline: Timeline, match: Match): MatchTimeli
   const levels: number[][] = Array.from({ length: n }, () => []);
   const items: [number, number, number, number][] = [];
   const kills: [number, number, number, number][] = [];
+  const cs: number[][] = Array.from({ length: n }, () => []);
+  const wards: [number, number][] = [];
+  const monsters: [number, number, number, number][] = [];
+  const bitsOf = (ids: number[] | undefined) =>
+    (ids ?? []).reduce((bits, id) => {
+      const a = index(id);
+      return a === undefined ? bits : bits | (1 << a);
+    }, 0);
 
   for (const frame of timeline.info.frames) {
     for (const pf of Object.values(frame.participantFrames)) {
@@ -56,16 +64,23 @@ export function summarizeTimeline(timeline: Timeline, match: Match): MatchTimeli
       if (i === undefined) continue;
       gold[i]!.push(Math.round(pf.totalGold));
       if (pf.level !== undefined) levels[i]!.push(pf.level);
+      if (pf.minionsKilled !== undefined) cs[i]!.push(pf.minionsKilled + (pf.jungleMinionsKilled ?? 0));
     }
     for (const e of frame.events) {
       if (e.type === "CHAMPION_KILL") {
         const victim = index(e.victimId);
         if (victim === undefined) continue;
-        const assists = (e.assistingParticipantIds ?? []).reduce((bits, id) => {
-          const a = index(id);
-          return a === undefined ? bits : bits | (1 << a);
-        }, 0);
-        kills.push([Math.round(e.timestamp / 1000), e.killerId ? (index(e.killerId) ?? -1) : -1, victim, assists]);
+        kills.push([Math.round(e.timestamp / 1000), e.killerId ? (index(e.killerId) ?? -1) : -1, victim, bitsOf(e.assistingParticipantIds)]);
+        continue;
+      }
+      if (e.type === "ELITE_MONSTER_KILL") {
+        monsters.push([Math.round(e.timestamp / 1000), e.killerId ? (index(e.killerId) ?? -1) : -1, bitsOf(e.assistingParticipantIds), e.killerTeamId ?? 0]);
+        continue;
+      }
+      if (e.type === "WARD_PLACED") {
+        // Vision wards only (a champion's own traps and the like have other types).
+        const placer = index(e.creatorId);
+        if (placer !== undefined && /_(WARD|TRINKET)$/.test(e.wardType ?? "")) wards.push([Math.round(e.timestamp / 1000), placer]);
         continue;
       }
       const i = index(e.participantId);
@@ -108,5 +123,6 @@ export function summarizeTimeline(timeline: Timeline, match: Match): MatchTimeli
   }
   // Levels only when every participant has one per frame (older timelines may lack them).
   const withLevels = levels.every((l, i) => l.length === gold[i]!.length && l.length > 0);
-  return { gold, items, skills, ...(withLevels ? { levels } : {}), kills };
+  const withCs = cs.every((c, i) => c.length === gold[i]!.length && c.length > 0);
+  return { gold, items, skills, ...(withLevels ? { levels } : {}), kills, ...(withCs ? { cs } : {}), wards, monsters };
 }

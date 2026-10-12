@@ -140,6 +140,11 @@ export class MetaIndex {
     return { delta: rating(smoothRate(s.wins, s.games, expected, this.cfg.priorGames.pair)) - rating(expected), n: s.n };
   }
 
+  /** How a champion wins in a role: its won vs lost games' means per goal metric (null without data). */
+  championWins(id: ChampionId, role: Position): Record<string, [number, number, number]> | null {
+    return this.snapshot.championWins?.find((c) => c.championId === id && c.role === role)?.metrics ?? null;
+  }
+
   /** Champions with matchup data against `id` in `role`, both in that role (lane opponents). */
   opponentsOf(id: ChampionId, role: Position): ChampionId[] {
     const out: ChampionId[] = [];

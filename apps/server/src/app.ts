@@ -8,13 +8,14 @@ import { gunzipSync } from "node:zlib";
 import { eq } from "drizzle-orm";
 import { newestPatch } from "@ldc/meta";
 import { AdviceRecordSchema, saveAdvice } from "./advice";
+import type { BackupJob } from "./backup";
 import { AccountError, createInvite, deleteUser, publicUser, registerUser, touchUser, userByToken, type AccountLookup, type User } from "./accounts";
 import { bearerToken, sha256 } from "./auth";
 import type { Db } from "./db";
 import { metaSnapshots } from "./db/schema";
 import { WindowLimiter } from "./limits";
 import type { MetaJob } from "./meta-job";
-import { loadProfile } from "./profile";
+import { PROFILE_IDS_MAX, profileJson } from "./profile";
 import type { SyncScheduler } from "./sync-scheduler";
 
 export interface AppDeps {
@@ -25,7 +26,7 @@ export interface AppDeps {
   /** True once Riot has rejected the key (e.g. an expired development key). */
   riotKeyRejected?: () => boolean;
   /** Runs user syncs; null when the server has no Riot key. */
-  sync?: Pick<SyncScheduler, "request" | "state" | "forget"> | null;
+  sync?: (Pick<SyncScheduler, "request" | "state" | "forget"> & Partial<Pick<SyncScheduler, "backfill">>) | null;
   now?: () => number;
   /** Registration attempts allowed per client per minute. */
   registerPerMinute?: number;
@@ -40,6 +41,8 @@ export interface AppDeps {
   meta?: Pick<MetaJob, "run" | "running" | "lastRun"> | null;
   /** /health reports the collector as stale when it stored no new game for this long (ms). */
   collectorStaleAfterMs?: number;
+  /** The daily off-site backup of the user data; null when not configured. */
+  backup?: Pick<BackupJob, "runIfDue" | "health"> | null;
   /** Served by GET /config (scoring weights, thresholds and wording); absent: no route. */
   publicConfig?: Record<string, unknown> | null;
 }
@@ -75,6 +78,16 @@ function metaHealth(deps: AppDeps) {
   };
 }
 
+/** GET /me/profile's optional extras (additive: older panels send neither). */
+const ProfileQuery = z.object({
+  ids: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(",") : []))
+    .pipe(z.array(z.string().regex(/^[A-Z0-9]{1,8}_[0-9]{1,20}$/)).max(PROFILE_IDS_MAX)),
+  timelines: z.enum(["1"]).optional(),
+});
+
 const InviteBody = z.object({
   note: z.string().max(100).optional(),
   days: z.number().positive().max(365).optional(),
@@ -89,6 +102,17 @@ const RegisterBody = z.object({
 
 const ACCOUNT_ERROR_STATUS = { invalid_riot_id: 400, invite_invalid: 403, riot_id_not_found: 404 } as const;
 
+/**
+ * If-None-Match against an ETag, compared weakly as HTTP says (RFC 9110 13.1.2): the compress
+ * middleware sends gzipped bodies with the ETag made weak (W/"…"), and clients send that back.
+ */
+export function etagMatches(ifNoneMatch: string | undefined, etag: string): boolean {
+  if (!ifNoneMatch) return false;
+  const strip = (t: string) => t.trim().replace(/^W\//, "");
+  const want = strip(etag);
+  return ifNoneMatch.split(",").some((t) => t.trim() === "*" || strip(t) === want);
+}
+
 /** Client address behind Railway's proxy (first X-Forwarded-For hop), for rate limiting only. */
 function clientKey(c: Context): string {
   return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "local";
@@ -100,11 +124,29 @@ function clientKey(c: Context): string {
  */
 export function createApp(deps: AppDeps): Hono<Env> {
   const now = deps.now ?? Date.now;
-  const registerLimiter = new WindowLimiter(deps.registerPerMinute ?? 10, 60_000);
   const app = new Hono<Env>();
   // Profiles are large JSON (a full history is several MB); gzip shrinks them ~5x.
   app.use(compress());
+  // Registered in this order: public routes, then everything that needs a user's token.
+  healthRoute(app, deps);
+  adminRoutes(app, deps, now);
+  configRoute(app, deps);
+  registrationRoute(app, deps, now);
+  userRoutes(app, deps, now);
 
+  app.notFound((c) => c.json({ error: "not_found" }, 404));
+  app.onError((err, c) => {
+    console.error(err);
+    return c.json({ error: "internal_error" }, 500);
+  });
+
+  return app;
+}
+
+type App = Hono<Env>;
+
+/** GET /health: the database, the Riot key and (when the database answers) the collector, snapshots and backups. */
+function healthRoute(app: App, deps: AppDeps): void {
   app.get("/health", (c) => {
     let database: "ok" | "error" = "ok";
     try {
@@ -119,13 +161,15 @@ export function createApp(deps: AppDeps): Hono<Env> {
         database,
         // "missing": no key configured; "rejected": Riot refused it (dev keys expire every 24 h).
         riotKey: !deps.riot ? "missing" : deps.riotKeyRejected?.() ? "rejected" : "ok",
-        ...(database === "ok" ? metaHealth(deps) : {}),
+        ...(database === "ok" ? { ...metaHealth(deps), backup: deps.backup?.health() ?? null } : {}),
       },
       database === "ok" ? 200 : 503,
     );
   });
+}
 
-  // Owner-only routes (bearer ADMIN_TOKEN); they don't exist when no token is set.
+/** Owner-only routes (bearer ADMIN_TOKEN): invites and the hourly collect; they don't exist when no token is set. */
+function adminRoutes(app: App, deps: AppDeps, now: () => number): void {
   if (deps.adminToken) {
     const expected = sha256(deps.adminToken);
     const adminLimiter = new WindowLimiter(20, 60_000);
@@ -151,24 +195,34 @@ export function createApp(deps: AppDeps): Hono<Env> {
       if (!deps.meta) return c.json({ error: "meta_unavailable", message: "The meta job isn't configured." }, 503);
       const alreadyRunning = deps.meta.running;
       const { stale } = collectorFreshness(deps);
+      // Once a day, the same wake-up backs up the user data first (a small copy, seconds).
+      void deps.backup?.runIfDue().catch((err: unknown) => console.error("backup failed:", err));
       deps.meta.run().catch((err: unknown) => console.error("meta run failed:", err));
+      // Same wake-up: continue loading long user histories (their calls go first in the rate limiter).
+      void deps.sync?.backfill?.().catch((err: unknown) => console.error("backfill failed:", err));
       // The run starts either way; a stale collector answers 503 so the cron run fails visibly in
       // Railway (the spec's "alert when the collector stops receiving data").
       if (stale) return c.json({ error: "collector_stale", message: "No new collected game for too long; see /health.", started: !alreadyRunning, running: true }, 503);
       return c.json({ started: !alreadyRunning, running: true }, 202);
     });
   }
+}
 
-  // Scoring config (weights, thresholds, wording), so tuning needs no app release.
+/** GET /config: the scoring config (weights, thresholds, wording), so tuning needs no app release. */
+function configRoute(app: App, deps: AppDeps): void {
   if (deps.publicConfig) {
     const body = JSON.stringify(deps.publicConfig);
     const etag = `"${sha256(body).slice(0, 32)}"`;
     app.get("/config", (c) => {
-      if (c.req.header("if-none-match") === etag) return c.body(null, 304, { etag });
+      if (etagMatches(c.req.header("if-none-match"), etag)) return c.body(null, 304, { etag });
       return c.body(body, 200, { "content-type": "application/json", etag });
     });
   }
+}
 
+/** POST /users: registration with an invite code, rate limited per client. */
+function registrationRoute(app: App, deps: AppDeps, now: () => number): void {
+  const registerLimiter = new WindowLimiter(deps.registerPerMinute ?? 10, 60_000);
   app.post("/users", async (c) => {
     if (!registerLimiter.allow(clientKey(c), now())) return c.json({ error: "rate_limited", message: "Too many attempts. Try again in a minute." }, 429);
     const body = RegisterBody.safeParse(await c.req.json().catch(() => null));
@@ -187,7 +241,10 @@ export function createApp(deps: AppDeps): Hono<Env> {
       throw err;
     }
   });
+}
 
+/** Everything under /me, /meta and /advice: a valid bearer token, and only that user's own data. */
+function userRoutes(app: App, deps: AppDeps, now: () => number): void {
   // Everything under /me needs a valid bearer token.
   const requireUser = createMiddleware<Env>(async (c, next) => {
     const token = bearerToken(c.req.header("authorization"));
@@ -202,17 +259,27 @@ export function createApp(deps: AppDeps): Hono<Env> {
   app.use("/meta/*", requireUser);
   app.use("/advice", requireUser);
 
+  meRoutes(app, deps, now);
+}
+
+/** The user's own routes (behind requireUser): their profile, syncs, the band's meta, the advice log, deleting their data. */
+function meRoutes(app: App, deps: AppDeps, now: () => number): void {
   app.get("/me", (c) => c.json({ user: publicUser(c.get("user")) }));
 
   app.get("/me/profile", (c) => {
     const raw = c.req.query("since");
     const since = raw === undefined ? undefined : Number(raw);
     if (since !== undefined && !Number.isFinite(since)) return c.json({ error: "invalid_since", message: "since must be epoch milliseconds." }, 400);
+    const query = ProfileQuery.safeParse({ ids: c.req.query("ids"), timelines: c.req.query("timelines") });
+    if (!query.success) return c.json({ error: "invalid_query", message: `ids: up to ${PROFILE_IDS_MAX} match ids, comma-separated; timelines: 1.` }, 400);
     const user = c.get("user");
     if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs)) {
       deps.sync.request(user.id).catch(() => {});
     }
-    return c.json({ ...loadProfile(deps.db, user, since, now()), sync: deps.sync?.state(user.id) ?? { state: "idle" } });
+    // ids and timelines let a panel that keeps its matches on disk ask for what it lacks (GET /me/profile?since=…&ids=…&timelines=1).
+    const opts = { ids: query.data.ids, timelines: query.data.timelines === "1" };
+    const body = profileJson(deps.db, user, since, now(), { sync: deps.sync?.state(user.id) ?? { state: "idle" } }, opts);
+    return c.body(body, 200, { "content-type": "application/json" });
   });
 
   app.post("/me/sync", (c) => {
@@ -231,7 +298,7 @@ export function createApp(deps: AppDeps): Hono<Env> {
     const row = deps.db.select().from(metaSnapshots).where(eq(metaSnapshots.band, band)).get();
     if (!row) return c.json({ error: "no_snapshot", message: `No meta snapshot for band ${band} yet.` }, 404);
     const headers = { etag: row.etag, "cache-control": "private, no-cache" };
-    if (c.req.header("if-none-match") === row.etag) return c.body(null, 304, headers);
+    if (etagMatches(c.req.header("if-none-match"), row.etag)) return c.body(null, 304, headers);
     // Stored gzipped; sent as is to clients that accept gzip (every real one does).
     if (/\bgzip\b/.test(c.req.header("accept-encoding") ?? "")) {
       return c.body(new Uint8Array(row.body), 200, { ...headers, "content-type": "application/json", "content-encoding": "gzip" });
@@ -252,12 +319,4 @@ export function createApp(deps: AppDeps): Hono<Env> {
     deps.sync?.forget(c.get("user").id);
     return c.body(null, 204);
   });
-
-  app.notFound((c) => c.json({ error: "not_found" }, 404));
-  app.onError((err, c) => {
-    console.error(err);
-    return c.json({ error: "internal_error" }, 500);
-  });
-
-  return app;
 }

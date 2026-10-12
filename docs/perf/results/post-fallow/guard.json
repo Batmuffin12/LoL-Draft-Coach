@@ -1,0 +1,114 @@
+{
+  "against": "baseline",
+  "ok": true,
+  "screens": {
+    "Ban": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "Connect": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "LastGame": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "LockedIn-Build": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "LockedIn-Matchups": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 15,
+      "diffShare": 0.00004734848484848485,
+      "pass": true
+    },
+    "LockedIn-Runes": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "Month": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "New": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "NextGame": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "Pick": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "Pool": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    },
+    "Style": {
+      "overflowBefore": 0,
+      "overflowAfter": 0,
+      "dumpSame": true,
+      "dumpDiff": [],
+      "diffPixels": 0,
+      "diffShare": 0,
+      "pass": true
+    }
+  }
+}

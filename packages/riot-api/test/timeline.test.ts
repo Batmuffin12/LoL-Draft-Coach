@@ -94,6 +94,29 @@ describe("summarizeTimeline", () => {
     ]);
   });
 
+  it("keeps CS per minute (only when every participant has it), vision wards and epic monsters", () => {
+    expect(t.cs).toBeUndefined();
+    expect(t.wards).toEqual([]); // the fixture's ward has no type: not a vision ward
+    const more = structuredClone(raw);
+    more.info.frames.forEach((f, k) => Object.values(f.participantFrames).forEach((pf) => Object.assign(pf, { minionsKilled: 10 * k, jungleMinionsKilled: k })));
+    more.info.frames[1]!.events.push(
+      { type: "WARD_PLACED", timestamp: 300000, creatorId: 2, wardType: "CONTROL_WARD" } as never,
+      { type: "WARD_PLACED", timestamp: 310000, creatorId: 1, wardType: "TEEMO_MUSHROOM" } as never,
+      { type: "ELITE_MONSTER_KILL", timestamp: 341000, killerId: 2, killerTeamId: 200, assistingParticipantIds: [1] } as never,
+      { type: "ELITE_MONSTER_KILL", timestamp: 555000, killerId: 1, killerTeamId: 100 } as never,
+    );
+    const s = summarizeTimeline(TimelineSchema.parse(more), match);
+    expect(s.cs).toEqual([
+      [0, 11],
+      [0, 11],
+    ]);
+    expect(s.wards).toEqual([[300, 0]]); // participant 2 is the match's first
+    expect(s.monsters).toEqual([
+      [341, 0, 0b10, 200],
+      [555, 1, 0, 100],
+    ]);
+  });
+
   it("never keeps PUUIDs", () => {
     expect(JSON.stringify(t)).not.toContain("SECRET");
   });

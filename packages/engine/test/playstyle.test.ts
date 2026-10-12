@@ -43,10 +43,66 @@ describe("playstyle", () => {
     expect(readMetric(x, 1800, "unknownMetric")).toBeNull();
   });
 
+  it("reads the gold lead on your lane opponent at 14 min from the timeline", () => {
+    const me = p("middle", { teamId: 100 });
+    const ally = p("jungle", { teamId: 100 });
+    const opp = p("middle", { teamId: 200 });
+    const frames = (at14: number) => Array.from({ length: 16 }, (_, i) => (i === 14 ? at14 : i * 300));
+    const match = { participants: [me, ally, opp], timeline: { gold: [frames(5600), frames(5000), frames(5100)], items: [], skills: [] } };
+    expect(readMetric(me, 1800, "laneGoldDiffAt14", match)).toBe(500);
+    expect(readMetric(opp, 1800, "laneGoldDiffAt14", match)).toBe(-500);
+    expect(readMetric(me, 1800, "laneGoldDiffAt14")).toBeNull(); // no match
+    expect(readMetric(me, 1800, "laneGoldDiffAt14", { participants: match.participants })).toBeNull(); // no timeline
+    expect(readMetric(ally, 1800, "laneGoldDiffAt14", match)).toBeNull(); // no opponent in the position
+    const short = { ...match, timeline: { ...match.timeline, gold: match.timeline.gold.map((g) => g.slice(0, 10)) } };
+    expect(readMetric(me, 1800, "laneGoldDiffAt14", short)).toBeNull(); // ended before minute 14
+  });
+
+  it("reads CS lead at 10, wards placed and epic monsters taken before 14 min from the timeline", () => {
+    const me = p("bottom", { teamId: 100 });
+    const opp = p("bottom", { teamId: 200 });
+    const timeline = {
+      gold: [[], []],
+      items: [],
+      skills: [],
+      cs: [Array.from({ length: 12 }, (_, i) => i * 8), Array.from({ length: 12 }, (_, i) => i * 7)],
+      wards: [[60, 0], [500, 0], [900, 0], [120, 1]] as [number, number][],
+      // [second, killer, assists bitmask, team]: one kill, one assist, one too late, one without me.
+      monsters: [[341, 0, 0, 100], [555, 1, 0b01, 200], [900, 0, 0, 100], [600, 1, 0b10, 200]] as [number, number, number, number][],
+    };
+    const match = { participants: [me, opp], timeline };
+    expect(readMetric(me, 1800, "laneCsDiffAt10", match)).toBe(10);
+    expect(readMetric(me, 1800, "wardsPlacedBefore14", match)).toBe(2);
+    expect(readMetric(me, 1800, "earlyEpicMonsterTakedowns", match)).toBe(2);
+    // Timelines stored before these were kept: no reading, not zero.
+    const old = { participants: [me, opp], timeline: { gold: [[], []], items: [], skills: [] } };
+    expect(["laneCsDiffAt10", "wardsPlacedBefore14", "earlyEpicMonsterTakedowns"].map((m) => readMetric(me, 1800, m, old))).toEqual([null, null, null]);
+  });
+
   it("computes percentiles with ties counted as half", () => {
     expect(empiricalPercentile(5, [1, 2, 3, 4])).toBe(1);
     expect(empiricalPercentile(0, [1, 2, 3, 4])).toBe(0);
     expect(empiricalPercentile(2, [1, 2, 2, 3])).toBe(0.5);
+  });
+
+  it("finds the same percentile as counting every value (binary search)", () => {
+    const scan = (v: number, sorted: number[]) => {
+      let below = 0;
+      let equal = 0;
+      for (const x of sorted) {
+        if (x < v) below++;
+        else if (x === v) equal++;
+        else break;
+      }
+      return (below + equal / 2) / sorted.length;
+    };
+    let seed = 7;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (let t = 0; t < 200; t++) {
+      const sorted = Array.from({ length: 1 + Math.floor(rand() * 60) }, () => Math.floor(rand() * 20) / 2).sort((a, b) => a - b);
+      for (const v of [...sorted, -1, 0.25, 7.3, 50, sorted[0]!]) expect(empiricalPercentile(v, sorted)).toBe(scan(v, sorted));
+    }
+    expect(empiricalPercentile(Number.NaN, [1, 2])).toBe(scan(Number.NaN, [1, 2]));
   });
 
   it("scores a fighter who rarely dies high on fighting and risk control, against their lane opponents", () => {
@@ -72,6 +128,17 @@ describe("playstyle", () => {
     expect(computePlaystyle(games(cfg.minGamesPerRole - 1), "jungle", NOW, cfg)).toBeNull();
     expect(computePlaystyle(games(30), "bottom", NOW, cfg)).toBeNull();
     expect(computePlaystyle(games(30), "", NOW, cfg)).toBeNull();
+  });
+
+  it("gives the same result from its per-matches cache as from a fresh computation", () => {
+    const all = games(40);
+    const fewer = all.slice(5);
+    // A copy is another key: computed before anything is cached for `all`.
+    const fresh = computePlaystyle(structuredClone(fewer), "jungle", NOW, cfg);
+    const first = computePlaystyle(all, "jungle", NOW, cfg);
+    expect(computePlaystyle(all, "jungle", NOW, cfg)).toEqual(first);
+    expect(computePlaystyle(fewer, "jungle", NOW, cfg)).toEqual(fresh);
+    expect(fresh).not.toEqual(first);
   });
 
   it("lists the roles with enough games, most played first", () => {

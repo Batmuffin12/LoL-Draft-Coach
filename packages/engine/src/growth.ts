@@ -44,6 +44,8 @@ export interface FocusMetric {
   /** The median in your role (and rank, with the band's data). */
   typical: number;
   importance: number;
+  /** Where the importance was measured: your rank's games, or the players in your own games. */
+  importanceFrom: "band" | "games";
   impact: number;
   /** Your last games on it, oldest first: whether each reached the target. */
   recent: boolean[];
@@ -61,6 +63,13 @@ export interface GrowthFocus {
   met: FocusMetric[];
   /** Where the typical values and importance came from. */
   reference: "band" | "games";
+  /**
+   * "role": enough games in the role to set the target from your older games and track the newer
+   * ones. "few": fewer games than that; the role's goals all the same, from the games you have.
+   */
+  scope: "role" | "few";
+  /** Your games in the role behind it. */
+  games: number;
 }
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -80,8 +89,14 @@ export function pickFocus(
   bandReferences?: Record<string, GrowthReference>,
 ): GrowthFocus | null {
   const g = cfg.growth;
-  const inRole = [...matches].sort((a, b) => b.match.endedAt - a.match.endedAt).filter((m) => m.match.participants[m.me]?.position === role).slice(0, g.window);
-  if (!role || inRole.length < g.minGames) return null;
+  const inRole = [...matches]
+    .sort((a, b) => b.match.endedAt - a.match.endedAt)
+    .filter((m) => m.match.participants[m.me]?.position === role)
+    .slice(0, g.window);
+  if (!role || !inRole.length) return null;
+  // Few games in the role: the same goals, from the games you have (no older games to set a target from).
+  const scope: GrowthFocus["scope"] = inRole.length >= g.minGames ? "role" : "few";
+  const few = scope === "few";
 
   const counts = new Map<ChampionId, number>();
   for (const m of inRole) {
@@ -89,54 +104,68 @@ export function pickFocus(
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   const [mainId, mainGames] = [...counts].sort((a, b) => b[1] - a[1])[0]!;
-  const championId = mainGames >= g.minGames ? mainId : null;
+  const championId = !few && mainGames >= g.minGames ? mainId : null;
   const games = championId === null ? inRole : inRole.filter((m) => m.match.participants[m.me]!.championId === championId);
   const recentGames = games.slice(0, g.checkGames);
   const older = games.slice(g.checkGames);
   const baseGames = older.length >= Math.ceil(g.checkGames / 2) ? older : games;
 
-  const metrics = [...new Set(g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
-  const useBand = Object.values(bandReferences ?? {}).some((r) => r.importance !== undefined && r.n >= cfg.playstyle.minReferenceSamples);
+  const metrics = [...new Set(g.roles?.[role] ?? g.metrics ?? Object.values(cfg.playstyle.axes).flatMap((a) => a.metrics))];
+  const bandOk = (r: GrowthReference | undefined): r is GrowthReference => !!r && r.n >= cfg.playstyle.minReferenceSamples && r.quantiles.length >= 3;
+  // With the band's references, typical and spread always come from your rank (as on the Style tab).
+  const useBand = Object.values(bandReferences ?? {}).some(bandOk);
   const candidates: FocusMetric[] = [];
   for (const raw of metrics) {
     const lowerIsBetter = raw.startsWith("-");
     const metric = lowerIsBetter ? raw.slice(1) : raw;
     const s = lowerIsBetter ? -1 : 1;
 
-    // Typical, spread and importance: the band's, else the other players in your role in your own games.
-    let typical: number;
-    let spread: number;
-    let importance: number;
-    const band = bandReferences?.[metric];
-    if (useBand) {
-      if (!band || band.importance === undefined || band.n < cfg.playstyle.minReferenceSamples || band.quantiles.length < 3) continue;
-      typical = at(band.quantiles, 0.5);
-      spread = at(band.quantiles, 0.75) - at(band.quantiles, 0.25);
-      importance = band.importance;
-    } else {
-      const others = matches.flatMap((m) =>
+    // Typical and spread: the band's, else the other players in your role in your own games.
+    // Importance: the band's when it has one (older servers don't), else from your games.
+    const others = () =>
+      matches.flatMap((m) =>
         m.match.participants
           .filter((p, i) => i !== m.me && p.position === role)
           .flatMap((p) => {
-            const value = readMetric(p, m.match.durationSec, metric);
+            const value = readMetric(p, m.match.durationSec, metric, m.match);
             return value === null ? [] : [{ value, win: p.win }];
           }),
       );
-      if (others.length < cfg.playstyle.minReferenceSamples) continue;
-      const sorted = others.map((o) => o.value).sort((a, b) => a - b);
+    let typical: number;
+    let spread: number;
+    let importance: number;
+    let importanceFrom: FocusMetric["importanceFrom"] = "games";
+    const band = bandReferences?.[metric];
+    if (useBand) {
+      if (!bandOk(band)) continue;
+      typical = at(band.quantiles, 0.5);
+      spread = at(band.quantiles, 0.75) - at(band.quantiles, 0.25);
+      if (band.importance !== undefined) {
+        importance = band.importance;
+        importanceFrom = "band";
+      }
+      else {
+        const o = others();
+        if (o.length < cfg.playstyle.minReferenceSamples) continue;
+        importance = metricImportance(o);
+      }
+    } else {
+      const o = others();
+      if (o.length < cfg.playstyle.minReferenceSamples) continue;
+      const sorted = o.map((x) => x.value).sort((a, b) => a - b);
       typical = at(sorted, 0.5);
       spread = at(sorted, 0.75) - at(sorted, 0.25);
-      importance = metricImportance(others);
+      importance = metricImportance(o);
     }
     if (!(spread > 0) || s * importance < g.minImportance) continue;
 
     const valuesOf = (ms: UserMatch[]) => ms.flatMap((m) => {
-      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric);
+      const v = readMetric(m.match.participants[m.me]!, m.match.durationSec, metric, m.match);
       return v === null ? [] : [v];
     });
     const base = valuesOf(baseGames);
     const recentValues = valuesOf(recentGames);
-    if (base.length < Math.ceil(g.minGames / 2) || !recentValues.length) continue;
+    if (base.length < (few ? 1 : Math.ceil(g.minGames / 2)) || !recentValues.length) continue;
     const baseline = mean(base);
     const gap = s * (typical - baseline);
     if (gap <= 0) continue;
@@ -150,11 +179,28 @@ export function pickFocus(
       target,
       typical,
       importance,
+      importanceFrom,
       impact: (gap / spread) * s * importance,
       recent: [...recentValues].reverse().map((v) => s * (v - target) >= 0),
       done: s * (you - target) >= 0,
     });
   }
   candidates.sort((a, b) => b.impact - a.impact);
-  return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games" };
+  return { role, championId, focus: candidates.find((c) => !c.done) ?? null, met: candidates.filter((c) => c.done), reference: useBand ? "band" : "games", scope, games: inRole.length };
+}
+
+/**
+ * Your growth goal after a game (pure): from the role of your last game and its own goals (a
+ * jungle main's first support game gets a support goal, from that one game). With no games, your main role.
+ */
+export function focusAfterLastGame(
+  matches: UserMatch[],
+  main: Position | null,
+  cfg: { growth: GrowthConfig; playstyle: PlaystyleConfig },
+  references: (role: Position) => Record<string, GrowthReference> | undefined,
+): GrowthFocus | null {
+  const newest = matches.reduce<UserMatch | null>((a, m) => (!a || m.match.endedAt > a.match.endedAt ? m : a), null);
+  const role = newest?.match.participants[newest.me]?.position || main;
+  if (!role) return null;
+  return pickFocus(matches, role, cfg, references(role));
 }

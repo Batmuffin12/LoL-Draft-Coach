@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Locked in, build</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.chip{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;padding:1px 8px;border:1px solid var(--line-strong);border-radius:999px;color:var(--muted)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.tabs{display:flex;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.tab{all:unset;font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.section{padding:10px 16px;display:flex;flex-direction:column;gap:8px}
+.section+.section{border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:center;gap:10px;min-height:22px;flex-wrap:wrap}
+.section-head .rule{flex:1;height:1px;background:var(--line);min-width:16px}
+.icon{display:grid;place-items:center;border-radius:4px;background:var(--track);font-family:var(--font-display);font-weight:700;color:var(--muted);flex-shrink:0;box-sizing:border-box}
+.icon.item{border-radius:3px}
+.icon.framed{border:1px solid var(--gold);color:var(--gold)}
+.btn{font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;min-height:32px;padding:0 12px;border-radius:3px;border:1px solid var(--line-strong);background:transparent;color:var(--text);cursor:pointer}
+.btn.primary{border-color:var(--gold);background:var(--gold-tint);color:var(--gold-bright)}
+.btn.wide{width:100%;min-height:44px}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.col{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;text-align:center}
+.main{background:var(--bg);padding:0 4px;margin:2px 0}
+.opt{display:flex;align-items:center;gap:4px;min-height:24px}
+.i32{width:32px;height:32px;font-size:10px}
+.i22{width:22px;height:22px;font-size:8px}
+.lrow{display:flex;align-items:center;gap:8px;min-height:24px}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="Connected"></span><span class="app">Draft Coach</span><span class="chip">16.20</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+
+  <section style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #222c3d">
+    <span class="icon framed" style="width: 44px; height: 44px; font-size: 16px">SA</span>
+    <div style="display: flex; flex-direction: column; flex: 1">
+      <span class="t-label gold">Locked in · Bot vs Caitlyn</span>
+      <span class="t-title">Samira</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end"><span class="t-number pos">51%</span><span class="t-micro">win chance</span></div>
+  </section>
+  <nav class="tabs"><a class="tab" href="Final-LockedIn.dc.html">Runes</a><a class="tab on" href="Final-Build.dc.html">Build</a><a class="tab" href="Final-Matchups.dc.html">Matchups &amp; plan</a></nav>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Build path</span><span class="rule"></span><span class="t-micro">pick rate · ★ adds the most</span></div>
+    <div style="position: relative; display: flex; align-items: flex-start">
+      <span style="position: absolute; left: 40px; right: 40px; top: 52px; height: 2px; background: #222c3d"></span>
+      <div class="col">
+        <span class="t-micro text">Start</span><span class="t-micro">0 min</span>
+        <span class="icon item main i32" title="Doran’s Blade and 1 potion">DB</span>
+        <span class="t-micro text">+1 potion</span>
+      </div>
+      <div class="col">
+        <span class="t-micro text">Boots</span><span class="t-micro">8 min</span>
+        <span class="icon item main i32" title="Berserker’s Greaves">BG</span>
+        <span class="t-micro text">71%</span>
+        <span class="t-micro">or</span>
+        <span class="opt"><span class="icon item i22" title="Plated Steelcaps">PS</span><span class="t-micro">18%</span></span>
+        <span class="opt"><span class="icon item i22" title="Mercury’s Treads">MT</span><span class="t-micro">7%</span></span>
+      </div>
+      <div class="col">
+        <span class="t-micro text">Item 1</span><span class="t-micro">11 min</span>
+        <span class="icon item framed main i32" title="Bloodthirster">BT</span>
+        <span class="t-micro text">64%</span>
+        <span class="t-micro">or</span>
+        <span class="opt"><span class="icon item i22" title="Kraken Slayer">KS</span><span class="t-micro">22%</span></span>
+        <span class="opt"><span class="icon item i22" title="Eclipse">EC</span><span class="t-micro">9%</span></span>
+      </div>
+      <div class="col">
+        <span class="t-micro text">Item 2</span><span class="t-micro gold">18 min · spike</span>
+        <span class="icon item framed main i32" title="Infinity Edge">IE</span>
+        <span class="t-micro text">58% <span class="gold">★</span></span>
+        <span class="t-micro">or</span>
+        <span class="opt"><span class="icon item i22" title="Lord Dominik’s Regards">LD</span><span class="t-micro">19%</span></span>
+        <span class="opt"><span class="icon item i22" title="Collector">CL</span><span class="t-micro">14%</span></span>
+      </div>
+      <div class="col">
+        <span class="t-micro text">Item 3</span><span class="t-micro">24 min</span>
+        <span class="icon item main i32" title="Collector">CL</span>
+        <span class="t-micro text">41%</span>
+        <span class="t-micro">or</span>
+        <span class="opt"><span class="icon item i22" title="Mercurial Scimitar">MS</span><span class="t-micro">26%</span></span>
+        <span class="t-micro" style="max-width: 76px">No other common pick</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Vs this team</span><span class="rule"></span></div>
+    <div class="lrow"><span class="icon item i22">MS</span><span class="icon item i22">GA</span><span class="t-caption"><b class="text">Mercurial Scimitar</b> if their Leona chains you; Guardian Angel late against their burst.</span></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label">Later: pick by situation</span><span class="rule"></span></div>
+    <div class="lrow"><span class="icon item i22">MW</span><span class="t-caption"><span class="text">Mortal Reminder</span> — against healing</span></div>
+    <div class="lrow"><span class="icon item i22">DD</span><span class="t-caption"><span class="text">Death’s Dance</span> — when you’re focused in fights</span></div>
+    <div class="lrow"><span class="icon item i22">BC</span><span class="t-caption"><span class="text">Black Cleaver</span> — against tanky frontlines</span></div>
+  </section>
+
+  <footer class="foot">
+    <button class="btn primary wide">Import runes, spells &amp; items</button>
+    <span class="t-micro">From 2,140 games in Gold to Platinum.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

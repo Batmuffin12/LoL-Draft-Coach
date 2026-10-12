@@ -7,26 +7,29 @@ import { serve } from "@hono/node-server";
 import { DataDragon } from "@ldc/ddragon";
 import { RateLimiter, RiotApi } from "@ldc/riot-api";
 import { createApp } from "./app";
+import { BackupJob } from "./backup";
+import { S3BackupStore } from "./backup-store";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
-import { readServerEnv } from "./env";
+import { backupSettings, readServerEnv } from "./env";
 import { MetaJob } from "./meta-job";
 import { SyncScheduler } from "./sync-scheduler";
+import { SERVER_VERSION as VERSION } from "./version";
 
-const VERSION = "0.6.2";
 const MINUTE = 60_000;
 
 const env = readServerEnv(process.env);
 const config = loadServerConfig(findConfigDir(process.cwd()));
 const db = openDb(env.DATABASE_PATH);
+// The collector leaves part of each limit free, so a user's sync never waits behind it (a boosted run may use all of it).
+const limiter = new RateLimiter({ collectorShare: config.meta.collector.rateLimitShare });
 const riot = env.RIOT_API_KEY
   ? new RiotApi({
       apiKey: env.RIOT_API_KEY,
       keyType: env.RIOT_KEY_TYPE,
       platform: env.RIOT_PLATFORM,
       region: env.RIOT_REGION,
-      // The collector leaves part of each limit free, so a user's sync never waits behind it.
-      limiter: new RateLimiter({ collectorShare: config.meta.collector.rateLimitShare }),
+      limiter,
     })
   : null;
 const sync = riot
@@ -44,7 +47,10 @@ const items = async () => {
   await ddragon.load();
   return ddragon.data.itemInfo;
 };
-const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine }, { items });
+const meta = new MetaJob(db, riot, { meta: config.meta, bands: config.bands, engine: config.engine }, { items, collectorShare: (share) => limiter.setCollectorShare(share) });
+// Daily off-site backup of the user data, inside the hourly wake-up (no timer of its own).
+const backupConf = backupSettings(env);
+const backup = backupConf ? new BackupJob(db, env.DATABASE_PATH, new S3BackupStore(backupConf.s3), backupConf) : null;
 const app = createApp({
   db,
   version: VERSION,
@@ -54,6 +60,7 @@ const app = createApp({
   syncWhenStaleMs: env.SYNC_STALE_MINUTES * MINUTE,
   adminToken: env.ADMIN_TOKEN ?? null,
   meta,
+  backup,
   collectorStaleAfterMs: config.meta.collector.staleAfterHours * 60 * MINUTE,
   publicConfig: { app: config.app, engine: config.engine, bands: config.bands, explain: config.explain },
 });
@@ -61,6 +68,7 @@ const app = createApp({
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`LoL Draft Coach server ${VERSION} listening on :${info.port}`);
   if (!riot) console.warn("RIOT_API_KEY is not set: registration and syncing are off until it is.");
+  if (!backup) console.warn("BACKUP_ variables are not set: the user data is not backed up.");
   // With SYNC_INTERVAL_MINUTES=0 there is no timer: syncs run on request only, and the
   // server sends no outbound traffic while unused, so Railway can put it to sleep.
   if (env.SYNC_INTERVAL_MINUTES > 0) sync?.start();

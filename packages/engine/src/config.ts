@@ -1,3 +1,4 @@
+import { TERM_NAMES } from "@ldc/shared";
 import { z } from "zod";
 import type { FactorName, RankBandId } from "@ldc/shared";
 
@@ -38,6 +39,11 @@ export const EngineConfigSchema = z.object({
       mix: z.object({ winRate: weight, experience: weight }),
     }),
     mix: z.object({ skill: weight, form: weight }),
+    /**
+     * Comfort in a role you never played the champion in is this share of it (0..1): knowing Gwen
+     * top doesn't mean knowing Gwen jungle (another way to play her).
+     */
+    unplayedRoleShare: unit.default(0.6),
   }),
   roleAdvice: z.object({
     halfLifeDays: z.number().positive(),
@@ -96,6 +102,11 @@ export const EngineConfigSchema = z.object({
      * Absent: every playstyle metric.
      */
     metrics: z.array(z.string().min(1)).min(1).optional(),
+    /**
+     * Per role (Riot position), the metrics that matter for it, most important first (research/ROLE-GOALS.md):
+     * a support is judged on vision, a jungler on early farm and ganks. Overrides `metrics` for that role.
+     */
+    roles: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
   }),
   /** Deaths before this minute count as early deaths (the "earlyDeaths" metric, from timelines). */
   earlyDeathsMinute: z.number().positive().default(14),
@@ -140,12 +151,55 @@ export const EngineConfigSchema = z.object({
   }),
   /** Monthly report (DESIGN §7, F8). */
   report: z.object({
-    /** The period, in days, compared with the same length of time before it. */
+    /** The period, in days, compared with the games before it. */
     days: z.number().int().min(1),
+    /**
+     * How far back the games before the period may come from (days). The comparison takes the
+     * games right before the period, as many as the period has (at least trend.minGamesPerSide),
+     * so a break between them doesn't leave nothing to compare. Absent: the same length of time before.
+     */
+    beforeLookbackDays: z.number().int().min(1).optional(),
     maxChampions: z.number().int().min(1),
     /** Games on a champion before the period needed to show its change. */
     minPriorGames: z.number().int().min(1),
+    /**
+     * When a style axis counts as changed (research/answers/03-style-month.md): this period's games
+     * against the period before (separate games), each side with minGamesPerSide games, a Welch
+     * z of at least z, and a change of at least minChange points (0-100). The old rule (any 2
+     * points between overlapping sets) marked 58-74% of axes changed for a player who didn't change.
+     */
+    trend: z.object({ minGamesPerSide: z.number().int().min(2), z: z.number().min(0), minChange: z.number().min(0) }).default({ minGamesPerSide: 15, z: 2.4, minChange: 5 }),
+    /**
+     * Raw numbers compared between the two periods in your most played role ("-" = lower is better),
+     * with the same test; minRelChange: the smallest change that counts, as a share of the value.
+     * Absent: no number trends.
+     */
+    stats: z.object({ metrics: z.array(z.string().regex(/^-?[\w.]+$/)).min(1), minRelChange: z.number().min(0) }).optional(),
+    /** Share of the period's games on your this many most played champions (pool focus); absent: not shown. */
+    focusTop: z.number().int().min(1).optional(),
   }),
+  /**
+   * How you play in a role, beside the playstyle axes (the op.gg comparison, Oct 9 2026): headline
+   * numbers against your rank, pool focus, class mix and damage split; and win rate by map side
+   * when the split is real. Absent: the Style tab shows the axes only.
+   */
+  style: z
+    .object({
+      /** Your last this many games in the role count for focus, classes and damage. */
+      window: z.number().int().min(1),
+      /** Headline numbers per role ("-" = lower is better); `default` for roles not listed. */
+      headline: z.record(z.string(), z.array(z.string().regex(/^-?[\w.]+$/)).min(1)),
+      /** Pool focus: share of games on your top N champions, for each N. */
+      focusTop: z.array(z.number().int().min(1)).min(1),
+      /** Class mix (Data Dragon's first tag): at most this many classes, each with at least this share. */
+      maxClasses: z.number().int().min(1),
+      minClassShare: unit,
+      /** Win rate by side: Riot's team id of the blue side; shown only with minGames a side, a gap of minDiff and a z of at least z. */
+      side: z.object({ blueTeamId: z.number().int(), minGames: z.number().int().min(1), minDiff: unit, z: z.number().min(0) }),
+      /** A headline number reads as better or worse than typical when its average percentile is this far from 0.5. */
+      toneGap: unit,
+    })
+    .optional(),
   /** New-champion recommender (DESIGN §6). */
   newChamps: z.object({
     /** Champions you played fewer games of in the role (and with less mastery) count as new. */
@@ -182,6 +236,12 @@ export const EngineConfigSchema = z.object({
       dropMin: z.number().min(0),
       /** Per role, the growth metric to hold at your usual while learning ("-" = lower is better). */
       basics: z.record(z.string(), z.string()),
+      /** "How it plays": a measured percentile (0..1) at or above `high` is said as high, at or below `low` as low. */
+      profile: z.object({ high: unit, low: unit }).default({ high: 0.66, low: 0.33 }),
+      /** Skill order is shown once this many games back it. */
+      skillMinGames: z.number().int().min(1).default(100),
+      /** "No matchup swings it much" once this many opponents are measured, all within plan.evenWin. */
+      evenMatchupsMin: z.number().int().min(1).default(5),
     }),
   }),
   /** Champion pool tiers per role, and the draft needs the pool should cover. */
@@ -194,6 +254,8 @@ export const EngineConfigSchema = z.object({
     /** Learning: first played within learningWindowDays and at most learningMaxGames games. */
     learningWindowDays: z.number().positive(),
     learningMaxGames: z.number().int().min(1),
+    /** ...and with mastery under this: a champion you already know is "rusty" when you come back to it, never "learning". */
+    learningMaxMastery: z.number().min(0).default(30000),
     /** Rusty: at least dormantMastery points, unplayed for dormantDays, and a listed role fit. */
     dormantMastery: z.number().min(0),
     dormantDays: z.number().positive(),
@@ -202,6 +264,11 @@ export const EngineConfigSchema = z.object({
     coverage: z.object({ damageShare: unit, frontline: unit, engage: unit }),
     /** A hole is shown only when the team lacked it in at least this share of the player's losses in the role... */
     minLossShare: unit,
+    /**
+     * A need counts as a hole only when champions that fill it play at least this share of the role's
+     * games in your rank (bot lane rarely brings magic damage: no "no magic-damage pick" there).
+     */
+    minRoleNeedShare: unit.default(0.15),
     /** ...unless there are fewer losses than this to judge by (then it's shown without evidence). */
     minLossesForEvidence: z.number().int().min(1),
   }),
@@ -238,7 +305,34 @@ export const EngineConfigSchema = z.object({
       learningPenalty: z.number().min(0),
       /** Suggest champions the player hasn't played yet (they carry the learning penalty). */
       includeUnplayed: z.boolean(),
+      /**
+       * The experience model (research/answers/06-draft-engine.md, our own learning curve: about 43%
+       * on a first game, 52-55% after 20). When set, it replaces the comfort-score mapping above:
+       * - experience: −penalty · e^(−n / tauGames) rating points, where n = your games on the
+       *   champion in this role + transfer × (its games in other roles + mastery ÷ pointsPerGame);
+       *   knowing a champion in another role only partly carries over.
+       * - skill: your win rate on it in this role, shrunk with priorGames toward the champion's
+       *   win rate in your rank, as rating points over that rate, capped at ±maxPoints.
+       */
+      experience: z
+        .object({ penalty: z.number().min(0), tauGames: z.number().positive(), transfer: unit, pointsPerGame: z.number().positive() })
+        .optional(),
+      /** weight: a multiplier on the skill points (production backtest: half strength is best calibrated). */
+      skill: z.object({ priorGames: z.number().min(0), maxPoints: z.number().min(0), weight: z.number().min(0).default(1) }).optional(),
+      /**
+       * Filled (autofill): the assigned role is under maxShare of your last recentGames games (with at
+       * least minGames). Picks then lean harder on champions you know: the experience cost × penaltyScale.
+       * The role's own cost isn't added to the chance: no published number, not yet measured
+       * (research/answers/06-draft-engine.md Q5).
+       */
+      offRole: z.object({ recentGames: z.number().int().min(1), minGames: z.number().int().min(1), maxShare: unit, penaltyScale: z.number().min(1) }).optional(),
     }),
+    /**
+     * Terms that count in the shown win chance (and the ranking). Measured on production games,
+     * only champion strength (meta) and your own experience (personal) predict the result; the
+     * others are shown for information. Absent: every term.
+     */
+    inChance: z.array(z.enum(TERM_NAMES)).optional(),
     /** Lane opponent unknown: expected matchup over likely opponents, minus a share of the bad tail. */
     blind: z.object({
       riskAversion: z.number().min(0),
@@ -280,6 +374,8 @@ export const EngineConfigSchema = z.object({
       clearMaxPersonalLossWin: unit,
       /** A champion's power curve is mentioned when long- and short-game win rates differ by this much (0..1). */
       powerCurveGap: unit,
+      /** ...and by this many standard errors of the two win rates, so noise isn't said as fact. */
+      powerCurveZ: z.number().min(0).default(2),
       /** Mentioned when the champion is this much gold ahead of (or behind) its lane opponent at 15 minutes on average. */
       laneGoldGap: z.number().min(0),
       /** Factor bars: this change in win chance fills a bar from the middle to the end. */
@@ -288,6 +384,15 @@ export const EngineConfigSchema = z.object({
   }),
   /** Loadout after lock-in: runes, spells, skill order and items (DESIGN.md "Loadout", "Item ranking"). */
   loadout: z.object({
+    /**
+     * Rune swaps need a game mechanic, not only a lift (research/answers/04-runes.md): per enemy
+     * trait, a pattern on the rune's own Data Dragon description that names the mechanic that
+     * answers it (crowd control → "when receiving crowd control"). Traits without a pattern get no
+     * rune suggestion (no rune reacts to physical or magic damage). Absent: any lift counts.
+     */
+    runeMechanics: z.record(z.string(), z.string()).optional(),
+    /** The same for situational items, on the item's Data Dragon description (anti-heal → "Wounds"). */
+    itemMechanics: z.record(z.string(), z.string()).optional(),
     /** What counts as a completed item (derived from Data Dragon). */
     items: z.object({ mapId: z.string().min(1), legendaryMinGold: z.number().min(0) }),
     /** An option (page, spells, …) needs this share of the champion-role's games to be suggested… */
@@ -395,10 +500,25 @@ export const AppConfigSchema = z.object({
     queues: z.array(z.number().int()).min(1),
     /** Your newest games that also get their timeline (one more Riot call each): when you die, your gold at 15. */
     timelineCount: z.number().int().min(0).optional(),
+    /**
+     * Riot calls one sync may spend on games (a match and its timeline are one each): newest games
+     * first, then older ones and missing timelines. The rest of a long history fills in over the
+     * next syncs and hourly wake-ups. Absent: no limit.
+     */
+    callsPerSync: z.number().int().positive().optional(),
+    /** The same, for each user still loading their history during the hourly wake-up (it fills a long history in a few hours). */
+    backfillCallsPerWake: z.number().int().positive().optional(),
+    /**
+     * After a game, Riot publishes the match a little later: the panel asks the server to sync
+     * again after each of these delays (seconds) until the game is in your history.
+     */
+    newGameRetrySeconds: z.array(z.number().positive()).optional(),
   }),
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */
   import: z.object({ enabled: z.boolean() }).default({ enabled: false }),
+  /** Positions that share a lane (bot and support): an ally there is your lane partner. */
+  sharedLanes: z.array(z.array(z.string())).default([]),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 

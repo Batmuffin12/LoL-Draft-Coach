@@ -98,6 +98,24 @@ describe("LcuConnector replaying a fixture", () => {
     // Two full TLS + WebSocket handshakes: a cold Windows CI runner can take longer than the default 5 s.
   }, 20_000);
 
+  it("notices a client that closes right after connecting, while the first reads are still running", async () => {
+    const creds = await startMock();
+    const statuses: string[] = [];
+    connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });
+    // Drop the socket the moment the connector says "connected": its champ select read is still in flight.
+    let dropped = false;
+    connector.on("status", (s) => {
+      statuses.push(s);
+      if (s === "connected" && !dropped) {
+        dropped = true;
+        server!.dropClients();
+      }
+    });
+    connector.start();
+    await waitFor(() => statuses.includes("disconnected"));
+    await waitFor(() => connector!.status === "connected" && server!.clientCount === 1);
+  }, 20_000);
+
   it("exposes validated local reads (pickable champions, gameflow queue)", async () => {
     const creds = await startMock();
     connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });

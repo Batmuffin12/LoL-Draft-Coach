@@ -35,7 +35,14 @@ export function completedBoots(catalog: ReadonlyMap<number, ItemInfo>, rules: It
 }
 
 export function completedItems(catalog: ReadonlyMap<number, ItemInfo>, rules: ItemRules): Set<number> {
-  return new Set([...catalog.values()].filter((i) => isCompletedItem(i, catalog, rules)).map((i) => i.id));
+  // Data Dragon also lists other modes' copies of an item (Arena's Thornmail 323075 next to 3075)
+  // as Summoner's Rift items: of items with the same name, only the original (lowest id) counts.
+  const original = new Map<string, number>();
+  for (const i of catalog.values()) {
+    const seen = original.get(i.name);
+    if (seen === undefined || i.id < seen) original.set(i.name, i.id);
+  }
+  return new Set([...catalog.values()].filter((i) => original.get(i.name) === i.id && isCompletedItem(i, catalog, rules)).map((i) => i.id));
 }
 
 export const ENEMY_TRAITS: readonly EnemyTrait[] = ["magic", "physical", "frontline", "engage", "heal"];

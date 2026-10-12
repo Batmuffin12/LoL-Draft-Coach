@@ -1,10 +1,12 @@
 {
   "name": "@ldc/sim",
-  "version": "0.6.2",
+  "version": "0.7.9",
   "private": true,
   "description": "Draft simulator for tests and dev: any champ select as a fixture, plus synthetic meta snapshots",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
@@ -16,6 +18,7 @@
   },
   "devDependencies": {
     "@ldc/engine": "workspace:*",
+    "@ldc/meta": "workspace:*",
     "tsx": "^4"
   }
 }

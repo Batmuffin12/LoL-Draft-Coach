@@ -65,9 +65,24 @@ Plus the Hobby plan's $5/month, which you pay anyway for the other projects.
 
 ## Backups and restore
 
-**There are no backups yet.** Railway's volume backups are a [Pro-plan feature](https://docs.railway.com/volumes/backups); this workspace is on Hobby, where the schedule is silently ignored (tried 2026-10-06), so it was removed from `.railway/railway.ts`.
+Railway's volume backups are a [Pro-plan feature](https://docs.railway.com/volumes/backups); this workspace is on Hobby, where the schedule is silently ignored (tried 2026-10-06). Instead the server backs itself up to **Cloudflare R2** (decided 2026-10-11: a different provider than Railway, so an account problem or the hard limit can't take the backups with it; free tier 10 GB, we use ~30 MB).
 
-What a lost volume would cost: the `users` and `invites` tables can't be re-created (everyone registers again with a new invite). Everything else comes back on its own: each user's games re-sync from Riot when they open the app, and the collector refills the meta within days. A free alternative (an owner-only download of the users and invites to your PC) is a possible follow-up.
+**What is backed up:** only what can't be rebuilt: `users` (Riot IDs, hashed tokens, rank), `invites`, `advice_log`, `rank_history`, plus `schema_migrations`. The file is the whole schema with those rows: a working database. Games, masteries and meta are left out (they reload from Riot and the collector).
+
+**How:** once a day, inside the hourly wake-up (`POST /admin/collect`, no timer of its own, so the server still sleeps), `BackupJob` copies those tables to a temporary SQLite file, gzips it, encrypts it (AES-256-GCM, `BACKUP_ENCRYPTION_KEY`) and uploads `users/<time>.ldcb` to the `ldc-backups` bucket. A failed run is retried at the next wake-up. Copies older than 30 days are deleted by the bucket's lifecycle rule and by the server (`BACKUP_KEEP_DAYS`). `/health` shows `backup.lastGoodAt`, `stale` (no good backup for 2 days) and the last run's error.
+
+**Settings:** `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_ENCRYPTION_KEY` (all five, or backups are off; half set is a startup error), optional `BACKUP_EVERY_HOURS` (24), `BACKUP_KEEP_DAYS` (30). Secrets live in Railway variables and the local `.env`. The R2 token can only read and write objects in `ldc-backups`. **Keep a copy of `BACKUP_ENCRYPTION_KEY` outside Railway** (a password manager): without it no backup can be opened.
+
+**Bucket setup (done 2026-10-11, Cloudflare dashboard, the one manual step):** R2 bucket `ldc-backups` (location Western Europe), lifecycle rule "delete after 30 days", an R2 API token with Object Read & Write on that bucket only.
+
+**Restore** (from the repo, reads `.env`):
+
+```bash
+pnpm --filter @ldc/server backup list                                  # stored backups
+pnpm --filter @ldc/server backup restore --out data/restored.sqlite   # newest (or name one); decrypts and checks integrity
+```
+
+To put it on the server: stop the cron (`ldc-meta-wake`) for the hour, upload the file next to the database in the same base64 way as the copy below (in reverse), then `mv /data/restored.sqlite /data/ldc.sqlite && rm -f /data/ldc.sqlite-wal /data/ldc.sqlite-shm` and redeploy `ldc-server`. Every user stays signed in; their games reload on their next sync and the collector refills the meta within days. Delete local restored copies afterwards. Tested 2026-10-11 against R2 (backup, list, restore, integrity check, row counts).
 
 ### Copy the production database to your PC (backtests, a manual backup)
 
@@ -120,3 +135,5 @@ railway service status --service ldc-server                          # deploymen
 | 2026-10-08 | M8 (branch): each hourly run also measures power spikes over every collected band's timelines (one extra pass that parses only timeline rows) and adds them to each band's snapshot | | | A few seconds to ~1 min more awake per hour at full size (cents per month, est.); snapshot +~50 KB gzipped. Measure after the M8 deploy |
 | 2026-10-08 | M7 (branch), owner approved for power spikes (docs/ENGINE-PLAN.md): Gold–Plat `timelineShare` 0.5 → 1, run budget 1800 → 2400 s (`maxMatchesPerRun` 900 → 1100) so the extra timeline calls don't cut the number of games; timelines now also keep champion kills and levels per minute | | | Awake ≈ +10 min per hour ≈ +$1/month (est.). A stored game grows by ~1 KB (kills, levels). Runs end around minute 47–50. Check after a week |
 | 2026-10-08 | M7 (branch), from the October review: collector run budget 900 → 1800 s (`maxMatchesPerRun` 450 → 900), `lookbackDays` 10 (was the 30-day window), win-rate-band `timelineShare` 1 → 0.5 (build band stays 1), no timelines for remakes | | | The run used ~29 % of the key. Expect ~2.5× more Gold–Plat games per day. Awake ≈ +15 min per hour ≈ +$1.40/month (est., same rate as the cron entry). Check after a week |
+| 2026-10-09 | v0.7.4 (branch): user histories 200 → 1,000 games, every one with a timeline, loaded over several syncs (`history.callsPerSync` 200; `backfillCallsPerWake` 800 for each user still loading, inside the hourly wake-up, users' calls before the collector's) | | | No extra awake time (it runs inside wake-ups that happen anyway). A full history is ~2,000 Riot calls per user (about 3 hourly wake-ups). Storage ~25 KB per game with timeline ≈ 25 MB per user |
+| 2026-10-09 | v0.7.4 (branch): collector **boost** behind a switch (`meta.collector.boost` in `config/meta.v1.json`): 100% of the key, 3200 s and 1600 matches per run while fewer than 60,000 collected games are stored; it switches itself off at that size, or at once with `"enabled": false` | | | Awake about 55 of 60 min per hour while it lasts (≈ always on: about +$1–2/month, est.), then back to the 2400 s runs. ~1.7× the games per hour for power spikes. Users' syncs and history backfill still go first in the rate limiter |

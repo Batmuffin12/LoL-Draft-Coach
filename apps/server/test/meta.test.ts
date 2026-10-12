@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { MatchSchema, TimelineSchema, RiotApiError, RiotKeyError, type LeaguePlayer, type Match } from "@ldc/riot-api";
 import type { MetaSnapshot } from "@ldc/shared";
-import { createApp } from "../src/app";
+import { createApp, etagMatches } from "../src/app";
 import { sha256 } from "../src/auth";
 import { collect, nextCursor, pruneCollected, type CollectorRiot, type CollectOptions } from "../src/collector";
 import { findConfigDir, loadServerConfig } from "../src/config";
@@ -122,7 +122,7 @@ describe("collector", () => {
     expect(text).not.toContain("SECRET");
     expect(text).not.toContain("Name0");
     expect(rows[0]!.summary.participants[0]!.challenges).toEqual({ killParticipation: 0.5 });
-    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [] });
+    expect(rows[0]!.summary.timeline).toEqual({ gold: Array.from({ length: 10 }, () => [500]), items: [[0, 1, 0, 1055]], skills: Array.from({ length: 10 }, () => []), kills: [], wards: [], monsters: [] });
     // Players' identifiers are never stored anywhere.
     const dump = JSON.stringify(db.$client.prepare("SELECT * FROM collector_cursors").all());
     expect(dump).not.toContain("P-");
@@ -286,6 +286,24 @@ describe("meta job", () => {
     expect(r.snapshots).toHaveLength(1);
   });
 
+  it("boosts collection until enough games are stored, then switches itself off; enabled: false switches it off", async () => {
+    const boost = { enabled: true, untilMatches: 1, budgetSeconds: 3200, maxMatchesPerRun: 1600, rateLimitShare: 1 };
+    const run = async (b: typeof boost, seedGames: number) => {
+      const db = openDb(":memory:");
+      const { summarizeMatch } = await import("@ldc/riot-api");
+      for (let i = 0; i < seedGames; i++) {
+        db.insert(schema.matches).values({ matchId: `S${i}`, queueId: 420, gameVersion: "16.19.1", endedAt: NOW - MIN, durationSec: 1800, summary: summarizeMatch(rawMatch(`S${i}`, NOW - MIN)), source: "collector", storedAt: NOW, band: 2 }).run();
+      }
+      const shares: number[] = [];
+      const s = { ...settings, meta: { ...config.meta, collector: { ...config.meta.collector, boost: b } } };
+      const r = await new MetaJob(db, { ...fakeRiot(), keyProblem: new Error("x") }, s, { now: () => NOW, log: () => {}, collectorShare: (x) => shares.push(x) }).run();
+      return { boosted: r.boosted, shares };
+    };
+    expect(await run(boost, 0)).toEqual({ boosted: true, shares: [1] });
+    expect(await run(boost, 1)).toEqual({ boosted: false, shares: [config.meta.collector.rateLimitShare] });
+    expect(await run({ ...boost, enabled: false }, 0)).toEqual({ boosted: false, shares: [config.meta.collector.rateLimitShare] });
+  });
+
   it("closes a run the server never finished (a redeploy mid-run) before the next one", async () => {
     const db = openDb(":memory:");
     db.insert(schema.collectorRuns).values({ startedAt: NOW - 3_600_000 }).run();
@@ -334,6 +352,22 @@ describe("meta routes", () => {
       for (let i = 0; i < 1203; i++) insert.run(`m${i}`, NOW - MIN, JSON.stringify(summarizeMatch(rawMatch(`m${i}`, NOW - MIN))), NOW);
     })();
     expect((await publishSnapshot(db, 2, settings, NOW)).matches).toBe(1203);
+  });
+
+  it("reads the band and the band above together, chunk by chunk, counting only the band's own games", async () => {
+    const { db } = setup();
+    const { summarizeMatch } = await import("@ldc/riot-api");
+    const insert = db.$client.prepare("INSERT INTO matches (match_id, queue_id, game_version, ended_at, duration_sec, summary, source, stored_at, band) VALUES (?, 420, '16.19.1', ?, 1800, ?, 'collector', ?, ?)");
+    db.$client.transaction(() => {
+      // Interleaved in time, with ties inside each band, more than one chunk each.
+      for (let i = 0; i < 1300; i++) {
+        const band = i % 2 ? 3 : 2;
+        const endedAt = NOW - MIN * (1 + Math.floor(i / 4));
+        insert.run(`m${i}`, endedAt, JSON.stringify(summarizeMatch(rawMatch(`m${i}`, endedAt))), NOW, band);
+      }
+    })();
+    const s = await publishSnapshot(db, 2, settings, NOW, { buildBands: [3] });
+    expect(s.matches).toBe(650);
   });
 
   it("serves the band snapshot to registered users only, gzipped with an ETag", async () => {
@@ -402,5 +436,28 @@ describe("meta routes", () => {
     const res = await app.request("/config");
     expect(((await res.json()) as { engine: { topN: number } }).engine.topN).toBe(config.engine.topN);
     expect((await app.request("/config", { headers: { "if-none-match": res.headers.get("etag")! } })).status).toBe(304);
+  });
+
+  it("answers 304 to a gzip client sending back the weak ETag the compressed body carried", async () => {
+    const { app } = setup();
+    const res = await app.request("/config", { headers: { "accept-encoding": "gzip" } });
+    expect(res.headers.get("content-encoding")).toBe("gzip");
+    const etag = res.headers.get("etag")!;
+    expect(etag).toMatch(/^W\//);
+    const again = await app.request("/config", { headers: { "accept-encoding": "gzip", "if-none-match": etag } });
+    expect(again.status).toBe(304);
+    // A changed config (another ETag) is still sent in full.
+    expect((await app.request("/config", { headers: { "accept-encoding": "gzip", "if-none-match": 'W/"other"' } })).status).toBe(200);
+  });
+});
+
+describe("etagMatches", () => {
+  it("compares weakly and reads lists", () => {
+    expect(etagMatches('W/"a"', '"a"')).toBe(true);
+    expect(etagMatches('"a"', '"a"')).toBe(true);
+    expect(etagMatches('"b", W/"a"', '"a"')).toBe(true);
+    expect(etagMatches("*", '"a"')).toBe(true);
+    expect(etagMatches('"b"', '"a"')).toBe(false);
+    expect(etagMatches(undefined, '"a"')).toBe(false);
   });
 });

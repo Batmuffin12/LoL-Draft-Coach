@@ -9,7 +9,9 @@ export const ExplainConfigSchema = z.object({
   /** Display names of playstyle axes. */
   axes: z.record(z.string(), z.string()).default({}),
   /** Display names and number formats of playstyle metrics; `count`: counted per game (deaths, plates), so one game's value reads as a whole number. */
-  metrics: z.record(z.string(), z.object({ label: z.string(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
+  metrics: z.record(z.string(), z.object({ label: z.string(), short: z.string().optional(), format: z.enum(["percent", "decimal", "decimal2", "integer"]), count: z.boolean().optional() })).default({}),
+  /** What to keep in mind for a growth goal, by "role:metric" (research/ROLE-GOALS.md). */
+  tips: z.record(z.string(), z.array(z.string())).default({}),
   settings: z.object({
     /** Score gap (0..1) between #1 and #2 at or above which #1 is a "clear pick". */
     clearGap: z.number().min(0).max(1),
@@ -34,7 +36,8 @@ export const reason = (id: string, slots: Reason["slots"] = {}): Reason => ({ id
 
 /**
  * Fills a template from a reason's slots. Supported slot forms:
- * `{x}` value, `{x:pct}` 0..1 share as a whole percent, `{x:champion}` champion name,
+ * `{x}` value, `{x:pct}` 0..1 share as a whole percent, `{x:per100}` a 0..1 difference as whole
+ * wins per 100 games (unsigned), `{x:champion}` champion name,
  * `{x:item}` / `{x:rune}` item or rune name,
  * `{x|one|many}` singular/plural by the number in slot x. A missing template renders
  * the id, so a typo is visible instead of silent.
@@ -53,6 +56,9 @@ export function renderReason(r: Reason, templates: Record<string, string>, champ
     if (v === undefined) return "";
     if (fmt === "pct" && typeof v === "number") return String(Math.round(v * 100));
     if (fmt === "pct1" && typeof v === "number") return (v * 100).toFixed(1);
+    // A win-rate difference as whole wins per 100 games ("2 more wins per 100 games"), unsigned:
+    // the template says more or fewer (research/answers/01-language.md).
+    if (fmt === "per100" && typeof v === "number") return String(Math.max(1, Math.round(Math.abs(v) * 100)));
     if (fmt === "signedPct1" && typeof v === "number") {
       const s = (v * 100).toFixed(1);
       return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s.replace("-", "−");
@@ -93,6 +99,11 @@ export function formatMetric(value: number, metric: string, cfg: ExplainConfig):
   // Small rates (deaths per minute) need two decimals to show a change.
   if (f === "decimal2") return value.toFixed(2);
   return value.toFixed(1);
+}
+
+/** A metric's short name for tight tables ("CS/min"): configured short label, else its label. */
+export function metricShort(metric: string, cfg: ExplainConfig): string {
+  return cfg.metrics[metric]?.short ?? metricLabel(metric, cfg);
 }
 
 /** A metric's display name: configured label, else the Riot field name split into words. */

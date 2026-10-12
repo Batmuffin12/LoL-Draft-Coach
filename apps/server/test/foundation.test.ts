@@ -4,6 +4,8 @@ import { createApp } from "../src/app";
 import { openDb, schema } from "../src/db";
 import { migrate, MIGRATIONS } from "../src/db/migrations";
 import { readServerEnv, ServerEnvError } from "../src/env";
+import { SERVER_VERSION } from "../src/version";
+import { readFileSync } from "node:fs";
 
 describe("server env", () => {
   it("applies defaults for a blank environment", () => {
@@ -40,7 +42,7 @@ describe("migrations", () => {
 
   it("match the Drizzle schema (every Drizzle column exists in the migrated tables)", () => {
     const db = openDb(":memory:");
-    for (const table of [schema.users, schema.invites, schema.matches, schema.userMatches, schema.userMasteries, schema.collectorCursors, schema.collectorRuns, schema.metaSnapshots]) {
+    for (const table of [schema.users, schema.invites, schema.matches, schema.userMatches, schema.userMasteries, schema.collectorCursors, schema.collectorRuns, schema.metaSnapshots, schema.backups]) {
       const name = (table as unknown as Record<symbol, string>)[Symbol.for("drizzle:Name")]!;
       const cols = (db.$client.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map((c) => c.name);
       for (const col of Object.values(table) as { name?: string }[]) {
@@ -75,6 +77,7 @@ describe("GET /health", () => {
       patch: null,
       newestMatchAt: null,
       collector: { stale: false, lastDataAt: null, running: false, lastRun: null, snapshots: [] },
+      backup: null,
     });
   });
 
@@ -100,5 +103,13 @@ describe("GET /health", () => {
     const res = await createApp({ db: openDb(":memory:"), version: "test", riot: null }).request("/nope");
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "not_found" });
+  });
+});
+
+describe("server version", () => {
+  it("comes from package.json and matches the repo's single version", () => {
+    const read = (path: string) => (JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8")) as { version: string }).version;
+    expect(SERVER_VERSION).toBe(read("../package.json"));
+    expect(SERVER_VERSION).toBe(read("../../../package.json"));
   });
 });

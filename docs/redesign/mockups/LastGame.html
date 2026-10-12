@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lobby, last game</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.t-call{text-transform:uppercase;letter-spacing:.06em}
+.t-legal{font-size:11px;line-height:14px;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.chip{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;padding:1px 8px;border:1px solid var(--line-strong);border-radius:999px;color:var(--muted)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.tabs{display:flex;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.tab{all:unset;font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.section{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.section+.section{border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:center;gap:10px;min-height:22px;flex-wrap:wrap}
+.section-head .rule{flex:1;height:1px;background:var(--line);min-width:16px}
+.icon{display:grid;place-items:center;border-radius:4px;background:var(--track);font-family:var(--font-display);font-weight:700;color:var(--muted);flex-shrink:0;box-sizing:border-box}
+.icon.framed{border:1px solid var(--gold);color:var(--gold)}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.foot-link{all:unset;font-size:12px;line-height:16px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.fx{display:grid;grid-template-columns:120px minmax(0,1fr) 44px;align-items:center;gap:10px;min-height:24px}
+.fx .t{position:relative;height:8px;background:var(--track);border-radius:2px}
+.fx .t .z{position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--line-strong)}
+.gm{width:20px;height:20px;border-radius:3px;box-sizing:border-box}
+.gm.y{background:var(--gold)}
+.gm.n{border:1px solid var(--line-strong)}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="Connected"></span><span class="app">Draft Coach</span><span class="chip">16.20</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+  <nav class="tabs"><button class="tab on">Last game</button><button class="tab">Style</button><button class="tab">Pool</button><button class="tab">New</button><button class="tab">This month</button></nav>
+
+  <section style="display: flex; align-items: center; gap: 12px; padding: 16px; background: rgba(255,184,107,.08); border-bottom: 1px solid #222c3d">
+    <span class="icon framed" style="width: 44px; height: 44px; font-size: 16px">SA</span>
+    <div style="display: flex; flex-direction: column; flex: 1">
+      <span class="t-title t-call neg">Defeat</span>
+      <span class="t-caption text">Samira · Bot · 28 min · 5 min ago</span>
+      <span class="t-micro">You took the coach’s #1 pick: 51% when you locked in</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">What decided the draft</span><span class="rule"></span></div>
+    <div class="fx"><span>Your comfort</span><span class="t"><span class="z"></span><span style="position: absolute; left: 50%; width: 22%; top: 0; bottom: 0; background: #3ccf8e; border-radius: 2px"></span></span><span class="t-heading pos" style="text-align: right">+0.9</span></div>
+    <div class="fx"><span>Lane vs Caitlyn</span><span class="t"><span class="z"></span><span style="position: absolute; left: 30%; width: 20%; top: 0; bottom: 0; background: #ffb86b; border-radius: 2px"></span></span><span class="t-heading neg" style="text-align: right">−0.8</span></div>
+    <div class="fx"><span>Their team</span><span class="t"><span class="z"></span><span style="position: absolute; left: 20%; width: 30%; top: 0; bottom: 0; background: #ffb86b; border-radius: 2px"></span></span><span class="t-heading neg" style="text-align: right">−1.2</span></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Your goal</span><span class="rule"></span><span class="t-micro">Bot</span></div>
+    <span class="t-title">Fewer deaths before 14 min</span>
+    <div style="display: flex; align-items: center; gap: 16px">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 88px; height: 88px; border-radius: 50%; border: 3px solid #3ccf8e; flex-shrink: 0; box-sizing: border-box">
+        <span class="t-hero pos">2</span>
+        <span class="t-micro">this game</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="t-heading pos">Goal met: 2.4 or fewer</span>
+        <span class="t-caption">Your average is 2.6. A typical bot player in your rank: 2.0.</span>
+        <span style="display: flex; gap: 4px; align-items: center" title="Filled: you met the goal in that game"><span class="gm y"></span><span class="gm n"></span><span class="gm n"></span><span class="gm n"></span><span class="gm n"></span><span class="gm y"></span><span class="gm y"></span><span class="gm y"></span><span class="gm y"></span><span class="gm y"></span></span>
+        <span class="t-micro">6 of your last 10 met it, the last 5 in a row</span>
+      </div>
+    </div>
+    <span class="t-caption"><span class="t-label gold">Next game</span> Don’t trade when their wave is bigger: minion aggro hurts.</span>
+  </section>
+
+  <footer class="foot">
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap"><span class="t-micro text" style="flex: 1">EzekielSalad#EUW</span><button class="foot-link">Sign out</button><button class="foot-link">Delete my data</button></div>
+    <span class="t-legal">LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

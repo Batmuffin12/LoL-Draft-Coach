@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Locked in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&amp;family=Barlow+Semi+Condensed:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+html,body{overflow:hidden}
+body{margin:0;background:#0b0f17}
+a{color:#c8aa6e}a:hover{color:#f0e6d2}
+.w{--bg:#0b0f17;--card:#131a26;--card-raised:#1a2333;--line:#222c3d;--line-strong:#66738c;--text:#e6e9ef;--muted:#8a94a7;--gold:#c8aa6e;--gold-bright:#f0e6d2;--gold-tint:rgba(200,170,110,.12);--frame:#7a6640;--positive:#3ccf8e;--negative:#ffb86b;--warn-tint:rgba(255,184,107,.08);--track:#1c2433;--red:#ff5d5d;--on-gold:#0b0f17;--font-display:"Barlow Semi Condensed","Segoe UI",system-ui,sans-serif;--font-sans:Barlow,"Segoe UI",system-ui,sans-serif;--font-mono:ui-monospace,Consolas,monospace;width:440px;height:720px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--frame);overflow:hidden;color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:19px;font-variant-numeric:tabular-nums}
+.t-hero,.t-number,.t-title,.t-heading{font-family:var(--font-display);font-weight:600}
+.t-hero{font-size:32px;line-height:36px}.t-number{font-size:22px;line-height:26px}.t-title{font-size:20px;line-height:24px}.t-heading{font-size:16px;line-height:20px}
+.t-caption{font-size:13px;line-height:17px;color:var(--muted)}
+.t-micro{font-size:12px;line-height:16px;color:var(--muted)}
+.t-label{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.gold{color:var(--gold)}.gold-bright{color:var(--gold-bright)}.muted{color:var(--muted)}.text{color:var(--text)}.pos{color:var(--positive)}.neg{color:var(--negative)}
+.header{height:36px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 2px 0 16px;border-bottom:1px solid var(--line)}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--positive)}
+.app{font-family:var(--font-display);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.chip{font-family:var(--font-display);font-size:12px;line-height:16px;font-weight:600;padding:1px 8px;border:1px solid var(--line-strong);border-radius:999px;color:var(--muted)}
+.icon-btn{all:unset;width:32px;height:32px;display:grid;place-items:center;color:var(--muted);font-size:16px;border-radius:4px;cursor:pointer}
+.section{padding:10px 16px;display:flex;flex-direction:column;gap:8px}
+.section+.section{border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:center;gap:10px;min-height:22px;flex-wrap:wrap}
+.section-head .rule{flex:1;height:1px;background:var(--line);min-width:16px}
+.card{background:var(--card);border-radius:4px}
+.icon{display:grid;place-items:center;border-radius:4px;background:var(--track);font-family:var(--font-display);font-weight:700;color:var(--muted);flex-shrink:0;box-sizing:border-box}
+.icon.round{border-radius:50%}.icon.item{border-radius:3px}
+.icon.framed{border:1px solid var(--gold);color:var(--gold)}
+.icon.off{opacity:.45}
+.btn{font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;min-height:32px;padding:0 12px;border-radius:3px;border:1px solid var(--line-strong);background:transparent;color:var(--text);cursor:pointer}
+.btn.primary{border-color:var(--gold);background:var(--gold-tint);color:var(--gold-bright)}
+.btn.wide{width:100%;min-height:44px}
+.foot{margin-top:auto;padding:8px 16px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.trees{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tree{display:flex;flex-direction:column;gap:4px;padding:6px 8px;background:var(--card);border-radius:4px}
+.tree-head{display:flex;align-items:center;gap:6px}
+.tree-row{display:flex;justify-content:space-around;align-items:center}
+.tree-row.keys{padding-bottom:4px;border-bottom:1px solid var(--line)}
+.r22{width:22px;height:22px;font-size:8px}
+.r18{width:18px;height:18px;font-size:7px}
+.r30{width:30px;height:30px;font-size:10px}
+.key{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:3px;border:1px solid var(--gold);color:var(--gold);font-family:var(--font-display);font-weight:700;font-size:15px}
+.g-row{display:grid;grid-template-columns:18px repeat(18,minmax(0,1fr));gap:2px}
+.g-key{font-family:var(--font-display);font-weight:700;font-size:12px;color:var(--muted);display:grid;place-items:center}
+.g-cell{height:16px;border-radius:2px;background:var(--card);font-family:var(--font-display);font-size:10px;font-weight:700;display:grid;place-items:center;color:var(--on-gold)}
+.g-cell.on{background:var(--gold)}
+.g-cell.ult{background:var(--gold-bright)}
+.step{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;text-align:center}
+.pair{display:flex;align-items:flex-end;gap:2px;background:var(--bg);padding:0 2px}
+.alt{width:20px;height:20px;font-size:7px;border:1px solid var(--line-strong)}
+.tabs{display:flex;gap:20px;padding:0 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.tab{all:unset;font-family:var(--font-display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 0 8px;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+</style>
+</helmet>
+<div class="w">
+  <header class="header"><span class="status-dot" role="img" aria-label="Connected"></span><span class="app">Draft Coach</span><span class="chip">16.20</span><span style="flex: 1"></span><button class="icon-btn" aria-label="Undock">◧</button><button class="icon-btn" aria-label="Close">×</button></header>
+
+  <section style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #222c3d">
+    <span class="icon framed" style="width: 44px; height: 44px; font-size: 16px">SA</span>
+    <div style="display: flex; flex-direction: column; flex: 1">
+      <span class="t-label gold">Locked in · Bot vs Caitlyn</span>
+      <span class="t-title">Samira</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end"><span class="t-number pos">51%</span><span class="t-micro">win chance</span></div>
+  </section>
+  <nav class="tabs"><a class="tab on" href="Final-LockedIn.dc.html">Runes</a><a class="tab" href="Final-Build.dc.html">Build</a><a class="tab" href="Final-Matchups.dc.html">Matchups &amp; plan</a></nav>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Runes</span><span class="rule"></span><span class="t-micro"><b class="pos">53.0%</b> WR · 1,980 games</span></div>
+    <div class="trees">
+      <div class="tree" style="justify-content: space-between">
+        <div class="tree-head"><span class="icon round framed" style="width: 20px; height: 20px; font-size: 8px">PR</span><span class="t-label">Precision</span></div>
+        <div class="tree-row keys"><span class="icon round r30 off">PA</span><span class="icon round r30 off">LT</span><span class="icon round r30 off">FF</span><span class="icon round r30 framed">CQ</span></div>
+        <div class="tree-row"><span class="icon round r22 off">AL</span><span class="icon round r22 framed">TR</span><span class="icon round r22 off">PM</span></div>
+        <div class="tree-row"><span class="icon round r22 framed">LA</span><span class="icon round r22 off">LH</span><span class="icon round r22 off">LB</span></div>
+        <div class="tree-row"><span class="icon round r22 off">CG</span><span class="icon round r22 framed">CD</span><span class="icon round r22 off">LS</span></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div class="tree">
+          <div class="tree-head"><span class="icon round framed" style="width: 20px; height: 20px; font-size: 8px">DO</span><span class="t-label">Domination</span></div>
+          <div class="tree-row"><span class="icon round r22 off">CS</span><span class="icon round r22 framed">TB</span><span class="icon round r22 off">SI</span></div>
+          <div class="tree-row"><span class="icon round r22 off">SS</span><span class="icon round r22 off">GM</span><span class="icon round r22 off">DW</span></div>
+          <div class="tree-row"><span class="icon round r22 framed">TH</span><span class="icon round r22 off">RH</span><span class="icon round r22 off">UH</span></div>
+        </div>
+        <div class="tree" aria-label="Stat mods">
+          <div class="tree-row"><span class="icon round r18 off">AD</span><span class="icon round r18 framed">AS</span><span class="icon round r18 off">AH</span></div>
+          <div class="tree-row"><span class="icon round r18 framed">AD</span><span class="icon round r18 off">MS</span><span class="icon round r18 off">HP</span></div>
+          <div class="tree-row"><span class="icon round r18 framed">HP</span><span class="icon round r18 off">TN</span><span class="icon round r18 off">HP</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px"><span class="icon round r22 off" style="opacity: 1">LS</span><span class="t-caption"><b class="text">Swap in Last Stand</b> if their team dives you early</span></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><span class="t-label gold">Summoner spells &amp; skill order</span><span class="rule"></span></div>
+    <div style="display: flex; align-items: center; gap: 6px">
+      <span style="display: inline-flex; gap: 4px; margin-right: 6px; padding-right: 10px; border-right: 1px solid #222c3d"><span class="icon item" style="width: 28px; height: 28px; font-size: 10px">FL</span><span class="icon item" style="width: 28px; height: 28px; font-size: 10px">HE</span></span>
+      <span class="t-label">Priority</span><span class="key">Q</span><span class="muted" style="font-size: 15px">›</span><span class="key">E</span><span class="muted" style="font-size: 15px">›</span><span class="key">W</span>
+      <span class="t-micro" style="margin-left: auto"><b class="pos">52.6%</b> WR</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px" role="table" aria-label="Skill per level">
+      <div class="g-row"><span class="g-key">Q</span><span class="g-cell on">1</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on">4</span><span class="g-cell on">5</span><span class="g-cell"></span><span class="g-cell on">7</span><span class="g-cell"></span><span class="g-cell on">9</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span></div>
+      <div class="g-row"><span class="g-key">W</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on">3</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on">14</span><span class="g-cell on">15</span><span class="g-cell"></span><span class="g-cell on">17</span><span class="g-cell on">18</span></div>
+      <div class="g-row"><span class="g-key">E</span><span class="g-cell"></span><span class="g-cell on">2</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on">8</span><span class="g-cell"></span><span class="g-cell on">10</span><span class="g-cell"></span><span class="g-cell on">12</span><span class="g-cell on">13</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span></div>
+      <div class="g-row"><span class="g-key">R</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on ult">6</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on ult">11</span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell"></span><span class="g-cell on ult">16</span><span class="g-cell"></span><span class="g-cell"></span></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <button class="btn primary wide">Import runes, spells &amp; items</button>
+    <span class="t-micro">From 2,140 games in Gold to Platinum.</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

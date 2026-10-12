@@ -45,9 +45,15 @@ export interface RolePool {
    * that the player's losses back up; most frequent in losses first.
    */
   holes: PoolHole[];
+  /**
+   * The needs champions in this role usually bring (config pool.minRoleNeedShare of the band's
+   * games in the role; all four without the meta): what the role is judged on.
+   */
+  needs: PoolNeed[];
 }
 
-const covers = (a: ChampionAttributes, need: PoolNeed, cov: EngineConfig["pool"]["coverage"]) =>
+/** Whether a champion's measured attributes bring a draft need (thresholds from config pool.coverage). */
+export const covers = (a: ChampionAttributes, need: PoolNeed, cov: EngineConfig["pool"]["coverage"]) =>
   need === "magic"
     ? a.magicShare >= cov.damageShare
     : need === "physical"
@@ -56,7 +62,21 @@ const covers = (a: ChampionAttributes, need: PoolNeed, cov: EngineConfig["pool"]
         ? a.frontline >= cov.frontline
         : a.engage >= cov.engage;
 
-const NEEDS: PoolNeed[] = ["magic", "physical", "frontline", "engage"];
+export const POOL_NEEDS: readonly PoolNeed[] = ["magic", "physical", "frontline", "engage"];
+const NEEDS = POOL_NEEDS;
+
+/**
+ * Which needs each pool champion brings, from its measured attributes. A champion without
+ * measured attributes is left out (unknown, never guessed).
+ */
+export function poolCoverage(champions: PoolChampion[], attributes: Map<ChampionId, ChampionAttributes>, cov: EngineConfig["pool"]["coverage"]): Map<ChampionId, PoolNeed[]> {
+  const out = new Map<ChampionId, PoolNeed[]>();
+  for (const c of champions) {
+    const a = attributes.get(c.championId);
+    if (a) out.set(c.championId, POOL_NEEDS.filter((n) => covers(a, n, cov)));
+  }
+  return out;
+}
 
 /**
  * The player's champion pool for one role, in tiers, and the draft needs it doesn't
@@ -73,6 +93,8 @@ export function analyzePool(input: {
   intendedPositions: Map<ChampionId, Position[]>;
   now: number;
   config: EngineConfig;
+  /** The band's champions in the role and their games (meta), to skip needs the role rarely fills. */
+  rolePicks?: { championId: ChampionId; games: number }[];
 }): RolePool {
   const { role, comfort, attributes, now, config } = input;
   const cfg = config.pool;
@@ -92,28 +114,41 @@ export function analyzePool(input: {
     const first = firstPlayed.get(c.championId);
     const m = mastery.get(c.championId);
     if (fit && games >= cfg.coreGames && c.score >= cfg.coreMin) champions.push({ ...entry, tier: "main" });
-    else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames)
+    else if (fit && games > 0 && first !== undefined && now - first <= cfg.learningWindowDays * DAY_MS && c.games <= cfg.learningMaxGames && (m?.points ?? 0) < cfg.learningMaxMastery)
       champions.push({
         ...entry,
         tier: "learning",
         progress: { games: c.games, maxGames: cfg.learningMaxGames, daysLeft: Math.max(1, Math.ceil(cfg.learningWindowDays - (now - first) / DAY_MS)) },
       });
-    else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
     else if (
-      // Rusty: lots of mastery, not played for a while, and a real role fit here (not just the player's own games).
+      // Rusty: a champion you know (lots of mastery) and that is a real role fit here (not just the
+      // player's own games), either not played for a while or only a few games since coming back to
+      // it (clearing the rust). Checked before "comfortable" so coming back reads as coming back.
       m &&
       m.points >= cfg.dormantMastery &&
-      m.lastPlayTime !== undefined &&
-      now - m.lastPlayTime >= cfg.dormantDays * DAY_MS &&
+      ((m.lastPlayTime !== undefined && now - m.lastPlayTime >= cfg.dormantDays * DAY_MS) || c.games <= cfg.learningMaxGames) &&
       (input.intendedPositions.get(c.championId)?.includes(role) ?? false)
     )
       champions.push({ ...entry, tier: "rusty" });
+    else if (fit && games > 0 && c.score >= cfg.secondaryMin) champions.push({ ...entry, tier: "comfortable" });
   }
   const order: Record<PoolTier, number> = { main: 0, comfortable: 1, learning: 2, rusty: 3 };
   champions.sort((a, b) => order[a.tier] - order[b.tier] || b.comfort - a.comfort || a.championId - b.championId);
   const limited = (["main", "comfortable", "learning", "rusty"] as PoolTier[]).flatMap((t) =>
     champions.filter((c) => c.tier === t).slice(0, cfg.maxPerTier),
   );
+
+  const rolePicksTotal = input.rolePicks?.reduce((s, c) => s + c.games, 0) ?? 0;
+  /** Whether champions in this role usually bring the need (all needs count without the meta). */
+  const roleFills = (need: PoolNeed) => {
+    if (!input.rolePicks || rolePicksTotal <= 0) return true;
+    const filled = input.rolePicks.reduce((s, c) => {
+      const a = attributes.get(c.championId);
+      return s + (a && covers(a, need, cfg.coverage) ? c.games : 0);
+    }, 0);
+    return filled / rolePicksTotal >= cfg.minRoleNeedShare;
+  };
+  const needs = NEEDS.filter(roleFills);
 
   // Holes: judged only on main + comfortable champions with measured attributes.
   const reliable = limited.filter((c) => c.tier === "main" || c.tier === "comfortable").map((c) => attributes.get(c.championId)).filter((a): a is ChampionAttributes => !!a);
@@ -124,7 +159,7 @@ export function analyzePool(input: {
       return p && p.position === role && !p.win;
     });
     for (const need of NEEDS) {
-      if (reliable.some((a) => covers(a, need, cfg.coverage))) continue;
+      if (reliable.some((a) => covers(a, need, cfg.coverage)) || !roleFills(need)) continue;
       const lossesLacking = losses.filter((m) => {
         const me = m.match.participants[m.me]!;
         const team = m.match.participants.filter((p) => p.teamId === me.teamId);
@@ -153,5 +188,5 @@ export function analyzePool(input: {
     }
     holes.sort((a, b) => b.lossesLacking / Math.max(1, b.losses) - a.lossesLacking / Math.max(1, a.losses));
   }
-  return { role, champions: limited, holes };
+  return { role, champions: limited, holes, needs };
 }

@@ -94,3 +94,23 @@ describe("real recorded fixture", () => {
     expect([...d.myTeam, ...d.theirTeam].every((s) => s.championId > 0)).toBe(true);
   });
 });
+
+describe("recent games schema", () => {
+  it("reads the ids, queue and timing of your own last games and tolerates the rest", async () => {
+    const { RecentGamesSchema } = await import("../src/index");
+    const body = { accountId: 1, platformId: "EUW1", games: { gameCount: 1, games: [{ gameId: 8010886498, queueId: 420, gameCreation: 1_791_750_038_398, gameDuration: 1594, participants: [{}], newField: true }] } };
+    const parsed = parseLcu(RecentGamesSchema, "/lol-match-history/v1/products/lol/current-summoner/matches", body);
+    expect(parsed.games.games[0]).toMatchObject({ gameId: 8010886498, queueId: 420 });
+    expect(() => parseLcu(RecentGamesSchema, "x", { games: { games: [{ gameId: "x" }] } })).toThrow(LcuSchemaError);
+  });
+});
+
+describe("lobby roles", () => {
+  it("keeps your own two role choices (primary first), drops fill and unset, and reads the queue", async () => {
+    const { LobbySchema, lobbyRoles } = await import("../src/index");
+    const l = parseLcu(LobbySchema, "/lol-lobby/v2/lobby", { localMember: { firstPositionPreference: "BOTTOM", secondPositionPreference: "JUNGLE", summonerName: "x" }, members: [{}], gameConfig: { queueId: 420, isCustom: false } });
+    expect(lobbyRoles(l)).toEqual({ positions: ["bottom", "jungle"], queueId: 420, isCustom: false });
+    expect(lobbyRoles(parseLcu(LobbySchema, "x", { localMember: { firstPositionPreference: "TOP", secondPositionPreference: "FILL" } })).positions).toEqual(["top"]);
+    expect(lobbyRoles(parseLcu(LobbySchema, "x", {})).positions).toEqual([]);
+  });
+});

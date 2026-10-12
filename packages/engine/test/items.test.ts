@@ -36,6 +36,11 @@ describe("completed items (derived from Data Dragon)", () => {
   it("counts legendaries and upgraded boots, never components, consumables, other maps or champion-only items", () => {
     expect([...completedItems(catalog, { mapId: "11", legendaryMinGold: 2000 })].sort()).toEqual([3003, 3006, 3071]);
   });
+
+  it("counts another mode's copy of an item (same name, higher id) only once, as the original", () => {
+    const withCopy = new Map([...catalog, [323071, item(323071, { name: "Item 3071", from: [1036] })]]);
+    expect([...completedItems(withCopy, { mapId: "11", legendaryMinGold: 2000 })].sort()).toEqual([3003, 3006, 3071]);
+  });
 });
 
 describe("enemy traits", () => {

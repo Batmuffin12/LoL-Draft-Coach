@@ -1,0 +1,511 @@
+{
+ "label": "s2-profile-raw",
+ "at": "2026-10-12T08:02:31.623Z",
+ "durationSec": 195,
+ "quick": false,
+ "machine": {
+  "cpu": "AMD Ryzen 7 7800X3D 8-Core Processor           ",
+  "cores": 16,
+  "memGb": 33,
+  "platform": "win32",
+  "node": "v24.14.0",
+  "electron": "44.5.1"
+ },
+ "git": "8ed9b99",
+ "metrics": {
+  "server.coldStart": {
+   "median": 132.9998000000005,
+   "p95": 144.23899999999958,
+   "min": 130.48380000000088,
+   "max": 144.23899999999958,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "server.job.snapshot": {
+   "value": 1666.4103999999998,
+   "unit": "ms"
+  },
+  "server.job.sync200": {
+   "value": 57.94120000000021,
+   "unit": "ms"
+  },
+  "server.GET /health.latency": {
+   "median": 4,
+   "p975": 6,
+   "p99": 9,
+   "max": 23,
+   "samples": 46494,
+   "unit": "ms"
+  },
+  "server.GET /health.reqPerSec": {
+   "value": 2325.31,
+   "unit": "req/s"
+  },
+  "server.GET /health.bytes": {
+   "value": 208,
+   "unit": "bytes"
+  },
+  "server.GET /health.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /config.latency": {
+   "median": 3,
+   "p975": 4,
+   "p99": 6,
+   "max": 12,
+   "samples": 54788,
+   "unit": "ms"
+  },
+  "server.GET /config.reqPerSec": {
+   "value": 2739.9,
+   "unit": "req/s"
+  },
+  "server.GET /config.bytes": {
+   "value": 12585,
+   "unit": "bytes"
+  },
+  "server.GET /config.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /config (304).latency": {
+   "median": 0,
+   "p975": 0,
+   "p99": 0,
+   "max": 2,
+   "samples": 530871,
+   "unit": "ms"
+  },
+  "server.GET /config (304).reqPerSec": {
+   "value": 26543.2,
+   "unit": "req/s"
+  },
+  "server.GET /config (304).bytes": {
+   "value": 0,
+   "unit": "bytes"
+  },
+  "server.GET /config (304).unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /meta/2.latency": {
+   "median": 3,
+   "p975": 5,
+   "p99": 7,
+   "max": 8,
+   "samples": 60414,
+   "unit": "ms"
+  },
+  "server.GET /meta/2.reqPerSec": {
+   "value": 3021.2,
+   "unit": "req/s"
+  },
+  "server.GET /meta/2.bytes": {
+   "value": 13683,
+   "unit": "bytes"
+  },
+  "server.GET /meta/2.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /meta/2 (304).latency": {
+   "median": 2,
+   "p975": 4,
+   "p99": 6,
+   "max": 10,
+   "samples": 70146,
+   "unit": "ms"
+  },
+  "server.GET /meta/2 (304).reqPerSec": {
+   "value": 3507.9,
+   "unit": "req/s"
+  },
+  "server.GET /meta/2 (304).bytes": {
+   "value": 0,
+   "unit": "bytes"
+  },
+  "server.GET /meta/2 (304).unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /me/profile.latency": {
+   "median": 707,
+   "p975": 834,
+   "p99": 1002,
+   "max": 1003,
+   "samples": 276,
+   "unit": "ms"
+  },
+  "server.GET /me/profile.reqPerSec": {
+   "value": 13.8,
+   "unit": "req/s"
+  },
+  "server.GET /me/profile.bytes": {
+   "value": 1858852,
+   "unit": "bytes"
+  },
+  "server.GET /me/profile.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /me/profile (1 connection).latency": {
+   "median": 152,
+   "p975": 160,
+   "p99": 161,
+   "max": 166,
+   "samples": 131,
+   "unit": "ms"
+  },
+  "server.GET /me/profile (1 connection).reqPerSec": {
+   "value": 6.55,
+   "unit": "req/s"
+  },
+  "server.GET /me/profile (1 connection).bytes": {
+   "value": 1858852,
+   "unit": "bytes"
+  },
+  "server.GET /me/profile (1 connection).unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /me/profile?since.latency": {
+   "median": 22,
+   "p975": 31,
+   "p99": 32,
+   "max": 52,
+   "samples": 8506,
+   "unit": "ms"
+  },
+  "server.GET /me/profile?since.reqPerSec": {
+   "value": 425.3,
+   "unit": "req/s"
+  },
+  "server.GET /me/profile?since.bytes": {
+   "value": 44656,
+   "unit": "bytes"
+  },
+  "server.GET /me/profile?since.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.flow.first.total": {
+   "median": 225.19580000001588,
+   "p95": 247.36069999999017,
+   "min": 219.60839999999735,
+   "max": 247.36069999999017,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.first.profile": {
+   "median": 220.93499999999767,
+   "p95": 238.76780000000144,
+   "min": 215.78680000000168,
+   "max": 238.76780000000144,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.first.requests": {
+   "value": 3,
+   "unit": "count"
+  },
+  "server.flow.first.bytes": {
+   "value": 14122925,
+   "unit": "bytes"
+  },
+  "server.flow.next.total": {
+   "median": 225.93419999998878,
+   "p95": 238.39119999998366,
+   "min": 220.97609999999986,
+   "max": 238.39119999998366,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.next.profile": {
+   "median": 223.0976999999839,
+   "p95": 235.46989999999641,
+   "min": 218.27019999999902,
+   "max": 235.46989999999641,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.next.requests": {
+   "value": 3,
+   "unit": "count"
+  },
+  "server.flow.next.bytes": {
+   "value": 14018453,
+   "unit": "bytes"
+  }
+ },
+ "raw": {
+  "server": {
+   "queryPlans": {
+    "profile matches": [
+     "SEARCH um USING INDEX user_matches_by_time (user_id=? AND ended_at>?)",
+     "SEARCH m USING INDEX sqlite_autoindex_matches_1 (match_id=?)"
+    ],
+    "profile match ids": [
+     "SEARCH user_matches USING INDEX user_matches_by_time (user_id=?)"
+    ],
+    "user by token": [
+     "SEARCH users USING INDEX sqlite_autoindex_users_2 (token_hash=?)"
+    ],
+    "recent advice": [
+     "SEARCH advice_log USING INDEX advice_log_by_time (user_id=?)"
+    ],
+    "rank history": [
+     "SEARCH rank_history USING INDEX sqlite_autoindex_rank_history_1 (user_id=? AND day>?)"
+    ],
+    "meta snapshot": [
+     "SEARCH meta_snapshots USING INTEGER PRIMARY KEY (rowid=?)"
+    ],
+    "health: collector freshness": [
+     "SEARCH matches USING COVERING INDEX matches_source_stored (source=?)"
+    ]
+   },
+   "endpoints": [
+    {
+     "name": "GET /health",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 208,
+     "contentEncoding": "gzip",
+     "reqPerSec": 2325.31,
+     "latency": {
+      "p50": 4,
+      "p975": 6,
+      "p99": 9,
+      "max": 23,
+      "mean": 3.76
+     },
+     "requests": 46494,
+     "statuses": {
+      "200": 46494
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 1008972.8
+    },
+    {
+     "name": "GET /config",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 12585,
+     "contentEncoding": "gzip",
+     "reqPerSec": 2739.9,
+     "latency": {
+      "p50": 3,
+      "p975": 4,
+      "p99": 6,
+      "max": 12,
+      "mean": 3.16
+     },
+     "requests": 54788,
+     "statuses": {
+      "200": 54788
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 35223961.6
+    },
+    {
+     "name": "GET /config (304)",
+     "connections": 10,
+     "status": 304,
+     "expect": 304,
+     "wireBytes": 0,
+     "contentEncoding": null,
+     "reqPerSec": 26543.2,
+     "latency": {
+      "p50": 0,
+      "p975": 0,
+      "p99": 0,
+      "max": 2,
+      "mean": 0.01
+     },
+     "requests": 530871,
+     "statuses": {
+      "304": 530871
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 4114124.8
+    },
+    {
+     "name": "GET /meta/2",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 13683,
+     "contentEncoding": "gzip",
+     "reqPerSec": 3021.2,
+     "latency": {
+      "p50": 3,
+      "p975": 5,
+      "p99": 7,
+      "max": 8,
+      "mean": 2.91
+     },
+     "requests": 60414,
+     "statuses": {
+      "200": 60414
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 42108518.4
+    },
+    {
+     "name": "GET /meta/2 (304)",
+     "connections": 10,
+     "status": 304,
+     "expect": 304,
+     "wireBytes": 0,
+     "contentEncoding": null,
+     "reqPerSec": 3507.9,
+     "latency": {
+      "p50": 2,
+      "p975": 4,
+      "p99": 6,
+      "max": 10,
+      "mean": 2.37
+     },
+     "requests": 70146,
+     "statuses": {
+      "304": 70146
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 662886.4
+    },
+    {
+     "name": "GET /me/profile",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 1858852,
+     "contentEncoding": "gzip",
+     "reqPerSec": 13.8,
+     "latency": {
+      "p50": 707,
+      "p975": 834,
+      "p99": 1002,
+      "max": 1003,
+      "mean": 713.72
+     },
+     "requests": 276,
+     "statuses": {
+      "200": 276
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 25664102.4
+    },
+    {
+     "name": "GET /me/profile (1 connection)",
+     "connections": 1,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 1858852,
+     "contentEncoding": "gzip",
+     "reqPerSec": 6.55,
+     "latency": {
+      "p50": 152,
+      "p975": 160,
+      "p99": 161,
+      "max": 166,
+      "mean": 152.17
+     },
+     "requests": 131,
+     "statuses": {
+      "200": 131
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 12184371.2
+    },
+    {
+     "name": "GET /me/profile?since",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 44656,
+     "contentEncoding": "gzip",
+     "reqPerSec": 425.3,
+     "latency": {
+      "p50": 22,
+      "p975": 31,
+      "p99": 32,
+      "max": 52,
+      "mean": 23.01
+     },
+     "requests": 8506,
+     "statuses": {
+      "200": 8506
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 19097190.4
+    }
+   ],
+   "flow": {
+    "first": {
+     "requests": [
+      {
+       "method": "GET",
+       "path": "/config",
+       "status": 200,
+       "bytes": 44089,
+       "ms": 35.4824999999837
+      },
+      {
+       "method": "GET",
+       "path": "/me/profile",
+       "status": 200,
+       "bytes": 14018453,
+       "ms": 159.2834000000148
+      },
+      {
+       "method": "GET",
+       "path": "/meta/2",
+       "status": 200,
+       "bytes": 60383,
+       "ms": 1.3740000000107102
+      }
+     ],
+     "totalMs": 223.60920000000624,
+     "profileMs": 219.94450000001234
+    },
+    "next": {
+     "requests": [
+      {
+       "method": "GET",
+       "path": "/config",
+       "status": 304,
+       "bytes": 0,
+       "ms": 0.35649999999441206
+      },
+      {
+       "method": "GET",
+       "path": "/me/profile",
+       "status": 200,
+       "bytes": 14018453,
+       "ms": 153.62720000001718
+      },
+      {
+       "method": "GET",
+       "path": "/meta/2",
+       "status": 304,
+       "bytes": 0,
+       "ms": 0.790500000002794
+      }
+     ],
+     "totalMs": 220.97609999999986,
+     "profileMs": 218.27019999999902
+    }
+   }
+  }
+ }
+}

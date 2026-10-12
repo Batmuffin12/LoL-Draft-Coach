@@ -1,57 +1,47 @@
-import { communityDragonAsset } from "@ldc/ddragon";
-import { LcuImporter, unavailableChampions } from "@ldc/lcu";
+import { LcuImporter, type LobbyRoles } from "@ldc/lcu";
 import {
   adviseRoles,
+  completedItems,
   bandFromRankedEntries,
   computeComfort,
   deriveChampionAttributes,
-  draftRole,
   advisePicks,
   analyzePool,
-  computePlaystyle,
-  formatMetric,
-  metricLabel,
-  playstyleRoles,
+  sideSplit,
   mainRole,
   renderReason,
-  weightsForBand,
   adviseLivePicks,
   assessPick,
-  draftLoadout,
-  pickFocus,
+  focusAfterLastGame,
   learningPlan,
-  powerSpikes,
   recommendNewChampions,
   monthlyReport,
-  sessionCheck,
-  gamePlan,
-  enemyTeamNotes,
   type GrowthFocus,
-  completedItems,
-  completedBoots,
-  personalBuild,
-  suggestBans,
-  suggestHoverBans,
-  placeDraft,
   MetaIndex,
   type ChampionAttributes,
+  type RolePool,
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
-import type { AdviceRecord, BanSuggestion, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
-import type { BanView, MyPickView, NewChampRoleView, PickView, PlaystyleView } from "../shared/view";
+import type { AdviceRecord, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
+import type { MyPickView, NewChampRoleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
-import { AdviceRecorder, adviceOption, postGameView } from "./advice-log";
-import { importLoadout } from "./loadout-import";
-import { focusInGame, focusView } from "./focus-view";
+import { AdviceRecorder, adviceOption } from "./advice-log";
+import { importShownLoadout } from "./loadout-import";
+import { growthFocusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
 import { monthView } from "./month-view";
+import { playstyleViews, sideView } from "./style-view";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { champView } from "./draft-view";
-import { toLoadoutView } from "./loadout-view";
-import { capital, reasonView } from "./reason-view";
-import { banNumbers, draftMatchups } from "./stats-view";
+import { capital } from "./reason-view";
+import { adviceNotes, pickViews, queuePreviewRoles, roleView } from "./role-view";
+import { readClientState } from "./client-state";
+import { banningNow, draftScoring, laneOpponent, lockedPick, queuePreviewWanted, queueSupported, recordVsLane } from "./draft-facts";
+import { lastGameView, sessionView } from "./last-game-view";
+import { currentGame, hasGame, lastClientGame, NewGameWaiter } from "./game-wait";
+import { banViews, cardLoadout, draftNotes, pickCardView, type PickCardContext } from "./pick-card";
 import { profileFromMatches, type PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
@@ -67,35 +57,18 @@ export interface PersonalCoachDeps extends CoachDeps {
   meta?: MetaSource | null;
 }
 
+/** The panel's fixed wording: explain templates "ui.*", without the prefix. */
+export function uiCopy(templates: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("ui.") ? [[k.slice(3), v]] : [])));
+}
+
 /** Position names from the explain templates ("role.utility": "support"). */
 export function roleLabels(templates: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("role.") ? [[k.slice(5), v]] : [])));
 }
 
-/** The champion the local player has locked in (their pick action is completed), or null. */
-export function lockedPick(draft: DraftState): ChampionId | null {
-  const action = draft.actions.find((a) => a.type === "pick" && a.actorCellId === draft.localCellId && a.completed && a.championId > 0);
-  if (action) return action.championId;
-  // After the pick phase (finalization), the seat's champion is final even if actions are trimmed.
-  const me = draft.myTeam.find((s) => s.isLocalPlayer);
-  return draft.timerPhase === "FINALIZATION" && me && me.championId > 0 ? me.championId : null;
-}
-
-/**
- * The enemy most likely in your lane, or null before they pick. The client doesn't say enemy
- * roles: with the band's meta, the engine assigns them (draft-roles); without it, only an enemy
- * seat that shows your position counts.
- */
-export function laneOpponent(draft: DraftState, role: Position, index: MetaIndex | null): ChampionId | null {
-  if (index) return placeDraft(draft, index, role).enemies.find((e) => e.role === role)?.championId ?? null;
-  return draft.theirTeam.find((s) => s.position === role && s.championId > 0)?.championId ?? null;
-}
-
-/** The local player is banning right now, or the draft is in the planning phase before bans. */
-function banningNow(draft: DraftState): boolean {
-  if (draft.timerPhase === "PLANNING") return true;
-  return draft.actions.some((a) => a.inProgress && !a.completed && a.type === "ban" && a.actorCellId === draft.localCellId);
-}
+/** Client phases where a game is starting or running: the locked-in loadout stays only then. */
+const GAME_PHASES = new Set(["ChampSelect", "GameStart", "InProgress", "Reconnect"]);
 
 /**
  * Adds the personal coach on top of the live draft: gets the player's own history from
@@ -118,6 +91,19 @@ export class PersonalCoach extends Coach {
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
   private importMessage: string | null = null;
+  /** The client's gameflow phase, as this coach last heard it ("" before the first). */
+  private clientPhase = "";
+  /** Your role choices in the lobby before a queue (from the client), or null. */
+  private lobby: LobbyRoles | null = null;
+  /** Waits for a game that just ended to reach your history. */
+  private readonly gameWaiter = new NewGameWaiter({
+    profiles: () => this.p.profiles,
+    retrySeconds: () => this.config.app.history.newGameRetrySeconds ?? [],
+    hasGame: (gameId) => hasGame(this.profile?.matches, gameId),
+    pending: (waiting) => this.update({ lastGamePending: waiting }),
+  });
+  /** The Riot ID logged into the League client (the local player's own), or null. */
+  private clientRiotId: string | null = null;
   /**
    * The last "Your pick" card, kept after champ select ends (champ select often closes
    * seconds after you lock in, e.g. in custom games) until the game is over.
@@ -145,21 +131,15 @@ export class PersonalCoach extends Coach {
 
   /**
    * Writes the shown loadout into the League client: "runes" = the rune page and your two
-   * summoner spells (one button), "items" = the item set. Called only from the player's click on
-   * an import button (CLAUDE.md: the single approved LCU write exception).
+   * summoner spells, "items" = the item set, "all" = both, one after the other (the panel's one
+   * import button). Called only from the player's click on an import button (CLAUDE.md: the single
+   * approved LCU write exception).
    */
-  async importLoadout(kind: "runes" | "items"): Promise<void> {
+  async importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     const shown = this.shownLoadout;
     const creds = this.p.connector.credentials;
     if (!shown || !creds || !this.config.app.import.enabled) return;
-    const { templates } = this.config.explain;
-    const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, String);
-    const importer = new LcuImporter(creds);
-    try {
-      this.importMessage = await importLoadout(kind, shown, importer, { say, mapId: Number(this.config.engine.loadout.items.mapId) });
-    } finally {
-      importer.close();
-    }
+    this.importMessage = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config);
     this.onDraft();
   }
   /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */
@@ -169,15 +149,16 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
-    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates) };
+    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates) };
   }
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
   setConfig(config: LoadedConfig): void {
     // Wording the server doesn't have yet (an older server) falls back to the bundled copy, never to raw ids.
-    this.config = { ...config, explain: { ...config.explain, templates: { ...this.p.config.explain.templates, ...config.explain.templates } } };
+    const local = this.p.config.explain;
+    this.config = { ...config, explain: { ...config.explain, templates: { ...local.templates, ...config.explain.templates }, tips: { ...local.tips, ...config.explain.tips } } };
     this.comfortByRole.clear();
-    this.update({ roleLabels: roleLabels(this.config.explain.templates) });
+    this.update({ roleLabels: roleLabels(this.config.explain.templates), copy: uiCopy(this.config.explain.templates) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
     this.updateRoleAdvice();
@@ -207,12 +188,12 @@ export class PersonalCoach extends Coach {
       profiles.on("profile", (profile) => this.setProfile(profile));
       profiles.on("status", (profile) => this.update({ status: { ...this.view.status, profile } }));
       profiles.on("band", (band) => this.setBand(band));
-      profiles.on("account", (account) => this.update({ account }));
+      profiles.on("account", (account) => this.update({ account: { ...account, clientRiotId: this.clientRiotId } }));
       profiles.on("advice", (advice) => {
         this.advice = advice;
         this.updateLastGame();
       });
-      if (profiles.account) this.update({ account: profiles.account });
+      if (profiles.account) this.update({ account: { ...profiles.account, clientRiotId: this.clientRiotId } });
     }
     const { meta } = this.p;
     if (meta) {
@@ -242,11 +223,15 @@ export class PersonalCoach extends Coach {
       if (["Lobby", "None", "Matchmaking", "ReadyCheck"].includes(phase)) this.recorder.leftChampSelect();
       // New games are in the player's history once a game has ended (the advice for it is sent first).
       if (phase === "EndOfGame") void this.onGameEnded();
-      // The kept loadout is for the game being played: drop it once that game is over or left.
-      if (["EndOfGame", "Lobby", "None"].includes(phase) && this.keptPick) {
-        this.keptPick = null;
-        this.onDraft();
-      }
+      this.clientPhase = phase;
+      // The kept loadout is for the game being played: drop it as soon as the client is anywhere else.
+      if (!GAME_PHASES.has(phase)) this.keptPick = null;
+      this.onDraft();
+      this.updateQueuePreview();
+    });
+    this.p.connector.on("lobby", (lobby) => {
+      this.lobby = lobby;
+      this.updateQueuePreview();
     });
     await super.start();
     // Without the League client, fall back to the Riot ID from .env.
@@ -255,17 +240,38 @@ export class PersonalCoach extends Coach {
 
   /** The game started: its id ties the advice shown in champ select to the game in your history. */
   private async onGameStarted(): Promise<void> {
-    const session = await this.p.connector.getGameflowSession().catch(() => null);
-    this.recorder.gameStarted(session?.gameData?.gameId ?? null, session?.gameData?.queue?.id ?? null);
+    const { gameId, queueId } = await currentGame(this.p.connector);
+    this.recorder.gameStarted(gameId, queueId);
   }
 
   private async onGameEnded(): Promise<void> {
     const record = this.recorder.gameEnded();
     if (record) await this.p.profiles?.recordAdvice(record).catch(() => {});
-    await this.p.profiles?.refresh();
+    // The game just played: from the advice log, else the client's own last game.
+    const gameId = record?.gameId ?? (await lastClientGame(this.p.connector, this.config.app.history.queues))?.gameId ?? null;
+    if (gameId !== null) await this.gameWaiter.wait(gameId);
+    else await this.p.profiles?.refresh();
   }
 
   /** A champion from Data Dragon (undefined when it isn't loaded or unknown). */
+  /** An item's name from Data Dragon ("#id" while it isn't loaded). */
+  private itemName(id: number): string {
+    try {
+      return this.deps.ddragon.data.itemInfo.get(id)?.name ?? `#${id}`;
+    } catch {
+      return `#${id}`;
+    }
+  }
+
+  /** Completed items from Data Dragon with the engine's item rules (undefined while it isn't loaded). */
+  private completedItemSet(): ReadonlySet<number> | undefined {
+    try {
+      return completedItems(this.deps.ddragon.data.itemInfo, this.config.engine.loadout.items);
+    } catch {
+      return undefined;
+    }
+  }
+
   private readonly championLookup = (id: number) => {
     try {
       return this.deps.ddragon.champion(id);
@@ -283,63 +289,32 @@ export class PersonalCoach extends Coach {
   /** What the focus and month report were last computed from (they change only with these). */
   private growthInputs: unknown[] = [];
 
-  /** Your growth focus: on your main role (and champion), from your games and the band's references. */
+  /**
+   * Your growth focus: on the role of your last game (each role has its own goals: vision for a
+   * support, early farm and ganks for a jungler), even from your first games there.
+   * From your games and the band's references.
+   */
   private updateFocus(): void {
     if (!this.profile) return;
     const inputs = [this.profile, this.metaIndex?.snapshot, this.config, this.band];
     if (inputs.every((x, i) => x === this.growthInputs[i])) return;
     this.growthInputs = inputs;
-    const { engine, explain } = this.config;
-    const role = mainRole(this.profile.games);
-    this.growth = role ? pickFocus(this.profile.matches, role, engine, this.metaIndex?.snapshot.references[role]) : null;
-    const lookup = (id: number) => this.championLookup(id)?.name ?? `#${id}`;
-    const view = this.growth
-      ? focusView(this.growth, {
-          explain,
-          targetStep: engine.growth.targetStep,
-          checkGames: engine.growth.checkGames,
-          bandName: this.metaIndex ? (this.config.bands.bands.find((b) => b.id === this.band)?.name ?? null) : null,
-          championName: lookup,
-          positionLabel: this.positionLabel,
-        })
-      : null;
-    this.update({ focus: view });
+    this.growth = focusAfterLastGame(this.profile.matches, mainRole(this.profile.games), this.config.engine, (role) => this.metaIndex?.snapshot.references[role]);
+    const championName = (id: number) => this.championLookup(id)?.name ?? `#${id}`;
+    this.update({ focus: growthFocusView(this.growth, { config: this.config, band: this.metaIndex ? this.band : null, championName, positionLabel: this.positionLabel }) });
     this.updateMonth();
   }
 
   /** Your own games on this champion in this role against your lane opponent's champion (none: nothing to say). */
   private recordVsLane(profile: PersonalProfile, championId: number, role: Position | null): Reason[] {
     const enemy = this.draft && role ? laneOpponent(this.draft, role, this.metaIndex) : null;
-    if (!enemy || !role) return [];
-    let wins = 0;
-    let losses = 0;
-    for (const m of profile.matches) {
-      const me = m.match.participants[m.me];
-      if (!me || me.championId !== championId || me.position !== role) continue;
-      if (!m.match.participants.some((p) => p.teamId !== me.teamId && p.position === role && p.championId === enemy)) continue;
-      if (me.win) wins++;
-      else losses++;
-    }
-    return wins + losses ? [{ id: "plan.record", slots: { enemy, wins, losses } }] : [];
+    return recordVsLane(profile.matches, championId, role, enemy);
   }
 
   /** A break suggestion after a losing streak or a long session, from your own games. */
   private updateSession(): void {
     if (!this.profile) return;
-    const { engine, explain } = this.config;
-    const check = sessionCheck(this.profile.matches, Date.now(), engine.session);
-    if (!check) return this.update({ session: null });
-    const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, explain.templates, (id) => `#${id}`);
-    const lastEnded = Math.max(...this.profile.matches.map((m) => m.match.endedAt));
-    this.update({
-      session: {
-        text: check.reason === "losses" ? say("session.losses", { streak: check.lossStreak }) : say("session.long", { games: check.games }),
-        record: check.record
-          ? say("session.record", { streak: check.record.afterStreak, winRate: check.record.winRate, games: check.record.games, overall: check.record.overallWinRate })
-          : null,
-        until: lastEnded + engine.session.gapMinutes * 60_000,
-      },
-    });
+    this.update({ session: sessionView(this.profile.matches, Date.now(), this.config) });
   }
 
   /** The monthly report: your last month against the month before, from your own games. */
@@ -362,19 +337,10 @@ export class PersonalCoach extends Coach {
     });
   }
 
-  /** The post-game card: your newest logged game, joined with your history for its result. */
+  /** The post-game card: your newest game, with what the coach showed for it when it was there. */
   private updateLastGame(): void {
-    const latest = this.advice[0];
-    if (!latest) return this.update({ lastGame: null });
-    const lookup = this.championLookup;
-    const view = postGameView(latest, this.profile?.matches ?? [], {
-      templates: this.config.explain.templates,
-      minDeltaWin: this.config.engine.rating.explain.minDeltaWin,
-      champion: (id) => champView(id, lookup),
-      championName: (id) => lookup(id)?.name ?? `#${id}`,
-      focus: (matchId) => focusInGame(this.growth, matchId, this.profile?.matches ?? [], this.config.explain),
-    });
-    this.update({ lastGame: view });
+    const { explain, engine } = this.config;
+    this.update({ lastGame: lastGameView(this.advice[0], this.profile?.matches ?? [], this.growth, { explain, minDeltaWin: engine.rating.explain.minDeltaWin, lookup: this.championLookup }) });
   }
 
   private setProfileError(message: string): void {
@@ -387,21 +353,24 @@ export class PersonalCoach extends Coach {
    */
   private async onClientConnected(): Promise<void> {
     try {
-      const me = await this.p.connector.getCurrentSummoner();
-      const ranked = await this.p.connector.getRankedStats().catch(() => null);
-      this.intendedPositions = await this.p.connector.getRecommendedPositions().catch(() => new Map());
-      const perks = await this.p.connector.getPerks().catch(() => []);
-      this.perks = new Map(perks.map((p) => [p.id, { name: p.name, iconUrl: communityDragonAsset(p.iconPath) }]));
-      this.shardRows = await this.p.connector.getStatShardRows().catch(() => []);
-      const owned = await this.p.connector.getOwnedChampionIds().catch(() => []);
-      this.owned = owned.length ? new Set(owned) : null;
+      const { me, ranked, intendedPositions, perks, shardRows, owned } = await readClientState(this.p.connector);
+      this.intendedPositions = intendedPositions;
+      this.perks = perks;
+      this.shardRows = shardRows;
+      this.owned = owned;
       if (!this.shardRows.length) await this.loadShardsFallback();
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
       if (me?.gameName && me.tagLine) {
         this.identity = { gameName: me.gameName, tagLine: me.tagLine };
+        // Your own Riot ID from the client, shown on the connect screen before you register.
+        this.clientRiotId = `${me.gameName}#${me.tagLine}`;
+        if (this.view.account) this.update({ account: { ...this.view.account, clientRiotId: this.clientRiotId } });
         await this.p.profiles?.load(this.identity, { bandFromApi: !ranked });
+        // A game that ended while the panel was closed (or before Riot published it) isn't in the history yet: wait for it.
+        const last = await lastClientGame(this.p.connector, this.config.app.history.queues);
+        if (last && this.profile && !hasGame(this.profile.matches, last.gameId)) void this.gameWaiter.wait(last.gameId);
       } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
       this.notice(`Could not read your account from the client: ${(err as Error).message}`);
@@ -466,78 +435,19 @@ export class PersonalCoach extends Coach {
     this.onDraft();
   }
 
-  /** Playstyle per role (lobby card): percentiles against others in the role in the player's own games. */
+  /** Playstyle per role (lobby Style tab) and your side split. */
   private updatePlaystyle(): void {
     if (!this.profile) return;
     const { engine, explain } = this.config;
-    const now = Date.now();
-    const level = (s: number) => (s >= explain.settings.playstyleHigh ? "high" : s <= explain.settings.playstyleLow ? "low" : "mid") as "high" | "mid" | "low";
-    const views: PlaystyleView[] = [];
-    for (const role of playstyleRoles(this.profile.matches, engine.playstyle).slice(0, 3)) {
-      const ps = computePlaystyle(this.profile.matches, role, now, engine.playstyle, this.metaIndex?.snapshot.references[role]);
-      if (!ps) continue;
-      views.push({
-        role,
-        games: ps.games,
-        axes: ps.axes.map((a) => {
-          const m = a.metrics[0];
-          const lv = level(a.score);
-          return {
-            axis: a.axis,
-            label: explain.axes[a.axis] ?? a.axis,
-            score: Math.round(a.score * 100),
-            level: lv,
-            levelLabel: renderReason({ id: `playstyle.level.${lv}`, slots: {} }, explain.templates, String),
-            detail: m
-              ? renderReason(
-                  {
-                    id: "playstyle.metric",
-                    slots: { metric: metricLabel(m.metric, explain), you: formatMetric(m.you, m.metric, explain), reference: formatMetric(m.reference, m.metric, explain) },
-                  },
-                  explain.templates,
-                  String,
-                )
-              : null,
-            games: a.games,
-          };
-        }),
-      });
-    }
-    this.update({ playstyle: views });
-  }
-
-  /** An item's name from Data Dragon ("#id" while it isn't loaded). */
-  private itemName(id: number): string {
-    try {
-      return this.deps.ddragon.data.itemInfo.get(id)?.name ?? `#${id}`;
-    } catch {
-      return `#${id}`;
-    }
-  }
-
-  /** Completed items from Data Dragon with the engine's item rules (undefined while it isn't loaded). */
-  private completedItemSet(): ReadonlySet<number> | undefined {
-    try {
-      return completedItems(this.deps.ddragon.data.itemInfo, this.config.engine.loadout.items);
-    } catch {
-      return undefined;
-    }
+    const views = playstyleViews(this.profile.matches, Date.now(), engine, explain, (role) => this.metaIndex?.snapshot.references[role], (id) => this.championLookup(id)?.tags);
+    this.update({ playstyle: views, side: engine.style ? sideView(sideSplit(this.profile.matches, engine.style.side), explain) : null });
   }
 
   private updateRoleAdvice(): void {
     if (!this.profile) return;
-    const lookup = this.championLookup;
+    const { engine, explain } = this.config;
     const newChamps: NewChampRoleView[] = [];
-    const roles = adviseRoles(
-      this.profile.games,
-      this.profile.masteries,
-      Date.now(),
-      this.config.engine,
-      this.intendedPositions,
-      this.attrs,
-    ).map((r) => {
-      const { explain } = this.config;
-      const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, explain.templates, String);
+    const roles = adviseRoles(this.profile.games, this.profile.masteries, Date.now(), engine, this.intendedPositions, this.attrs).map((r) => {
       const pool = r.enoughData
         ? analyzePool({
             role: r.role,
@@ -547,76 +457,56 @@ export class PersonalCoach extends Coach {
             attributes: this.attrs,
             intendedPositions: this.intendedPositions,
             now: Date.now(),
-            config: this.config.engine,
+            config: engine,
+            ...(this.metaIndex ? { rolePicks: this.metaIndex.championsIn(r.role) } : {}),
           })
         : null;
-      if (pool && this.metaIndex) {
-        const played = new Map<ChampionId, number>();
-        for (const g of this.profile!.games) if (g.position === r.role) played.set(g.championId, (played.get(g.championId) ?? 0) + 1);
-        const advice = recommendNewChampions({
-          role: r.role,
-          pool,
-          playedInRole: played,
-          masteries: this.profile!.masteries,
-          index: this.metaIndex,
-          champions: (id) => lookup(id),
-          attributes: this.attrs,
-          owned: this.owned,
-          config: this.config.engine.newChamps,
-          coverage: this.config.engine.pool.coverage,
-        });
-        newChamps.push(
-          newChampsView(advice, {
-            explain,
-            champion: (id) => champView(id, lookup),
-            championName: (id) => lookup(id)?.name ?? `#${id}`,
-            itemName: (id) => this.itemName(id),
-            planGames: this.config.engine.newChamps.planGames,
-            blockGames: this.config.engine.newChamps.learn.blockGames,
-            plan: (id) =>
-              learningPlan({
-                championId: id,
-                role: r.role,
-                matches: this.profile!.matches,
-                index: this.metaIndex,
-                champion: lookup(id),
-                goal: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
-                completed: this.completedItemSet(),
-                config: this.config.engine,
-              }),
-          }),
-        );
-      }
-      return {
-        role: r.role,
-        games: r.games,
-        winRate: r.winRate,
-        score: r.score,
-        enoughData: r.enoughData,
-        pool: (pool?.champions ?? []).map((c) => ({
-          champion: champView(c.championId, lookup)!,
-          tier: c.tier,
-          tierLabel: say(`pool.tier.${c.tier}`),
-          games: c.games,
-          winRate: c.winRate,
-        })),
-        holes: (pool?.holes ?? []).map((h) => ({
-          text: say(`pool.hole.${h.need}`),
-          evidence: h.losses > 0 ? say("pool.hole.evidence", { lacking: h.lossesLacking, losses: h.losses, role: r.role }) : null,
-          coveredBy: h.coveredBy.length
-            ? say("pool.hole.coveredBy", {
-                champions: h.coveredBy
-                  .map((id) => {
-                    const c = pool!.champions.find((x) => x.championId === id)!;
-                    return `${champView(id, lookup)!.name} (${say(`pool.tier.${c.tier}`).toLowerCase()})`;
-                  })
-                  .join(" and "),
-              })
-            : null,
-        })),
-      };
+      if (pool && this.metaIndex) newChamps.push(this.newChampsFor(r.role, pool, this.metaIndex));
+      return roleView(r, pool, { attributes: this.attrs, coverage: engine.pool.coverage, templates: explain.templates, lookup: this.championLookup });
     });
     this.update({ roles, newChamps });
+    this.updateQueuePreview();
+  }
+
+  /** The New tab for one role: champions to learn there, each with its plan. */
+  private newChampsFor(role: Position, pool: RolePool, index: MetaIndex): NewChampRoleView {
+    const profile = this.profile!;
+    const { engine, explain } = this.config;
+    const lookup = this.championLookup;
+    const played = new Map<ChampionId, number>();
+    for (const g of profile.games) if (g.position === role) played.set(g.championId, (played.get(g.championId) ?? 0) + 1);
+    const advice = recommendNewChampions({
+      role,
+      pool,
+      playedInRole: played,
+      masteries: profile.masteries,
+      index,
+      champions: (id) => lookup(id),
+      attributes: this.attrs,
+      owned: this.owned,
+      config: engine.newChamps,
+      coverage: engine.pool.coverage,
+    });
+    return newChampsView(advice, {
+      explain,
+      champion: (id) => champView(id, lookup),
+      championName: (id) => lookup(id)?.name ?? `#${id}`,
+      itemName: (id) => this.itemName(id),
+      planGames: engine.newChamps.planGames,
+      learn: { profile: engine.newChamps.learn.profile, laneGoldEven: engine.rating.explain.laneGoldGap },
+      blockGames: engine.newChamps.learn.blockGames,
+      plan: (id) =>
+        learningPlan({
+          championId: id,
+          role,
+          matches: profile.matches,
+          index,
+          champion: lookup(id),
+          goal: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
+          completed: this.completedItemSet(),
+          config: engine,
+        }),
+    });
   }
 
   /** Comfort for a role, cached until the profile changes. */
@@ -635,15 +525,37 @@ export class PersonalCoach extends Coach {
     const { connector, config } = this.p;
     this.refreshMeta(false);
     this.pickable = await connector.getPickableChampionIds().catch(() => []);
-    const session = await connector.getGameflowSession().catch(() => null);
-    const queueId = session?.gameData?.queue?.id;
-    this.queueId = queueId ?? null;
-    this.queueSupported = this.draft?.isCustomGame === true || queueId === undefined || config.app.supportedQueues.includes(queueId);
+    const { queueId } = await currentGame(connector);
+    this.queueId = queueId;
+    this.queueSupported = queueSupported(this.draft, queueId, config.app.supportedQueues);
     if (!this.queueSupported) this.notice("This queue isn't supported yet — suggestions are for Ranked and Normal Draft.");
     this.onDraft();
   }
 
   private hadDraft = false;
+
+  /**
+   * In the lobby with roles chosen: your best picks for each, ranked as a blind pick (nobody else
+   * has picked yet), so you can plan before the queue pops. Champ select replaces it with the real draft.
+   */
+  private updateQueuePreview(): void {
+    const l = this.lobby;
+    if (!l || !this.profile || this.draft || !queuePreviewWanted(l, this.clientPhase, this.config.app.supportedQueues)) {
+      if (this.view.queuePreview) this.update({ queuePreview: null });
+      return;
+    }
+    const roles = queuePreviewRoles(l.positions, {
+      owned: this.owned,
+      comfortFor: (position) => this.comfortFor(position),
+      attributes: this.attributes,
+      intendedPositions: this.intendedPositions,
+      config: this.config,
+      band: this.band,
+      index: this.metaIndex,
+      lookup: this.championLookup,
+    });
+    this.update({ queuePreview: { roles } });
+  }
 
   protected override onDraft(): void {
     super.onDraft();
@@ -656,128 +568,92 @@ export class PersonalCoach extends Coach {
     // While your history loads, bans still come from the live meta alone (picks wait for your history).
     const loading = !this.profile && this.draft !== null && this.queueSupported && this.metaIndex !== null && banningNow(this.draft);
     const profile = this.profile ?? (loading ? profileFromMatches([], []) : null);
-    if (!this.draft || !profile || !this.queueSupported) {
-      this.shownLoadout = null;
-      // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
-      const kept = this.draft ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [] });
-      return;
-    }
+    if (!this.draft || !profile || !this.queueSupported) return this.showNoDraft();
+    const draft = this.draft;
     const { engine } = this.config;
-    const role = draftRole(this.draft, profile.games);
-    const comfort = loading ? new Map<ChampionId, ComfortStats>() : this.comfortFor(role);
-    const input = {
-      draft: this.draft,
+    const { role, input, filled, live } = draftScoring({
+      draft,
+      games: profile.games,
+      loading,
       pickable: this.pickable,
-      unavailable: unavailableChampions(this.draft),
-      comfort,
+      comfortFor: (r) => this.comfortFor(r),
       attributes: this.attributes,
       intendedPositions: this.intendedPositions,
-      role,
-      weights: weightsForBand(this.band, engine),
-      config: engine,
-    };
-    // Live meta (engine v2) when the band's snapshot is loaded; the player's own data otherwise.
-    const live = this.metaIndex ? { ...input, index: this.metaIndex, band: this.band } : null;
-    const lookup = this.championLookup;
-    const { templates } = this.config.explain;
-    const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
-    const say = (r: Parameters<typeof renderReason>[0]) => renderReason(r, templates, nameOf, { item: (id) => this.itemName(id) });
+      band: this.band,
+      engine,
+      index: this.metaIndex,
+    });
+    const ctx = this.cardContext(live, draft, role, profile);
+    const { say, lookup } = ctx;
 
-    // Their team in short (damage type, main engage), once two are picked.
-    const enemyNotes = live ? enemyTeamNotes(live).map(say) : [];
+    const { enemyNotes, lane, filledNote } = draftNotes(draft, role, live, filled, ctx);
 
     // Locked in: no more suggestions; show the player's own pick (and, with live meta, how it looks in this draft).
-    const locked = lockedPick(this.draft);
-    // The one draft fact the advice hinges on: who you face in lane (the client doesn't say enemy roles).
-    const lane = role ? { role, champion: champView(laneOpponent(this.draft, role, this.metaIndex) ?? 0, lookup) } : null;
-    /** The card for a champion: how it looks in this draft and its loadout (the import buttons use it). */
-    const card = (championId: number, hovering: boolean): MyPickView => {
-      const assessed = live ? assessPick(live, championId) : null;
-      // Your own games on the champion fill in when your rank has too few (completed items from Data Dragon).
-      let completed: Set<number> = new Set();
-      let boots: Set<number> = new Set();
-      let data = null;
-      try {
-        data = this.deps.ddragon.data;
-        completed = completedItems(data.itemInfo, engine.loadout.items);
-        boots = completedBoots(data.itemInfo, engine.loadout.items);
-      } catch {
-        // Data Dragon not loaded yet: names fall back to ids.
-      }
-      const personal = personalBuild(profile.matches, championId, role, completed);
-      const buildsFrom = (id: number) => this.deps.ddragon.data.itemInfo.get(id)?.from ?? [];
-      const loadout = live ? draftLoadout(live, championId, engine.loadout, personal, boots, buildsFrom) : null;
-      if (this.shownLoadout?.loadout.championId !== championId) this.importMessage = null;
-      this.shownLoadout = loadout ? { loadout, champion: nameOf(championId) } : null;
-      return {
-        champion: champView(championId, lookup)!,
-        role,
-        expectedWin: assessed?.expectedWin ?? null,
-        reasons: assessed ? assessed.reasons.map((r) => reasonView(r, say)) : [],
-        loadout: loadout
-          ? toLoadoutView(loadout, {
-              data,
-              templates,
-              championName: nameOf,
-              bands: this.config.bands,
-              band: this.band,
-              canImport: this.canImport,
-              perk: (id) => this.perks.get(id),
-              shardRows: this.shardRows,
-              spikeSlots: live && role ? powerSpikes(live.index, championId, role, engine.spikes).filter((s) => s.kind === "item").map((s) => s.at) : [],
-            })
-          : null,
-        importMessage: this.importMessage,
-        hovering,
-        matchups: this.metaIndex && this.draft ? draftMatchups(this.draft, this.metaIndex, championId, role, lookup) : null,
-        plan: [...(live ? gamePlan(live, championId) : []), ...this.recordVsLane(profile, championId, role)].map(say),
-      };
-    };
-
+    const locked = lockedPick(draft);
     if (locked !== null) {
       const assessed = live ? assessPick(live, locked) : null;
       this.recorder.locked(adviceOption(assessed ?? { championId: locked }), { role, band: this.band, queueId: this.queueId, now: Date.now() });
-      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, enemyNotes, myPick: card(locked, false) });
+      this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, pickAdvice: { whyNot: null, confidence: null }, pickRole: role, laneOpponent: lane, enemyNotes, filledNote: null, myPick: this.card(locked, false, ctx) });
       this.keptPick = this.view.myPick;
       return;
     }
     const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.config.explain.settings);
     this.recorder.shown(advice.picks.map(adviceOption));
-    const views: PickView[] = advice.picks.map((p) => ({
-      champion: champView(p.championId, lookup)!,
-      score: p.score,
-      expectedWin: p.expectedWin ?? null,
-      factors: p.factors,
-      terms: p.terms ?? [],
-      reasons: p.reasons.map((r) => reasonView(r, say)),
-      offMeta: p.offMeta,
-    }));
-    const pickAdvice = {
-      whyNot: advice.whyNot ? say(advice.whyNot) : null,
-      confidence: advice.confidence ? { level: advice.confidence, label: say({ id: `confidence.${advice.confidence}`, slots: {} }) } : null,
-      minGames: this.config.engine.rating.minGames,
-    };
-    const banning = live !== null && banningNow(this.draft);
-    const banSuggestions = banning ? suggestBans(live) : [];
-    // The ban table shows the rates in columns: its reason lines use the short ".row" wording when there is one.
-    const row = (r: BanSuggestion["reasons"][number]) => say(templates[`${r.id}.row`] ? { ...r, id: `${r.id}.row` } : r);
-    const toView = (b: BanSuggestion): BanView => ({ champion: champView(b.championId, lookup)!, reasons: b.reasons.map(row), ...banNumbers(live!.index, b, role, engine.rating.bans.minPickRate) });
-    // Hovering a champion before or during bans: extra bans that protect it (1 if it's already the top suggestion).
-    const hovered = this.draft.myTeam.find((s) => s.isLocalPlayer)?.pickIntentId ?? 0;
-    const hoverBans =
-      banning && hovered > 0
-        ? {
-            champion: champView(hovered, lookup)!,
-            bans: suggestHoverBans(live, hovered, banSuggestions.map((b) => b.championId)).map(toView),
-          }
-        : null;
+    const { bans, hoverBans } = live !== null && banningNow(draft) ? banViews(live, ctx) : { bans: [], hoverBans: null };
     // Hovering (or selected, not locked yet): its loadout already, so there's time to read and import it.
-    const me = this.draft.myTeam.find((s) => s.isLocalPlayer);
+    const me = draft.myTeam.find((s) => s.isLocalPlayer);
     const pending = me ? me.championId || me.pickIntentId : 0;
-    const hoverCard = live && pending > 0 ? card(pending, true) : null;
+    const hoverCard = live && pending > 0 ? this.card(pending, true, ctx) : null;
     if (!hoverCard?.loadout) this.shownLoadout = null;
-    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane, enemyNotes });
-    this.update({ picks: views, pickAdvice, bans: banSuggestions.map(toView), hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane, enemyNotes });
+    if (loading) return this.update({ picks: [], pickAdvice: { whyNot: null, confidence: null }, bans, hoverBans, myPick: null, hoverPick: null, pickRole: role, laneOpponent: lane, enemyNotes, filledNote: null });
+    const pickAdvice = { ...adviceNotes(advice, say), minGames: engine.rating.minGames };
+    this.update({ picks: pickViews(advice.picks, lookup, say), pickAdvice, bans, hoverBans, myPick: null, hoverPick: hoverCard?.loadout ? hoverCard : null, pickRole: role, laneOpponent: lane, enemyNotes, filledNote });
+  }
+
+  /** Out of champ select (or no history, or a queue we don't coach): your pick stays while the game it's for is on. */
+  private showNoDraft(): void {
+    this.shownLoadout = null;
+    // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
+    const inGame = GAME_PHASES.has(this.clientPhase);
+    const kept = this.draft || !inGame ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
+    this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [], filledNote: null });
+  }
+
+  /** What champ select's cards need from the coach right now. */
+  private cardContext(live: PickCardContext["live"], draft: DraftState, role: Position | null, profile: PersonalProfile): PickCardContext {
+    const lookup = this.championLookup;
+    const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
+    let data: PickCardContext["data"] = null;
+    try {
+      data = this.deps.ddragon.data;
+    } catch {
+      // Data Dragon not loaded yet: names fall back to ids.
+    }
+    return {
+      live,
+      draft,
+      index: this.metaIndex,
+      role,
+      matches: profile.matches,
+      config: this.config,
+      bands: this.config.bands,
+      band: this.band,
+      data,
+      lookup,
+      say: (r) => renderReason(r, this.config.explain.templates, nameOf, { item: (id) => this.itemName(id) }),
+      canImport: this.canImport,
+      perk: (id) => this.perks.get(id),
+      shardRows: this.shardRows,
+      recordVsLane: (championId) => this.recordVsLane(profile, championId, role),
+    };
+  }
+
+  /** The card for a champion, keeping its loadout for the import button (a message from an earlier import goes with another champion). */
+  private card(championId: ChampionId, hovering: boolean, ctx: PickCardContext): MyPickView {
+    const loadout = cardLoadout(championId, ctx);
+    if (this.shownLoadout?.loadout.championId !== championId) this.importMessage = null;
+    const nameOf = (id: number) => ctx.lookup(id)?.name ?? `#${id}`;
+    this.shownLoadout = loadout ? { loadout, champion: nameOf(championId) } : null;
+    return pickCardView(championId, hovering, loadout, this.importMessage, ctx);
   }
 }

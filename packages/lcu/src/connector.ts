@@ -15,10 +15,13 @@ import {
   type Perk,
   RankedStatsSchema,
   RecommendedPositionsSchema,
+  RecentGamesSchema,
+  LobbySchema,
   parseLcu,
   type ChampSelectSession,
   type CurrentSummoner,
   type GameflowSession,
+  type Lobby,
   type RankedStats,
 } from "./schemas";
 
@@ -33,13 +36,31 @@ export const LCU_PATHS = {
   perks: "/lol-perks/v1/perks",
   perkStyles: "/lol-perks/v1/styles",
   ownedChampions: "/lol-champions/v1/owned-champions-minimal",
+  recentGames: "/lol-match-history/v1/products/lol/current-summoner/matches",
+  lobby: "/lol-lobby/v2/lobby",
 } as const;
+
+/** Your two role choices in the lobby (primary first; "fill" and unset left out) and the queue. */
+export interface LobbyRoles {
+  positions: Position[];
+  queueId: number | null;
+  isCustom: boolean;
+}
+
+const NO_ROLE = new Set(["", "unselected", "fill"]);
+
+export function lobbyRoles(l: Lobby): LobbyRoles {
+  const raw = [l.localMember?.firstPositionPreference, l.localMember?.secondPositionPreference].map(normalizePosition);
+  return { positions: [...new Set(raw.filter((p) => !NO_ROLE.has(p)))], queueId: l.gameConfig?.queueId ?? null, isCustom: l.gameConfig?.isCustom ?? false };
+}
 
 export interface ConnectorEvents {
   status: [ConnectionState];
   gameflowPhase: [string];
   /** Raw (validated) session, or null when champ select ends. Sanitise before display. */
   champSelect: [ChampSelectSession | null];
+  /** Your own role choices in the lobby before a queue (null: not in a lobby). */
+  lobby: [LobbyRoles | null];
   /** Every raw event, for the fixture recorder. */
   rawEvent: [LcuEvent];
   schemaError: [Error];
@@ -109,8 +130,7 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
       const creds = await this.opts.discover().catch(() => null);
       if (creds && this.running) {
         try {
-          await this.connect(creds);
-          await new Promise<void>((resolve) => this.socket?.once("close", resolve));
+          await this.connect(creds); // until the socket closes
         } catch {
           // Client still booting or just closed; retry on the next poll.
         }
@@ -122,12 +142,15 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     }
   }
 
+  /** Connects, then settles when the socket closes. */
   private async connect(creds: LcuCredentials): Promise<void> {
     const http = new LcuHttp(creds, this.opts.host);
     // Fails until the client's API is ready, which sends us back to polling.
     const phase = parseLcu(GameflowPhaseSchema, LCU_PATHS.gameflowPhase, await http.get(LCU_PATHS.gameflowPhase));
     const socket = new LcuSocket(creds, this.opts.host);
     await socket.connect();
+    // Listen for the close at once: the client can close while the first reads below are still running.
+    const closed = new Promise<void>((resolve) => socket.once("close", resolve));
     this.http = http;
     this.socket = socket;
     this.creds = creds;
@@ -135,11 +158,14 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     socket.on("event", (e) => this.onEvent(e));
     socket.subscribe(LCU_PATHS.champSelectSession);
     socket.subscribe(LCU_PATHS.gameflowPhase);
+    socket.subscribe(LCU_PATHS.lobby);
     this.setState("connected");
     this.emit("gameflowPhase", phase);
 
     const session = await this.getChampSelect().catch(() => null);
     if (session) this.emit("champSelect", session);
+    this.emit("lobby", await this.getLobby().catch(() => null));
+    return closed;
   }
 
   private onEvent(e: LcuEvent): void {
@@ -147,6 +173,8 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
     try {
       if (e.uri === LCU_PATHS.gameflowPhase) {
         this.emit("gameflowPhase", parseLcu(GameflowPhaseSchema, e.uri, e.data));
+      } else if (e.uri === LCU_PATHS.lobby) {
+        this.emit("lobby", e.eventType === "Delete" || e.data == null ? null : lobbyRoles(parseLcu(LobbySchema, e.uri, e.data)));
       } else if (e.uri === LCU_PATHS.champSelectSession) {
         this.emit(
           "champSelect",
@@ -190,6 +218,25 @@ export class LcuConnector extends EventEmitter<ConnectorEvents> {
   async getGameflowSession(): Promise<GameflowSession | null> {
     const data = await this.requireHttp().get(LCU_PATHS.gameflowSession);
     return data == null ? null : parseLcu(GameflowSessionSchema, LCU_PATHS.gameflowSession, data);
+  }
+
+  /**
+   * The local player's own last games as the client lists them, newest first: game id, queue and
+   * when it ended. Used only to notice a finished game the history doesn't have yet.
+   */
+  async getRecentGames(count = 3): Promise<{ gameId: number; queueId: number; endedAt: number }[]> {
+    const path = `${LCU_PATHS.recentGames}?begIndex=0&endIndex=${Math.max(0, count - 1)}`;
+    const data = await this.requireHttp().get(path);
+    if (data == null) return [];
+    return parseLcu(RecentGamesSchema, LCU_PATHS.recentGames, data)
+      .games.games.map((g) => ({ gameId: g.gameId, queueId: g.queueId, endedAt: g.gameCreation + g.gameDuration * 1000 }))
+      .sort((a, b) => b.endedAt - a.endedAt);
+  }
+
+  /** Your own role choices and the queue of the lobby you're in, or null outside a lobby. */
+  async getLobby(): Promise<LobbyRoles | null> {
+    const data = await this.requireHttp().get(LCU_PATHS.lobby);
+    return data == null ? null : lobbyRoles(parseLcu(LobbySchema, LCU_PATHS.lobby, data));
   }
 
   /** The local player's own ranked stats (used only to pick their rank band). */

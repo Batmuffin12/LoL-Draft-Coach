@@ -22,7 +22,7 @@ export interface MetaSettings {
 
 /** Playstyle and growth-focus metric names from the engine config (without the lower-is-better "-"). */
 export function playstyleMetrics(engine: EngineConfig): string[] {
-  const all = [...Object.values(engine.playstyle.axes).flatMap((a) => a.metrics), ...(engine.growth.metrics ?? [])];
+  const all = [...Object.values(engine.playstyle.axes).flatMap((a) => a.metrics), ...(engine.growth.metrics ?? []), ...Object.values(engine.growth.roles ?? {}).flat()];
   return [...new Set(all.map((m) => m.replace(/^-/, "")))];
 }
 
@@ -80,7 +80,7 @@ const CHUNK_ROWS = 500;
  * (the server runs in a 256 MB heap).
  */
 async function bandPass(rows: Rows, band: RankBandId, bands: RankBandId[], settings: MetaSettings, now: number) {
-  const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine) });
+  const agg = new BandAggregator({ band, now, config: settings.meta.aggregation, metrics: playstyleMetrics(settings.engine), championMetrics: settings.engine.growth.roles ?? {} });
   const fitter = new ExpectedWinFitter(settings.meta.builds.stateBins);
   for await (const row of rows(bands)) {
     const m = JSON.parse(row.summary) as MatchSummary;
@@ -195,22 +195,39 @@ export async function measureSpikes(db: Db, bands: RankBandId[], settings: MetaS
   return measure.finish();
 }
 
-/** Stored matches of some bands inside the window, newest first, in chunks (keyset on ended_at, match_id), yielding to the event loop between them. */
+/**
+ * Stored matches of some bands inside the window, newest first.
+ */
 function storedRows(db: Db, since: number): Rows {
+  // Newest first, in chunks, yielding to the event loop between them. One cursor per band, each
+  // reading its band's (band, ended_at) index in order (keyset on ended_at, rowid: the index holds
+  // rowid, so SQLite never sorts), merged newest first. A single query over several bands made
+  // SQLite sort the whole window again for every chunk, which blocked the API for minutes.
+  type Row = { summary: string; band: number; endedAt: number; rid: number };
   return async function* (bands) {
     const stmt = db.$client.prepare(
-      `SELECT summary, band, ended_at AS endedAt, match_id AS id FROM matches
-       WHERE band IN (${bands.map(() => "?").join(",")}) AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND match_id < ?))
-       ORDER BY ended_at DESC, match_id DESC LIMIT ?`,
+      `SELECT summary, band, ended_at AS endedAt, rowid AS rid FROM matches
+       WHERE band = ? AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND rowid < ?))
+       ORDER BY ended_at DESC, rowid DESC LIMIT ?`,
     );
-    let at = Number.MAX_SAFE_INTEGER;
-    let id = "";
+    const cursors = [...new Set(bands)].map((b) => ({ band: b, buf: [] as Row[], i: 0, at: Number.MAX_SAFE_INTEGER, rid: Number.MAX_SAFE_INTEGER, done: false }));
+    const fill = (c: (typeof cursors)[number]) => {
+      c.buf = stmt.all(c.band, since, c.at, c.at, c.rid, CHUNK_ROWS) as Row[];
+      c.i = 0;
+      if (c.buf.length < CHUNK_ROWS) c.done = true;
+      else ({ endedAt: c.at, rid: c.rid } = c.buf[c.buf.length - 1]!);
+    };
+    let sent = 0;
     for (;;) {
-      const chunk = stmt.all(...bands, since, at, at, id, CHUNK_ROWS) as { summary: string; band: number; endedAt: number; id: string }[];
-      yield* chunk;
-      if (chunk.length < CHUNK_ROWS) return;
-      ({ endedAt: at, id } = chunk[chunk.length - 1]!);
-      await new Promise((resolve) => setImmediate(resolve));
+      let next: (typeof cursors)[number] | null = null;
+      for (const c of cursors) {
+        if (c.i >= c.buf.length && !c.done) fill(c);
+        const r = c.buf[c.i];
+        if (r && (!next || r.endedAt > next.buf[next.i]!.endedAt)) next = c;
+      }
+      if (!next) return;
+      yield next.buf[next.i++]!;
+      if (++sent % CHUNK_ROWS === 0) await new Promise((resolve) => setImmediate(resolve));
     }
   };
 }
@@ -223,9 +240,13 @@ export interface MetaRunResult {
   error: string | null;
   pruned: number;
   snapshots: PublishedSnapshot[];
+  /** The run used the temporary boost (meta.collector.boost). */
+  boosted: boolean;
 }
 
 export interface MetaJobOptions {
+  /** Sets the rate limiter's collector share for a run (the boost uses more of the key). */
+  collectorShare?: (share: number) => void;
   /** Data Dragon items for the current patch (to tell completed items); null when unavailable. */
   items?: () => Promise<ReadonlyMap<number, ItemInfo> | null>;
   now?: () => number;
@@ -283,6 +304,15 @@ export class MetaJob {
     const startedAt = this.now();
     const runId = this.db.insert(collectorRuns).values({ startedAt }).returning({ id: collectorRuns.id }).get().id;
     const bands = activeBands(this.db, bandConfig, startedAt - meta.collector.activeUserDays * DAY_MS);
+    // The temporary boost: until enough games are stored, use more of the key and the hour.
+    const boost = meta.collector.boost;
+    const stored = boost?.enabled
+      ? (this.db.$client.prepare("SELECT count(*) AS n FROM matches WHERE source = 'collector'").get() as { n: number }).n
+      : 0;
+    const boosted = !!boost?.enabled && stored < boost.untilMatches;
+    const collector = boosted ? { ...meta.collector, budgetSeconds: boost!.budgetSeconds, maxMatchesPerRun: boost!.maxMatchesPerRun } : meta.collector;
+    this.opts.collectorShare?.(boosted ? boost!.rateLimitShare : meta.collector.rateLimitShare);
+    if (boost?.enabled) this.log(boosted ? `collector: boosted run (${stored} of ${boost.untilMatches} games stored)` : `collector: boost done (${stored} games stored)`);
     const buildBands = buildBandsFor(bands, bandConfig);
     let collected: CollectResult | null = null;
     let error: string | null = null;
@@ -295,10 +325,10 @@ export class MetaJob {
           bands,
           buildBands,
           bandConfig,
-          collector: meta.collector,
+          collector,
           keepChallenges: challengeFields(engine),
           now: this.now,
-          deadline: startedAt + meta.collector.budgetSeconds * 1000,
+          deadline: startedAt + collector.budgetSeconds * 1000,
           since: startedAt - Math.min(meta.collector.lookbackDays, meta.aggregation.windowDays) * DAY_MS,
           minDurationSec: meta.aggregation.minDurationSec,
           earlyDeathsSec: engine.earlyDeathsMinute * 60,
@@ -341,6 +371,6 @@ export class MetaJob {
         snapshots.map((s) => `band ${s.band}: ${s.matches} matches ${Math.round(s.sizeBytes / 1024)} KB`).join("; ") +
         (error ? ` (${error})` : ""),
     );
-    return { startedAt, finishedAt, collected, error, pruned, snapshots };
+    return { startedAt, finishedAt, collected, error, pruned, snapshots, boosted };
   }
 }

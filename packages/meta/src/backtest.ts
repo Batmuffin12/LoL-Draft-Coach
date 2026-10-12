@@ -145,7 +145,7 @@ export function draftFor(match: MatchSummary, i: number): DraftState {
 
 /** Engine config with the personal term off (no player history in collected matches). */
 export function withoutPersonal(cfg: EngineConfig): EngineConfig {
-  return { ...cfg, rating: { ...cfg.rating, personal: { ...cfg.rating.personal, comfortScale: 0, learningPenalty: 0 } } };
+  return { ...cfg, rating: { ...cfg.rating, personal: { ...cfg.rating.personal, comfortScale: 0, learningPenalty: 0, experience: undefined, skill: undefined } } };
 }
 
 /** The same config with some terms weighted 0 in every band (for ablations). */

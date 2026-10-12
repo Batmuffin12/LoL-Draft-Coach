@@ -32,9 +32,10 @@
     }
   },
   "comfort": {
-    "smoothingK": 5,
+    "smoothingK": 10,
     "experienceScaleGames": 8,
-    "winRateSpread": 0.15,
+    "winRateSpread": 0.2,
+    "unplayedRoleShare": 0.6,
     "skill": {
       "halfLifeDays": 120,
       "masteryStaleHalfLifeDays": 180,
@@ -117,8 +118,7 @@
           "challenges.maxCsAdvantageOnLaneOpponent",
           "challenges.turretPlatesTaken",
           "challenges.killsOnLanersEarlyJungleAsJungler",
-          "challenges.initialCrabCount",
-          "challenges.enemyJungleMonsterKills"
+              "challenges.enemyJungleMonsterKills"
         ]
       },
       "fighting": {
@@ -167,13 +167,6 @@
           "challenges.getTakedownsInAllLanesEarlyJungleAsLaner",
           "challenges.moreEnemyJungleThanOpponent"
         ]
-      },
-      "playmaking": {
-        "metrics": [
-          "ccPerMinute",
-          "challenges.enemyChampionImmobilizations",
-          "challenges.pickKillWithAlly"
-        ]
       }
     }
   },
@@ -193,13 +186,41 @@
       "challenges.killsOnLanersEarlyJungleAsJungler",
       "challenges.controlWardsPlaced",
       "challenges.visionScorePerMinute"
-    ]
+    ],
+    "roles": {
+      "top": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "laneGoldDiffAt14", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
+      "jungle": ["challenges.jungleCsBefore10Minutes", "challenges.killsOnLanersEarlyJungleAsJungler", "-earlyDeaths", "earlyEpicMonsterTakedowns", "challenges.wardTakedowns", "challenges.controlWardsPlaced"],
+      "middle": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "challenges.takedownsFirstXMinutes", "laneGoldDiffAt14", "challenges.turretPlatesTaken", "challenges.controlWardsPlaced"],
+      "bottom": ["challenges.laneMinionsFirst10Minutes", "-earlyDeaths", "laneCsDiffAt10", "challenges.turretPlatesTaken", "challenges.takedownsFirstXMinutes"],
+      "utility": ["challenges.controlWardsPlaced", "wardsPlacedBefore14", "challenges.wardTakedowns", "-earlyDeaths", "challenges.visionScorePerMinute"]
+    }
   },
   "earlyDeathsMinute": 14,
   "spikes": { "minCorrelation": 0.5, "minAgreement": 0.8, "minZ": 2, "minGold": 50, "max": 2, "timingMinGames": 2, "timingSlowMinutes": 1.5 },
   "plan": { "evenWin": 0.01, "scalingGap": 0.03, "damageShare": 0.65, "engageMin": 0.85 },
   "session": { "gapMinutes": 45, "lossStreak": 2, "longSession": 6, "minGames": 8 },
-  "report": { "days": 30, "maxChampions": 3, "minPriorGames": 5 },
+  "report": {
+    "days": 30,
+    "beforeLookbackDays": 180,
+    "maxChampions": 3,
+    "minPriorGames": 5,
+    "trend": { "minGamesPerSide": 15, "z": 2.4, "minChange": 5 },
+    "stats": { "metrics": ["kda", "challenges.killParticipation", "csPerMinute", "challenges.damagePerMinute", "-deathsPerMinute", "challenges.visionScorePerMinute"], "minRelChange": 0.08 },
+    "focusTop": 3
+  },
+  "style": {
+    "window": 100,
+    "headline": {
+      "default": ["kda", "challenges.killParticipation", "csPerMinute", "challenges.damagePerMinute", "challenges.visionScorePerMinute", "-deathsPerMinute"],
+      "jungle": ["kda", "challenges.killParticipation", "csPerMinute", "challenges.damagePerMinute", "objectiveDamagePerMinute", "-deathsPerMinute"],
+      "utility": ["kda", "challenges.killParticipation", "challenges.visionScorePerMinute", "challenges.controlWardsPlaced", "ccPerMinute", "-deathsPerMinute"]
+    },
+    "focusTop": [1, 3, 5],
+    "maxClasses": 3,
+    "minClassShare": 0.1,
+    "side": { "blueTeamId": 100, "minGames": 40, "minDiff": 0.05, "z": 2.4 },
+    "toneGap": 0.04
+  },
   "newChamps": {
     "maxGames": 3,
     "maxMastery": 30000,
@@ -213,7 +234,7 @@
     "cloneCut": 0.92,
     "topN": 3,
     "planGames": [3, 5],
-    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.4, "overlap": 1 },
+    "weights": { "similarity": 1, "gap": 0.6, "meta": 0.8, "ease": 0.8, "overlap": 1 },
     "learn": {
       "firstGames": 3,
       "settleGames": { "easy": 15, "medium": 20, "hard": 30 },
@@ -227,7 +248,10 @@
         "middle": "-earlyDeaths",
         "bottom": "challenges.laneMinionsFirst10Minutes",
         "utility": "challenges.visionScorePerMinute"
-      }
+      },
+      "profile": { "high": 0.66, "low": 0.33 },
+      "skillMinGames": 100,
+      "evenMatchupsMin": 5
     }
   },
   "pool": {
@@ -236,6 +260,7 @@
     "secondaryMin": 0.4,
     "learningWindowDays": 21,
     "learningMaxGames": 7,
+    "learningMaxMastery": 30000,
     "dormantMastery": 50000,
     "dormantDays": 60,
     "maxPerTier": 4,
@@ -245,6 +270,7 @@
       "engage": 0.65
     },
     "minLossShare": 0.2,
+    "minRoleNeedShare": 0.15,
     "minLossesForEvidence": 5
   },
   "rating": {
@@ -265,8 +291,12 @@
       "neutralComfort": 0.5,
       "fullComfort": 0.65,
       "learningPenalty": 50,
-      "includeUnplayed": true
+      "includeUnplayed": true,
+      "experience": { "penalty": 30, "tauGames": 10, "transfer": 0.2, "pointsPerGame": 700 },
+      "skill": { "priorGames": 100, "maxPoints": 60, "weight": 0.5 },
+        "offRole": { "recentGames": 100, "minGames": 20, "maxShare": 0.1, "penaltyScale": 1.5 }
     },
+    "inChance": ["meta", "personal"],
     "blind": {
       "riskAversion": 0.5,
       "riskQuantile": 0.2,
@@ -301,9 +331,20 @@
     "priorGames": 40,
     "minMatchupGames": 25,
     "itemMinShare": 0.04,
-    "winAddedScale": 695,
+    "winAddedScale": 0,
     "shareScale": 50,
     "liftScale": 60,
+    "runeMechanics": {
+      "engage": "when receiving crowd control|tenacity",
+      "frontline": "high health enemy|more damage to high health"
+    },
+    "itemMechanics": {
+      "heal": "Wounds",
+      "magic": "\\d+ Magic Resist",
+      "physical": "\\d+ Armor(?! Penetration)|incoming damage from Attacks",
+      "engage": "Tenacity|Slow Resist",
+      "frontline": "Armor Penetration|Magic Penetration|max(imum)? Health damage"
+    },
     "negativeGuard": -0.02,
     "minLift": 1.3,
     "maxSituational": 3,
