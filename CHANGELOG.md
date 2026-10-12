@@ -2,6 +2,11 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.7.8] — 2026-10-12
+
+### Fixed
+- **Pool**: champions you're learning or getting back into show their record (games · win rate) under their tier, as main and comfortable ones do.
+
 ## [0.7.7] — 2026-10-12 — Panel redesign v2
 
 ### Changed
