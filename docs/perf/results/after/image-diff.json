@@ -1,0 +1,103 @@
+{
+  "Ban.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 278,
+    "box": null,
+    "share": 0
+  },
+  "Connect.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "LastGame.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "LockedIn-Build.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "LockedIn-Matchups.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 15,
+    "maskedTimerPixels": 0,
+    "box": {
+      "x0": 25,
+      "y0": 362,
+      "x1": 54,
+      "y1": 544
+    },
+    "share": 0.00004734848484848485
+  },
+  "LockedIn-Runes.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "Month.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "New.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "NextGame.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "Pick.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 278,
+    "box": null,
+    "share": 0
+  },
+  "Pool.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  },
+  "Style.png": {
+    "width": 440,
+    "height": 720,
+    "diffPixels": 0,
+    "maskedTimerPixels": 0,
+    "box": null,
+    "share": 0
+  }
+}

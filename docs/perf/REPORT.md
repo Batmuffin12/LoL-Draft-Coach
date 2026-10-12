@@ -1,10 +1,10 @@
 # Performance report: panel and server
 
-Measured with `pnpm perf` (see [README.md](README.md)) on one machine, offline: the panel on the simulator and a synthetic 1,000-game history, the server on a synthetic database on localhost. Medians unless marked; p95 for the panel, p99 for server latency.
+Measured with `pnpm perf` (see [README.md](README.md)) on one machine (AMD Ryzen 7 7800X3D, 16 threads, Node 24.14, Electron 44.5.1), offline: the panel on the simulator and a synthetic 1,000-game history, the server on a synthetic database on localhost. Medians unless marked; p95 for the panel, p99 for server latency. Changes under 5% or inside the baseline runs' spread count as noise.
 
-## Where we are now (baseline, `main` 330bd0c, v0.7.8)
+Budgets met: **22/23 → 22/23**. The one over, before and after: the full `/me/profile` download with 10 connections at once (2,327 → 925 ms p99, budget 200). Nothing the user sees changed: every screen's view dump and pixels match the baseline (`pnpm perf:guard baseline after`).
 
-Budgets met: **22 of 23**. The one over: the full profile download.
+## Where we were (baseline, `main` 330bd0c, v0.7.8)
 
 | Area | Metric | Baseline | Budget |
 | --- | --- | --- | --- |
@@ -15,19 +15,70 @@ Budgets met: **22 of 23**. The one over: the full profile download.
 | | building the view in main per draft event | 1.3 ms (p95 1.9) | |
 | | ViewState size per push | 43 kB | |
 | | pushes per draft event | 2; 34% of pushes repeat the one before | |
-| | React commit per push | 0.2 ms (p95 0.3) | |
+| | React commit per render | 0.2 ms (p95 0.3) | |
 | Renderer | long tasks over 50 ms | none | none ✔ |
 | | frames (timer ring) | 16.7 ms (p95 16.8) | 60 fps ✔ |
 | | heap growth between replays | 0.08–0.23 MB | none ✔ |
 | Clicks → next paint | lobby tab / locked-in tab / pill / "If not" | p95 15.9 / 16.7 / 16.4 / 16.6 ms | p95 ≤ 100 ✔ |
-| Main process (bench) | load a 1,000-game history | 423 ms | |
-| | a new meta snapshot | 298 ms | |
+| Main process (bench) | load a 1,000-game history / a new meta snapshot | 423 / 298 ms | |
 | Server | wake-up (process start → first 200) | 134 ms | ≤ 1 s ✔ |
 | | `/health`, `/config`, `/meta` p99 (10 connections) | 5–8 ms | ≤ 50 ✔ |
 | | `/config` with its ETag | **200, never 304** (12.6 kB each time) | |
-| | `/me/profile` full, 1,000 games | p99 **2,327 ms** (10 conn.), 207 ms alone; 1.86 MB gzip, 14 MB JSON | p99 ≤ 200 ✘ |
+| | `/me/profile` full (1,000 games) | p99 **2,327 ms** (10 conn.), 207 ms alone; 1.86 MB gzip / 14 MB JSON | p99 ≤ 200 ✘ |
 | | `/me/profile?since` | p99 46 ms | ≤ 200 ✔ |
-| Startup round trips | panel start → profile, meta, config in | 3 requests, 282 ms; the next start the same (14 MB again) | |
-| Code health (fallow) | issues / duplication / health | 43 / 2.3% / 78.4 | |
+| Startup round trips | panel start → profile, meta, config in | 3 requests, 274 ms; the next start the same, 14 MB again | |
+| Code health (fallow) | issues / unused exports / duplication / health | 43 / 14 / 2.3% / 78.4 | |
 
-Full numbers: [results/baseline.json](results/baseline.json); screens: [results/baseline/](results/baseline/).
+## Where we are now (after, branch `perf/optimize`)
+
+| Metric | Before | After | Change | Budget before → after |
+| --- | --- | --- | --- | --- |
+| Cold start → first full screen | 724 ms | 422 ms | −42% | within → within |
+| Main process busy during cold start | 380 ms | 105 ms | −72% | |
+| … loading the 1,000-game profile | 372 ms | 87 ms | −77% | |
+| Pushes until the full screen | 57 | 9 | −84% | |
+| Bench: load a 1,000-game history | 423 ms | 69 ms | −84% | |
+| Bench: a new meta snapshot | 298 ms | 45 ms | −85% | |
+| Bench: one champ select update (locked in) | 1.8 ms | 1.1 ms | −37% | |
+| Draft event → painted, p95 (mid-counter) | 19.0 ms | 19.9 ms | noise | within → within |
+| Pushes per minute in champ select | 199 | 85 | −57% | |
+| Pushes repeating the one before | 34% | 3% | −92% | |
+| React commits per minute in champ select | 530 | 416 | −21% | |
+| Longest renderer task | 0 ms | 0 ms | – | within → within |
+| Frame p95 (timer ring) | 16.8 ms | 16.8 ms | – | within → within |
+| Heap growth between replays | 0.23 MB | 0.24 MB | noise | within → within |
+| Clicks → next paint, p95 (lobby tab / locked tab / pill / If not) | 15.9 / 16.7 / 16.4 / 16.6 ms | 16.7 / 17.3 / 16.6 / 14.6 ms | noise | within → within |
+| Server wake-up | 134 ms | 133 ms | noise | within → within |
+| `/config` with its ETag | 200, 12.6 kB, p99 5 ms | 304, 0 B, p99 0 ms | −100% bytes | within → within |
+| `/me/profile` full, 10 connections, p99 | 2,327 ms | 925 ms | −60% | **over → over** |
+| `/me/profile` full, alone, p50 | 207 ms | 150 ms | −28% | |
+| `/me/profile?since`, p99 | 46 ms | 31 ms | −33% | within → within |
+| Panel's next start (config + profile + meta) | 274 ms, 14.06 MB | 83 ms, 37 kB | −70%, −99.7% | |
+| Panel's first start | 278 ms to the profile | 231 ms | −17% | |
+| fallow issues / unused exports | 43 / 14 | 28 / 0 | −35% | |
+| Renderer JS / main bundle | 280 kB / 1.84 MB | 280 kB / 1.85 MB | – | |
+
+Full table: `pnpm perf:compare baseline after` ([results/baseline.json](results/baseline.json), [results/after.json](results/after.json)); screens: [results/baseline/](results/baseline/), [results/after/](results/after/) with `guard.json`.
+
+## The changes that made the gains
+
+1. **`fix(server)`: `/config` answers 304 to gzip clients.** The compress middleware makes a gzipped body's ETag weak (`W/"…"`); the panel sent that back and the route compared strongly, so every start and every champ select downloaded the whole config. If-None-Match is compared weakly now (RFC 9110). 12.6 kB → 0 per check.
+2. **`perf(server)`: `/me/profile` sends the stored match JSON as is** instead of parsing 1,000 summaries and stringifying them again. Alone 207 → 150 ms; at 10 connections p99 2,327 → ~925 ms; `?since` 46 → 31 ms.
+3. **`feat(server)` + `perf(desktop)`: the panel keeps your matches on disk** (`profile-matches.json`) and a start asks `?since=…&timelines=1`; games it lacks or the server has updated since come by name (`ids=`, new and additive). Next start 274 ms / 14 MB → 83 ms / 37 kB.
+4. **`perf(engine)`: binary search in `empiricalPercentile`.** A CPU profile showed the linear scan was ~90% of the main process's work when the profile or meta changes. Load a history 423 → 69 ms, new snapshot 298 → 45 ms; cold start 724 → ~420 ms.
+5. **`perf(desktop)`: one ViewState push per event-loop turn, never the same twice** (`StatePusher`). Pushes to the first screen 57 → 9, per minute −57%, repeats 34% → 3%.
+6. **`refactor`: dead code fallow found.** 14 exports used only in their own file, the unused `HowYouPlay` component, `shared`'s unused zod dependency. fallow issues 43 → 28.
+
+## Tried and reverted
+
+- **Gzip `/me/profile` explicitly on libuv's thread pool**: −13% p99 at 10 connections, no change for one request. Not worth the extra code.
+- **Cache the gzipped profile per user** (keyed by a SHA-256 of the JSON): p99 at 10 connections 932 → 369 ms, still over budget, and up to 1.9 MB per cached user on a server with a 256 MB heap, for a request the panel now rarely makes.
+- **Minify the main bundle** (1.85 → 0.95 MB): main script start 100 → 97 ms, the first full screen unchanged. Noise, and worse stack traces.
+
+## What's left
+
+- **The full profile at 10 connections stays over budget** (925 ms p99). Gzip of 14 MB costs ~105 ms per request and the JSON ~15 ms; to get under 200 ms with 10 at once it would take a cache of compressed responses (memory on a small server) or precompressed match summaries. With the panel's disk cache a full download happens only on registration, after sign-out, or against an older server, one request at a time (150 ms alone, within budget), so I left it.
+- **Coach engine, smaller wins left**: after the fix, `measure`/`readMetric` in playstyle (~45 ms of a profile load) rebuild the reference values for every call; a cache per (matches, role, metric) would save maybe 20–30 ms. Not needed for any budget.
+- **Champ select timer**: the whole screen re-renders 4×/s for the countdown; a commit costs 0.2 ms, so isolating the timer isn't worth it now.
+- **Main-process heap numbers** in the results are not after a full GC (`--expose-gc` reaches the renderers only), so `mainHeap` moves with GC timing; the renderer heap is the reliable one.
+- The lobby replay's "commits per minute" rose because coalescing shortened the span its denominator uses (a 10 s run of clicks); its pushes per minute fell 57% like the others.

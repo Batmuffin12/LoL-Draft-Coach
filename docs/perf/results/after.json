@@ -1,0 +1,3928 @@
+{
+ "label": "after",
+ "at": "2026-10-12T08:49:17.656Z",
+ "durationSec": 444,
+ "quick": false,
+ "machine": {
+  "cpu": "AMD Ryzen 7 7800X3D 8-Core Processor           ",
+  "cores": 16,
+  "memGb": 33,
+  "platform": "win32",
+  "node": "v24.14.0",
+  "electron": "44.5.1"
+ },
+ "git": "9e35ade",
+ "metrics": {
+  "bundle.rendererJs": {
+   "value": 279858,
+   "unit": "bytes"
+  },
+  "bundle.rendererCss": {
+   "value": 36575,
+   "unit": "bytes"
+  },
+  "bundle.fonts": {
+   "value": 501636,
+   "unit": "bytes"
+  },
+  "bundle.main": {
+   "value": 1848960,
+   "unit": "bytes"
+  },
+  "bundle.preload": {
+   "value": 2189,
+   "unit": "bytes"
+  },
+  "desktop.coldStart.ready": {
+   "median": 126.84130859375,
+   "p95": 133.249267578125,
+   "min": 124.84423828125,
+   "max": 133.249267578125,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.windowCreated": {
+   "median": 163.063720703125,
+   "p95": 171.550048828125,
+   "min": 160.39697265625,
+   "max": 171.550048828125,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstContentfulPaint": {
+   "median": 305.39990234375,
+   "p95": 327.10009765625,
+   "min": 297.39990234375,
+   "max": 327.10009765625,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstState": {
+   "median": 223.7998046875,
+   "p95": 234.10009765625,
+   "min": 217.699951171875,
+   "max": 234.10009765625,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstScreen": {
+   "median": 276.7998046875,
+   "p95": 284.800048828125,
+   "min": 266.60009765625,
+   "max": 284.800048828125,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.fullScreen": {
+   "median": 421.7998046875,
+   "p95": 462.89990234375,
+   "min": 401.10009765625,
+   "max": 462.89990234375,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.pushes": {
+   "median": 9,
+   "p95": 9,
+   "min": 9,
+   "max": 9,
+   "samples": 10,
+   "unit": "count"
+  },
+  "desktop.coldStart.profileLoad": {
+   "median": 86.92950000000002,
+   "p95": 96.7579,
+   "min": 84.73689999999999,
+   "max": 96.7579,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.coldStart.mainBusy": {
+   "median": 104.78340000000009,
+   "p95": 112.4172999999999,
+   "min": 94.14080000000016,
+   "max": 112.4172999999999,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.update": {
+   "median": 12.306884765625,
+   "p95": 19.876953125,
+   "min": 3.2119140625,
+   "max": 35.55810546875,
+   "samples": 70,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.build": {
+   "median": 1.123700000000099,
+   "p95": 1.5578999999997905,
+   "min": 0.3756999999999948,
+   "max": 2.419399999998859,
+   "samples": 70,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.send": {
+   "median": 0.13210000000253785,
+   "p95": 0.21009999999841966,
+   "min": 0.03149999999999409,
+   "max": 0.32400000000052387,
+   "samples": 77,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.bytes": {
+   "median": 42459,
+   "p95": 44193,
+   "min": 3644,
+   "max": 44193,
+   "samples": 77,
+   "unit": "bytes"
+  },
+  "desktop.replay.mid-counter.pushesPerMin": {
+   "value": 85.06051943817693,
+   "unit": "per min"
+  },
+  "desktop.replay.mid-counter.pushesPerDraftEvent": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.mid-counter.identicalShare": {
+   "value": 0.025974025974025976,
+   "unit": "share"
+  },
+  "desktop.replay.mid-counter.ipcLatency": {
+   "median": 1.45654296875,
+   "p95": 2.523193359375,
+   "min": 1.015869140625,
+   "max": 19.858154296875,
+   "samples": 76,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.renderToPaint": {
+   "median": 9.900146484375,
+   "p95": 18.60009765625,
+   "min": 0.5,
+   "max": 38.199951171875,
+   "samples": 76,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.commit": {
+   "median": 0.19999998807907104,
+   "p95": 0.30000001192092896,
+   "min": 0,
+   "max": 7.199999988079071,
+   "samples": 377,
+   "unit": "ms",
+   "total": 79.69999939203262
+  },
+  "desktop.replay.mid-counter.commitsPerMin": {
+   "value": 416.46514062587926,
+   "unit": "per min"
+  },
+  "desktop.replay.mid-counter.longTasks": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.mid-counter.longTaskMax": {
+   "value": 0,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.frame": {
+   "median": 16.69999999999709,
+   "p95": 16.80000000000291,
+   "min": 16.299999999995634,
+   "max": 22,
+   "samples": 4091,
+   "unit": "ms"
+  },
+  "desktop.replay.mid-counter.framesOver17": {
+   "value": 0.0009777560498655585,
+   "unit": "share"
+  },
+  "desktop.replay.mid-counter.heapGrowth": {
+   "value": 0.235004,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.heap": {
+   "value": 3.142548,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.mainHeap": {
+   "value": 25.567492,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.workingSet.Browser": {
+   "value": 136.6328125,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.workingSet.GPU": {
+   "value": 116.81640625,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.workingSet.Utility": {
+   "value": 50.05859375,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.workingSet.Tab": {
+   "value": 96.73828125,
+   "unit": "MB"
+  },
+  "desktop.replay.mid-counter.cpu.total": {
+   "value": 0,
+   "unit": "%"
+  },
+  "desktop.clicks.ifNot": {
+   "median": 9.7001953125,
+   "p95": 14.60009765625,
+   "min": 1.699951171875,
+   "max": 16.5,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "desktop.clicks.ifNot.eventTiming": {
+   "median": 24,
+   "p95": 32,
+   "min": 16,
+   "max": 32,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.update": {
+   "median": 11.875732421875,
+   "p95": 19.44873046875,
+   "min": 3.107177734375,
+   "max": 21.877197265625,
+   "samples": 80,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.build": {
+   "median": 0.38650000000052387,
+   "p95": 2.1512000000002445,
+   "min": 0.2256000000052154,
+   "max": 5.782100000000355,
+   "samples": 80,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.send": {
+   "median": 0.11079999999856227,
+   "p95": 0.16550000000279397,
+   "min": 0.02240000000000464,
+   "max": 0.21219999999993888,
+   "samples": 87,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.bytes": {
+   "median": 30973,
+   "p95": 40863,
+   "min": 3644,
+   "max": 40863,
+   "samples": 87,
+   "unit": "bytes"
+  },
+  "desktop.replay.locked-solid.pushesPerMin": {
+   "value": 93.99198729069822,
+   "unit": "per min"
+  },
+  "desktop.replay.locked-solid.pushesPerDraftEvent": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.locked-solid.identicalShare": {
+   "value": 0.022988505747126436,
+   "unit": "share"
+  },
+  "desktop.replay.locked-solid.ipcLatency": {
+   "median": 1.204833984375,
+   "p95": 1.4326171875,
+   "min": 0.821533203125,
+   "max": 5.3359375,
+   "samples": 86,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.renderToPaint": {
+   "median": 8.900146484375,
+   "p95": 17.300048828125,
+   "min": 1.39990234375,
+   "max": 44.7001953125,
+   "samples": 86,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.commit": {
+   "median": 0.19999998807907104,
+   "p95": 0.699999988079071,
+   "min": 0,
+   "max": 6.199999988079071,
+   "samples": 300,
+   "unit": "ms",
+   "total": 75.80000066757202
+  },
+  "desktop.replay.locked-solid.commitsPerMin": {
+   "value": 324.11030100240765,
+   "unit": "per min"
+  },
+  "desktop.replay.locked-solid.longTasks": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.locked-solid.longTaskMax": {
+   "value": 0,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.frame": {
+   "median": 16.69999999999709,
+   "p95": 16.80000000000291,
+   "min": 14.300000000000011,
+   "max": 17,
+   "samples": 4097,
+   "unit": "ms"
+  },
+  "desktop.replay.locked-solid.framesOver17": {
+   "value": 0,
+   "unit": "share"
+  },
+  "desktop.replay.locked-solid.heapGrowth": {
+   "value": 0.415864,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.heap": {
+   "value": 3.424862,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.mainHeap": {
+   "value": 22.63098,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.workingSet.Browser": {
+   "value": 133.9453125,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.workingSet.GPU": {
+   "value": 125.82421875,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.workingSet.Utility": {
+   "value": 50.65625,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.workingSet.Tab": {
+   "value": 107.70703125,
+   "unit": "MB"
+  },
+  "desktop.replay.locked-solid.cpu.total": {
+   "value": 0,
+   "unit": "%"
+  },
+  "desktop.clicks.lockedTab": {
+   "median": 9.10009765625,
+   "p95": 17.2998046875,
+   "min": 2.699951171875,
+   "max": 17.699951171875,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "desktop.clicks.lockedTab.eventTiming": {
+   "median": 24,
+   "p95": 32,
+   "min": 16,
+   "max": 32,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.update": {
+   "median": 9.630126953125,
+   "p95": 19.11669921875,
+   "min": 2.830078125,
+   "max": 33.59326171875,
+   "samples": 85,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.build": {
+   "median": 1.331399999999121,
+   "p95": 2.0838999999996304,
+   "min": 0.04579999999987194,
+   "max": 2.2694000000001324,
+   "samples": 85,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.send": {
+   "median": 0.13009999999485444,
+   "p95": 0.19830000000001746,
+   "min": 0.02549999999996544,
+   "max": 0.3006999999997788,
+   "samples": 121,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.bytes": {
+   "median": 41056,
+   "p95": 43403,
+   "min": 3644,
+   "max": 43416,
+   "samples": 121,
+   "unit": "bytes"
+  },
+  "desktop.replay.full-game.pushesPerMin": {
+   "value": 122.44683924637918,
+   "unit": "per min"
+  },
+  "desktop.replay.full-game.pushesPerDraftEvent": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.full-game.identicalShare": {
+   "value": 0.049586776859504134,
+   "unit": "share"
+  },
+  "desktop.replay.full-game.ipcLatency": {
+   "median": 0.947998046875,
+   "p95": 1.15673828125,
+   "min": 0.429931640625,
+   "max": 2.750244140625,
+   "samples": 120,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.renderToPaint": {
+   "median": 6.89990234375,
+   "p95": 16.400146484375,
+   "min": 0.60009765625,
+   "max": 40.199951171875,
+   "samples": 120,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.commit": {
+   "median": 0.20000004768371582,
+   "p95": 0.6000000238418579,
+   "min": 0,
+   "max": 6.199999988079071,
+   "samples": 231,
+   "unit": "ms",
+   "total": 68.40000021457672
+  },
+  "desktop.replay.full-game.commitsPerMin": {
+   "value": 233.76214765217844,
+   "unit": "per min"
+  },
+  "desktop.replay.full-game.longTasks": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.full-game.longTaskMax": {
+   "value": 0,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.frame": {
+   "median": 16.69999999999709,
+   "p95": 16.80000000000109,
+   "min": 15,
+   "max": 17,
+   "samples": 4176,
+   "unit": "ms"
+  },
+  "desktop.replay.full-game.framesOver17": {
+   "value": 0,
+   "unit": "share"
+  },
+  "desktop.replay.full-game.heapGrowth": {
+   "value": 0.08113999999999999,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.heap": {
+   "value": 3.321761,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.mainHeap": {
+   "value": 65.428964,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.workingSet.Browser": {
+   "value": 130.27734375,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.workingSet.GPU": {
+   "value": 128.28125,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.workingSet.Utility": {
+   "value": 50.35546875,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.workingSet.Tab": {
+   "value": 103.6484375,
+   "unit": "MB"
+  },
+  "desktop.replay.full-game.cpu.total": {
+   "value": 0,
+   "unit": "%"
+  },
+  "desktop.clicks.lobbyTab": {
+   "median": 9.900146484375,
+   "p95": 16.699951171875,
+   "min": 1.89990234375,
+   "max": 17.10009765625,
+   "samples": 35,
+   "unit": "ms"
+  },
+  "desktop.clicks.lobbyTab.eventTiming": {
+   "median": 24,
+   "p95": 32,
+   "min": 16,
+   "max": 32,
+   "samples": 35,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.update": {
+   "median": null,
+   "p95": null,
+   "min": null,
+   "max": null,
+   "samples": 0,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.build": {
+   "median": null,
+   "p95": null,
+   "min": null,
+   "max": null,
+   "samples": 0,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.send": {
+   "median": 0.034500000000036835,
+   "p95": 0.13239999999996144,
+   "min": 0.025000000000034106,
+   "max": 0.13239999999996144,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.bytes": {
+   "median": 3667,
+   "p95": 31159,
+   "min": 3644,
+   "max": 31159,
+   "samples": 5,
+   "unit": "bytes"
+  },
+  "desktop.replay.lobby.pushesPerMin": {
+   "value": 937.029597873382,
+   "unit": "per min"
+  },
+  "desktop.replay.lobby.pushesPerDraftEvent": {
+   "value": null,
+   "unit": "count"
+  },
+  "desktop.replay.lobby.identicalShare": {
+   "value": 0.2,
+   "unit": "share"
+  },
+  "desktop.replay.lobby.ipcLatency": {
+   "median": 1.091796875,
+   "p95": 1.628173828125,
+   "min": 0.982666015625,
+   "max": 1.628173828125,
+   "samples": 4,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.renderToPaint": {
+   "median": 5.699951171875,
+   "p95": 33.89990234375,
+   "min": 3.599853515625,
+   "max": 33.89990234375,
+   "samples": 4,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.commit": {
+   "median": 0.10000002384185791,
+   "p95": 0.7000000476837158,
+   "min": 0,
+   "max": 6.500000059604645,
+   "samples": 66,
+   "unit": "ms",
+   "total": 17.500000178813934
+  },
+  "desktop.replay.lobby.commitsPerMin": {
+   "value": 12368.790691928643,
+   "unit": "per min"
+  },
+  "desktop.replay.lobby.longTasks": {
+   "value": 0,
+   "unit": "count"
+  },
+  "desktop.replay.lobby.longTaskMax": {
+   "value": 0,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.frame": {
+   "median": 16.699999999999818,
+   "p95": 16.800000000000182,
+   "min": 14.5,
+   "max": 17.100000000000023,
+   "samples": 1103,
+   "unit": "ms"
+  },
+  "desktop.replay.lobby.framesOver17": {
+   "value": 0.001813236627379873,
+   "unit": "share"
+  },
+  "desktop.replay.lobby.heapGrowth": {
+   "value": 0,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.heap": {
+   "value": 2.50018,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.mainHeap": {
+   "value": 72.875724,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.workingSet.Browser": {
+   "value": 227.53515625,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.workingSet.GPU": {
+   "value": 113.7578125,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.workingSet.Utility": {
+   "value": 50.15234375,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.workingSet.Tab": {
+   "value": 95.8515625,
+   "unit": "MB"
+  },
+  "desktop.replay.lobby.cpu.total": {
+   "value": 0,
+   "unit": "%"
+  },
+  "desktop.clicks.pill": {
+   "median": 7.39990234375,
+   "p95": 16.599853515625,
+   "min": 1.699951171875,
+   "max": 17.199951171875,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "desktop.clicks.pill.eventTiming": {
+   "median": 24,
+   "p95": 32,
+   "min": 16,
+   "max": 32,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.coach: profile from 1,000 games (profileFromMatches)": {
+   "median": 5.374799999999993,
+   "p95": 6.038000000000011,
+   "min": 5.236400000000003,
+   "max": 6.689700000000016,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.coach: load a 1,000-game history (setProfile)": {
+   "median": 69.04379999999992,
+   "p95": 76.17330000000004,
+   "min": 67.84090000000015,
+   "max": 76.17330000000004,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "bench.coach: new meta snapshot (setSnapshot)": {
+   "median": 44.587999999999965,
+   "p95": 54.36700000000019,
+   "min": 44.26340000000005,
+   "max": 54.36700000000019,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "bench.coach: champ select update, pick turn (onDraft)": {
+   "median": 0.9395999999999276,
+   "p95": 1.4391000000000531,
+   "min": 0.7759000000000924,
+   "max": 2.8162999999999556,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.coach: champ select update, locked in (onDraft)": {
+   "median": 1.1259000000000015,
+   "p95": 1.3219000000001415,
+   "min": 1.0273999999999432,
+   "max": 1.4266000000000076,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.engine: index a meta snapshot (new MetaIndex)": {
+   "median": 0.00760000000002492,
+   "p95": 0.020699999999976626,
+   "min": 0.007400000000018281,
+   "max": 0.025700000000028922,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.engine: comfort from 1,000 games (computeComfort)": {
+   "median": 0.37229999999999563,
+   "p95": 0.6157999999999788,
+   "min": 0.3310999999999922,
+   "max": 1.022299999999973,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.engine: score a draft with live meta (adviseLivePicks)": {
+   "median": 0.08370000000002165,
+   "p95": 0.19999999999998863,
+   "min": 0.07150000000001455,
+   "max": 0.20800000000002683,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.engine: suggest bans (suggestBans)": {
+   "median": 0.07260000000002265,
+   "p95": 0.1604000000000383,
+   "min": 0.05819999999999936,
+   "max": 0.16599999999999682,
+   "samples": 30,
+   "unit": "ms"
+  },
+  "bench.meta: aggregate a band of 10,000 games (BandAggregator)": {
+   "median": 283.5929000000001,
+   "p95": 351.21590000000015,
+   "min": 277.94309999999996,
+   "max": 351.21590000000015,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "server.coldStart": {
+   "median": 132.61449999999968,
+   "p95": 147.15819999999985,
+   "min": 131.2440999999999,
+   "max": 147.15819999999985,
+   "samples": 10,
+   "unit": "ms"
+  },
+  "server.job.snapshot": {
+   "value": 1627.0157999999997,
+   "unit": "ms"
+  },
+  "server.job.sync200": {
+   "value": 56.85829999999987,
+   "unit": "ms"
+  },
+  "server.GET /health.latency": {
+   "median": 3,
+   "p975": 6,
+   "p99": 8,
+   "max": 26,
+   "samples": 47927,
+   "unit": "ms"
+  },
+  "server.GET /health.reqPerSec": {
+   "value": 2396.7,
+   "unit": "req/s"
+  },
+  "server.GET /health.bytes": {
+   "value": 207,
+   "unit": "bytes"
+  },
+  "server.GET /health.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /config.latency": {
+   "median": 3,
+   "p975": 4,
+   "p99": 6,
+   "max": 12,
+   "samples": 54782,
+   "unit": "ms"
+  },
+  "server.GET /config.reqPerSec": {
+   "value": 2739.7,
+   "unit": "req/s"
+  },
+  "server.GET /config.bytes": {
+   "value": 12585,
+   "unit": "bytes"
+  },
+  "server.GET /config.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /config (304).latency": {
+   "median": 0,
+   "p975": 0,
+   "p99": 0,
+   "max": 2,
+   "samples": 547375,
+   "unit": "ms"
+  },
+  "server.GET /config (304).reqPerSec": {
+   "value": 27369.6,
+   "unit": "req/s"
+  },
+  "server.GET /config (304).bytes": {
+   "value": 0,
+   "unit": "bytes"
+  },
+  "server.GET /config (304).unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /meta/2.latency": {
+   "median": 3,
+   "p975": 5,
+   "p99": 6,
+   "max": 8,
+   "samples": 61809,
+   "unit": "ms"
+  },
+  "server.GET /meta/2.reqPerSec": {
+   "value": 3090.9,
+   "unit": "req/s"
+  },
+  "server.GET /meta/2.bytes": {
+   "value": 13682,
+   "unit": "bytes"
+  },
+  "server.GET /meta/2.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /meta/2 (304).latency": {
+   "median": 2,
+   "p975": 3,
+   "p99": 5,
+   "max": 10,
+   "samples": 71938,
+   "unit": "ms"
+  },
+  "server.GET /meta/2 (304).reqPerSec": {
+   "value": 3597.3,
+   "unit": "req/s"
+  },
+  "server.GET /meta/2 (304).bytes": {
+   "value": 0,
+   "unit": "bytes"
+  },
+  "server.GET /meta/2 (304).unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /me/profile.latency": {
+   "median": 710,
+   "p975": 863,
+   "p99": 925,
+   "max": 1046,
+   "samples": 276,
+   "unit": "ms"
+  },
+  "server.GET /me/profile.reqPerSec": {
+   "value": 13.8,
+   "unit": "req/s"
+  },
+  "server.GET /me/profile.bytes": {
+   "value": 1858848,
+   "unit": "bytes"
+  },
+  "server.GET /me/profile.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /me/profile (1 connection).latency": {
+   "median": 150,
+   "p975": 157,
+   "p99": 159,
+   "max": 161,
+   "samples": 132,
+   "unit": "ms"
+  },
+  "server.GET /me/profile (1 connection).reqPerSec": {
+   "value": 6.6,
+   "unit": "req/s"
+  },
+  "server.GET /me/profile (1 connection).bytes": {
+   "value": 1858848,
+   "unit": "bytes"
+  },
+  "server.GET /me/profile (1 connection).unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.GET /me/profile?since.latency": {
+   "median": 22,
+   "p975": 30,
+   "p99": 31,
+   "max": 49,
+   "samples": 8669,
+   "unit": "ms"
+  },
+  "server.GET /me/profile?since.reqPerSec": {
+   "value": 433.45,
+   "unit": "req/s"
+  },
+  "server.GET /me/profile?since.bytes": {
+   "value": 44658,
+   "unit": "bytes"
+  },
+  "server.GET /me/profile?since.unexpected": {
+   "value": 0,
+   "unit": "count"
+  },
+  "server.flow.first.total": {
+   "median": 271.59440000000177,
+   "p95": 289.3029000000097,
+   "min": 262.02489999998943,
+   "max": 289.3029000000097,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.first.profile": {
+   "median": 230.75909999999567,
+   "p95": 234.59679999999935,
+   "min": 215.62350000001607,
+   "max": 234.59679999999935,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.first.requests": {
+   "value": 3,
+   "unit": "count"
+  },
+  "server.flow.first.bytes": {
+   "value": 14122925,
+   "unit": "bytes"
+  },
+  "server.flow.next.total": {
+   "median": 83.1712000000116,
+   "p95": 86.30219999997644,
+   "min": 75.84570000000531,
+   "max": 86.30219999997644,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.next.profile": {
+   "median": 81.0003999999899,
+   "p95": 83.21150000000489,
+   "min": 73.60700000001816,
+   "max": 83.21150000000489,
+   "samples": 5,
+   "unit": "ms"
+  },
+  "server.flow.next.requests": {
+   "value": 3,
+   "unit": "count"
+  },
+  "server.flow.next.bytes": {
+   "value": 36882,
+   "unit": "bytes"
+  },
+  "fallow.total_issues": {
+   "value": 28,
+   "unit": "count"
+  },
+  "fallow.unused_files": {
+   "value": 0,
+   "unit": "count"
+  },
+  "fallow.unused_exports": {
+   "value": 0,
+   "unit": "count"
+  },
+  "fallow.unused_types": {
+   "value": 0,
+   "unit": "count"
+  },
+  "fallow.unused_class_members": {
+   "value": 23,
+   "unit": "count"
+  },
+  "fallow.unused_dependencies": {
+   "value": 3,
+   "unit": "count"
+  },
+  "fallow.unresolved_imports": {
+   "value": 0,
+   "unit": "count"
+  },
+  "fallow.circular_dependencies": {
+   "value": 0,
+   "unit": "count"
+  },
+  "fallow.duplication": {
+   "value": 2.239099122692157,
+   "unit": "%"
+  },
+  "fallow.duplicatedLines": {
+   "value": 513,
+   "unit": "lines"
+  },
+  "fallow.health": {
+   "value": 80.6,
+   "unit": "score"
+  },
+  "fallow.functionsAboveThreshold": {
+   "value": 148,
+   "unit": "count"
+  }
+ },
+ "raw": {
+  "startup": [
+   {
+    "marks": {
+     "processStart": 1791794959695.401,
+     "mainEval": 1791794959773.2803,
+     "spawn": 1791794959674,
+     "ready": 1791794959800.8923,
+     "windowCreated": 1791794959836.9824,
+     "rendererReady": 1791794959894.8596
+    },
+    "renderer": {
+     "firstState": 1791794959896,
+     "firstScreen": 1791794959950.9001,
+     "firstPaint": 1791794959981.6,
+     "firstContentfulPaint": 1791794959981.6,
+     "fullScreen": 1791794960102.9001
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794959909.1816,
+      "ms": 0.39529999999999177,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794959909.6238,
+      "ms": 0.01669999999998595,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794959914.2192,
+      "ms": 0.02600000000001046,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794959923.7786,
+      "ms": 0.2734000000000094,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794959924.0564,
+      "ms": 0.09750000000002501,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959928.2832,
+      "ms": 0.4322999999999979,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794959929.0972,
+      "ms": 4.505400000000009,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794959933.6143,
+      "ms": 0.018799999999998818,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794959950.3945,
+      "ms": 0.021299999999996544,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959971.3042,
+      "ms": 0.92349999999999,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959972.4011,
+      "ms": 0.05660000000000309,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959972.5757,
+      "ms": 0.037599999999997635,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959972.6995,
+      "ms": 0.020800000000008367,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959972.8167,
+      "ms": 0.022800000000017917,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959972.9214,
+      "ms": 0.02600000000001046,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.0225,
+      "ms": 0.015900000000044656,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.1467,
+      "ms": 0.02250000000003638,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.2673,
+      "ms": 0.04199999999997317,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.4048,
+      "ms": 0.013899999999978263,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.486,
+      "ms": 0.012499999999988631,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.607,
+      "ms": 0.013700000000028467,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794959973.7122,
+      "ms": 0.02179999999998472,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794959997.8528,
+      "ms": 87.11460000000005,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794960085.029,
+      "ms": 0.009900000000016007,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794960301.857,
+     "mainEval": 1791794960380.0208,
+     "spawn": 1791794960280,
+     "ready": 1791794960406.4673,
+     "windowCreated": 1791794960442.4973,
+     "rendererReady": 1791794960498.9062
+    },
+    "renderer": {
+     "firstState": 1791794960499.9001,
+     "firstScreen": 1791794960546.6,
+     "firstPaint": 1791794960582.8,
+     "firstContentfulPaint": 1791794960582.8,
+     "fullScreen": 1791794960681.1
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794960515.6184,
+      "ms": 0.40610000000000923,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794960516.0793,
+      "ms": 0.01870000000002392,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794960520.2083,
+      "ms": 0.025999999999982037,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794960527.4272,
+      "ms": 0.23229999999998086,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794960527.663,
+      "ms": 0.08209999999999695,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960530.832,
+      "ms": 0.379099999999994,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794960531.554,
+      "ms": 3.335399999999993,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794960534.8982,
+      "ms": 0.011699999999990496,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794960538.7627,
+      "ms": 0.022899999999992815,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794960590.8115,
+      "ms": 84.73689999999999,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794960675.6238,
+      "ms": 0.010199999999997544,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960677.302,
+      "ms": 1.1877000000000066,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960678.6284,
+      "ms": 0.786200000000008,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960679.5042,
+      "ms": 0.9284000000000106,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960680.503,
+      "ms": 0.9028999999999883,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960681.5244,
+      "ms": 0.7375999999999863,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960682.3271,
+      "ms": 0.9839000000000055,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960683.3767,
+      "ms": 0.6303000000000338,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960684.1226,
+      "ms": 0.872099999999989,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960685.09,
+      "ms": 0.6347999999999843,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960685.7898,
+      "ms": 0.6108999999999583,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960686.4514,
+      "ms": 0.5923000000000229,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960687.1262,
+      "ms": 0.897199999999998,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794960688.0737,
+      "ms": 0.8059999999999832,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794960911.497,
+     "mainEval": 1791794960989.7742,
+     "spawn": 1791794960890,
+     "ready": 1791794961016.8413,
+     "windowCreated": 1791794961055.5088,
+     "rendererReady": 1791794961113.994
+    },
+    "renderer": {
+     "firstState": 1791794961115.0999,
+     "firstScreen": 1791794961167.7998,
+     "firstPaint": 1791794961200.4,
+     "firstContentfulPaint": 1791794961200.4,
+     "fullScreen": 1791794961315.2
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794961131.023,
+      "ms": 0.4070000000000107,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794961131.4756,
+      "ms": 0.015100000000018099,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794961135.2705,
+      "ms": 0.027999999999991587,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794961143.032,
+      "ms": 0.23509999999998854,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794961143.2708,
+      "ms": 0.09669999999999845,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961147.328,
+      "ms": 0.720799999999997,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794961148.5544,
+      "ms": 4.633499999999998,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794961153.2,
+      "ms": 0.02359999999998763,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794961183.9297,
+      "ms": 0.02250000000003638,
+      "pushes": 0,
+      "donePushSeq": 7,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794961214.877,
+      "ms": 88.27699999999999,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794961303.222,
+      "ms": 0.009700000000009368,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961304.9138,
+      "ms": 1.1614999999999895,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961306.218,
+      "ms": 1.0296999999999912,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961307.3303,
+      "ms": 0.6430000000000291,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961308.0422,
+      "ms": 0.9070000000000391,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961309.059,
+      "ms": 0.7579999999999814,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961309.882,
+      "ms": 0.9411000000000058,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961310.8958,
+      "ms": 0.6252999999999815,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961311.642,
+      "ms": 0.8010999999999626,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961312.5728,
+      "ms": 1.3023999999999774,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961313.9724,
+      "ms": 0.9533999999999878,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961315.0066,
+      "ms": 0.6463999999999714,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961315.7412,
+      "ms": 1.0083999999999946,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961316.8296,
+      "ms": 1.3240000000000123,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794961556.952,
+     "mainEval": 1791794961635.1125,
+     "spawn": 1791794961532,
+     "ready": 1791794961661.2996,
+     "windowCreated": 1791794961698.6443,
+     "rendererReady": 1791794961756.793
+    },
+    "renderer": {
+     "firstState": 1791794961757.7,
+     "firstScreen": 1791794961809,
+     "firstPaint": 1791794961832.2,
+     "firstContentfulPaint": 1791794961832.2,
+     "fullScreen": 1791794961948.8
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794961776.0986,
+      "ms": 0.41450000000000387,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794961776.556,
+      "ms": 0.01839999999998554,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794961779.9993,
+      "ms": 0.01840000000001396,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794961787.9424,
+      "ms": 0.23089999999999122,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794961788.1768,
+      "ms": 0.08780000000001564,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961792.6748,
+      "ms": 0.4421000000000106,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794961793.4421,
+      "ms": 3.047300000000007,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794961796.4978,
+      "ms": 0.011799999999993815,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794961799.816,
+      "ms": 0.014000000000010004,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794961852.532,
+      "ms": 86.78559999999999,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794961939.3845,
+      "ms": 0.010199999999997544,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961941.1968,
+      "ms": 1.0466000000000122,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961942.3967,
+      "ms": 0.7875999999999976,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961943.2632,
+      "ms": 0.6736999999999966,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961944.0095,
+      "ms": 0.9105999999999881,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961945.0276,
+      "ms": 0.7197999999999638,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961945.8113,
+      "ms": 0.9123000000000161,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961946.8005,
+      "ms": 0.6243999999999801,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961947.5361,
+      "ms": 0.8779999999999859,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961948.7437,
+      "ms": 0.7053999999999974,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961949.5107,
+      "ms": 0.7484999999999786,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961950.3118,
+      "ms": 0.6953000000000316,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961951.0962,
+      "ms": 0.9885999999999626,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794961952.139,
+      "ms": 0.8543999999999983,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794962214.684,
+     "mainEval": 1791794962291.648,
+     "spawn": 1791794962192,
+     "ready": 1791794962318.5632,
+     "windowCreated": 1791794962354.9822,
+     "rendererReady": 1791794962420.0254
+    },
+    "renderer": {
+     "firstState": 1791794962421.2002,
+     "firstScreen": 1791794962475.4001,
+     "firstPaint": 1791794962519.1,
+     "firstContentfulPaint": 1791794962519.1,
+     "fullScreen": 1791794962632.8
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794962439.7244,
+      "ms": 0.5780999999999779,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794962440.365,
+      "ms": 0.028500000000008185,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794962444.884,
+      "ms": 0.02719999999999345,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794962454.6333,
+      "ms": 0.29879999999999995,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794962454.9368,
+      "ms": 0.12219999999999231,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962458.3174,
+      "ms": 0.48109999999999786,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794962459.2002,
+      "ms": 3.3004999999999995,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794962462.5095,
+      "ms": 0.012300000000010414,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794962466.9092,
+      "ms": 0.0216999999999814,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794962520.8584,
+      "ms": 96.7579,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794962617.685,
+      "ms": 0.009999999999990905,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962619.546,
+      "ms": 1.147199999999998,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962620.8337,
+      "ms": 0.9669000000000096,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962621.8875,
+      "ms": 0.625,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962622.5818,
+      "ms": 0.9180999999999813,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962623.6196,
+      "ms": 0.8521000000000072,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962624.5398,
+      "ms": 1.0273000000000252,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962625.6333,
+      "ms": 0.6755999999999744,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962626.4358,
+      "ms": 0.941599999999994,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962627.4824,
+      "ms": 0.652499999999975,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962628.1953,
+      "ms": 0.6383000000000152,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962628.8848,
+      "ms": 0.5905999999999949,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962629.5603,
+      "ms": 0.9288999999999987,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794962630.5408,
+      "ms": 0.814899999999966,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794962860.727,
+     "mainEval": 1791794962938.3274,
+     "spawn": 1791794962837,
+     "ready": 1791794962965.3645,
+     "windowCreated": 1791794963006.5115,
+     "rendererReady": 1791794963066.5657
+    },
+    "renderer": {
+     "firstState": 1791794963067.9,
+     "firstScreen": 1791794963104.2998,
+     "firstPaint": 1791794963134.4,
+     "firstContentfulPaint": 1791794963134.4,
+     "fullScreen": 1791794963299.9
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794963128.3306,
+      "ms": 0.4415000000000191,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794963128.8293,
+      "ms": 0.015100000000018099,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794963132.1538,
+      "ms": 0.02159999999997808,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794963139.2573,
+      "ms": 0.22109999999997854,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794963139.4822,
+      "ms": 0.08539999999999281,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963143.4783,
+      "ms": 0.3947000000000003,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794963144.216,
+      "ms": 3.422399999999982,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794963147.6494,
+      "ms": 0.02159999999997808,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794963151.325,
+      "ms": 0.013499999999964984,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794963193.5588,
+      "ms": 94.44759999999997,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794963288.0833,
+      "ms": 0.010699999999985721,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963289.6829,
+      "ms": 1.150199999999984,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963290.9797,
+      "ms": 0.7443000000000097,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963291.8057,
+      "ms": 0.6340000000000146,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963292.5093,
+      "ms": 0.9070999999999572,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963293.5254,
+      "ms": 0.7135999999999854,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963294.3044,
+      "ms": 0.9502999999999702,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963295.331,
+      "ms": 0.6234999999999786,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963296.0696,
+      "ms": 0.8374999999999773,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963297.0015,
+      "ms": 0.9935999999999581,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963298.0586,
+      "ms": 0.6381000000000085,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963298.7498,
+      "ms": 0.6966999999999643,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963299.5574,
+      "ms": 0.9800999999999931,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963300.5918,
+      "ms": 0.8863000000000056,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794963538.804,
+     "mainEval": 1791794963618.6348,
+     "spawn": 1791794963520,
+     "ready": 1791794963644.8442,
+     "windowCreated": 1791794963680.397,
+     "rendererReady": 1791794963736.473
+    },
+    "renderer": {
+     "firstState": 1791794963739.8,
+     "firstScreen": 1791794963793.3,
+     "firstPaint": 1791794963820,
+     "firstContentfulPaint": 1791794963820,
+     "fullScreen": 1791794963933.9
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794963753.1526,
+      "ms": 0.40730000000002065,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794963753.6035,
+      "ms": 0.019700000000000273,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794963756.2576,
+      "ms": 0.01839999999998554,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794963764.2598,
+      "ms": 0.23140000000000782,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794963764.4988,
+      "ms": 0.08449999999999136,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963769.8228,
+      "ms": 0.45990000000000464,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794963770.6748,
+      "ms": 3.3303999999999974,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794963774.014,
+      "ms": 0.012499999999988631,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794963777.5527,
+      "ms": 0.013300000000015189,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794963829.1025,
+      "ms": 89.43530000000004,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794963918.607,
+      "ms": 0.010199999999997544,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963920.525,
+      "ms": 1.3588000000000306,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963922.0054,
+      "ms": 0.7038000000000011,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963922.79,
+      "ms": 0.7010000000000218,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963923.5913,
+      "ms": 0.9504999999999768,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963924.6724,
+      "ms": 0.7207000000000221,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963925.4585,
+      "ms": 0.9245000000000232,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963926.4497,
+      "ms": 0.6444999999999936,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963927.2224,
+      "ms": 0.9402999999999793,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963928.2512,
+      "ms": 0.7798999999999978,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963929.0938,
+      "ms": 0.643100000000004,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963929.7893,
+      "ms": 0.5865999999999758,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963930.4604,
+      "ms": 0.9653999999999883,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794963931.4785,
+      "ms": 0.8414000000000215,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794964167.153,
+     "mainEval": 1791794964245.2112,
+     "spawn": 1791794964146,
+     "ready": 1791794964272.1597,
+     "windowCreated": 1791794964310.1987,
+     "rendererReady": 1791794964368.2556
+    },
+    "renderer": {
+     "firstState": 1791794964369.7998,
+     "firstScreen": 1791794964422.7998,
+     "firstPaint": 1791794964451.4,
+     "firstContentfulPaint": 1791794964451.4,
+     "fullScreen": 1791794964567.7998
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794964385.8188,
+      "ms": 0.44700000000000273,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794964386.3457,
+      "ms": 0.018000000000000682,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794964390.2712,
+      "ms": 0.028799999999989723,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794964400.109,
+      "ms": 0.31049999999999045,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794964400.424,
+      "ms": 0.12609999999997967,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964405.673,
+      "ms": 0.5500000000000114,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794964406.653,
+      "ms": 3.7997000000000014,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794964410.4622,
+      "ms": 0.01290000000000191,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794964414.338,
+      "ms": 0.023199999999974352,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794964466.0835,
+      "ms": 86.19350000000003,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794964552.3809,
+      "ms": 0.014800000000036562,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964554.7922,
+      "ms": 1.192100000000039,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964556.1763,
+      "ms": 1.003499999999974,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964557.284,
+      "ms": 0.6576000000000022,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964558.0242,
+      "ms": 0.9938999999999965,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964559.1465,
+      "ms": 0.896000000000015,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964560.1565,
+      "ms": 1.4981000000000222,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964561.7673,
+      "ms": 0.9122999999999593,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964562.8716,
+      "ms": 1.4933000000000334,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964564.523,
+      "ms": 1.2369999999999663,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964565.855,
+      "ms": 1.0217000000000098,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964566.9758,
+      "ms": 0.8050999999999817,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964567.8787,
+      "ms": 1.7241000000000213,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794964569.6797,
+      "ms": 1.332400000000007,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794964834.648,
+     "mainEval": 1791794964911.9426,
+     "spawn": 1791794964811,
+     "ready": 1791794964938.9382,
+     "windowCreated": 1791794964974.0637,
+     "rendererReady": 1791794965028.018
+    },
+    "renderer": {
+     "firstState": 1791794965028.7,
+     "firstScreen": 1791794965078.4,
+     "firstPaint": 1791794965118.2,
+     "firstContentfulPaint": 1791794965118.2,
+     "fullScreen": 1791794965218.3
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794965046.681,
+      "ms": 0.4140000000000157,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794965047.138,
+      "ms": 0.01839999999998554,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794965050.93,
+      "ms": 0.01829999999998222,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794965058.6833,
+      "ms": 0.22419999999999618,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794965058.911,
+      "ms": 0.08310000000000173,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965062.4011,
+      "ms": 0.3649000000000058,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794965063.1272,
+      "ms": 3.5366000000000213,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794965066.6729,
+      "ms": 0.015500000000002956,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794965092.4407,
+      "ms": 0.01979999999997517,
+      "pushes": 0,
+      "donePushSeq": 7,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794965123.887,
+      "ms": 86.92950000000002,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794965210.8853,
+      "ms": 0.009799999999984266,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965212.5466,
+      "ms": 1.3390999999999735,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965214.0088,
+      "ms": 0.7173999999999978,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965214.8171,
+      "ms": 0.6311999999999784,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965215.5164,
+      "ms": 0.9434999999999718,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965216.564,
+      "ms": 0.7025000000000432,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965217.3376,
+      "ms": 0.9341000000000008,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965218.3384,
+      "ms": 0.6366999999999621,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965219.0898,
+      "ms": 1.0188999999999737,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965220.2886,
+      "ms": 0.7148000000000252,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965221.0674,
+      "ms": 0.6561000000000377,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965221.776,
+      "ms": 0.5862999999999943,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965222.448,
+      "ms": 0.9415000000000191,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965223.442,
+      "ms": 0.8591000000000122,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   },
+   {
+    "marks": {
+     "processStart": 1791794965445.297,
+     "mainEval": 1791794965528.0217,
+     "spawn": 1791794965423,
+     "ready": 1791794965556.2493,
+     "windowCreated": 1791794965594.55,
+     "rendererReady": 1791794965655.5742
+    },
+    "renderer": {
+     "firstState": 1791794965657.1,
+     "firstScreen": 1791794965707.8,
+     "firstPaint": 1791794965736.1,
+     "firstContentfulPaint": 1791794965736.1,
+     "fullScreen": 1791794965852.9001
+    },
+    "emits": [
+     {
+      "source": "ddragon:patch",
+      "at": 1791794965678.5522,
+      "ms": 0.40610000000000923,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794965679.0027,
+      "ms": 0.014199999999988222,
+      "pushes": 0,
+      "donePushSeq": 3,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:advice",
+      "at": 1791794965682.7253,
+      "ms": 0.018100000000004002,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:status",
+      "at": 1791794965689.5872,
+      "ms": 0.32109999999997285,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:gameflowPhase",
+      "at": 1791794965689.9133,
+      "ms": 0.12540000000001328,
+      "pushes": 0,
+      "donePushSeq": 4,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965694.825,
+      "ms": 0.4504000000000019,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:snapshot",
+      "at": 1791794965695.6355,
+      "ms": 3.4139000000000124,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "meta:status",
+      "at": 1791794965699.0598,
+      "ms": 0.017200000000002547,
+      "pushes": 0,
+      "donePushSeq": 5,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:lobby",
+      "at": 1791794965703.347,
+      "ms": 0.013699999999971624,
+      "pushes": 0,
+      "donePushSeq": 6,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:profile",
+      "at": 1791794965752.5156,
+      "ms": 85.5967,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "profiles:status",
+      "at": 1791794965838.1794,
+      "ms": 0.010099999999965803,
+      "pushes": 0,
+      "donePushSeq": 8,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965840.1694,
+      "ms": 1.4944000000000415,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965841.8167,
+      "ms": 1.0317000000000007,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965842.9766,
+      "ms": 1.0090999999999894,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965844.096,
+      "ms": 1.2980999999999767,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965845.5513,
+      "ms": 1.163000000000011,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965846.8508,
+      "ms": 1.319500000000005,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965848.3137,
+      "ms": 1.295000000000016,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965849.7893,
+      "ms": 1.2841999999999985,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965851.1836,
+      "ms": 1.0418000000000234,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965852.34,
+      "ms": 1.0206000000000017,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965853.4607,
+      "ms": 1.0434999999999945,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965854.6426,
+      "ms": 1.4864000000000033,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     },
+     {
+      "source": "lcu:champSelect",
+      "at": 1791794965856.209,
+      "ms": 1.366800000000012,
+      "pushes": 0,
+      "donePushSeq": 9,
+      "overhead": 0
+     }
+    ]
+   }
+  ],
+  "replay.mid-counter": {
+   "pushes": 77,
+   "emits": 84,
+   "sources": {
+    "ddragon:patch": {
+     "count": 1,
+     "ms": {
+      "median": 0.4048000000000229,
+      "p95": 0.4048000000000229,
+      "min": 0.4048000000000229,
+      "max": 0.4048000000000229,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:status": {
+     "count": 2,
+     "ms": {
+      "median": 0.01470000000000482,
+      "p95": 0.2442999999999813,
+      "min": 0.01470000000000482,
+      "max": 0.2442999999999813,
+      "samples": 2,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:advice": {
+     "count": 1,
+     "ms": {
+      "median": 0.019399999999990314,
+      "p95": 0.019399999999990314,
+      "min": 0.019399999999990314,
+      "max": 0.019399999999990314,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:gameflowPhase": {
+     "count": 5,
+     "ms": {
+      "median": 1.391299999999319,
+      "p95": 2.4078000000008615,
+      "min": 0.10489999999998645,
+      "max": 2.4078000000008615,
+      "samples": 5,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:champSelect": {
+     "count": 70,
+     "ms": {
+      "median": 1.123700000000099,
+      "p95": 1.5578999999997905,
+      "min": 0.3756999999999948,
+      "max": 2.419399999998859,
+      "samples": 70,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:snapshot": {
+     "count": 1,
+     "ms": {
+      "median": 3.32650000000001,
+      "p95": 3.32650000000001,
+      "min": 3.32650000000001,
+      "max": 3.32650000000001,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.012000000000000455,
+      "p95": 0.012000000000000455,
+      "min": 0.012000000000000455,
+      "max": 0.012000000000000455,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:lobby": {
+     "count": 1,
+     "ms": {
+      "median": 0.028799999999989723,
+      "p95": 0.028799999999989723,
+      "min": 0.028799999999989723,
+      "max": 0.028799999999989723,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:profile": {
+     "count": 1,
+     "ms": {
+      "median": 90.06560000000002,
+      "p95": 90.06560000000002,
+      "min": 90.06560000000002,
+      "max": 90.06560000000002,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.010400000000004184,
+      "p95": 0.010400000000004184,
+      "min": 0.010400000000004184,
+      "max": 0.010400000000004184,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    }
+   }
+  },
+  "replay.locked-solid": {
+   "pushes": 87,
+   "emits": 94,
+   "sources": {
+    "ddragon:patch": {
+     "count": 1,
+     "ms": {
+      "median": 0.39339999999998554,
+      "p95": 0.39339999999998554,
+      "min": 0.39339999999998554,
+      "max": 0.39339999999998554,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:status": {
+     "count": 2,
+     "ms": {
+      "median": 0.018100000000004002,
+      "p95": 0.2033999999999878,
+      "min": 0.018100000000004002,
+      "max": 0.2033999999999878,
+      "samples": 2,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:advice": {
+     "count": 1,
+     "ms": {
+      "median": 0.026299999999991996,
+      "p95": 0.026299999999991996,
+      "min": 0.026299999999991996,
+      "max": 0.026299999999991996,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:gameflowPhase": {
+     "count": 5,
+     "ms": {
+      "median": 2.110000000000582,
+      "p95": 3.0887000000002445,
+      "min": 0.09149999999999636,
+      "max": 3.0887000000002445,
+      "samples": 5,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:champSelect": {
+     "count": 80,
+     "ms": {
+      "median": 0.38650000000052387,
+      "p95": 2.1512000000002445,
+      "min": 0.2256000000052154,
+      "max": 5.782100000000355,
+      "samples": 80,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:snapshot": {
+     "count": 1,
+     "ms": {
+      "median": 1.2393999999999892,
+      "p95": 1.2393999999999892,
+      "min": 1.2393999999999892,
+      "max": 1.2393999999999892,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.010500000000035925,
+      "p95": 0.010500000000035925,
+      "min": 0.010500000000035925,
+      "max": 0.010500000000035925,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:lobby": {
+     "count": 1,
+     "ms": {
+      "median": 0.023400000000037835,
+      "p95": 0.023400000000037835,
+      "min": 0.023400000000037835,
+      "max": 0.023400000000037835,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:profile": {
+     "count": 1,
+     "ms": {
+      "median": 91.19640000000004,
+      "p95": 91.19640000000004,
+      "min": 91.19640000000004,
+      "max": 91.19640000000004,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.014400000000023283,
+      "p95": 0.014400000000023283,
+      "min": 0.014400000000023283,
+      "max": 0.014400000000023283,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    }
+   }
+  },
+  "replay.full-game": {
+   "pushes": 121,
+   "emits": 134,
+   "sources": {
+    "ddragon:patch": {
+     "count": 1,
+     "ms": {
+      "median": 0.41219999999998436,
+      "p95": 0.41219999999998436,
+      "min": 0.41219999999998436,
+      "max": 0.41219999999998436,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:status": {
+     "count": 2,
+     "ms": {
+      "median": 0.014499999999998181,
+      "p95": 0.22090000000002874,
+      "min": 0.014499999999998181,
+      "max": 0.22090000000002874,
+      "samples": 2,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:advice": {
+     "count": 11,
+     "ms": {
+      "median": 0.24370000000635628,
+      "p95": 0.6527999999998428,
+      "min": 0.019000000000005457,
+      "max": 0.6527999999998428,
+      "samples": 11,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:gameflowPhase": {
+     "count": 20,
+     "ms": {
+      "median": 0.08269999999998845,
+      "p95": 0.5570000000006985,
+      "min": 0.042399999998451676,
+      "max": 0.5766999999977998,
+      "samples": 20,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:champSelect": {
+     "count": 85,
+     "ms": {
+      "median": 1.331399999999121,
+      "p95": 2.0838999999996304,
+      "min": 0.04579999999987194,
+      "max": 2.2694000000001324,
+      "samples": 85,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:snapshot": {
+     "count": 1,
+     "ms": {
+      "median": 10.533999999999992,
+      "p95": 10.533999999999992,
+      "min": 10.533999999999992,
+      "max": 10.533999999999992,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.011099999999999,
+      "p95": 0.011099999999999,
+      "min": 0.011099999999999,
+      "max": 0.011099999999999,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:lobby": {
+     "count": 1,
+     "ms": {
+      "median": 0.020800000000008367,
+      "p95": 0.020800000000008367,
+      "min": 0.020800000000008367,
+      "max": 0.020800000000008367,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:profile": {
+     "count": 6,
+     "ms": {
+      "median": 82.00179999999818,
+      "p95": 87.03679999999997,
+      "min": 73.03120000000126,
+      "max": 87.03679999999997,
+      "samples": 6,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:status": {
+     "count": 6,
+     "ms": {
+      "median": 0.003400000001420267,
+      "p95": 0.013199999999983447,
+      "min": 0.0030999999999039574,
+      "max": 0.013199999999983447,
+      "samples": 6,
+      "unit": "ms"
+     },
+     "pushes": 0
+    }
+   }
+  },
+  "replay.lobby": {
+   "pushes": 5,
+   "emits": 10,
+   "sources": {
+    "ddragon:patch": {
+     "count": 1,
+     "ms": {
+      "median": 0.4408999999999992,
+      "p95": 0.4408999999999992,
+      "min": 0.4408999999999992,
+      "max": 0.4408999999999992,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:status": {
+     "count": 2,
+     "ms": {
+      "median": 0.014600000000029922,
+      "p95": 0.25790000000000646,
+      "min": 0.014600000000029922,
+      "max": 0.25790000000000646,
+      "samples": 2,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:advice": {
+     "count": 1,
+     "ms": {
+      "median": 0.019099999999980355,
+      "p95": 0.019099999999980355,
+      "min": 0.019099999999980355,
+      "max": 0.019099999999980355,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:gameflowPhase": {
+     "count": 1,
+     "ms": {
+      "median": 0.10569999999995616,
+      "p95": 0.10569999999995616,
+      "min": 0.10569999999995616,
+      "max": 0.10569999999995616,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "lcu:lobby": {
+     "count": 1,
+     "ms": {
+      "median": 0.016600000000039472,
+      "p95": 0.016600000000039472,
+      "min": 0.016600000000039472,
+      "max": 0.016600000000039472,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:profile": {
+     "count": 1,
+     "ms": {
+      "median": 86.9076,
+      "p95": 86.9076,
+      "min": 86.9076,
+      "max": 86.9076,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "profiles:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.01659999999998263,
+      "p95": 0.01659999999998263,
+      "min": 0.01659999999998263,
+      "max": 0.01659999999998263,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:snapshot": {
+     "count": 1,
+     "ms": {
+      "median": 61.86620000000005,
+      "p95": 61.86620000000005,
+      "min": 61.86620000000005,
+      "max": 61.86620000000005,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    },
+    "meta:status": {
+     "count": 1,
+     "ms": {
+      "median": 0.03460000000001173,
+      "p95": 0.03460000000001173,
+      "min": 0.03460000000001173,
+      "max": 0.03460000000001173,
+      "samples": 1,
+      "unit": "ms"
+     },
+     "pushes": 0
+    }
+   }
+  },
+  "server": {
+   "queryPlans": {
+    "profile matches": [
+     "SEARCH um USING INDEX user_matches_by_time (user_id=? AND ended_at>?)",
+     "SEARCH m USING INDEX sqlite_autoindex_matches_1 (match_id=?)"
+    ],
+    "profile match ids": [
+     "SEARCH user_matches USING INDEX user_matches_by_time (user_id=?)"
+    ],
+    "user by token": [
+     "SEARCH users USING INDEX sqlite_autoindex_users_2 (token_hash=?)"
+    ],
+    "recent advice": [
+     "SEARCH advice_log USING INDEX advice_log_by_time (user_id=?)"
+    ],
+    "rank history": [
+     "SEARCH rank_history USING INDEX sqlite_autoindex_rank_history_1 (user_id=? AND day>?)"
+    ],
+    "meta snapshot": [
+     "SEARCH meta_snapshots USING INTEGER PRIMARY KEY (rowid=?)"
+    ],
+    "health: collector freshness": [
+     "SEARCH matches USING COVERING INDEX matches_source_stored (source=?)"
+    ]
+   },
+   "endpoints": [
+    {
+     "name": "GET /health",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 207,
+     "contentEncoding": "gzip",
+     "reqPerSec": 2396.7,
+     "latency": {
+      "p50": 3,
+      "p975": 6,
+      "p99": 8,
+      "max": 26,
+      "mean": 3.64
+     },
+     "requests": 47927,
+     "statuses": {
+      "200": 47927
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 1037670.4
+    },
+    {
+     "name": "GET /config",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 12585,
+     "contentEncoding": "gzip",
+     "reqPerSec": 2739.7,
+     "latency": {
+      "p50": 3,
+      "p975": 4,
+      "p99": 6,
+      "max": 12,
+      "mean": 3.17
+     },
+     "requests": 54782,
+     "statuses": {
+      "200": 54782
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 35215769.6
+    },
+    {
+     "name": "GET /config (304)",
+     "connections": 10,
+     "status": 304,
+     "expect": 304,
+     "wireBytes": 0,
+     "contentEncoding": null,
+     "reqPerSec": 27369.6,
+     "latency": {
+      "p50": 0,
+      "p975": 0,
+      "p99": 0,
+      "max": 2,
+      "mean": 0.01
+     },
+     "requests": 547375,
+     "statuses": {
+      "304": 547375
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 4241971.2
+    },
+    {
+     "name": "GET /meta/2",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 13682,
+     "contentEncoding": "gzip",
+     "reqPerSec": 3090.9,
+     "latency": {
+      "p50": 3,
+      "p975": 5,
+      "p99": 6,
+      "max": 8,
+      "mean": 2.8
+     },
+     "requests": 61809,
+     "statuses": {
+      "200": 61809
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 43080089.6
+    },
+    {
+     "name": "GET /meta/2 (304)",
+     "connections": 10,
+     "status": 304,
+     "expect": 304,
+     "wireBytes": 0,
+     "contentEncoding": null,
+     "reqPerSec": 3597.3,
+     "latency": {
+      "p50": 2,
+      "p975": 3,
+      "p99": 5,
+      "max": 10,
+      "mean": 2.31
+     },
+     "requests": 71938,
+     "statuses": {
+      "304": 71938
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 679859.2
+    },
+    {
+     "name": "GET /me/profile",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 1858848,
+     "contentEncoding": "gzip",
+     "reqPerSec": 13.8,
+     "latency": {
+      "p50": 710,
+      "p975": 863,
+      "p99": 925,
+      "max": 1046,
+      "mean": 715.5
+     },
+     "requests": 276,
+     "statuses": {
+      "200": 276
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 25667379.2
+    },
+    {
+     "name": "GET /me/profile (1 connection)",
+     "connections": 1,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 1858848,
+     "contentEncoding": "gzip",
+     "reqPerSec": 6.6,
+     "latency": {
+      "p50": 150,
+      "p975": 157,
+      "p99": 159,
+      "max": 161,
+      "mean": 150.13
+     },
+     "requests": 132,
+     "statuses": {
+      "200": 132
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 12277350.4
+    },
+    {
+     "name": "GET /me/profile?since",
+     "connections": 10,
+     "status": 200,
+     "expect": 200,
+     "wireBytes": 44658,
+     "contentEncoding": "gzip",
+     "reqPerSec": 433.45,
+     "latency": {
+      "p50": 22,
+      "p975": 30,
+      "p99": 31,
+      "max": 49,
+      "mean": 22.56
+     },
+     "requests": 8669,
+     "statuses": {
+      "200": 8669
+     },
+     "unexpected": 0,
+     "errors": 0,
+     "throughputBytesPerSec": 19463372.8
+    }
+   ],
+   "flow": {
+    "first": {
+     "requests": [
+      {
+       "method": "GET",
+       "path": "/config",
+       "status": 200,
+       "bytes": 44089,
+       "ms": 39.80849999998463
+      },
+      {
+       "method": "GET",
+       "path": "/me/profile",
+       "status": 200,
+       "bytes": 14018453,
+       "ms": 169.97909999999683
+      },
+      {
+       "method": "GET",
+       "path": "/meta/2",
+       "status": 200,
+       "bytes": 60383,
+       "ms": 6.912499999976717
+      }
+     ],
+     "totalMs": 271.59440000000177,
+     "profileMs": 231.7722000000067
+    },
+    "next": {
+     "requests": [
+      {
+       "method": "GET",
+       "path": "/config",
+       "status": 304,
+       "bytes": 0,
+       "ms": 0.3791999999957625
+      },
+      {
+       "method": "GET",
+       "path": "/me/profile?since=…&timelines=1",
+       "status": 200,
+       "bytes": 36882,
+       "ms": 28.636399999988498
+      },
+      {
+       "method": "GET",
+       "path": "/meta/2",
+       "status": 304,
+       "bytes": 0,
+       "ms": 0.6220999999786727
+      }
+     ],
+     "totalMs": 86.30219999997644,
+     "profileMs": 83.21150000000489
+    }
+   }
+  },
+  "fallow": {
+   "grade": "B",
+   "unusedExports": [],
+   "unusedClassMembers": [
+    "apps/server/src/backup.ts.running",
+    "apps/server/src/sync-scheduler.ts.forget",
+    "packages/lcu/src/connector.ts.credentials",
+    "packages/lcu/src/connector.ts.getRecentGames",
+    "packages/lcu/src/connector.ts.getPerks",
+    "packages/lcu/src/connector.ts.getCurrentSummoner",
+    "packages/riot-api/src/rate-limiter.ts.waitMs",
+    "packages/riot-api/src/rate-limiter.ts.record",
+    "packages/riot-api/src/rate-limiter.ts.pending",
+    "packages/sim/src/draft.ts.ally",
+    "packages/sim/src/draft.ts.bans",
+    "packages/sim/src/draft.ts.owned",
+    "packages/sim/src/draft.ts.positions",
+    "packages/sim/src/draft.ts.timers",
+    "packages/sim/src/draft.ts.stopAt",
+    "packages/sim/src/draft.ts.build",
+    "packages/sim/src/meta.ts.matchup",
+    "packages/sim/src/meta.ts.duo",
+    "packages/sim/src/meta.ts.ban",
+    "packages/sim/src/meta.ts.attribute",
+    "packages/sim/src/meta.ts.reference",
+    "packages/sim/src/meta.ts.traitCuts",
+    "packages/sim/src/meta.ts.done"
+   ]
+  }
+ }
+}
