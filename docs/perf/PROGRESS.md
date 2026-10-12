@@ -25,7 +25,7 @@ Unattended optimisation run (prompt: [OPTIMIZE-PROMPT.md](OPTIMIZE-PROMPT.md)). 
 - [x] Commit the harness
 - [x] Phase 2: ranked list
 - [x] Phase 3: optimisations (in the order above)
-- [ ] Phase 4: after numbers, REPORT.md, README.md, CHANGELOG, CLAUDE.md status, PR, artifact
+- [x] Phase 4: after numbers, REPORT.md, README.md, CHANGELOG, CLAUDE.md status, PR, artifact
 
 ## Ranked candidates
 
@@ -72,3 +72,7 @@ Baseline: 22/23 budgets met. Over budget: full `GET /me/profile` (p99 2,327 ms a
 - Async gzip of `/me/profile` on the thread pool: −13% p99 at 10 connections, no change for one request. Reverted for simplicity.
 - Per-user cache of the gzipped profile (keyed by a SHA-256 of the JSON): p99 at 10 connections 932 → 369 ms, but costs up to 1.9 MB per cached user on a 256 MB server, for a request the panel now rarely makes. Reverted.
 - Minified main bundle: within noise for cold start. Reverted.
+
+## Summary page
+
+https://claude.ai/artifact/PngMfMhFWup1ZHstpQ3tmv (PR: https://github.com/Batmuffin12/LoL-Draft-Coach/pull/2)
