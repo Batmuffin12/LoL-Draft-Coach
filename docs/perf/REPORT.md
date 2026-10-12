@@ -75,10 +75,25 @@ Full table: `pnpm perf:compare baseline after` ([results/baseline.json](results/
 - **Cache the gzipped profile per user** (keyed by a SHA-256 of the JSON): p99 at 10 connections 932 → 369 ms, still over budget, and up to 1.9 MB per cached user on a server with a 256 MB heap, for a request the panel now rarely makes.
 - **Minify the main bundle** (1.85 → 0.95 MB): main script start 100 → 97 ms, the first full screen unchanged. Noise, and worse stack traces.
 
+## Follow-up (same day, after the first report)
+
+Two items from "What's left" done, measured as `final` (`pnpm perf:compare after final`):
+
+| Metric | after | final | Change |
+| --- | --- | --- | --- |
+| Bench: a new meta snapshot | 44.6 ms | 7.5 ms | −83% |
+| Bench: load a 1,000-game history | 69.0 ms | 62.0 ms | −10% |
+| Main heap after 60 s (full-game / lobby replay) | 65.4 / 72.9 MB (not after GC) | 24.1 / 22.9 MB (after a full GC) | measurement fixed |
+| Main heap growth between replays (new budget ≤ 1 MB) | – | 0.01 MB | within |
+| Cold start → first full screen | 422 ms | 422 ms | – |
+
+7. **`perf(engine)`: playstyle reuses each role's games and metric values per matches array** (a WeakMap: the profile's array is replaced, never changed). The style, its numbers, the focus and the month read the same metrics from the same games; a new snapshot no longer recomputes them.
+8. **`chore(perf)`: main-process heap samples after a real full GC** (`--expose-gc` via `v8.setFlagsFromString`, dev builds under `LDC_PERF` only), plus a `mainHeapGrowth` budget.
+
+Budgets met with the new one: 23/24. Draft-update medians in this run read ~18 ms (10–12 before) while p95 stayed 20–22 ms and click medians fell: both are aligned to the 60 Hz frame and flip between runs; neither change touches the draft path. Not done, on purpose: the timer isolation (0.2 ms a commit) and the full-profile cache (memory on the server).
+
 ## What's left
 
 - **The full profile at 10 connections stays over budget** (925 ms p99). Gzip of 14 MB costs ~105 ms per request and the JSON ~15 ms; to get under 200 ms with 10 at once it would take a cache of compressed responses (memory on a small server) or precompressed match summaries. With the panel's disk cache a full download happens only on registration, after sign-out, or against an older server, one request at a time (150 ms alone, within budget), so I left it.
-- **Coach engine, smaller wins left**: after the fix, `measure`/`readMetric` in playstyle (~45 ms of a profile load) rebuild the reference values for every call; a cache per (matches, role, metric) would save maybe 20–30 ms. Not needed for any budget.
 - **Champ select timer**: the whole screen re-renders 4×/s for the countdown; a commit costs 0.2 ms, so isolating the timer isn't worth it now.
-- **Main-process heap numbers** in the results are not after a full GC (`--expose-gc` reaches the renderers only), so `mainHeap` moves with GC timing; the renderer heap is the reliable one.
 - The lobby replay's "commits per minute" rose because coalescing shortened the span its denominator uses (a 10 s run of clicks); its pushes per minute fell 57% like the others.

@@ -55,6 +55,8 @@ Baseline: 22/23 budgets met. Over budget: full `GET /me/profile` (p99 2,327 ms a
 - 12:30 fallow cleanup (unused exports, `HowYouPlay`, shared's zod): issues 43 → 28. Committed 9e35ade. Stopping rule: every budget met but the full profile at 10 connections, and the remaining options there trade memory or bytes; three tries there brought no acceptable gain.
 - 13:10 `pnpm perf --label after`, screens `after`, guard baseline → after: every screen matches. Budgets 22/23 → 22/23. REPORT.md, CHANGELOG (Unreleased), CLAUDE.md status written.
 
+- Follow-up (owner asked for the "Left for later" items that are right to do now): playstyle per-matches cache (new snapshot 45 → 7.5 ms, f92395a) and main-process GC in the perf probe (fa3c12e). `pnpm perf --label final`, guard baseline → final: every screen matches. Budgets 23/24. Not done on purpose: timer isolation (gain too small) and the full-profile gzip cache (server memory).
+
 ## Decisions for the owner
 
 - The benchmarks use a **synthetic** server database (`.local/perf-server`, built from packages/sim: one user with 1,000 games, 20,000 collector games, a snapshot built by the real `publishSnapshot`) instead of a copy of `apps/server/data/ldc.sqlite`: repeatable, holds no real player, and the local DB had only 200 games and a 264-game snapshot (not representative). The server runs with no Riot key and no admin token, so it cannot call Riot.
