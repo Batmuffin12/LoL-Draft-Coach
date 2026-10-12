@@ -354,7 +354,7 @@ export class MetaJob {
       return null;
     });
     // Spikes pool every collected band (build-only bands too): measured once, carried by every snapshot.
-    const spikes = await measureSpikes(this.db, [...bands, ...buildBands], this.settings, this.now(), items);
+    const spikes = meta.spikes.publish ? await measureSpikes(this.db, [...bands, ...buildBands], this.settings, this.now(), items) : null;
     for (const band of bands) {
       const above = buildBandsFor([band], bandConfig);
       snapshots.push(await publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items, spikes }));

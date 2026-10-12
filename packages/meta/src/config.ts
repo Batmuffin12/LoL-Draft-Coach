@@ -41,6 +41,12 @@ export const MetaConfigSchema = z.object({
   }),
   /** Power spikes per champion-role, measured from timelines of all bands (docs/ENGINE-PLAN.md). */
   spikes: z.object({
+    /**
+     * Measure spikes in the hourly run and publish them with their check. Off while the offline
+     * check (`pnpm --filter @ldc/server spikes`) fails: the pass costs minutes of CPU an hour and
+     * the panel hides spikes without a check anyway.
+     */
+    publish: z.boolean().default(true),
     /** Minutes before and after a spike event that are compared. */
     windowMinutes: z.number().int().min(1),
     /** Completed items measured (1 = the first). */

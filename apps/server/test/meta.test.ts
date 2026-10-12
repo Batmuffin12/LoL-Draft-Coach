@@ -278,6 +278,22 @@ describe("meta job", () => {
     expect(job.lastRun()).toMatchObject({ newMatches: r.collected!.newMatches, error: null });
   });
 
+  it("measures and publishes spikes with their check only when spikes.publish is on", async () => {
+    const snapshotAfter = async (publish: boolean) => {
+      const db = openDb(":memory:");
+      addUser(db, "a", 2);
+      const s = { ...settings, meta: { ...config.meta, spikes: { ...config.meta.spikes, publish } } };
+      await new MetaJob(db, fakeRiot(), s, { now: () => NOW, log: () => {}, random: () => 0 }).run();
+      return JSON.parse(gunzipSync(db.select().from(schema.metaSnapshots).get()!.body).toString()) as MetaSnapshot;
+    };
+    const on = await snapshotAfter(true);
+    expect(on.spikeCheck).toBeDefined();
+    expect(on.spikes).toBeDefined();
+    const off = await snapshotAfter(false);
+    expect(off.spikeCheck).toBeUndefined();
+    expect(off.spikes).toBeUndefined();
+  });
+
   it("uses the default band when nobody is registered, and still publishes when the key is rejected", async () => {
     const db = openDb(":memory:");
     expect(activeBands(db, config.bands)).toEqual([config.bands.defaultBand]);

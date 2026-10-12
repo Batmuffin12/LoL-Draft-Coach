@@ -26,6 +26,7 @@
     }
   },
   "spikes": {
+    "publish": false,
     "windowMinutes": 3,
     "itemSlots": 3,
     "minGames": 60,
