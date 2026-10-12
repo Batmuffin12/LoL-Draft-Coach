@@ -8,7 +8,7 @@ The facts a new session needs to pick up the next phase without re-deriving them
 | --- | --- |
 | `main` | **v0.7.9** (tag on `036a3cf`, 2026-10-12): performance and code health. Production runs it (`/health` → `0.7.9`). |
 | Production | Railway `ldc-server`, https://ldc-server-production-c9e7.up.railway.app. Collector wakes at minute 7 each hour for ~40 min; a push to `main` that touches `apps/server/**`, `packages/**`, `config/**`, `pnpm-lock.yaml` or `.railway/**` redeploys and cuts a running collector short: push outside :07–:47. |
-| `milestone-8-spikes` | Power spikes (M8), worktree `C:\fullstack\lol-draft-coach-m8`. 10 commits ahead of `main`, **149 behind** (CI red until `main` is merged in). Exit rule: **Oct 15** (below). |
+| `milestone-8-spikes` | Power spikes (M8), worktree `C:\fullstack\lol-draft-coach-m8`. **`main` merged in on 2026-10-12** (4f4517a, CI green; spikes ported to the split coach, the Build tab marks a spike step in BuildPath). Exit rule: **Oct 15** (below). |
 | Roadmap tracker | https://claude.ai/artifact/M8ftC66LNAy3neFgxvFasD (artifact database: `tasks`, `log` collections; write with ArtifactData, pin `if_version`). |
 | Perf report | `docs/perf/REPORT.md`; summary page https://claude.ai/artifact/PngMfMhFWup1ZHstpQ3tmv. |
 | Code health | fallow 3.33.1 health **90.5 (A)**. Keep it ≥ 90: `npx -y fallow@3.33.1 health --score --hotspots`. |
@@ -28,8 +28,8 @@ The facts a new session needs to pick up the next phase without re-deriving them
 
 | Task | State | Notes |
 | --- | --- | --- |
-| ops-5 Merge `main` into `milestone-8-spikes` | to do | A merge, not a rebase. Expect conflicts in `personal-coach.ts`: M8's spike lines (game plan, New tab, Build tab) were written against the old class; port them into `pick-card.ts` (plan), `role-view.ts`/`newchamps-view.ts` (New tab) and the loadout views. |
-| spk-3 Spike check on production data | blocked (data) | Oct 8 on 10,336 games: item-specific spikes r 0.07–0.16 (noise); the game-phase effect was what looked like spikes (fixed in fe2d7ab). Re-check on a fresh production copy (docs/CLOUD.md "Copy the production database"): `pnpm --filter @ldc/server spikes --windows 2,3,4,5,6,8`. Pass = split-half correlation ≥ 0.5 and ≥ 80% same direction at z ≥ 2. Delete the copy afterwards. |
+| ops-5 Merge `main` into `milestone-8-spikes` | **done** (4f4517a) | A merge, not a rebase. Expect conflicts in `personal-coach.ts`: M8's spike lines (game plan, New tab, Build tab) were written against the old class; port them into `pick-card.ts` (plan), `role-view.ts`/`newchamps-view.ts` (New tab) and the loadout views. |
+| spk-3 Spike check on production data | blocked (data) | Oct 8 on 10,336 games: item-specific spikes r 0.07–0.16 (noise); the game-phase effect was what looked like spikes (fixed in fe2d7ab). **Oct 12 re-check not run:** with Railway CLI 5.63.1, `railway ssh -s ldc-server -- "cmd"` (and plain `ssh <user>@ssh.railway.com "cmd"`) returns an account summary instead of running the command in the container, so the docs/CLOUD.md copy fails; the owner needs to find the new route (an interactive `railway ssh` session, or an `ssh -T` tool from that summary). Then re-check on a fresh production copy (docs/CLOUD.md "Copy the production database"): `pnpm --filter @ldc/server spikes --windows 2,3,4,5,6,8`. Pass = split-half correlation ≥ 0.5 and ≥ 80% same direction at z ≥ 2. Delete the copy afterwards. |
 | spk-7 SPEC: spike info is passive | to do | Before v0.8.0 merges: spikes only on screens the player opens; no pushed "X hit level 6" alerts (Riot/Overwolf compliance). |
 | spk-8 Merge and tag v0.8.0 | to do | **Exit rule (Oct 15):** if the check passes, spikes show for champions that pass; if it still fails, ship with spikes hidden behind the check (as built) and your own item timing (spk-6) visible. |
 
