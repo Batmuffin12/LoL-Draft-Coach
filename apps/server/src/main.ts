@@ -59,6 +59,7 @@ const app = createApp({
   sync,
   syncWhenStaleMs: env.SYNC_STALE_MINUTES * MINUTE,
   adminToken: env.ADMIN_TOKEN ?? null,
+  maxUsers: config.app.accounts?.maxUsers ?? null,
   meta,
   backup,
   collectorStaleAfterMs: config.meta.collector.staleAfterHours * 60 * MINUTE,

@@ -16,6 +16,9 @@
   "import": {
     "enabled": true
   },
+  "accounts": {
+    "maxUsers": 10
+  },
   "sharedLanes": [
     ["bottom", "utility"]
   ],
