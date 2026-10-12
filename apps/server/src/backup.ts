@@ -13,7 +13,7 @@ import { backups } from "./db/schema";
  * The data that can't be rebuilt: who is registered, invites, the advice log and rank history.
  * Games, masteries and the meta come back by themselves (user sync, collector), so they're left out.
  */
-export const BACKUP_TABLES = ["schema_migrations", "users", "invites", "advice_log", "rank_history"] as const;
+const BACKUP_TABLES = ["schema_migrations", "users", "invites", "advice_log", "rank_history"] as const;
 
 const MAGIC = Buffer.from("LDCB1");
 const IV_BYTES = 12;

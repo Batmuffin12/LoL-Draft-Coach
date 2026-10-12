@@ -13,7 +13,7 @@ import { Header, Notices } from "./common";
 type ImportKind = "runes" | "items" | "all";
 
 /** Import busy state: one click at a time, only ever from a button. */
-export function useImport(): { busy: ImportKind | null; run: (kind: ImportKind) => void } {
+function useImport(): { busy: ImportKind | null; run: (kind: ImportKind) => void } {
   const [busy, setBusy] = useState<ImportKind | null>(null);
   const run = (kind: ImportKind) => {
     if (busy) return;
@@ -36,7 +36,7 @@ const IMPORT_TITLE =
   "Creates (or updates) an 'LDC:' rune page, sets your two summoner spells in champ select (Flash keeps its key) and saves an item set for this champion. Only when you click.";
 
 /** "From 2,140 games in Gold to Platinum · rough guide": wraps, never cut. */
-export function LoadoutSource({ pick }: { pick: MyPickView }) {
+function LoadoutSource({ pick }: { pick: MyPickView }) {
   const l = pick.loadout;
   if (!l) return <span className="micro">{t("loadout.none", { champion: pick.champion.name })}</span>;
   return (
@@ -92,7 +92,7 @@ function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: stri
   );
 }
 
-export function loadoutTabs(): { value: LoadoutTab; label: string }[] {
+function loadoutTabs(): { value: LoadoutTab; label: string }[] {
   return [
     { value: "runes", label: "Runes" },
     { value: "build", label: "Build" },

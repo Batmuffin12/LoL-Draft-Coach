@@ -7,7 +7,7 @@ import { isForeignPuuidError, isSamePlayer } from "./identity";
 import { matches, rankHistory, userMasteries, userMatches, users, type StoredMastery } from "./db/schema";
 
 /** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
-export const MATCH_IDS_PAGE = 100;
+const MATCH_IDS_PAGE = 100;
 
 /** What syncing needs from the Riot API adapter. */
 export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match"> & Partial<Pick<RiotApi, "timeline">>;

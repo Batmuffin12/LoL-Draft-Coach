@@ -4,7 +4,7 @@ import { z } from "zod";
 const routing = z.string().regex(/^[a-z0-9]+$/, 'must be a Riot routing value like "euw1" or "europe"');
 const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : typeof v === "string" ? v.trim() : v);
 
-export const ServerEnvSchema = z.object({
+const ServerEnvSchema = z.object({
   PORT: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(65535).default(8787)),
   /** SQLite file; on Railway this sits on the mounted volume. */
   DATABASE_PATH: z.preprocess(blankToUndefined, z.string().default("data/ldc.sqlite")),

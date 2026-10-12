@@ -20,7 +20,7 @@ export interface ProfileResponse {
 }
 
 /** Days of rank history sent with the profile. */
-export const RANK_HISTORY_DAYS = 120;
+const RANK_HISTORY_DAYS = 120;
 
 /** Match ids asked for by name (GET /me/profile?ids=) at most. */
 export const PROFILE_IDS_MAX = 100;

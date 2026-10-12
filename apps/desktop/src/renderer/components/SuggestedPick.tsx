@@ -11,7 +11,7 @@ const TILES = [
 ] as const;
 
 /** The short part of a reason, before its numbers: "Strong in mid in your rank: 51.7% …" → "Strong in mid in your rank". */
-export function reasonHeadline(r: ReasonView): string {
+function reasonHeadline(r: ReasonView): string {
   const i = r.text.indexOf(":");
   return i > 0 ? r.text.slice(0, i) : r.text;
 }
