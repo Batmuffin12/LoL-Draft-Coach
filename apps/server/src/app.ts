@@ -15,7 +15,7 @@ import type { Db } from "./db";
 import { metaSnapshots } from "./db/schema";
 import { WindowLimiter } from "./limits";
 import type { MetaJob } from "./meta-job";
-import { loadProfile } from "./profile";
+import { profileJson } from "./profile";
 import type { SyncScheduler } from "./sync-scheduler";
 
 export interface AppDeps {
@@ -230,7 +230,8 @@ export function createApp(deps: AppDeps): Hono<Env> {
     if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs)) {
       deps.sync.request(user.id).catch(() => {});
     }
-    return c.json({ ...loadProfile(deps.db, user, since, now()), sync: deps.sync?.state(user.id) ?? { state: "idle" } });
+    const body = profileJson(deps.db, user, since, now(), { sync: deps.sync?.state(user.id) ?? { state: "idle" } });
+    return c.body(body, 200, { "content-type": "application/json" });
   });
 
   app.post("/me/sync", (c) => {

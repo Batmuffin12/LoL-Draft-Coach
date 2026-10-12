@@ -1,7 +1,9 @@
+import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { MatchSchema } from "@ldc/riot-api";
 import { createApp } from "../src/app";
-import { createInvite } from "../src/accounts";
+import { createInvite, userByToken } from "../src/accounts";
+import { loadProfile, profileJson } from "../src/profile";
 import { openDb } from "../src/db";
 import { findConfigDir, loadServerConfig } from "../src/config";
 import { SyncScheduler } from "../src/sync-scheduler";
@@ -57,7 +59,7 @@ function setup() {
     return body.token;
   };
   const get = (path: string, token: string, method = "GET") => app.request(path, { method, headers: { authorization: `Bearer ${token}` } });
-  return { app, sync, register, get };
+  return { app, db, sync, register, get };
 }
 
 describe("GET /me/profile", () => {
@@ -90,6 +92,33 @@ describe("GET /me/profile", () => {
     expect(body.matches).toHaveLength(1);
     expect(body.matchIds).toEqual(["EUW1_3", "EUW1_2"]);
     expect((await get("/me/profile?since=yesterday", token)).status).toBe(400);
+  });
+
+  it("sends the same JSON as the profile object, matches included as stored", async () => {
+    const { db, register } = setup();
+    const token = await register("Ofek#EUW");
+    const user = userByToken(db, token)!;
+    for (const since of [undefined, NOW - 90 * 60_000]) {
+      const extra = { sync: { state: "idle" } };
+      expect(profileJson(db, user, since, NOW, extra)).toBe(JSON.stringify({ ...loadProfile(db, user, since, NOW), ...extra }));
+    }
+  });
+
+  it("is the same JSON gzipped, and new advice shows", async () => {
+    const { app, register } = setup();
+    const token = await register("Ofek#EUW");
+    const gz = async () => {
+      const res = await app.request("/me/profile", { headers: { authorization: `Bearer ${token}`, "accept-encoding": "gzip" } });
+      expect(res.headers.get("content-encoding")).toBe("gzip");
+      return JSON.parse(gunzipSync(Buffer.from(await res.arrayBuffer())).toString("utf8")) as { advice: unknown[]; matches: unknown[] };
+    };
+    const first = await gz();
+    expect(await gz()).toEqual(first);
+    expect(first.matches).toHaveLength(2);
+    const record = { gameId: 3, queueId: 420, role: "middle", band: 2, lockedAt: NOW - HOUR, pick: { championId: 100, expectedWin: 0.5, terms: [] }, shown: [] };
+    const post = await app.request("/advice", { method: "POST", body: JSON.stringify(record), headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
+    expect(post.status).toBe(204);
+    expect((await gz()).advice).toHaveLength(1);
   });
 
   it("is compressed when the client accepts gzip", async () => {

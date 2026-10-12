@@ -31,6 +31,32 @@ export function loadProfile(db: Db, user: User, since?: number, now = Date.now()
     .where(and(eq(userMatches.userId, user.id), since !== undefined ? gt(userMatches.endedAt, since) : undefined))
     .orderBy(desc(userMatches.endedAt))
     .all();
+  const { user: pub, ranked, masteries, matchIds, advice, rankHistory } = profileRest(db, user, now);
+  return { user: pub, ranked, masteries, matches: rows.map((r) => ({ match: r.summary, me: r.me })), matchIds, advice, rankHistory };
+}
+
+/**
+ * The same profile (plus `extra` fields) as JSON text, for GET /me/profile. Match summaries are
+ * stored as JSON already: they go into the response as stored, instead of being parsed and
+ * stringified again (a full history is about 14 MB of JSON).
+ */
+export function profileJson(db: Db, user: User, since: number | undefined, now: number, extra: Record<string, unknown>): string {
+  const rows = db.$client
+    .prepare(
+      `SELECT m.summary AS summary, um.participant_index AS me FROM user_matches um JOIN matches m ON m.match_id = um.match_id
+       WHERE um.user_id = ?${since !== undefined ? " AND um.ended_at > ?" : ""} ORDER BY um.ended_at DESC`,
+    )
+    .all(...(since !== undefined ? [user.id, since] : [user.id])) as { summary: string; me: number }[];
+  const { user: pub, ranked, masteries, matchIds, advice, rankHistory } = profileRest(db, user, now);
+  const head = JSON.stringify({ user: pub, ranked, masteries });
+  const tail = JSON.stringify({ matchIds, advice, rankHistory, ...extra });
+  const list = rows.map((r) => `{"match":${r.summary},"me":${r.me}}`).join(",");
+  // Same keys, same order as loadProfile's object: user, ranked, masteries, matches, matchIds, advice, rankHistory, then extra.
+  return `${head.slice(0, -1)},"matches":[${list}],${tail.slice(1)}`;
+}
+
+/** Everything in the profile but the matches. */
+function profileRest(db: Db, user: User, now: number): Omit<ProfileResponse, "matches"> {
   const matchIds = db
     .select({ id: userMatches.matchId })
     .from(userMatches)
@@ -42,7 +68,6 @@ export function loadProfile(db: Db, user: User, since?: number, now = Date.now()
     user: publicUser(user),
     ranked: user.ranked ?? [],
     masteries: db.select().from(userMasteries).where(eq(userMasteries.userId, user.id)).get()?.data ?? [],
-    matches: rows.map((r) => ({ match: r.summary, me: r.me })),
     matchIds,
     advice: recentAdvice(db, user.id),
     rankHistory: db
