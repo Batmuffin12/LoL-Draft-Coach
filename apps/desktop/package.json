@@ -10,7 +10,8 @@
     "start": "pnpm build && node node_modules/electron/install.js && electron .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "dist:win": "pnpm build && electron-builder --win nsis --config electron-builder.config.cjs"
+    "dist:win": "pnpm build && electron-builder --win nsis --config electron-builder.config.cjs --publish never",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "koffi": "^3.3.2"

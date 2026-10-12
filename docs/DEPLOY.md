@@ -55,17 +55,17 @@ The installer is written to `apps/desktop/release/LoL-Draft-Coach-Setup-<version
 
 ### Releases and automatic updates
 
-Nothing is published yet. The first build shared with friends will be **v1.0.0**; until then, versions stay 0.x (one per milestone) and installers are local test builds. Decide where releases are published (below) when preparing v1.0.0.
+Nothing is published yet. The first build shared with friends is **v1.0.0**; until then versions stay 0.x and installers are local test builds (`dist:win` never publishes). **Never publish a GitHub Release before v1.0.0**: installed apps take any published release as an update.
 
-#### Automatic updates
+Updates come from this repo's **GitHub Releases** (the repo is public, so installed apps read releases without a token; no token ships in the app). Every installer carries that location in `resources/app-update.yml`. To release a version (1.0.0 or later), after merging and tagging it:
 
-The repo is private, and a GitHub token must never ship inside the app, so updates need a public download location:
+```powershell
+pnpm --filter @ldc/desktop release
+```
 
-- **Option A (simplest):** create a separate **public** GitHub repo, for example `LoL-Draft-Coach-releases`, that holds only releases. Build with
-  `$env:LDC_UPDATE_URL = "https://github.com/<you>/LoL-Draft-Coach-releases/releases/latest/download"`, then attach the installer, its `.blockmap` and `latest.yml` (all in `release/`) to a new release in that repo.
-- **Option B:** a Cloudflare R2 bucket with public access (free up to 10 GB). Upload the same three files and set `LDC_UPDATE_URL` to the bucket's public URL.
+The script refuses a version below 1.0.0, uncommitted changes, a HEAD without the `v<version>` tag, or a missing GitHub token (it takes `gh auth token`; the token is only used to upload). It builds the installer and uploads it with its `.blockmap` and `latest.yml` as a **draft** release. Check the draft on GitHub (release notes from the changelog), then **Publish**: from then on installed apps download it in the background on their next start and install it when they close.
 
-Apps built with `LDC_UPDATE_URL` check for a new version on start, download it in the background, and install it when the app closes. Apps built without it never check.
+Elsewhere instead (for example if the repo goes private): build with `LDC_UPDATE_URL=<public URL>` (generic provider, e.g. a Cloudflare R2 bucket) and upload the same three files there; the release script refuses to run with it set.
 
 ## 4. What a friend does
 
