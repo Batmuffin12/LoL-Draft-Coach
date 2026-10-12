@@ -267,6 +267,8 @@ export interface AccountView {
   defaultServerUrl: string | null;
   /** The Riot ID logged into the League client right now (your own), before registering; null without a client. */
   clientRiotId?: string | null;
+  /** An invite code from a join link (lol-draft-coach://join/…), prefilled on the connect screen. */
+  inviteCode?: string | null;
   message: string | null;
 }
 

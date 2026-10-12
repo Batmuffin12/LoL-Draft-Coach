@@ -18,6 +18,8 @@ module.exports = {
   directories: { output: "release" },
   // Main, preload and renderer are bundled into dist/; only native addons ship as node_modules.
   files: ["dist/**", "package.json"],
+  // Join links from the invite page (lol-draft-coach://join/CODE) open the app with the code filled in.
+  protocols: [{ name: "LoL Draft Coach invite", schemes: ["lol-draft-coach"] }],
   extraResources: [{ from: "../../config", to: "config", filter: ["*.json"] }],
   asarUnpack: ["**/node_modules/koffi/**"],
   npmRebuild: false,

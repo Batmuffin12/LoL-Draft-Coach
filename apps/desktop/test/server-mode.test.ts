@@ -116,6 +116,19 @@ describe("ServerProfileSource against the real server API", () => {
     expect(loaded).toBe(false);
   });
 
+  it("prefills an invite from a join link, and only says so when this app is already connected", async () => {
+    const server = startServer();
+    const { s } = source(server);
+    await s.init();
+    s.offerInvite("HJ0S-XYFW-G0C6");
+    expect(s.account).toMatchObject({ state: "unregistered", inviteCode: "HJ0S-XYFW-G0C6" });
+    await s.load({ gameName: "Me", tagLine: "EUW" }, { bandFromApi: false });
+    await s.register(BASE, server.invite());
+    expect(s.account).toMatchObject({ state: "registered", inviteCode: null });
+    s.offerInvite("AAAA-BBBB-CCCC");
+    expect(s.account).toMatchObject({ state: "registered", riotId: "Me#EUW", message: expect.stringMatching(/already connected as Me#EUW.*sign out first/) });
+  });
+
   it("explains a bad invite and needs the client open to register", async () => {
     const server = startServer();
     const { s } = source(server);

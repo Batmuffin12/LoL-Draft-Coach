@@ -23,6 +23,7 @@ import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
 import { reportError, reportProblem, startCrashReports } from "./crash-reports";
+import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
@@ -53,6 +54,9 @@ const envResult = ((): { env: AppEnv } | { error: Error } => {
 
 let win: BrowserWindow | null = null;
 let latest: ViewState | null = null;
+/** Takes an invite code from a join link; until the server connection exists, the code waits here. */
+let pendingInvite: string | null = inviteFromArgs(process.argv);
+let offerInvite: ((code: string) => void) | null = null;
 
 function createWindow(): BrowserWindow {
   const w = new BrowserWindow({
@@ -276,6 +280,9 @@ async function createProfileSource(env: AppEnv, config: ReturnType<typeof loadCo
     cacheFile: join(app.getPath("userData"), "profile-matches.json"),
   });
   await server.init();
+  offerInvite = (code) => server.offerInvite(code);
+  if (pendingInvite) offerInvite(pendingInvite);
+  pendingInvite = null;
   return server;
 }
 
@@ -368,7 +375,14 @@ async function main(): Promise<void> {
 if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
+  // Join links (lol-draft-coach://join/CODE) open the app; the installer registers the scheme.
+  if (app.isPackaged) app.setAsDefaultProtocolClient(JOIN_SCHEME);
+  app.on("second-instance", (_event, argv) => {
+    const code = inviteFromArgs(argv);
+    if (code) {
+      if (offerInvite) offerInvite(code);
+      else pendingInvite = code;
+    }
     if (!win || win.isDestroyed()) return;
     if (win.isMinimized()) win.restore();
     win.show();

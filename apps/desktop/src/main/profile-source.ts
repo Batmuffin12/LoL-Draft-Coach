@@ -332,6 +332,18 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     }
   }
 
+  /**
+   * An invite code from a join link: prefilled on the connect screen (the player still clicks
+   * Connect). Already connected: said instead, since connecting again would replace this PC's sign-in.
+   */
+  offerInvite(code: string): void {
+    if (this.view.state === "registered") {
+      this.setAccount({ message: `This app is already connected as ${this.view.riotId}. To use the invite code ${code}, sign out first.` });
+      return;
+    }
+    this.setAccount({ inviteCode: code });
+  }
+
   /** Registers the player logged into the client, using an invite code. */
   async register(serverUrlInput: string, inviteCode: string): Promise<void> {
     if (!this.identity) {
@@ -349,7 +361,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.registeredAs = r.riotId;
       this.matches.clear();
       await this.clearCache();
-      this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null });
+      this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null, inviteCode: null });
       this.emit("status", { state: "loading", done: 0, total: 0 });
       await this.waitForSync();
     } catch (err) {
