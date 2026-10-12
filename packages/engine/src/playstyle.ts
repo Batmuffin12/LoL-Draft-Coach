@@ -69,17 +69,26 @@ function laneDiff(p: ParticipantSummary, match: Pick<MatchSummary, "participants
   return mine === undefined || theirs === undefined ? null : mine - theirs;
 }
 
-/** Share of `sorted` below v, counting ties as half (0..1). */
+/** Share of `sorted` (ascending) below v, counting ties as half (0..1). Binary search: called once per game per metric. */
 export function empiricalPercentile(v: number, sorted: number[]): number {
   if (!sorted.length) return 0.5;
-  let below = 0;
-  let equal = 0;
-  for (const x of sorted) {
-    if (x < v) below++;
-    else if (x === v) equal++;
-    else break;
+  if (Number.isNaN(v)) return 0;
+  // below: the first index not < v; through: the first index > v (ties in between).
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid]! < v) lo = mid + 1;
+    else hi = mid;
   }
-  return (below + equal / 2) / sorted.length;
+  const below = lo;
+  hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (sorted[mid]! <= v) lo = mid + 1;
+    else hi = mid;
+  }
+  return (below + (lo - below) / 2) / sorted.length;
 }
 
 /**
