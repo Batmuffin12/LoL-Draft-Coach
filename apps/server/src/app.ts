@@ -124,11 +124,29 @@ function clientKey(c: Context): string {
  */
 export function createApp(deps: AppDeps): Hono<Env> {
   const now = deps.now ?? Date.now;
-  const registerLimiter = new WindowLimiter(deps.registerPerMinute ?? 10, 60_000);
   const app = new Hono<Env>();
   // Profiles are large JSON (a full history is several MB); gzip shrinks them ~5x.
   app.use(compress());
+  // Registered in this order: public routes, then everything that needs a user's token.
+  healthRoute(app, deps);
+  adminRoutes(app, deps, now);
+  configRoute(app, deps);
+  registrationRoute(app, deps, now);
+  userRoutes(app, deps, now);
 
+  app.notFound((c) => c.json({ error: "not_found" }, 404));
+  app.onError((err, c) => {
+    console.error(err);
+    return c.json({ error: "internal_error" }, 500);
+  });
+
+  return app;
+}
+
+type App = Hono<Env>;
+
+/** GET /health: the database, the Riot key and (when the database answers) the collector, snapshots and backups. */
+function healthRoute(app: App, deps: AppDeps): void {
   app.get("/health", (c) => {
     let database: "ok" | "error" = "ok";
     try {
@@ -148,8 +166,10 @@ export function createApp(deps: AppDeps): Hono<Env> {
       database === "ok" ? 200 : 503,
     );
   });
+}
 
-  // Owner-only routes (bearer ADMIN_TOKEN); they don't exist when no token is set.
+/** Owner-only routes (bearer ADMIN_TOKEN): invites and the hourly collect; they don't exist when no token is set. */
+function adminRoutes(app: App, deps: AppDeps, now: () => number): void {
   if (deps.adminToken) {
     const expected = sha256(deps.adminToken);
     const adminLimiter = new WindowLimiter(20, 60_000);
@@ -186,8 +206,10 @@ export function createApp(deps: AppDeps): Hono<Env> {
       return c.json({ started: !alreadyRunning, running: true }, 202);
     });
   }
+}
 
-  // Scoring config (weights, thresholds, wording), so tuning needs no app release.
+/** GET /config: the scoring config (weights, thresholds, wording), so tuning needs no app release. */
+function configRoute(app: App, deps: AppDeps): void {
   if (deps.publicConfig) {
     const body = JSON.stringify(deps.publicConfig);
     const etag = `"${sha256(body).slice(0, 32)}"`;
@@ -196,7 +218,11 @@ export function createApp(deps: AppDeps): Hono<Env> {
       return c.body(body, 200, { "content-type": "application/json", etag });
     });
   }
+}
 
+/** POST /users: registration with an invite code, rate limited per client. */
+function registrationRoute(app: App, deps: AppDeps, now: () => number): void {
+  const registerLimiter = new WindowLimiter(deps.registerPerMinute ?? 10, 60_000);
   app.post("/users", async (c) => {
     if (!registerLimiter.allow(clientKey(c), now())) return c.json({ error: "rate_limited", message: "Too many attempts. Try again in a minute." }, 429);
     const body = RegisterBody.safeParse(await c.req.json().catch(() => null));
@@ -215,7 +241,10 @@ export function createApp(deps: AppDeps): Hono<Env> {
       throw err;
     }
   });
+}
 
+/** Everything under /me, /meta and /advice: a valid bearer token, and only that user's own data. */
+function userRoutes(app: App, deps: AppDeps, now: () => number): void {
   // Everything under /me needs a valid bearer token.
   const requireUser = createMiddleware<Env>(async (c, next) => {
     const token = bearerToken(c.req.header("authorization"));
@@ -230,6 +259,11 @@ export function createApp(deps: AppDeps): Hono<Env> {
   app.use("/meta/*", requireUser);
   app.use("/advice", requireUser);
 
+  meRoutes(app, deps, now);
+}
+
+/** The user's own routes (behind requireUser): their profile, syncs, the band's meta, the advice log, deleting their data. */
+function meRoutes(app: App, deps: AppDeps, now: () => number): void {
   app.get("/me", (c) => c.json({ user: publicUser(c.get("user")) }));
 
   app.get("/me/profile", (c) => {
@@ -285,12 +319,4 @@ export function createApp(deps: AppDeps): Hono<Env> {
     deps.sync?.forget(c.get("user").id);
     return c.body(null, 204);
   });
-
-  app.notFound((c) => c.json({ error: "not_found" }, 404));
-  app.onError((err, c) => {
-    console.error(err);
-    return c.json({ error: "internal_error" }, 500);
-  });
-
-  return app;
 }

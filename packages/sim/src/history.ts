@@ -115,21 +115,7 @@ export function history(spec: HistorySpec): SyntheticHistory {
     t -= durationSec * 1000 + (rand() < 0.3 ? between(4 * 3_600_000, (5 * spanMs) / count) : between(120_000, 600_000));
     const win = rand() < mine.winRate;
     const myTeam = rand() < 0.5 ? 100 : 200;
-    const used = new Set<number>([mine.championId]);
-    const participants: ParticipantSummary[] = [];
-    let me = 0;
-    for (const teamId of [100, 200]) {
-      for (const role of ROLES) {
-        const isMe = teamId === myTeam && role === roleSpec.role;
-        let championId = mine.championId;
-        if (!isMe) {
-          const options = OTHERS[role]!.filter((c) => !used.has(c));
-          championId = options.length ? pick(options) : pick(Object.values(OTHERS).flat().filter((c) => !used.has(c)));
-          used.add(championId);
-        } else me = participants.length;
-        participants.push(participant(championId, teamId, role, teamId === myTeam ? win : !win, durationSec));
-      }
-    }
+    const { participants, me } = seats(roleSpec.role, mine.championId, myTeam, win, durationSec);
     const match: MatchSummary = {
       matchId: `SIM1_${7_000_000_000 + count - g}`,
       queueId: rand() < 0.8 ? 420 : 440,
@@ -152,6 +138,26 @@ export function history(spec: HistorySpec): SyntheticHistory {
     grades: [pick(GRADES), pick(GRADES)],
   }));
   return { matches, masteries };
+
+  /** The ten seats of one game: you in your role on your team, the others from each role's champions, no champion twice. */
+  function seats(myRole: Position, myChampion: number, myTeam: number, win: boolean, durationSec: number): { participants: ParticipantSummary[]; me: number } {
+    const used = new Set<number>([myChampion]);
+    const participants: ParticipantSummary[] = [];
+    let me = 0;
+    for (const teamId of [100, 200]) {
+      for (const role of ROLES) {
+        const isMe = teamId === myTeam && role === myRole;
+        let championId = myChampion;
+        if (!isMe) {
+          const options = OTHERS[role]!.filter((c) => !used.has(c));
+          championId = options.length ? pick(options) : pick(Object.values(OTHERS).flat().filter((c) => !used.has(c)));
+          used.add(championId);
+        } else me = participants.length;
+        participants.push(participant(championId, teamId, role, teamId === myTeam ? win : !win, durationSec));
+      }
+    }
+    return { participants, me };
+  }
 
   function participant(championId: number, teamId: number, role: Position, won: boolean, durationSec: number): ParticipantSummary {
     const min = durationSec / 60;
@@ -189,35 +195,42 @@ export function history(spec: HistorySpec): SyntheticHistory {
       spells: [...SPELLS[role]!],
       perks: PAGES[role] ?? null,
       earlyDeaths: int(0, 2),
-      challenges: {
-        killParticipation: between(0.3, 0.75),
-        teamDamagePercentage: between(0.12, 0.34),
-        damagePerMinute: (physical + magic) / min,
-        soloKills: int(0, 3),
-        takedownsFirstXMinutes: int(0, 4),
-        earlyLaningPhaseGoldExpAdvantage: int(0, 1),
-        laningPhaseGoldExpAdvantage: int(0, 1),
-        maxCsAdvantageOnLaneOpponent: between(-10, 30),
-        turretPlatesTaken: int(0, 4),
-        killsOnLanersEarlyJungleAsJungler: jungle ? int(0, 4) : 0,
-        enemyJungleMonsterKills: int(0, jungle ? 20 : 3),
-        laneMinionsFirst10Minutes: support || jungle ? int(0, 10) : int(50, 85),
-        jungleCsBefore10Minutes: jungle ? int(40, 70) : 0,
-        goldPerMinute: between(320, 460),
-        visionScorePerMinute: support ? between(1.8, 2.8) : between(0.5, 1.2),
-        controlWardsPlaced: int(0, support ? 8 : 3),
-        wardTakedowns: int(0, 8),
-        visionScoreAdvantageLaneOpponent: between(-0.5, 0.5),
-        deathsByEnemyChamps: Math.max(0, deaths),
-        dragonTakedowns: int(0, 4),
-        riftHeraldTakedowns: int(0, 2),
-        baronTakedowns: int(0, 1),
-        turretTakedowns: int(0, 5),
-        killsOnOtherLanesEarlyJungleAsLaner: int(0, 2),
-        getTakedownsInAllLanesEarlyJungleAsLaner: int(0, 1),
-        moreEnemyJungleThanOpponent: between(-5, 5),
-        initialCrabCount: jungle ? int(0, 2) : 0,
-      },
+      challenges: challenges(role, min, deaths, physical, magic),
+    };
+  }
+
+  /** Match-V5 challenge metrics for one seat (the ones the engine reads). */
+  function challenges(role: Position, min: number, deaths: number, physical: number, magic: number): Record<string, number> {
+    const support = role === "utility";
+    const jungle = role === "jungle";
+    return {
+      killParticipation: between(0.3, 0.75),
+      teamDamagePercentage: between(0.12, 0.34),
+      damagePerMinute: (physical + magic) / min,
+      soloKills: int(0, 3),
+      takedownsFirstXMinutes: int(0, 4),
+      earlyLaningPhaseGoldExpAdvantage: int(0, 1),
+      laningPhaseGoldExpAdvantage: int(0, 1),
+      maxCsAdvantageOnLaneOpponent: between(-10, 30),
+      turretPlatesTaken: int(0, 4),
+      killsOnLanersEarlyJungleAsJungler: jungle ? int(0, 4) : 0,
+      enemyJungleMonsterKills: int(0, jungle ? 20 : 3),
+      laneMinionsFirst10Minutes: support || jungle ? int(0, 10) : int(50, 85),
+      jungleCsBefore10Minutes: jungle ? int(40, 70) : 0,
+      goldPerMinute: between(320, 460),
+      visionScorePerMinute: support ? between(1.8, 2.8) : between(0.5, 1.2),
+      controlWardsPlaced: int(0, support ? 8 : 3),
+      wardTakedowns: int(0, 8),
+      visionScoreAdvantageLaneOpponent: between(-0.5, 0.5),
+      deathsByEnemyChamps: Math.max(0, deaths),
+      dragonTakedowns: int(0, 4),
+      riftHeraldTakedowns: int(0, 2),
+      baronTakedowns: int(0, 1),
+      turretTakedowns: int(0, 5),
+      killsOnOtherLanesEarlyJungleAsLaner: int(0, 2),
+      getTakedownsInAllLanesEarlyJungleAsLaner: int(0, 1),
+      moreEnemyJungleThanOpponent: between(-5, 5),
+      initialCrabCount: jungle ? int(0, 2) : 0,
     };
   }
 }

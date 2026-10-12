@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
 import type { AddressInfo } from "node:net";
 import { generate } from "selfsigned";
@@ -46,52 +47,7 @@ export class MockLcuServer {
   async start(): Promise<LcuCredentials> {
     const pems = await generate([{ name: "commonName", value: "localhost" }], { keySize: 2048 });
     const expectedAuth = basicAuth({ port: 0, password: this.password, protocol: "https" });
-    const server = createServer({ key: pems.private, cert: pems.cert }, (req, res) => {
-      if (req.headers.authorization !== expectedAuth) {
-        res.writeHead(401).end();
-        return;
-      }
-      const path = (req.url ?? "/").split("?")[0] ?? "/";
-      if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
-        const chunks: Buffer[] = [];
-        req.on("data", (c: Buffer) => chunks.push(c));
-        req.on("end", () => {
-          const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "null") as Record<string, unknown>;
-          this.writes.push({ method: req.method!, path, body });
-          const pages = (this.state.get("/lol-perks/v1/pages") as { id: number }[] | undefined) ?? [];
-          if (req.method === "POST" && path === "/lol-perks/v1/pages") {
-            if (pages.length >= this.maxPages) return void res.writeHead(400).end('{"message":"Max pages reached"}');
-            const page = { ...body, id: 1000 + pages.length, isEditable: true };
-            this.state.set(path, [...pages, page]);
-            return void res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(page));
-          }
-          const pageId = /^\/lol-perks\/v1\/pages\/(\d+)$/.exec(path)?.[1];
-          if (req.method === "PUT" && pageId) {
-            this.state.set("/lol-perks/v1/pages", pages.map((p) => (p.id === Number(pageId) ? { ...body, id: p.id } : p)));
-            return void res.writeHead(200).end("{}");
-          }
-          if (req.method === "PATCH" && path === "/lol-champ-select/v1/session/my-selection") {
-            return void res.writeHead(204).end();
-          }
-          if (req.method === "PUT" && /^\/lol-item-sets\/v1\/item-sets\/\d+\/sets$/.test(path)) {
-            this.state.set(path, body);
-            return void res.writeHead(201).end();
-          }
-          res.writeHead(405).end();
-        });
-        return;
-      }
-      if (req.method !== "GET") {
-        res.writeHead(405).end();
-        return;
-      }
-      const body = this.state.get(path);
-      if (body === undefined || body === null) {
-        res.writeHead(404, { "content-type": "application/json" }).end('{"httpStatus":404}');
-        return;
-      }
-      res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(body));
-    });
+    const server = createServer({ key: pems.private, cert: pems.cert }, (req, res) => this.handle(req, res, expectedAuth));
 
     const wss = new WebSocketServer({
       server,
@@ -112,6 +68,59 @@ export class MockLcuServer {
     this.server = server;
     this.wss = wss;
     return { port: (server.address() as AddressInfo).port, password: this.password, protocol: "https" };
+  }
+
+  /** One HTTPS request: the client's basic auth, then a write (the importer's) or a GET of the current state. */
+  private handle(req: IncomingMessage, res: ServerResponse, expectedAuth: string): void {
+    if (req.headers.authorization !== expectedAuth) {
+      res.writeHead(401).end();
+      return;
+    }
+    const path = (req.url ?? "/").split("?")[0] ?? "/";
+    if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+      this.handleWrite(req, res, path);
+      return;
+    }
+    if (req.method !== "GET") {
+      res.writeHead(405).end();
+      return;
+    }
+    const body = this.state.get(path);
+    if (body === undefined || body === null) {
+      res.writeHead(404, { "content-type": "application/json" }).end('{"httpStatus":404}');
+      return;
+    }
+    res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(body));
+  }
+
+  /** The writes the importer makes (rune pages, spells, item sets), kept in `writes`; anything else answers 405. */
+  private handleWrite(req: IncomingMessage, res: ServerResponse, path: string): void {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "null") as Record<string, unknown>;
+      this.writes.push({ method: req.method!, path, body });
+      const pages = (this.state.get("/lol-perks/v1/pages") as { id: number }[] | undefined) ?? [];
+      if (req.method === "POST" && path === "/lol-perks/v1/pages") {
+        if (pages.length >= this.maxPages) return void res.writeHead(400).end('{"message":"Max pages reached"}');
+        const page = { ...body, id: 1000 + pages.length, isEditable: true };
+        this.state.set(path, [...pages, page]);
+        return void res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(page));
+      }
+      const pageId = /^\/lol-perks\/v1\/pages\/(\d+)$/.exec(path)?.[1];
+      if (req.method === "PUT" && pageId) {
+        this.state.set("/lol-perks/v1/pages", pages.map((p) => (p.id === Number(pageId) ? { ...body, id: p.id } : p)));
+        return void res.writeHead(200).end("{}");
+      }
+      if (req.method === "PATCH" && path === "/lol-champ-select/v1/session/my-selection") {
+        return void res.writeHead(204).end();
+      }
+      if (req.method === "PUT" && /^\/lol-item-sets\/v1\/item-sets\/\d+\/sets$/.test(path)) {
+        this.state.set(path, body);
+        return void res.writeHead(201).end();
+      }
+      res.writeHead(405).end();
+    });
   }
 
   /** Number of currently subscribed WebSocket clients. */

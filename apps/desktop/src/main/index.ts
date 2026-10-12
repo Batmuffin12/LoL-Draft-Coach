@@ -171,6 +171,90 @@ function scheduleScreenshot(coach: Coach): void {
   }, Number(process.env.LDC_SCREENSHOT_DELAY_MS ?? 8_000));
 }
 
+/** The connect screen's actions (register, sign out, delete my data), and the dev aid LDC_AUTO_REGISTER. */
+function handleAccountIpc(server: ServerProfileSource, env: AppEnv): void {
+  ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {
+    if (typeof serverUrl !== "string" || typeof inviteCode !== "string") return;
+    await server.register(serverUrl, inviteCode);
+  });
+  ipcMain.handle(IPC.signOut, () => server.signOut());
+  ipcMain.handle(IPC.deleteData, () => server.deleteData());
+  // Dev aid: LDC_AUTO_REGISTER=<invite> registers with SERVER_URL once the League client is
+  // logged in (it gives the Riot ID), retrying every few seconds (`pnpm local:prod` sets it).
+  const invite = !app.isPackaged ? process.env.LDC_AUTO_REGISTER : undefined;
+  if (invite && env.serverUrl) {
+    let tries = 0;
+    const timer = setInterval(() => {
+      const state = server.account.state;
+      if (state === "registered" || ++tries > 120) return clearInterval(timer);
+      if (state === "unregistered" || state === "error") void server.register(env.serverUrl!, invite);
+    }, 5_000);
+  }
+}
+
+/** Scoring config from the server (tuning without a release): the cached copy at once, then checks at start, on registering and at each champ select. */
+async function followServerConfig(serverProfiles: ServerProfileSource, coach: PersonalCoach, connector: LcuConnector): Promise<void> {
+  const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
+  remoteConfig.on("config", (c) => coach.setConfig(c));
+  await remoteConfig.loadCached();
+  void remoteConfig.refresh();
+  serverProfiles.on("account", (a) => {
+    if (a.state === "registered") void remoteConfig.refresh();
+  });
+  // Each champ select re-checks the scoring config (an ETag request: nothing is downloaded when
+  // it's unchanged), so a server update reaches the panel without restarting the app.
+  connector.on("gameflowPhase", (phase) => {
+    if (phase === "ChampSelect") void remoteConfig.refresh();
+  });
+}
+
+/**
+ * Where your history comes from: a saved file (dev aid LDC_PROFILE_FILE), the Riot API with the
+ * local key (development only), or the coach server (always in packaged builds).
+ */
+async function createProfileSource(env: AppEnv, config: ReturnType<typeof loadConfig>): Promise<DirectProfileSource | ServerProfileSource | FileProfileSource> {
+  const mode = profileMode({ packaged: app.isPackaged, riotApiKey: env.riotApiKey, serverUrl: env.serverUrl });
+  const profileFile = !app.isPackaged ? process.env.LDC_PROFILE_FILE : undefined;
+  if (profileFile) {
+    // Dev aid: your history from a saved file, no Riot key needed.
+    const file = new FileProfileSource({
+      read: async () => JSON.parse(await readFile(profileFile, "utf8")) as { matches: UserMatch[]; masteries: [] },
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
+    });
+    console.log(`LDC_PROFILE_FILE: using the saved history in ${profileFile}`);
+    return file;
+  }
+  if (mode === "direct" && env.riotApiKey) {
+    // Development only: the key from the local .env, used here in the main process and
+    // never sent to the renderer. Packaged builds always use the coach server.
+    const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
+    // v2: full anonymised match summaries (0.4+); the older trimmed cache is ignored.
+    const matchesDir = join(app.getPath("userData"), "matches-v2");
+    return new DirectProfileSource({
+      riot,
+      history: config.app.history,
+      bands: config.bands,
+      storeFor: (puuid) => new MatchStore(matchesDir, puuid),
+      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
+    });
+  }
+  // Default: the coach server, which holds the only Riot API key.
+  const box = {
+    encrypt: (plain: string) =>
+      safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : `raw:${plain}`,
+    decrypt: (sealed: string) =>
+      sealed.startsWith("enc:") ? safeStorage.decryptString(Buffer.from(sealed.slice(4), "base64")) : sealed.replace(/^raw:/, ""),
+  };
+  const server = new ServerProfileSource({
+    accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
+    defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
+    outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
+    cacheFile: join(app.getPath("userData"), "profile-matches.json"),
+  });
+  await server.init();
+  return server;
+}
+
 async function main(): Promise<void> {
   await app.whenReady();
   perf?.mark("ready");
@@ -188,44 +272,7 @@ async function main(): Promise<void> {
   });
   const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
-  const mode = profileMode({ packaged: app.isPackaged, riotApiKey: env.riotApiKey, serverUrl: env.serverUrl });
-  let profiles: DirectProfileSource | ServerProfileSource | FileProfileSource | null = null;
-  const profileFile = !app.isPackaged ? process.env.LDC_PROFILE_FILE : undefined;
-  if (profileFile) {
-    // Dev aid: your history from a saved file, no Riot key needed.
-    profiles = new FileProfileSource({
-      read: async () => JSON.parse(await readFile(profileFile, "utf8")) as { matches: UserMatch[]; masteries: [] },
-      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
-    });
-    console.log(`LDC_PROFILE_FILE: using the saved history in ${profileFile}`);
-  } else if (mode === "direct" && env.riotApiKey) {
-    // Development only: the key from the local .env, used here in the main process and
-    // never sent to the renderer. Packaged builds always use the coach server.
-    const riot = new RiotApi({ apiKey: env.riotApiKey, keyType: env.riotKeyType, platform: env.riotPlatform, region: env.riotRegion });
-    // v2: full anonymised match summaries (0.4+); the older trimmed cache is ignored.
-    const matchesDir = join(app.getPath("userData"), "matches-v2");
-    profiles = new DirectProfileSource({
-      riot,
-      history: config.app.history,
-      bands: config.bands,
-      storeFor: (puuid) => new MatchStore(matchesDir, puuid),
-      advice: new AdviceStore(join(app.getPath("userData"), "advice.json")),
-    });
-  } else {
-    const box = {
-      encrypt: (plain: string) =>
-        safeStorage.isEncryptionAvailable() ? `enc:${safeStorage.encryptString(plain).toString("base64")}` : `raw:${plain}`,
-      decrypt: (sealed: string) =>
-        sealed.startsWith("enc:") ? safeStorage.decryptString(Buffer.from(sealed.slice(4), "base64")) : sealed.replace(/^raw:/, ""),
-    };
-    profiles = new ServerProfileSource({
-      accounts: new AccountStore(join(app.getPath("userData"), "account.json"), box),
-      defaultServerUrl: env.serverUrl ?? builtInServerUrl(),
-      outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
-      cacheFile: join(app.getPath("userData"), "profile-matches.json"),
-    });
-    await profiles.init();
-  }
+  const profiles = await createProfileSource(env, config);
   // Live meta snapshots come from the coach server (none in dev-only direct mode).
   const serverProfiles = profiles instanceof ServerProfileSource ? profiles : null;
   const fixedMeta = devMetaFile();
@@ -252,40 +299,8 @@ async function main(): Promise<void> {
   // (`pnpm local:prod`: the branch's panel on production data).
   const bundledConfig = !app.isPackaged && process.env.LDC_BUNDLED_CONFIG === "1";
   if (bundledConfig) console.log("LDC_BUNDLED_CONFIG: using this build's config, not the server's");
-  if (serverProfiles && !bundledConfig) {
-    const remoteConfig = new ConfigSource({ client: () => serverProfiles.serverClient, cacheFile: join(app.getPath("userData"), "config", "server-config.json") });
-    remoteConfig.on("config", (c) => coach.setConfig(c));
-    await remoteConfig.loadCached();
-    void remoteConfig.refresh();
-    serverProfiles.on("account", (a) => {
-      if (a.state === "registered") void remoteConfig.refresh();
-    });
-    // Each champ select re-checks the scoring config (an ETag request: nothing is downloaded when
-    // it's unchanged), so a server update reaches the panel without restarting the app.
-    connector.on("gameflowPhase", (phase) => {
-      if (phase === "ChampSelect") void remoteConfig.refresh();
-    });
-  }
-  if (profiles instanceof ServerProfileSource) {
-    const server = profiles;
-    ipcMain.handle(IPC.register, async (_e, serverUrl: unknown, inviteCode: unknown) => {
-      if (typeof serverUrl !== "string" || typeof inviteCode !== "string") return;
-      await server.register(serverUrl, inviteCode);
-    });
-    ipcMain.handle(IPC.signOut, () => server.signOut());
-    ipcMain.handle(IPC.deleteData, () => server.deleteData());
-    // Dev aid: LDC_AUTO_REGISTER=<invite> registers with SERVER_URL once the League client is
-    // logged in (it gives the Riot ID), retrying every few seconds (`pnpm local:prod` sets it).
-    const invite = !app.isPackaged ? process.env.LDC_AUTO_REGISTER : undefined;
-    if (invite && env.serverUrl) {
-      let tries = 0;
-      const timer = setInterval(() => {
-        const state = server.account.state;
-        if (state === "registered" || ++tries > 120) return clearInterval(timer);
-        if (state === "unregistered" || state === "error") void server.register(env.serverUrl!, invite);
-      }, 5_000);
-    }
-  }
+  if (serverProfiles && !bundledConfig) await followServerConfig(serverProfiles, coach, connector);
+  if (profiles instanceof ServerProfileSource) handleAccountIpc(profiles, env);
 
   win = createWindow();
   perf?.mark("windowCreated");
