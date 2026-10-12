@@ -24,12 +24,8 @@
     "perf:guard": "node scripts/perf/guard.mjs"
   },
   "devDependencies": {
-    "@ldc/lcu": "workspace:*",
-    "@ldc/sim": "workspace:*",
     "@types/node": "^22.20.5",
-    "autocannon": "^8.0.0",
     "railway": "^3.12.0",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }

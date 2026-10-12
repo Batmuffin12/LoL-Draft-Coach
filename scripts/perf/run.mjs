@@ -29,7 +29,7 @@ const run = (cmd, cmdArgs, opts = {}) => {
   if (r.status !== 0) throw new Error(`${cmd} ${cmdArgs.join(" ")} failed (${r.status})`);
 };
 // tsx without a shell, so JSON arguments reach the script intact on Windows.
-const tsxCli = join(root, "node_modules", "tsx", "dist", "cli.mjs");
+const tsxCli = join(root, "scripts", "perf", "node_modules", "tsx", "dist", "cli.mjs");
 const tsx = (script, scriptArgs, opts = {}) => run(process.execPath, [tsxCli, script, ...scriptArgs], { shell: false, ...opts });
 const readJson = (f) => JSON.parse(readFileSync(f, "utf8"));
 

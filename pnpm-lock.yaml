@@ -8,24 +8,12 @@ importers:
 
   .:
     devDependencies:
-      '@ldc/lcu':
-        specifier: workspace:*
-        version: link:packages/lcu
-      '@ldc/sim':
-        specifier: workspace:*
-        version: link:packages/sim
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
-      autocannon:
-        specifier: ^8.0.0
-        version: 8.0.0
       railway:
         specifier: ^3.12.0
         version: 3.12.0
-      tsx:
-        specifier: ^4.23.15
-        version: 4.23.15
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -96,9 +84,6 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
-      selfsigned:
-        specifier: ^5.5.0
-        version: 5.5.0
       vite:
         specifier: ^8.3.2
         version: 8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
@@ -170,11 +155,7 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
-  packages/jev:
-    dependencies:
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
+  packages/jev: {}
 
   packages/lcu:
     dependencies:
@@ -238,6 +219,24 @@ importers:
         version: link:../meta
       tsx:
         specifier: ^4
+        version: 4.23.15
+
+  scripts/perf:
+    dependencies:
+      '@ldc/lcu':
+        specifier: workspace:*
+        version: link:../../packages/lcu
+      '@ldc/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@ldc/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+      autocannon:
+        specifier: ^8.0.0
+        version: 8.0.0
+      tsx:
+        specifier: ^4.23.15
         version: 4.23.15
 
 packages:

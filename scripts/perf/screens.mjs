@@ -19,4 +19,6 @@ const run = (cmd, args, env = {}) => {
   if (r.status !== 0) process.exit(r.status ?? 1);
 };
 run("pnpm", ["--filter", "@ldc/desktop", "build"], { LDC_PERF_PROFILING: "" });
-run("npx", ["tsx", "scripts/perf/desktop.ts", "screens", join(root, "docs", "perf", "results", set)]);
+const tsxCli = join(root, "scripts", "perf", "node_modules", "tsx", "dist", "cli.mjs");
+const r = spawnSync(process.execPath, [tsxCli, "scripts/perf/desktop.ts", "screens", join(root, "docs", "perf", "results", set)], { cwd: root, stdio: "inherit" });
+if (r.status !== 0) process.exit(r.status ?? 1);

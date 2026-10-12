@@ -5,7 +5,9 @@
     "**/bench/**/*.bench.ts",
     "packages/sim/scenarios/*.ts",
     "packages/lcu/scripts/*.mjs",
-    "scripts/**/*.{mjs,cjs,ts}"
+    "scripts/**/*.{mjs,cjs,ts}",
+    ".railway/railway.ts"
   ],
-  "ignorePatterns": ["docs/**", "research/**"]
+  // .railway/railway.ts (the infrastructure as code) is analysed too: fallow skips hidden folders otherwise.
+  "ignorePatterns": ["docs/**", "research/**", "!.railway/**"]
 }
