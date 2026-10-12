@@ -10,6 +10,8 @@
  *   LDC_PERF_T0             epoch ms when the driver spawned the process (cold start measures from it)
  */
 import { writeFileSync } from "node:fs";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 import type { EventEmitter } from "node:events";
 import { app, type BrowserWindow } from "electron";
 import type { ViewState } from "../shared/view";
@@ -81,8 +83,13 @@ export class PerfProbe {
   /** Events not followed by a push yet. */
   private waiting: EmitSample[] = [];
 
+  /** A full garbage collection in this (main) process: `--js-flags=--expose-gc` reaches only the renderers. */
+  private readonly gc: () => void;
+
   constructor(readonly opts: PerfOptions) {
     if (opts.t0) this.marks.spawn = opts.t0;
+    setFlagsFromString("--expose-gc");
+    this.gc = runInNewContext("gc") as () => void;
   }
 
   mark(name: string): void {
@@ -159,7 +166,7 @@ export class PerfProbe {
 
   private async sampleHeap(win: BrowserWindow): Promise<void> {
     // Collect garbage first, so the samples show what is kept, not what is waiting to be freed.
-    (globalThis as { gc?: () => void }).gc?.();
+    this.gc();
     const rendererUsed = await read<number>(win, "(window.gc && window.gc(), performance.memory ? performance.memory.usedJSHeapSize : 0)");
     this.heap.push({ at: epoch(), rendererUsed: rendererUsed ?? 0, mainUsed: process.memoryUsage().heapUsed });
   }

@@ -112,6 +112,8 @@ function summariseReplay(name, r, clickKey) {
     metrics[k("heapGrowth")] = value(heap.at(-1) - heap[Math.min(1, heap.length - 1)], "MB");
     metrics[k("heap")] = value(heap.at(-1), "MB");
     metrics[k("mainHeap")] = value(r.heap.at(-1).mainUsed / 1e6, "MB");
+    const main = r.heap.map((h) => h.mainUsed / 1e6);
+    metrics[k("mainHeapGrowth")] = value(main.at(-1) - main[Math.min(1, main.length - 1)], "MB");
   }
   for (const m of r.metrics ?? []) metrics[k(`workingSet.${m.type}`)] = value((metrics[k(`workingSet.${m.type}`)]?.value ?? 0) + m.workingSetKb / 1024, "MB");
   metrics[k("cpu.total")] = value((r.metrics ?? []).reduce((n, m) => n + m.cpu, 0), "%");

@@ -22,5 +22,6 @@
   "server.GET /me/profile?since.latency": { "stat": "p99", "max": 200, "why": "Database work, still not noticeable" },
   "server.coldStart": { "stat": "median", "max": 1000, "why": "Wake-up: process start → first 200" },
   "desktop.replay.mid-counter.heapGrowth": { "stat": "value", "max": 1, "why": "No memory growth between replays (MB, after GC)" },
-  "desktop.replay.full-game.heapGrowth": { "stat": "value", "max": 1, "why": "No memory growth between replays (MB, after GC)" }
+  "desktop.replay.full-game.heapGrowth": { "stat": "value", "max": 1, "why": "No memory growth between replays (MB, after GC)" },
+  "desktop.replay.full-game.mainHeapGrowth": { "stat": "value", "max": 1, "why": "No main-process memory growth between replays (MB, after GC)" }
 }
