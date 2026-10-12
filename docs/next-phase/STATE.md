@@ -2,7 +2,13 @@
 
 The facts a new session needs to pick up the next phase without re-deriving them. Read with [PROMPT.md](PROMPT.md), `CLAUDE.md` and `docs/SPEC.md` (the spec wins on conflicts).
 
-## Where things are
+## Update (2026-10-12, evening): M8 shipped, M9 under way
+
+- **v0.8.0 is on `main` and in production** (tag on 0397b3d, CI green, `/health` 0.8.0). The spike re-check on 62,617 production games failed again (item-specific r 0.02–0.10), so spikes ship hidden behind the check and `meta.v1.json` `spikes.publish` is off (the pass cost 100 s per hourly run). Numbers: docs/ENGINE-PLAN.md.
+- `railway ssh -s ldc-server -- "cmd"` works again, but intermittently answers with the account summary: retry; run it from the main checkout (worktrees aren't Railway-linked).
+- **M9 on `milestone-9-friends`** (CI green): server timeouts + a panel state per failure, coaching from saved games while the server is down (m9-8 done); updates from GitHub Releases with `pnpm --filter @ldc/desktop release` (drafts only, refuses < 1.0.0; ops-2 needs the real 1.0.0 → 1.0.1 test); desktop crash reports (m8-2: the owner creates the Sentry Electron project and builds with `LDC_SENTRY_DSN`; no Sentry on the server); docs/INSTALL.md and docs/PATCH-DAY.md (m9-5 done).
+- Left for M9: the owner's Sentry DSN and test crash, the product numbers from SPEC M9 (games on known champions, comfort vs off-pool, goals met, breaks taken), the Developer Portal description (m9-6, owner), then merge, tag v1.0.0, publish the first release and send invites (m9-7).
+
 
 | What | State |
 | --- | --- |
