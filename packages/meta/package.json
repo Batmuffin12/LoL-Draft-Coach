@@ -1,6 +1,6 @@
 {
   "name": "@ldc/meta",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Pure aggregation of collected matches into per-band meta snapshots",
   "type": "module",

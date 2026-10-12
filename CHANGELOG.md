@@ -2,6 +2,26 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [1.0.0] — 2026-10-12 — Friends release (milestone 9)
+
+The first build for friends: a public download that updates itself.
+
+### Added
+- **Landing page** on GitHub Pages (`site/`, https://batmuffin12.github.io/LoL-Draft-Coach/): what the coach does from ban to post-game, why its numbers can be trusted, the Riot rules it keeps, install steps, FAQ and Riot's notice. The download button reads the newest GitHub Release and shows "Coming soon" until one is published.
+- **Invite links**: `pnpm --filter @ldc/server invite "name"` prints a ready-to-send message with a join link (`join.html#CODE`, the code stays in the fragment). The installer registers `lol-draft-coach://`, so the link opens the app with the code filled in; the player still clicks Connect, and an app already connected says so instead of replacing its sign-in.
+- **Updates from this repo's GitHub Releases** (public repo, no token in the app; `LDC_UPDATE_URL` still overrides). `pnpm --filter @ldc/desktop release` uploads a draft only for a committed, tagged 1.x, so nothing reaches installed apps until the owner publishes it. The footer shows the app's version, and a downloaded update until restart.
+- **Crash reports (Sentry)**, only in installers built with `LDC_SENTRY_DSN`. Every string is scrubbed of Riot IDs, PUUIDs, match IDs, app tokens, Riot keys and the Windows user name; user, host name and headers are dropped. No Sentry on the server.
+- **At most 10 accounts** (`app.accounts.maxUsers`): the personal key covers a small group and the download is public; a new player past the cap is refused with a clear message (the invite stays unused), returning players always get back in.
+- docs/INSTALL.md for friends and docs/PATCH-DAY.md for the owner.
+
+### Changed
+- **The panel says what's wrong with the server** (asleep, unreachable, too slow, failing, unexpected answer) and when it tries again (1, 2, 5, then every 10 minutes), and keeps coaching from your games saved on this PC meanwhile (the cache also keeps masteries and rank history).
+- SPEC: the product numbers (games on known champions, comfort vs off-pool, goals met, breaks taken) move to milestone 11.
+
+### Fixed
+- Timeouts on every server request: a server that accepted a connection and never answered left the panel loading forever (20 s per attempt, 120 s in total).
+- Pool table rows line up when a label wraps.
+
 ## [0.8.0] — 2026-10-12 — Power spikes (milestone 8)
 
 ### Added
