@@ -24,8 +24,18 @@ import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSourc
 import { startAutoUpdate } from "./updater";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
+import { PerfProbe, perfOptions } from "./perf";
 
 const DOCK_POLL_MS = 500;
+
+// Dev aid: LDC_PERF=out.json measures startup, the state pipeline and the renderer (pnpm perf).
+const perfOpts = perfOptions(app.isPackaged);
+const perf = perfOpts ? new PerfProbe(perfOpts) : null;
+if (perf) {
+  // Memory samples after a full garbage collection, with exact heap sizes.
+  app.commandLine.appendSwitch("js-flags", "--expose-gc");
+  app.commandLine.appendSwitch("enable-precise-memory-info");
+}
 
 // Dev aid: LDC_USER_DATA_DIR keeps a test run (another account, a clean first run) out of your real profile.
 if (process.env.LDC_USER_DATA_DIR) app.setPath("userData", process.env.LDC_USER_DATA_DIR);
@@ -62,7 +72,7 @@ function createWindow(): BrowserWindow {
   w.once("ready-to-show", () => w.show());
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) void w.loadURL(devUrl);
-  else void w.loadFile(join(__dirname, "../renderer/index.html"));
+  else void w.loadFile(join(__dirname, "../renderer/index.html"), perf ? { query: { perf: "1" } } : undefined);
   // Never navigate away or open new windows from the panel.
   w.webContents.on("will-navigate", (e) => e.preventDefault());
   w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -162,6 +172,7 @@ function scheduleScreenshot(coach: Coach): void {
 
 async function main(): Promise<void> {
   await app.whenReady();
+  perf?.mark("ready");
   if ("error" in envResult) {
     // A broken .env is a setup problem: say exactly what to fix.
     dialog.showErrorBox("LoL Draft Coach: check your .env", envResult.error.message);
@@ -220,6 +231,12 @@ async function main(): Promise<void> {
     serverProfiles || fixedMeta
       ? new MetaSource({ client: () => serverProfiles?.serverClient ?? null, cacheDir: join(app.getPath("userData"), "meta"), fixed: fixedMeta ?? undefined })
       : null;
+  if (perf) {
+    perf.wrap("lcu", connector);
+    perf.wrap("ddragon", ddragon);
+    if (profiles) perf.wrap("profiles", profiles);
+    if (meta) perf.wrap("meta", meta);
+  }
   const coach = new PersonalCoach({
     connector,
     ddragon,
@@ -269,21 +286,31 @@ async function main(): Promise<void> {
   }
 
   win = createWindow();
+  perf?.mark("windowCreated");
   coach.on("state", (s) => {
     latest = s;
-    if (win && !win.isDestroyed()) win.webContents.send(IPC.state, s);
+    if (win && !win.isDestroyed()) {
+      if (perf) perf.send(win, IPC.state, s);
+      else win.webContents.send(IPC.state, s);
+    }
   });
   ipcMain.on(IPC.ready, (e) => {
-    if (latest) e.sender.send(IPC.state, latest);
+    perf?.mark("rendererReady");
+    if (latest && perf && win) perf.send(win, IPC.state, latest);
+    else if (latest) e.sender.send(IPC.state, latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
   ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
   startAutoUpdate((m) => coach.announce(m));
-  // Screenshots are of the panel at its design size (440 × 720, zoom 1), wherever the client is.
-  if (!process.env.LDC_SCREENSHOT) void startDocking(coach);
+  // Screenshots and perf runs are of the panel at its design size (440 × 720, zoom 1), wherever the client is.
+  if (!process.env.LDC_SCREENSHOT && !perf) void startDocking(coach);
   scheduleScreenshot(coach);
+  if (perf && win) {
+    win.webContents.setZoomFactor(1);
+    perf.run(win);
+  }
 
   app.on("window-all-closed", () => {
     coach.stop();
@@ -293,8 +320,8 @@ async function main(): Promise<void> {
 
 // A second instance would fight the first over Chromium's cache folders ("Unable to move
 // the cache: Access is denied"), so focus the running panel instead. Screenshot runs are
-// exempt so they can work next to an open panel.
-if (!process.env.LDC_SCREENSHOT && !app.requestSingleInstanceLock()) {
+// and perf runs are exempt so they can work next to an open panel.
+if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on("second-instance", () => {
