@@ -106,6 +106,23 @@ Measured with `npx fallow health` (fallow 3.33.1, formula v3: 100 minus capped p
 
 Same behaviour throughout: 552 tests (5 new for the extracted helpers), the regression guard on every screen after each step, a live replay with clicks, and the coach bench unchanged (history 63 ms, snapshot 8 ms).
 
+## Re-check after the code-health changes (`final` → `post-fallow`)
+
+A full `pnpm perf --label post-fallow` on the branch head (112bd08), compared with `final` (`pnpm perf:compare final post-fallow`): budgets 23/24 → 23/24, the regression guard matches every screen, and every metric is within noise:
+
+| Metric | final | post-fallow |
+| --- | --- | --- |
+| Cold start → first full screen | 422 ms | 426 ms |
+| Bench: load a history / new snapshot / champ select update | 62.0 / 7.5 / 0.95 ms | 63.3 / 7.5 / 0.92 ms |
+| Draft event → painted, p95 (mid-counter) | 22.1 ms | 22.1 ms |
+| Pushes per minute / repeats (mid-counter) | 85 / 3% | 85 / 3% |
+| Clicks → next paint, p95 | 16.9–18.2 ms | 16.9–17.6 ms |
+| Longest renderer task / frame p95 / heap growth | 0 ms / 16.8 ms / 0.23 MB | 0 ms / 16.8 ms / 0.24 MB |
+| Server: wake-up / `/me/profile` alone p50 / `?since` p99 | 135 / 149 / 30 ms | 131 / 149 / 30 ms |
+| Panel's next start | 77 ms, 37 kB | 81 ms, 37 kB |
+
+One number looked worse: the main process's profile load during cold start, 81.7 → 87–90 ms over three runs. Bisected: the commit just before the refactor, measured the same day, gives 83–86 ms, so the refactor's share is ~3 ms (~4%, under the 5% noise line and inside the runs' spread); the rest is the machine since `final`. A first-call profile load in plain Node is the same before and after (median 96 vs 95 ms over 8 fresh processes), and the first full screen doesn't move.
+
 ## What's left
 
 - **The full profile at 10 connections stays over budget** (925 ms p99). Gzip of 14 MB costs ~105 ms per request and the JSON ~15 ms; to get under 200 ms with 10 at once it would take a cache of compressed responses (memory on a small server) or precompressed match summaries. With the panel's disk cache a full download happens only on registration, after sign-out, or against an older server, one request at a time (150 ms alone, within budget), so I left it.
