@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "invite": "node scripts/invite.mjs",
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r test",
     "check": "pnpm typecheck && pnpm test",

@@ -13,8 +13,8 @@ You need: Windows 10 or 11, League of Legends on EUW, and an **invite code** fro
 ## 2. Connect
 
 1. Open League of Legends and log in **first**: the app reads your Riot ID from the client, so you never type it.
-2. Open LoL Draft Coach.
-3. Paste your invite code and click **Connect**.
+2. On your invite page, click **Open LoL Draft Coach**: the app opens with your code filled in. (Or open it from the desktop shortcut and paste the code.)
+3. Click **Connect**.
 4. The first time, the server loads your recent ranked and draft games. Your newest games arrive within a few minutes; older ones keep loading in the background (the panel shows how many are left).
 
 ## 3. Use it

@@ -25,7 +25,9 @@ Swapping the Riot key (daily for a development key; once for the personal key): 
 
 ## 2. Create an invite for each friend
 
-Each invite works once and lasts 14 days. Only a hash of each code is stored, so copy the code when it's printed. Your own account works the same way: create an invite for yourself.
+Each invite works once and lasts 14 days. Only a hash of each code is stored, so copy the code when it's printed. Your own account works the same way: create an invite for yourself. The server accepts at most `app.accounts.maxUsers` accounts (10, `config/app.v1.json`): past that, a new player is refused even with a valid code; returning players always get back in.
+
+**The easy way:** `pnpm invite "Dana"` (optionally `--days 30`) creates the invite on the live server and prints a message to paste to them, with their join link: `https://batmuffin12.github.io/LoL-Draft-Coach/join.html#CODE`. That page (`site/join.html`) walks them through download and install, then its button opens the app with the code filled in (`lol-draft-coach://join/CODE`, registered by the installer); they only click Connect. The code sits after the `#`, so it never reaches GitHub's servers.
 
 **From your PC (recommended).** Set `ADMIN_TOKEN` (at least 32 random characters) in the Railway variables and the same value in your local `.env`, then:
 
