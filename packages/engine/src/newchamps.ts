@@ -6,6 +6,7 @@ import type { ChampionAttributes, MasteryEntry } from "./types";
 import { readMetric } from "./playstyle";
 import { curveGap } from "./power-curve";
 import { deltaWin } from "./rating";
+import { firstItemTiming, powerSpikes, type ItemTiming, type PowerSpike } from "./spikes";
 
 export type NewChampsConfig = EngineConfig["newChamps"];
 
@@ -234,6 +235,10 @@ export interface LearningPlan {
   evenMatchups: number | null;
   /** Measured, but no real gap between short and long games: as strong early as late. */
   evenCurve: { early: number; late: number } | null;
+  /** Its measured power spikes in the role (empty until the snapshot's spikes pass their check). */
+  spikes: PowerSpike[];
+  /** Your first-item timing on it against typical, from your games with a timeline (null with too few). */
+  timing: ItemTiming | null;
 }
 
 export interface LearningWin {
@@ -256,7 +261,9 @@ export interface LearningPlanInput {
   champion: Pick<ChampionInfo, "info" | "tags"> | undefined;
   /** Your growth goal, used when it's in this role. */
   goal: { role: Position; metric: string; lowerIsBetter: boolean; target: number } | null;
-  config: Pick<EngineConfig, "rating" | "plan" | "growth" | "newChamps">;
+  config: Pick<EngineConfig, "rating" | "plan" | "growth" | "newChamps" | "spikes">;
+  /** Completed items (Data Dragon with the item rules), for your first-item timing; without it there is none. */
+  completed?: ReadonlySet<number>;
   /** Opponents listed per side. */
   count?: number;
 }
@@ -382,5 +389,7 @@ export function learningPlan(input: LearningPlanInput): LearningPlan {
   const laneGold = g15 && g15.games >= config.rating.minGames.meta ? { diff: g15.diff, games: g15.games } : null;
   const evenMatchups = opponents.length >= learn.evenMatchupsMin && !good.length && !hard.length ? opponents.length : null;
   const evenCurve = pc && gap === null && pc.early.games >= config.rating.minGames.meta && pc.late.games >= config.rating.minGames.meta ? { early: pc.early.winRate, late: pc.late.winRate } : null;
-  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, wins, profile, skills, laneGold, evenMatchups, evenCurve };
+  const spikes = index ? powerSpikes(index, id, role, config.spikes) : [];
+  const timing = input.completed ? firstItemTiming(input.matches, id, role, index, input.completed, config.spikes.timingMinGames, config.spikes.timingSlowMinutes) : null;
+  return { stage, ease, settleGames, record, focus, job: input.champion?.tags?.[0] ?? null, good, hard, curve, wins, profile, skills, laneGold, evenMatchups, evenCurve, spikes, timing };
 }

@@ -27,12 +27,15 @@ const PLAN: LearningPlan = {
   laneGold: null,
   evenMatchups: null,
   evenCurve: null,
+  spikes: [{ kind: "item", at: 1, minute: 11.2, gold: 120, z: 3.1, games: 400, itemId: 3031 }],
+  timing: { games: 3, you: 13.42, typical: 11.1, slow: true },
 };
-const FIRST: LearningPlan = { ...PLAN, stage: "practice", ease: 3, settleGames: 30, record: { games: 0, wins: 0 }, focus: { ...PLAN.focus!, source: "basic", value: null, recent: [] }, good: [], hard: [], curve: null, wins: [], skills: null };
+const FIRST: LearningPlan = { ...PLAN, stage: "practice", ease: 3, settleGames: 30, record: { games: 0, wins: 0 }, focus: { ...PLAN.focus!, source: "basic", value: null, recent: [] }, good: [], hard: [], curve: null, wins: [], skills: null, spikes: [], timing: null };
 const deps = {
   explain: config.explain,
   champion: (id: number) => (NAMES[id] ? { id, name: NAMES[id]!, iconUrl: null } : null),
   championName: (id: number) => NAMES[id] ?? `#${id}`,
+  itemName: (id: number) => (id === 3031 ? "Infinity Edge" : `#${id}`),
   planGames: [3, 5] as [number, number],
   blockGames: [2, 3] as [number, number],
   plan: (id: number): LearningPlan | null => (id === 99 ? PLAN : id === 245 ? FIRST : null),
@@ -80,6 +83,8 @@ describe("new champions view", () => {
         lines: [
           "Skills: start E, Q, W; max Q, then E, then W (55% of players)",
           "It wins with fewer deaths before 14 min: 1.1 in wins, 2.0 in losses (you: 2.5); and more CS at 10 min: 68 in wins, 61 in losses",
+          "Its spike: Infinity Edge (item 1, ~11 min). Fight once it's done; farm safely before",
+          "Your first item on it: 13.4 min (3 games), typical 11.1 min: farm and back on time to reach it sooner",
           "Stronger in long games: wins 53%, vs 47% in short ones",
           "Good first matchups: Orianna (+3.1%)",
           "Tough matchups for now: Zed (−4.2%), LeBlanc (−2.0%)",
@@ -107,6 +112,8 @@ describe("new champions view", () => {
       laneGold: { diff: -64, games: 540 },
       evenMatchups: 23,
       evenCurve: { early: 0.531, late: 0.545 },
+      spikes: [],
+      timing: null,
     };
     const v = newChampsView({ role: "jungle", picks: [], learning: { championId: 99, progress: null } }, { ...deps, plan: () => flat, learn: { profile: { high: 0.66, low: 0.33 }, laneGoldEven: 300 } });
     expect(v.learning?.learn?.lines).toEqual([

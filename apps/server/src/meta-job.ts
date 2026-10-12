@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { and, desc, eq, gte, isNotNull, isNull, sql } from "drizzle-orm";
 import { completedItems, traitCutsFrom, type EngineConfig, type RankBandConfig } from "@ldc/engine";
-import { BandAggregator, BuildAggregator, ExpectedWinFitter, type MetaConfig } from "@ldc/meta";
+import { BandAggregator, BuildAggregator, ExpectedWinFitter, SpikeAggregator, SpikeMeasure, type MetaConfig } from "@ldc/meta";
 import { RiotKeyError } from "@ldc/riot-api";
-import type { ExpectedWinTable, ItemInfo, MatchSummary, RankBandId } from "@ldc/shared";
+import type { ChampionSpikes, ExpectedWinTable, ItemInfo, MatchSummary, RankBandId, SpikeCheck } from "@ldc/shared";
 import { collect, pruneCollected, type CollectorRiot, type CollectResult } from "./collector";
 import type { Db } from "./db";
 import { collectorRuns, metaSnapshots, users } from "./db/schema";
@@ -137,15 +137,74 @@ export async function publishSnapshot(
   band: RankBandId,
   settings: MetaSettings,
   now: number,
-  extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null } = {},
+  extra: { buildBands?: RankBandId[]; items?: ReadonlyMap<number, ItemInfo> | null; spikes?: SpikesResult | null } = {},
 ): Promise<PublishedSnapshot> {
-  const since = now - settings.meta.aggregation.windowDays * DAY_MS;
+  const rows = storedRows(db, now - settings.meta.aggregation.windowDays * DAY_MS);
+  const bands = [band, ...(extra.buildBands ?? [])];
+  const first = await bandPass(rows, band, bands, settings, now);
+  const builds = JSON.stringify(await buildPass(rows, bands, settings, now, first, first.expected, extra.items ?? null));
+  // The parts are JSON objects with distinct keys: join them into one snapshot object.
+  const spikes = extra.spikes ? `,${JSON.stringify({ spikes: extra.spikes.spikes, spikeCheck: extra.spikes.check }).slice(1, -1)}` : "";
+  const json = `${first.baseJson.slice(0, -1)},${builds.slice(1, -1)}${spikes}}`;
+  const snapshot = first.summary;
+  const body = gzipSync(json);
+  const etag = `"${createHash("sha256").update(json).digest("hex").slice(0, 32)}"`;
+  const row = {
+    band,
+    createdAt: now,
+    etag,
+    matches: snapshot.matches,
+    patch: snapshot.patch,
+    newestMatchAt: snapshot.newestMatchAt,
+    sizeBytes: body.length,
+    body,
+  };
+  db.insert(metaSnapshots).values(row).onConflictDoUpdate({ target: metaSnapshots.band, set: row }).run();
+  return { band, matches: snapshot.matches, patch: snapshot.patch, sizeBytes: body.length, etag };
+}
+
+export interface SpikesResult {
+  spikes: ChampionSpikes[];
+  check: SpikeCheck;
+}
+
+/**
+ * Power spikes from the timelines of every collected band (docs/ENGINE-PLAN.md: pooled), with
+ * their split-half check. Two passes per run (the roles' usual timings, then item-specific spikes); every band's snapshot carries the same result.
+ */
+export async function measureSpikes(db: Db, bands: RankBandId[], settings: MetaSettings, now: number, items: ReadonlyMap<number, ItemInfo> | null): Promise<SpikesResult> {
+  const { aggregation, spikes } = settings.meta;
+  const opts = {
+    now,
+    config: spikes,
+    minDurationSec: aggregation.minDurationSec,
+    windowDays: aggregation.windowDays,
+    completed: items ? completedItems(items, settings.engine.loadout.items) : new Set<number>(),
+  };
+  const rows = async function* () {
+    for await (const row of storedRows(db, now - aggregation.windowDays * DAY_MS)(bands)) {
+      // Most of the cost is parsing: skip rows without a timeline unread.
+      if (row.summary.includes('"timeline"')) yield JSON.parse(row.summary) as MatchSummary;
+    }
+  };
+  // Pass 1: each role's usual time for each event. Pass 2: item-specific spikes (minus that game phase).
+  const first = new SpikeAggregator(opts);
+  for await (const m of rows()) first.add(m);
+  const measure = new SpikeMeasure({ ...opts, baselineSec: first.roleSeconds() });
+  for await (const m of rows()) measure.add(m);
+  return measure.finish();
+}
+
+/**
+ * Stored matches of some bands inside the window, newest first.
+ */
+function storedRows(db: Db, since: number): Rows {
   // Newest first, in chunks, yielding to the event loop between them. One cursor per band, each
   // reading its band's (band, ended_at) index in order (keyset on ended_at, rowid: the index holds
   // rowid, so SQLite never sorts), merged newest first. A single query over several bands made
   // SQLite sort the whole window again for every chunk, which blocked the API for minutes.
   type Row = { summary: string; band: number; endedAt: number; rid: number };
-  const rows: Rows = async function* (bands) {
+  return async function* (bands) {
     const stmt = db.$client.prepare(
       `SELECT summary, band, ended_at AS endedAt, rowid AS rid FROM matches
        WHERE band = ? AND ended_at > ? AND (ended_at < ? OR (ended_at = ? AND rowid < ?))
@@ -171,26 +230,6 @@ export async function publishSnapshot(
       if (++sent % CHUNK_ROWS === 0) await new Promise((resolve) => setImmediate(resolve));
     }
   };
-  const bands = [band, ...(extra.buildBands ?? [])];
-  const first = await bandPass(rows, band, bands, settings, now);
-  const builds = JSON.stringify(await buildPass(rows, bands, settings, now, first, first.expected, extra.items ?? null));
-  // The two parts are JSON objects with distinct keys: join them into one snapshot object.
-  const json = `${first.baseJson.slice(0, -1)},${builds.slice(1)}`;
-  const snapshot = first.summary;
-  const body = gzipSync(json);
-  const etag = `"${createHash("sha256").update(json).digest("hex").slice(0, 32)}"`;
-  const row = {
-    band,
-    createdAt: now,
-    etag,
-    matches: snapshot.matches,
-    patch: snapshot.patch,
-    newestMatchAt: snapshot.newestMatchAt,
-    sizeBytes: body.length,
-    body,
-  };
-  db.insert(metaSnapshots).values(row).onConflictDoUpdate({ target: metaSnapshots.band, set: row }).run();
-  return { band, matches: snapshot.matches, patch: snapshot.patch, sizeBytes: body.length, etag };
 }
 
 export interface MetaRunResult {
@@ -314,9 +353,11 @@ export class MetaJob {
       this.log(`meta: no item data, builds without items (${(err as Error).message})`);
       return null;
     });
+    // Spikes pool every collected band (build-only bands too): measured once, carried by every snapshot.
+    const spikes = meta.spikes.publish ? await measureSpikes(this.db, [...bands, ...buildBands], this.settings, this.now(), items) : null;
     for (const band of bands) {
       const above = buildBandsFor([band], bandConfig);
-      snapshots.push(await publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items }));
+      snapshots.push(await publishSnapshot(this.db, band, this.settings, this.now(), { buildBands: above, items, spikes }));
     }
 
     const finishedAt = this.now();

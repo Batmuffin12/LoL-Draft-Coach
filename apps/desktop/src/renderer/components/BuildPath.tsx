@@ -20,6 +20,8 @@ interface Step {
   alternatives: ItemOptionView[] | null;
   /** The start's other items with how many (2 potions, a ward), shown as icons. */
   extras: { item: IconView; count: number }[];
+  /** A measured power spike for the champion (only when the snapshot's spikes passed their check). */
+  spike?: boolean;
 }
 
 const tip = (o: Option) =>
@@ -50,7 +52,7 @@ function steps(l: LoadoutView): Step[] {
   if (l.boots) out.push({ key: "boots", label: t("build.boots"), minute: null, main: l.boots.top, core: false, alternatives: l.boots.alternatives.slice(0, ALTERNATIVES), extras: [] });
   if (l.items.length) {
     for (const [i, slot] of l.items.slice(0, CORE_SLOTS).entries())
-      out.push({ key: `item${slot.slot}`, label: t("build.item", { n: i + 1 }), minute: slot.minute, main: slot.top, core: true, alternatives: slot.alternatives.slice(0, ALTERNATIVES), extras: [] });
+      out.push({ key: `item${slot.slot}`, label: t("build.item", { n: i + 1 }), minute: slot.minute, main: slot.top, core: true, alternatives: slot.alternatives.slice(0, ALTERNATIVES), extras: [], spike: l.spikeSlots.includes(slot.slot) });
   } else {
     for (const [i, item] of (l.commonPath?.items ?? []).slice(0, CORE_SLOTS).entries())
       out.push({ key: `common${i}`, label: t("build.item", { n: i + 1 }), minute: null, main: { ...item, reasons: l.commonPath?.reason ? [l.commonPath.reason] : [] }, core: true, alternatives: null, extras: [] });
@@ -91,7 +93,13 @@ export function BuildPath({ loadout }: { loadout: LoadoutView }) {
         return (
           <div key={c.key} className="step" role="row">
             <span className="when">
-              <span className="micro text">{c.label}</span>
+              {c.spike ? (
+                <span className="micro text spike" title={t("build.spikeTip")}>
+                  {c.label}
+                </span>
+              ) : (
+                <span className="micro text">{c.label}</span>
+              )}
               {c.minute !== null && <span className="micro">{t("build.minutes", { n: Math.round(c.minute) })}</span>}
             </span>
             <span className="main" tabIndex={0} aria-label={tip(c.main)} title={tip(c.main)}>

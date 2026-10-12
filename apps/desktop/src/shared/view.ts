@@ -135,6 +135,8 @@ export interface LoadoutView {
   commonPath: { items: IconView[]; reason: string | null } | null;
   /** One-click import into the League client (only on your click), when enabled. */
   canImport: boolean;
+  /** Item slots that are a measured power spike for this champion (empty until spikes pass their check). */
+  spikeSlots: number[];
 }
 
 /** Your champion against (or with) one champion of the draft; champion null: that seat hasn't picked. */

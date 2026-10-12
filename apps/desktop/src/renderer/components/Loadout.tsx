@@ -77,7 +77,8 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
   const vsTeam = l.situational.filter((i) => !shown.has(i.id));
   // The note says only what the path shows: ★ needs win added, pick rates need ranked items.
   const stars = [...l.items.flatMap((s) => [s.top, ...s.alternatives]), ...(l.boots ? [l.boots.top, ...l.boots.alternatives] : [])].some((o) => o.winAdded !== null);
-  const note = stars ? t("build.note") : l.items.length > 0 || l.boots !== null ? t("build.noteRate") : t("build.noteThin");
+  const base = stars ? t("build.note") : l.items.length > 0 || l.boots !== null ? t("build.noteRate") : t("build.noteThin");
+  const note = l.spikeSlots.length ? `${base} · ${t("build.spikeNote")}` : base;
   return (
     <>
       <Section title={t("build.head")} aside={<span className="micro">{note}</span>}>

@@ -30,6 +30,8 @@ For every player-game with a timeline, take the minute `t` their k-th completed 
 
 The pattern makes sense: snowballing champions (assassins, skirmishers, lane bullies) spike on their first item, while tanks and scalers don't. But at 20–90 games per champion this is borderline (with ~150 champion-roles, a few z ≈ 2.4 can be chance). **Rough data needed:** ~300–400 timeline games per champion-role for a +100 gold swing to be clear. That's about 4–5× today's sample per band, or ~1.5× if spikes are pooled across bands. A spike belongs to the champion more than to a rank, so pooling is sensible.
 
+**Split-half check (M8, same 975 games, `pnpm --filter @ldc/server spikes`):** measured on two halves of the games, the first-three-item swings of 87 champion-role events correlate at only **0.09**, and 8 of 114 events reach z ≥ 2, about what chance gives. So the table above is mostly noise at this size; the pattern only *looked* right. Nothing is shown in the app until the check passes on production data (target: correlation ≥ 0.5 and ≥ 80% same direction at z ≥ 2). Production collects ~7k games a day with timelines (kills and levels too) from the v0.7.0 deploy on.
+
 ### Better signals with small data additions
 
 | Add to `summarizeTimeline` | Unlocks | Cost |
@@ -73,3 +75,47 @@ Steps 2–6 are the power-spike feature (one milestone-sized chunk, roughly a we
 1. **Power spikes are their own milestone: M8 (v0.8.0)**, after v0.7.0; in game and polish moves to M9 (SPEC roadmap updated).
 2. **Spikes pool all rank bands.**
 3. **Timelines on every Gold–Plat game: approved.** Done on `milestone-7-grow` so production collects spike data from the v0.7.0 deploy on: `timelineShare` 1, run budget 2400 s (docs/CLOUD.md), and timelines keep champion kills and levels per minute (step 2 of the plan). Older stored rows have neither; the aggregator must skip them.
+
+## M8 progress (branch `milestone-8-spikes`, from `milestone-7-grow`)
+
+| Step | Commit | State |
+| --- | --- | --- |
+| Timeline data (kills, levels; timelines on every Gold–Plat game) | 75b0f7f, 1675a99 | Done; reaches production with v0.7.0 |
+| `SpikeAggregator` (gold swing and fights won after vs before each item and level, minus the role's, shrunk) | 87f209b | Done |
+| `pnpm --filter @ldc/server spikes`: split-half check + strongest/weakest list | 8080c96 | Done; **local data fails the check (0.09)** |
+| Spikes and `spikeCheck` in every band's snapshot (one pass per run, all bands) | 267e374 | Done |
+| Shown in the game plan, the New tab and the Build tab, only when `spikeCheck` passes (`engine.v1.json` `spikes`) | 02c5a70 | Done; sim scenario `locked-spikes` |
+| Your first-item timing vs typical (New tab) | 5438184 | Done; needs ≥ 2 of your games on the champion with a timeline |
+| SPEC: spike info is passive | 8fb5d7e | Done |
+| `spikes.publish` (meta.v1.json): the hourly run measures spikes only when on | 30f7cae | Off: the check fails and the pass costs 100 s per run on production data |
+
+**Waiting on data:** M7 shipped (v0.7.0–v0.7.2 on `main`, 2026-10-08) with the timeline change, so production collects kills and levels from that deploy on (`/health` still reports 0.6.2, a known bug: confirm the deploy another way). After a few days, copy the DB (docs/CLOUD.md) and run `pnpm --filter @ldc/server spikes`. If the check passes (correlation ≥ 0.5, ≥ 80% same direction), merge M8 and the spikes appear; if not, try the time-matched comparison or a longer window before showing anything.
+
+### First test on production (2026-10-08, 10,336 games with timelines, all bands)
+
+`pnpm --filter @ldc/server spikes --windows 2,3,4,5,6,8` on a copy (deleted afterwards):
+
+| Window | With game phase r | Placebo vs real r | Item-specific r | Same direction | Older→newer r |
+| --- | --- | --- | --- | --- | --- |
+| 3 min | 0.21 | 0.43 | 0.09 | 64% | 0.01 |
+| 5 min | 0.47 | 0.74 | 0.15 | 61% | 0.02 |
+| 8 min | 0.61 | 0.89 | 0.16 | 71% | 0.11 |
+
+- Measured as first built, spikes pass the check from ~7-minute windows, but a placebo (the same player's swing at the role's usual item time) gives nearly the same numbers: that is the champion's **game phase**, not the item. Fixed in fe2d7ab: spikes subtract it (`baselineSec`), and the published check tests the item-specific part.
+- Item-specific spikes are noise at this size (32 of 725 at z ≥ 2 ≈ chance). By Spearman–Brown, r 0.1–0.15 needs ~6–10× the games (60–100k with timelines) to reach 0.5; production adds ~7k a day, capped at 50k per band. Fights won (kill events, collected since v0.7.x) may be more sensitive than gold.
+- What *is* stable today is the game phase itself (r 0.61, 90% same direction at 8 min): when a champion gains most on its lane opponent. It isn't an item spike, but it could be shown honestly as "strongest from about minute X" (owner to decide).
+
+### Re-check on production (2026-10-12, 62,617 games with timelines, 53,464 with kills and levels, all bands)
+
+Same command on a fresh copy (1.7 GB; the CLI now needs `NODE_OPTIONS=--max-old-space-size=14000`; copy deleted afterwards):
+
+| Window | With game phase r | Events | Item-specific r | Same direction (z ≥ 2) | Older→newer r |
+| --- | --- | --- | --- | --- | --- |
+| 2 min | 0.19 | 7,222 | 0.06 | 73% of 1,312 | 0.06 |
+| 3 min (published) | 0.30 | 6,674 | 0.02 | 67% of 1,087 | 0.03 |
+| 5 min | 0.47 | 5,797 | 0.06 | 69% of 896 | 0.05 |
+| 8 min | 0.67 | 4,659 | 0.10 | 73% of 818 | 0.11 |
+
+- **Fails again, with 6× the games.** Item-specific r stayed at 0.02–0.10 (Oct 8: 0.09–0.16 on 10k), and 92 of 1,241 item spikes reach z ≥ 2 (≈ 7%, little over chance). More data did not raise the split-half agreement, so the item-specific part looks like it is near zero for most champions, not just under-sampled.
+- The game phase keeps getting more stable (r 0.67 at 8 min). Level spikes look stronger in the top list (Irelia, Volibear, Darius at level 5, fights z 4–5), but the published check covers items only; testing levels on their own is a next step, not part of v0.8.0.
+- **Exit rule applies (Oct 15):** v0.8.0 ships with spikes hidden behind the check (as built) and your own item timing visible. Measuring them costs 100 s per hourly run on this PC (band 2's whole snapshot: 37 s), so the hourly run skips it (`spikes.publish: false`) until the offline check passes; then switch it on in `config/meta.v1.json`.

@@ -2,6 +2,17 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [0.8.0] — 2026-10-12 — Power spikes (milestone 8)
+
+### Added
+- **Power spikes, measured, not typed in**: per champion and role (all rank bands pooled), how much more players gain on their lane opponent right after each completed item and each level than the role does, minus the champion's game phase, shrunk toward the role. Shown in the game plan, the New tab and as a mark on the Build tab's spike step, **only when the snapshot's split-half check passes** (`engine.v1.json` `spikes`). On 62,617 production games the item-specific part doesn't repeat between halves (r 0.02–0.10, target 0.5), so the panel shows no spikes yet (docs/ENGINE-PLAN.md).
+- **Your first-item timing** on the champion you're learning (New tab), from your own games with a timeline, against your rank's usual minute for that champion's first item: "Your first item on it: 13.4 min (3 games), typical 11.1 min".
+- `pnpm --filter @ldc/server spikes`: the split-half check over several window lengths and the strongest and weakest spikes, on a database copy.
+
+### Changed
+- Server: `meta.v1.json` `spikes.publish` switches the spike pass of the hourly run (100 s on production data on a desktop CPU); off while the check fails, so snapshots carry no spikes and the run costs what it did.
+- SPEC: power-spike info is passive (only on screens the player opens; no pushed spike alerts).
+
 ## [0.7.9] — 2026-10-12 — Performance and code health
 
 ### Changed

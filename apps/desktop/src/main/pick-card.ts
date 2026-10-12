@@ -4,6 +4,7 @@ import {
   completedBoots,
   completedItems,
   draftLoadout,
+  powerSpikes,
   enemyTeamNotes,
   type filledRole,
   gamePlan,
@@ -87,6 +88,8 @@ export function pickCardView(championId: ChampionId, hovering: boolean, loadout:
           canImport: ctx.canImport,
           perk: ctx.perk,
           shardRows: ctx.shardRows,
+          // Item slots that are a measured spike (shown only when the snapshot's spikes passed their check).
+          spikeSlots: live && ctx.role ? powerSpikes(live.index, championId, ctx.role, config.engine.spikes).filter((s) => s.kind === "item").map((s) => s.at) : [],
         })
       : null,
     importMessage,

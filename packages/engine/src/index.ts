@@ -22,5 +22,6 @@ export * from "./newchamps";
 export * from "./report";
 export * from "./session";
 export * from "./plan";
+export * from "./spikes";
 export * from "./power-curve";
 export * from "./style-profile";

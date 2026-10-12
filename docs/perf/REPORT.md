@@ -123,6 +123,14 @@ A full `pnpm perf --label post-fallow` on the branch head (112bd08), compared wi
 
 One number looked worse: the main process's profile load during cold start, 81.7 → 87–90 ms over three runs. Bisected: the commit just before the refactor, measured the same day, gives 83–86 ms, so the refactor's share is ~3 ms (~4%, under the 5% noise line and inside the runs' spread); the rest is the machine since `final`. A first-call profile load in plain Node is the same before and after (median 96 vs 95 ms over 8 fresh processes), and the first full screen doesn't move.
 
+## M8 power spikes (`post-fallow` → `m8`, branch `milestone-8-spikes`, 2026-10-12)
+
+`pnpm perf --label m8`, `pnpm perf:compare post-fallow m8`: budgets 23/24 → 23/24 (the same one over). Cold start to the first full screen 426 → 429 ms (noise); champ select updates, clicks, frames and the server within noise. One real change: a new meta snapshot in the main process costs 7.5 → 8.7 ms (+1.2 ms), the spike index built per snapshot. fallow health 91 (A); `personal-coach.ts` stays at 48.5.
+
+Regression guard (`pnpm perf:screens m8`, `pnpm perf:guard baseline m8`): overflow 0 on all 12 screens, pixels identical except 15 px of icon noise on Matchups. View dumps differ only where M8 adds data: `copy.build.spikeNote` / `spikeTip` (the Build tab's spike wording, in every dump's copy) and an empty `loadout.spikeSlots` on the pick and locked-in screens (the scenarios' snapshots carry no passing spike check, so no step is marked). Your item timing doesn't appear in the guard: the synthetic history has no timelines on the learned champion.
+
+Server: measuring spikes on the production copy (62,617 timeline games) takes 100 s per hourly run on this PC, against 37 s for band 2's whole snapshot; peak memory 483 MB, streamed. Since the check fails, `meta.v1.json` `spikes.publish` is off: the hourly run skips it and the panel hides spikes as built.
+
 ## What's left
 
 - **The full profile at 10 connections stays over budget** (925 ms p99). Gzip of 14 MB costs ~105 ms per request and the JSON ~15 ms; to get under 200 ms with 10 at once it would take a cache of compressed responses (memory on a small server) or precompressed match summaries. With the panel's disk cache a full download happens only on registration, after sign-out, or against an older server, one request at a time (150 ms alone, within budget), so I left it.

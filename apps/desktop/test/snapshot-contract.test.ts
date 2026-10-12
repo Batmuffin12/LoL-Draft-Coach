@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adviseLivePicks, MetaIndex } from "@ldc/engine";
 import { MatchSchema, summarizeMatch } from "@ldc/riot-api";
-import { findConfigDir as serverConfigDir, loadServerConfig, openDb, publishSnapshot } from "@ldc/server";
+import { findConfigDir as serverConfigDir, loadServerConfig, measureSpikes, openDb, publishSnapshot } from "@ldc/server";
 import type { DraftState, MetaSnapshot } from "@ldc/shared";
 import { MetaSnapshotSchema } from "../src/main/server-client";
 
@@ -52,7 +52,8 @@ describe("meta snapshot contract", () => {
       const m = match(k);
       insert.run(m.matchId, m.endedAt, JSON.stringify(m), NOW);
     }
-    await publishSnapshot(db, 2, { meta: config.meta, bands: config.bands, engine: config.engine }, NOW);
+    const settings = { meta: config.meta, bands: config.bands, engine: config.engine };
+    await publishSnapshot(db, 2, settings, NOW, { spikes: await measureSpikes(db, [2], settings, NOW, null) });
     const { gunzipSync } = await import("node:zlib");
     const row = db.$client.prepare("SELECT body FROM meta_snapshots WHERE band = 2").get() as { body: Buffer };
     const json = JSON.parse(gunzipSync(row.body).toString()) as unknown;
@@ -61,6 +62,9 @@ describe("meta snapshot contract", () => {
     expect(parsed.success, parsed.success ? "" : JSON.stringify(parsed.error.issues.slice(0, 3))).toBe(true);
 
     const snapshot = json as MetaSnapshot;
+    // No timelines in these games: the spikes are empty, and their check says so.
+    expect(snapshot.spikes).toEqual([]);
+    expect(snapshot.spikeCheck).toMatchObject({ pairs: 0, goldCorrelation: null });
     const slot = (cellId: number, championId = 0, position = "", local = false) => ({ cellId, championId, pickIntentId: 0, position, isLocalPlayer: local });
     const draft: DraftState = {
       timerPhase: "BAN_PICK",

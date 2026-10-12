@@ -14,6 +14,8 @@ export interface LoadoutViewDeps {
   perk?: (id: number) => { name: string; iconUrl: string | null } | undefined;
   /** The stat shard rows as the client lists them (offense, flex, defense), when known. */
   shardRows?: number[][];
+  /** Item slots that are a measured power spike for the champion (shown only when the spikes passed their check). */
+  spikeSlots?: number[];
   /** Per enemy trait, the pattern a rune's own description must match to be suggested (engine loadout.runeMechanics). */
   runeMechanics?: Record<string, string>;
   /** The same for situational items (engine loadout.itemMechanics). */
@@ -175,5 +177,6 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
     items: l.items.map((s) => ({ slot: s.slot, minute: s.minute > 0 ? s.minute : null, top: option(s.top), alternatives: s.alternatives.map(option) })),
     commonPath: !l.items.length && l.core ? { items: l.core.value.map(item), reason: first(l.core.reasons) } : null,
     canImport: deps.canImport,
+    spikeSlots: deps.spikeSlots ?? [],
   };
 }

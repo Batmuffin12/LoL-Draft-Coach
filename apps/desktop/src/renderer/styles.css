@@ -293,6 +293,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .path .step { display: grid; grid-template-columns: 52px minmax(0, 1fr) 56px 116px; align-items: center; column-gap: 10px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); }
 .path .step:first-child { border-top: 0; }
 .path .when { display: flex; flex-direction: column; }
+.path .when .spike { color: var(--gold); text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
 .path .main { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .path .main .nm { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .path .rate { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); white-space: nowrap; }

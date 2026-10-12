@@ -1,6 +1,7 @@
 import { LcuImporter, type LobbyRoles } from "@ldc/lcu";
 import {
   adviseRoles,
+  completedItems,
   bandFromRankedEntries,
   computeComfort,
   deriveChampionAttributes,
@@ -253,6 +254,24 @@ export class PersonalCoach extends Coach {
   }
 
   /** A champion from Data Dragon (undefined when it isn't loaded or unknown). */
+  /** An item's name from Data Dragon ("#id" while it isn't loaded). */
+  private itemName(id: number): string {
+    try {
+      return this.deps.ddragon.data.itemInfo.get(id)?.name ?? `#${id}`;
+    } catch {
+      return `#${id}`;
+    }
+  }
+
+  /** Completed items from Data Dragon with the engine's item rules (undefined while it isn't loaded). */
+  private completedItemSet(): ReadonlySet<number> | undefined {
+    try {
+      return completedItems(this.deps.ddragon.data.itemInfo, this.config.engine.loadout.items);
+    } catch {
+      return undefined;
+    }
+  }
+
   private readonly championLookup = (id: number) => {
     try {
       return this.deps.ddragon.champion(id);
@@ -472,6 +491,7 @@ export class PersonalCoach extends Coach {
       explain,
       champion: (id) => champView(id, lookup),
       championName: (id) => lookup(id)?.name ?? `#${id}`,
+      itemName: (id) => this.itemName(id),
       planGames: engine.newChamps.planGames,
       learn: { profile: engine.newChamps.learn.profile, laneGoldEven: engine.rating.explain.laneGoldGap },
       blockGames: engine.newChamps.learn.blockGames,
@@ -483,6 +503,7 @@ export class PersonalCoach extends Coach {
           index,
           champion: lookup(id),
           goal: this.growth?.focus ? { role: this.growth.role, ...this.growth.focus } : null,
+          completed: this.completedItemSet(),
           config: engine,
         }),
     });
@@ -619,7 +640,7 @@ export class PersonalCoach extends Coach {
       band: this.band,
       data,
       lookup,
-      say: (r) => renderReason(r, this.config.explain.templates, nameOf),
+      say: (r) => renderReason(r, this.config.explain.templates, nameOf, { item: (id) => this.itemName(id) }),
       canImport: this.canImport,
       perk: (id) => this.perks.get(id),
       shardRows: this.shardRows,

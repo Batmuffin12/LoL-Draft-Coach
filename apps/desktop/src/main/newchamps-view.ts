@@ -1,4 +1,4 @@
-import { formatMetric, metricLabel, renderReason, type ExplainConfig, type LearningMatchup, type LearningPlan, type NewChampAdvice } from "@ldc/engine";
+import { formatMetric, metricLabel, renderReason, spikeReason, type ExplainConfig, type LearningMatchup, type LearningPlan, type NewChampAdvice } from "@ldc/engine";
 import type { Reason } from "@ldc/shared";
 import type { ChampView, LearnView, NewChampRoleView } from "../shared/view";
 
@@ -7,6 +7,8 @@ export interface NewChampsViewDeps {
   champion: (id: number) => ChampView | null;
   championName: (id: number) => string;
   /** "Try it in 3 to 5 Normal Draft games." */
+  /** Item names for spike lines ("#id" when unknown). */
+  itemName?: (id: number) => string;
   planGames: [number, number];
   /** "Play it in blocks of 2 to 3 games." */
   blockGames: [number, number];
@@ -25,10 +27,10 @@ const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
  * only what the data says about this champion: how it wins in your rank (with your numbers on
  * it), when it's strong, its matchups and your record on it. No generic advice.
  */
-export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "blockGames" | "learn">): LearnView {
+export function learnView(p: LearningPlan, role: string, championId: number, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "itemName" | "blockGames" | "learn">): LearnView {
   const { explain } = deps;
   const t = explain.templates;
-  const say = (r: Reason) => renderReason(r, t, deps.championName);
+  const say = (r: Reason) => renderReason(r, t, deps.championName, deps.itemName ? { item: deps.itemName } : {});
   const pct = (v: number) => {
     const s = (v * 100).toFixed(1);
     return v > 0 ? `+${s}%` : `${s.replace("-", "−")}%`;
@@ -79,6 +81,13 @@ export function learnView(p: LearningPlan, role: string, deps: Pick<NewChampsVie
     });
     lines.push(say({ id: "newchamp.learn.wins", slots: { items: items.join("; and ") } }));
   }
+  // Its measured spikes, and your own first-item timing on it (both only when measured).
+  for (const s of p.spikes) lines.push(say(spikeReason(s, "learn", championId)));
+  if (p.timing) {
+    const { games, you, typical, slow } = p.timing;
+    const id = typical === null ? "newchamp.learn.timing.only" : slow ? "newchamp.learn.timing.slow" : "newchamp.learn.timing";
+    lines.push(say({ id, slots: { games, you: you.toFixed(1), typical: typical === null ? "" : typical.toFixed(1) } }));
+  }
   if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
   else if (p.evenCurve) lines.push(say({ id: "newchamp.learn.evenCurve", slots: { early: p.evenCurve.early, late: p.evenCurve.late } }));
   if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
@@ -99,7 +108,7 @@ export function newChampsView(a: NewChampAdvice, deps: NewChampsViewDeps): NewCh
   const top = a.picks[0];
   const learnOf = (id: number) => {
     const p = deps.plan(id);
-    return p ? learnView(p, a.role, deps) : null;
+    return p ? learnView(p, a.role, id, deps) : null;
   };
   let plan: string | null = null;
   let planLearn: LearnView | null = null;

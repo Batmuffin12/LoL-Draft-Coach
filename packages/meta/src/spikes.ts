@@ -1,0 +1,263 @@
+import type { ChampionId, ChampionSpikes, MatchSummary, MatchTimeline, Position, SpikeCheck, SpikeStat } from "@ldc/shared";
+import { completedPurchases } from "./builds";
+import type { MetaConfig } from "./config";
+
+export type SpikeConfig = MetaConfig["spikes"];
+
+/** A spike moment: the k-th completed item (1-based), or reaching a champion level. */
+export type SpikeEvent = { kind: "item"; slot: number } | { kind: "level"; level: number };
+
+export interface SpikeOptions {
+  now: number;
+  config: SpikeConfig;
+  /** Games shorter than this are remakes; older ones than windowDays are left out (aggregation config). */
+  minDurationSec: number;
+  windowDays: number;
+  /** Completed items (Data Dragon with the engine's item rules). */
+  completed: ReadonlySet<number>;
+  /**
+   * Item-specific spikes: each player's swing at their own event time minus their swing at the
+   * role's usual second for that event ("role|item:1" → second, from `roleSeconds()` of a first
+   * pass). Without it, a spike also contains the champion's game phase (production, 2026-10-08:
+   * with long windows nearly all of it).
+   */
+  baselineSec?: ReadonlyMap<string, number>;
+}
+
+interface Acc {
+  n: number;
+  sum: number;
+  sq: number;
+  fn: number;
+  fsum: number;
+  fsq: number;
+  minutes: number;
+}
+const acc = (): Acc => ({ n: 0, sum: 0, sq: 0, fn: 0, fsum: 0, fsq: 0, minutes: 0 });
+const DAY_MS = 86_400_000;
+
+/**
+ * Measures power spikes from collected timelines (docs/ENGINE-PLAN.md): for each player and
+ * spike event (each of the first `itemSlots` completed items, each level), the gold lead over
+ * the lane opponent gained in the `windowMinutes` after the event minus the same span before
+ * it, and the same for fights won when kill events are stored. A champion's spike is its mean
+ * minus its role's mean at that event (so "everyone gets stronger with items" cancels), shrunk
+ * toward 0 with `priorGames`. Pools whatever matches it's given (all rank bands). Pure.
+ */
+export class SpikeAggregator {
+  private readonly byChampion = new Map<string, Acc>();
+  private readonly byRole = new Map<string, Acc>();
+  private games = 0;
+
+  constructor(private readonly opts: SpikeOptions) {}
+
+  add(m: MatchSummary): boolean {
+    const t = m.timeline;
+    const o = this.opts;
+    if (!t?.gold.length || m.durationSec < o.minDurationSec || m.endedAt <= o.now - o.windowDays * DAY_MS) return false;
+    if (!m.participants.every((p) => p.position)) return false;
+    this.games++;
+    m.participants.forEach((p, i) => {
+      const opp = m.participants.findIndex((q, j) => j !== i && q.position === p.position && q.win !== p.win);
+      if (opp < 0) return;
+      for (const [event, sec] of this.events(t, i)) this.measure(t, i, opp, p.championId, p.position, event, sec);
+    });
+    return true;
+  }
+
+  /** The player's spike events with the second each happened. */
+  private events(t: MatchTimeline, i: number): [SpikeEvent, number][] {
+    const out: [SpikeEvent, number][] = completedPurchases(t, i, this.opts.completed)
+      .slice(0, this.opts.config.itemSlots)
+      .map((x, k) => [{ kind: "item", slot: k + 1 }, x.sec]);
+    const levels = t.levels?.[i];
+    if (levels) {
+      // Frame f is minute f: a level first shown at frame f was reached during minute f − 1.
+      let reached = levels[0] ?? 1;
+      for (let f = 1; f < levels.length; f++) {
+        for (let l = reached + 1; l <= levels[f]!; l++) out.push([{ kind: "level", level: l }, (f - 1) * 60 + 30]);
+        reached = Math.max(reached, levels[f]!);
+      }
+    }
+    return out;
+  }
+
+  /** Gold-lead (and fights-won) swing around second `sec`: the window after minus the window before; null when it doesn't fit the game. */
+  private swing(t: MatchTimeline, i: number, opp: number, sec: number): { gold: number; fights: number | null } | null {
+    const w = this.opts.config.windowMinutes;
+    const a = Math.floor(sec / 60);
+    const b = a + 1;
+    const gi = t.gold[i]!;
+    const go = t.gold[opp]!;
+    if (a - w < 0 || b + w >= gi.length || b + w >= go.length) return null;
+    const lead = (f: number) => gi[f]! - go[f]!;
+    const gold = lead(b + w) - lead(b) - (lead(a) - lead(a - w));
+    let fights: number | null = null;
+    if (t.kills) {
+      const net = (from: number, to: number) => {
+        let n = 0;
+        for (const [s, killer, victim, assists] of t.kills!) {
+          if (s < from * 60 || s >= to * 60) continue;
+          if (killer === i || (assists & (1 << i)) !== 0) n++;
+          if (victim === i) n--;
+        }
+        return n;
+      };
+      fights = net(b, b + w) - net(a - w, a);
+    }
+    return { gold, fights };
+  }
+
+  private measure(t: MatchTimeline, i: number, opp: number, championId: ChampionId, role: Position, event: SpikeEvent, sec: number): void {
+    const real = this.swing(t, i, opp, sec);
+    if (!real) return;
+    let { gold, fights } = real;
+    // Item-specific: minus the same player's swing at the role's usual time for the event (the game phase).
+    const base = this.opts.baselineSec?.get(`${role}|${event.kind === "item" ? `item:${event.slot}` : `level:${event.level}`}`);
+    if (base !== undefined) {
+      const phase = this.swing(t, i, opp, base);
+      if (!phase) return;
+      gold -= phase.gold;
+      fights = fights !== null && phase.fights !== null ? fights - phase.fights : null;
+    }
+
+    const key = event.kind === "item" ? `item:${event.slot}` : `level:${event.level}`;
+    for (const [map, k] of [
+      [this.byChampion, `${championId}|${role}|${key}`],
+      [this.byRole, `${role}|${key}`],
+    ] as const) {
+      const x = map.get(k) ?? map.set(k, acc()).get(k)!;
+      x.n++;
+      x.sum += gold;
+      x.sq += gold * gold;
+      x.minutes += sec / 60;
+      if (fights !== null) {
+        x.fn++;
+        x.fsum += fights;
+        x.fsq += fights * fights;
+      }
+    }
+  }
+
+  /** The mean second each role reaches each event ("role|item:1" → second): the `baselineSec` of an item-specific run. */
+  roleSeconds(): Map<string, number> {
+    return new Map([...this.byRole].map(([k, x]) => [k, (x.minutes / x.n) * 60]));
+  }
+
+  /** Matches with a usable timeline. */
+  get matches(): number {
+    return this.games;
+  }
+
+  /** Spikes per champion-role with at least `minGames` games, by event; every measured event, unfiltered by z. */
+  finish(): ChampionSpikes[] {
+    const cfg = this.opts.config;
+    const out = new Map<string, ChampionSpikes>();
+    for (const [k, x] of this.byChampion) {
+      if (x.n < cfg.minGames) continue;
+      const [id, role, kind, at] = k.split(/[|:]/) as [string, Position, "item" | "level", string];
+      const r = this.byRole.get(`${role}|${kind}:${at}`)!;
+      const stat = (n: number, sum: number, sq: number, rn: number, rsum: number) => {
+        const mean = sum / n;
+        const sd = Math.sqrt(Math.max(0, sq / n - mean * mean));
+        const rel = mean - rsum / rn;
+        return { shrunk: (rel * n) / (n + cfg.priorGames), z: sd > 0 ? rel / (sd / Math.sqrt(n)) : 0 };
+      };
+      const g = stat(x.n, x.sum, x.sq, r.n, r.sum);
+      const s: SpikeStat = { kind, at: Number(at), n: x.n, minute: round(x.minutes / x.n, 1), gold: Math.round(g.shrunk), goldZ: round(g.z, 2) };
+      if (x.fn >= cfg.minGames && r.fn > 0) {
+        const f = stat(x.fn, x.fsum, x.fsq, r.fn, r.fsum);
+        Object.assign(s, { fights: round(f.shrunk, 3), fightsZ: round(f.z, 2), fightsN: x.fn });
+      }
+      const ck = `${id}|${role}`;
+      const c = out.get(ck) ?? out.set(ck, { championId: Number(id), role, spikes: [] }).get(ck)!;
+      c.spikes.push(s);
+    }
+    for (const c of out.values()) c.spikes.sort((a, b) => (a.kind === b.kind ? a.at - b.at : a.kind === "item" ? -1 : 1));
+    return [...out.values()].sort((a, b) => a.championId - b.championId || a.role.localeCompare(b.role));
+  }
+}
+
+const round = (v: number, digits: number) => Math.round(v * 10 ** digits) / 10 ** digits;
+
+/**
+ * Spikes with their own check: the spikes of all the games, and the same measured on two
+ * halves of them (alternate matches, so no game is in both) to see whether they repeat: a real
+ * effect shows up in both halves. Feed it matches in any order. Pure.
+ */
+export class SpikeMeasure {
+  private readonly all: SpikeAggregator;
+  private readonly halves: [SpikeAggregator, SpikeAggregator];
+  private k = 0;
+
+  constructor(private readonly opts: SpikeOptions) {
+    this.all = new SpikeAggregator(opts);
+    // Each half has half the games: half the minimum, so the check covers the same champions; unshrunk.
+    const raw = { ...opts, config: { ...opts.config, priorGames: 0, minGames: Math.max(1, Math.ceil(opts.config.minGames / 2)) } };
+    this.halves = [new SpikeAggregator(raw), new SpikeAggregator(raw)];
+  }
+
+  add(m: MatchSummary): boolean {
+    if (!this.all.add(m)) return false;
+    this.halves[this.k++ % 2]!.add(m);
+    return true;
+  }
+
+  get matches(): number {
+    return this.all.matches;
+  }
+
+  finish(): { spikes: ChampionSpikes[]; check: SpikeCheck } {
+    return { spikes: this.all.finish(), check: compareSpikeHalves(this.halves[0].finish(), this.halves[1].finish(), this.opts.config.checkZ) };
+  }
+}
+
+/** Spikes measured on two halves of the games, compared (see SpikeMeasure). */
+export function compareSpikeHalves(first: ChampionSpikes[], second: ChampionSpikes[], z: number): SpikeCheck {
+  const index = (cs: ChampionSpikes[]) => new Map(cs.flatMap((c) => c.spikes.map((s) => [`${c.championId}|${c.role}|${s.kind}:${s.at}`, s] as const)));
+  const [a, b] = [index(first), index(second)];
+  const pairs = [...a].flatMap(([key, s]) => {
+    const t = b.get(key);
+    return t ? [[s, t] as const] : [];
+  });
+  let goldCorrelation: number | null = null;
+  if (pairs.length >= 3) {
+    const xs = pairs.map(([s]) => s.gold);
+    const ys = pairs.map(([, t]) => t.gold);
+    const mx = xs.reduce((p, q) => p + q, 0) / xs.length;
+    const my = ys.reduce((p, q) => p + q, 0) / ys.length;
+    let sxy = 0;
+    let sxx = 0;
+    let syy = 0;
+    for (let i = 0; i < xs.length; i++) {
+      sxy += (xs[i]! - mx) * (ys[i]! - my);
+      sxx += (xs[i]! - mx) ** 2;
+      syy += (ys[i]! - my) ** 2;
+    }
+    goldCorrelation = sxx > 0 && syy > 0 ? round(sxy / Math.sqrt(sxx * syy), 3) : null;
+  }
+  const strong = pairs.flatMap(([s, t]) => [
+    ...(Math.abs(s.goldZ) >= z ? [Math.sign(s.gold) === Math.sign(t.gold)] : []),
+    ...(Math.abs(t.goldZ) >= z ? [Math.sign(t.gold) === Math.sign(s.gold)] : []),
+  ]);
+  return {
+    pairs: pairs.length,
+    goldCorrelation,
+    signAgreement: strong.length ? round(strong.filter(Boolean).length / strong.length, 3) : null,
+    strongPairs: strong.length,
+  };
+}
+
+/**
+ * The split-half check on a fixed set of games, two ways: "alternate" (every other game, like
+ * the hourly check) or "time" (older half vs newer half: do spikes measured on older games hold
+ * on newer ones, e.g. across a patch). Pure.
+ */
+export function checkSpikes(matches: MatchSummary[], opts: SpikeOptions, split: "alternate" | "time"): SpikeCheck {
+  const raw = { ...opts, config: { ...opts.config, priorGames: 0, minGames: Math.max(1, Math.ceil(opts.config.minGames / 2)) } };
+  const [a, b] = [new SpikeAggregator(raw), new SpikeAggregator(raw)];
+  const usable = matches.filter((m) => m.timeline);
+  const ordered = split === "time" ? [...usable].sort((x, y) => x.endedAt - y.endedAt || x.matchId.localeCompare(y.matchId)) : usable;
+  ordered.forEach((m, i) => (split === "time" ? (i < ordered.length / 2 ? a : b) : i % 2 === 0 ? a : b).add(m));
+  return compareSpikeHalves(a.finish(), b.finish(), opts.config.checkZ);
+}

@@ -1,6 +1,6 @@
 {
   "name": "@ldc/server",
-  "version": "0.7.9",
+  "version": "0.8.0",
   "private": true,
   "description": "LoL Draft Coach server: users, profiles, meta snapshots and background jobs (Hono + SQLite)",
   "type": "module",
@@ -14,6 +14,7 @@
     "test": "vitest run",
     "collect": "tsx --env-file-if-exists=../../.env src/collect-cli.ts",
     "backtest": "tsx --env-file-if-exists=../../.env src/backtest-cli.ts",
+    "spikes": "tsx --env-file-if-exists=../../.env src/spikes-cli.ts",
     "backup": "tsx --env-file-if-exists=../../.env src/backup-cli.ts"
   },
   "dependencies": {
