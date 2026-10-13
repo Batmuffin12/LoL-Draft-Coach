@@ -67,6 +67,8 @@ function createWindow(): BrowserWindow {
     alwaysOnTop: true,
     backgroundColor: "#0b0f17",
     title: "LoL Draft Coach",
+    // Packaged, the taskbar takes the exe's icon; a development build runs electron.exe, so set it here.
+    ...(app.isPackaged ? {} : { icon: join(__dirname, "../../assets/icon.ico") }),
     show: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),
