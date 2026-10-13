@@ -1,7 +1,8 @@
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error -- plain .mjs script without types
-import { releaseProblems } from "../scripts/release-check.mjs";
+import { releaseNotes, releaseProblems } from "../scripts/release-check.mjs";
 
 const ok = { version: "1.0.0", dirty: false, tags: ["v1.0.0"], token: true };
 const check = releaseProblems as (s: typeof ok) => string[];
@@ -26,6 +27,20 @@ describe("releaseProblems", () => {
   });
 });
 
+describe("releaseNotes", () => {
+  const notes = releaseNotes as (changelog: string, version: string) => string;
+  const log = ["# Changelog", "", "Intro.", "", "## [1.0.1] — 2026-10-13", "", "### Changed", "- New icon.", "", "## [1.0.0] — 2026-10-12", "", "- First.", ""].join("\n");
+
+  it("takes the version's section without its heading", () => {
+    expect(notes(log, "1.0.1")).toBe(["### Changed", "- New icon."].join("\n"));
+    expect(notes(log, "1.0.0")).toBe("- First.");
+  });
+
+  it("is empty for a version the changelog doesn't have", () => {
+    expect(notes(log, "1.0.2")).toBe("");
+  });
+});
+
 describe("installer config", () => {
   const load = (env: Record<string, string | undefined>) => {
     const saved = { ...process.env };
@@ -35,7 +50,7 @@ describe("installer config", () => {
       const require = createRequire(import.meta.url);
       const path = require.resolve("../electron-builder.config.cjs");
       delete require.cache[path];
-      return require(path) as { publish: Record<string, unknown>[] };
+      return require(path) as { publish: Record<string, unknown>[]; win: { icon: string }; nsis: { installerIcon: string; uninstallerIcon: string } };
     } finally {
       process.env = saved;
     }
@@ -47,5 +62,10 @@ describe("installer config", () => {
 
   it("points at another public location when LDC_UPDATE_URL is set", () => {
     expect(load({ LDC_UPDATE_URL: "https://updates.example" }).publish).toEqual([{ provider: "generic", url: "https://updates.example" }]);
+  });
+
+  it("gives the exe, installer and uninstaller the app icon, which exists", () => {
+    const c = load({});
+    for (const icon of [c.win.icon, c.nsis.installerIcon, c.nsis.uninstallerIcon]) expect(existsSync(new URL(`../${icon}`, import.meta.url))).toBe(true);
   });
 });

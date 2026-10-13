@@ -24,7 +24,9 @@ module.exports = {
   asarUnpack: ["**/node_modules/koffi/**"],
   npmRebuild: false,
   extraMetadata: { ...(serverUrl ? { ldcDefaultServerUrl: serverUrl } : {}), ...(sentryDsn ? { ldcSentryDsn: sentryDsn } : {}) },
+  // The DC shield (docs/brand/): the .exe, taskbar, shortcuts, installer and uninstaller.
   win: {
+    icon: "assets/icon.ico",
     target: [{ target: "nsis", arch: ["x64"] }],
     artifactName: "LoL-Draft-Coach-Setup-${version}.${ext}",
   },
@@ -34,6 +36,8 @@ module.exports = {
     allowToChangeInstallationDirectory: true,
     createDesktopShortcut: true,
     shortcutName: "LoL Draft Coach",
+    installerIcon: "assets/icon.ico",
+    uninstallerIcon: "assets/icon.ico",
   },
   publish: [updateUrl ? { provider: "generic", url: updateUrl } : githubReleases],
 };
