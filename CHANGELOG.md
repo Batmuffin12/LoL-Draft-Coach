@@ -2,6 +2,14 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [1.0.2] — 2026-10-14
+
+### Changed
+- **The DC shield logo in the panel header**, left of the connection dot and the app name, and in the landing and join pages' brand (top bar and footer).
+
+### Fixed
+- Development builds show the app icon in the taskbar (they run electron.exe, which has Electron's own icon).
+
 ## [1.0.1] — 2026-10-13
 
 ### Changed

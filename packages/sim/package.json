@@ -1,6 +1,6 @@
 {
   "name": "@ldc/sim",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Draft simulator for tests and dev: any champ select as a fixture, plus synthetic meta snapshots",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@ldc/perf",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Local performance measurements (pnpm perf at the root; docs/perf/README.md). A dev tool: never part of the app or the server.",
   "type": "module",
