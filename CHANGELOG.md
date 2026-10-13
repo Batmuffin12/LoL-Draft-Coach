@@ -2,6 +2,14 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [1.0.1] — 2026-10-13
+
+### Changed
+- **New app icon**: the DC shield with the style radar behind it, on the app, taskbar, shortcuts, installer and uninstaller, and as the landing page's favicon (sources in docs/brand/). Installed apps get it with this update; Windows can keep the old shortcut picture until its icon cache refreshes (sign out or restart).
+
+### Fixed
+- The release script creates the draft release (notes from this changelog) before uploading, so the installer, blockmap and `latest.yml` land in one draft (v1.0.0 got two), and checks that before you publish.
+
 ## [1.0.0] — 2026-10-12 — Friends release (milestone 9)
 
 The first build for friends: a public download that updates itself.
