@@ -15,3 +15,18 @@ export function releaseProblems(s) {
   if (!s.token) problems.push("No GitHub token: run `gh auth login` (the token is used only to upload, never built into the app).");
   return problems;
 }
+
+/**
+ * The CHANGELOG.md section of a version (without its heading), for the release notes;
+ * empty when the changelog has none. Pure, so it's tested.
+ * @param {string} changelog
+ * @param {string} version
+ * @returns {string}
+ */
+export function releaseNotes(changelog, version) {
+  const lines = changelog.split(/\r?\n/);
+  const start = lines.findIndex((l) => l.startsWith(`## [${version}]`));
+  if (start < 0) return "";
+  const end = lines.findIndex((l, i) => i > start && l.startsWith("## "));
+  return lines.slice(start + 1, end < 0 ? undefined : end).join("\n").trim();
+}
