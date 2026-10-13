@@ -74,6 +74,7 @@ p { margin: 0; text-wrap: pretty; }
 .nav { position: sticky; top: 0; z-index: 10; background: rgba(11, 15, 23, 0.86); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); text-decoration: none; font-size: 16px; white-space: nowrap; }
+.brand .logo { display: block; flex-shrink: 0; margin-right: -2px; }
 .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
 .nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a:not(.btn) { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px; }
@@ -247,7 +248,7 @@ footer .wrap { display: grid; gap: 18px; }
 
 <header class="nav">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="dot" aria-hidden="true"></span>Draft Coach</a>
+    <a class="brand" href="#top"><img class="logo" src="favicon.svg" alt="" width="26" height="26"><span class="dot" aria-hidden="true"></span>Draft Coach</a>
     <nav class="nav-links" aria-label="Main">
       <a href="#how">How it works</a>
       <a href="#trust">Why trust it</a>
@@ -518,7 +519,7 @@ footer .wrap { display: grid; gap: 18px; }
 <footer>
   <div class="wrap">
     <div class="foot-row">
-      <a class="brand" href="#top"><span class="dot" aria-hidden="true"></span>LoL Draft Coach</a>
+      <a class="brand" href="#top"><img class="logo" src="favicon.svg" alt="" width="26" height="26"><span class="dot" aria-hidden="true"></span>LoL Draft Coach</a>
       <nav aria-label="Footer">
         <a href="https://github.com/Batmuffin12/LoL-Draft-Coach/blob/main/docs/INSTALL.md">Install guide</a>
         <a href="https://github.com/Batmuffin12/LoL-Draft-Coach/releases">Releases</a>

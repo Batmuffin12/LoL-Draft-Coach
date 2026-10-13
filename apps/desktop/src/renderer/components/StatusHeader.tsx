@@ -1,4 +1,5 @@
 import type { CoachStatus } from "@ldc/shared";
+import logo from "../logo.svg";
 import { Chip } from "./Chip";
 
 export interface StatusHeaderProps {
@@ -18,11 +19,12 @@ const LCU_LABEL: Record<CoachStatus["lcu"], string> = {
   disconnected: "Client closed",
 };
 
-/** The 44px title bar and drag region: connection dot, app name, live-meta chip, dock and close. */
+/** The 44px title bar and drag region: logo, connection dot, app name, live-meta chip, dock and close. */
 export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onClose }: StatusHeaderProps) {
   const label = LCU_LABEL[lcu];
   return (
     <header className="header">
+      <img className="logo" src={logo} alt="" width={22} height={22} />
       <span className={`status-dot ${lcu}`} title={label} role="img" aria-label={label} />
       <span className="app">Draft Coach</span>
       {metaText && <Chip title={metaTitle}>{metaText}</Chip>}

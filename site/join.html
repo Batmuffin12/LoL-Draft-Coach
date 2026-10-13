@@ -46,6 +46,7 @@ p { margin: 0; text-wrap: pretty; }
 .nav { border-bottom: 1px solid var(--line); }
 .nav .wrap { display: flex; align-items: center; height: 60px; }
 .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); text-decoration: none; font-size: 16px; }
+.brand .logo { display: block; flex-shrink: 0; margin-right: -2px; }
 .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); }
 main { padding: 48px 0 64px; }
 .eyebrow { font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin: 0 0 12px; }
@@ -73,7 +74,7 @@ footer { border-top: 1px solid var(--line); padding: 24px 0 40px; }
 </style>
 </head>
 <body>
-<header class="nav"><div class="wrap"><a class="brand" href="./"><span class="dot"></span>LoL Draft Coach</a></div></header>
+<header class="nav"><div class="wrap"><a class="brand" href="./"><img class="logo" src="favicon.svg" alt="" width="26" height="26"><span class="dot"></span>LoL Draft Coach</a></div></header>
 
 <main class="wrap">
   <p class="eyebrow">You're invited</p>
