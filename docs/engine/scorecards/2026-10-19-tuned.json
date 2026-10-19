@@ -1,0 +1,328 @@
+{
+ "label": "2026-10-19-tuned",
+ "createdAt": "2026-10-19T16:41:17.438Z",
+ "games": {
+  "band1": 24559,
+  "band2": 50000,
+  "band3": 44580,
+  "users": 3,
+  "builds": 94580
+ },
+ "set": [],
+ "metrics": {
+  "draft.b1.gainVsSide": {
+   "value": -0.0038919785775607396,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.005270075784120238,
+   "hi": -0.0025421512735591288
+  },
+  "draft.b1.logLoss": {
+   "value": 0.6890965231866718,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b1.accuracy": {
+   "value": 0.5381666666666667,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b1.auc": {
+   "value": 0.5509167457006605,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b1.ece": {
+   "value": 0.013291851712991576,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b1.slope": {
+   "value": 1.1662819269752622,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b1.pickEce": {
+   "value": 0.004026218995666608,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b1.pickNearEven": {
+   "value": 0.9535333333333333,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b1.metaPrior": {
+   "value": 300,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b2.gainVsSide": {
+   "value": -0.0043744038343616065,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.006045265389128068,
+   "hi": -0.0026221135579503245
+  },
+  "draft.b2.logLoss": {
+   "value": 0.6887577275618953,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b2.accuracy": {
+   "value": 0.5375833333333333,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b2.auc": {
+   "value": 0.5539793506862386,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b2.ece": {
+   "value": 0.012412479996591742,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b2.slope": {
+   "value": 0.9623004866542437,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b2.pickEce": {
+   "value": 0.002580151346458742,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b2.pickNearEven": {
+   "value": 0.9096333333333333,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b2.metaPrior": {
+   "value": 300,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b3.gainVsSide": {
+   "value": -0.001450970455622369,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.002613887669830075,
+   "hi": -0.0003087459797512161
+  },
+  "draft.b3.logLoss": {
+   "value": 0.6915791365774516,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b3.accuracy": {
+   "value": 0.5240833333333333,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b3.auc": {
+   "value": 0.5328104303660364,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b3.ece": {
+   "value": 0.010460352466252388,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b3.slope": {
+   "value": 0.8299760547988909,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b3.pickEce": {
+   "value": 0.0037401867431223865,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b3.pickNearEven": {
+   "value": 0.9917166666666667,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b3.metaPrior": {
+   "value": 1000,
+   "n": 12000,
+   "better": "info"
+  },
+  "personal.gainVsOff": {
+   "value": -0.00001478272207289244,
+   "n": 1231,
+   "better": "lower",
+   "lo": -0.003158964239568787,
+   "hi": 0.003256708682453528
+  },
+  "personal.logLoss": {
+   "value": 0.6928925339890295,
+   "n": 1231,
+   "better": "lower"
+  },
+  "personal.ece": {
+   "value": 0.040838220401048154,
+   "n": 1231,
+   "better": "lower"
+  },
+  "loadout.page.taken": {
+   "value": 0.3466384950232925,
+   "n": 78566,
+   "better": "higher"
+  },
+  "loadout.page.delivered": {
+   "value": -0.006319057109830804,
+   "n": 27234,
+   "better": "higher",
+   "lo": -0.012242492478015822,
+   "hi": -0.0003956217416457861
+  },
+  "loadout.page.promised": {
+   "value": -0.002537881476742023,
+   "n": 27234,
+   "better": "info"
+  },
+  "loadout.spells.taken": {
+   "value": 0.8092940966830435,
+   "n": 78566,
+   "better": "higher"
+  },
+  "loadout.spells.delivered": {
+   "value": -0.0006458701165179622,
+   "n": 63583,
+   "better": "higher",
+   "lo": -0.004521253220690547,
+   "hi": 0.003229512987654622
+  },
+  "loadout.spells.promised": {
+   "value": 0.00012001793291253424,
+   "n": 63583,
+   "better": "info"
+  },
+  "items.top1": {
+   "value": 0.4553907318016371,
+   "n": 294793,
+   "better": "higher"
+  },
+  "items.top3": {
+   "value": 0.769146485839216,
+   "n": 294793,
+   "better": "higher"
+  },
+  "items.winAddedOurs": {
+   "value": 0.006569990912206307,
+   "n": 134246,
+   "better": "higher"
+  },
+  "items.winAddedOther": {
+   "value": -0.0038045681326959123,
+   "n": 160547,
+   "better": "info"
+  },
+  "ingame.m5.gainVsSide": {
+   "value": -0.04388158790748364,
+   "n": 7820,
+   "better": "lower",
+   "lo": -0.0501549302550367,
+   "hi": -0.037906221656067156
+  },
+  "ingame.m5.accuracy": {
+   "value": 0.6236572890025576,
+   "n": 7820,
+   "better": "higher"
+  },
+  "ingame.m5.auc": {
+   "value": 0.6655229449901608,
+   "n": 7820,
+   "better": "higher"
+  },
+  "ingame.m10.gainVsSide": {
+   "value": -0.09191377952589141,
+   "n": 7776,
+   "better": "lower",
+   "lo": -0.10031327648994036,
+   "hi": -0.08335437167226319
+  },
+  "ingame.m10.accuracy": {
+   "value": 0.6675668724279835,
+   "n": 7776,
+   "better": "higher"
+  },
+  "ingame.m10.auc": {
+   "value": 0.7350227382963134,
+   "n": 7776,
+   "better": "higher"
+  },
+  "ingame.m15.gainVsSide": {
+   "value": -0.15463594665511704,
+   "n": 7725,
+   "better": "lower",
+   "lo": -0.1655062996956482,
+   "hi": -0.14422726456265922
+  },
+  "ingame.m15.accuracy": {
+   "value": 0.7233656957928802,
+   "n": 7725,
+   "better": "higher"
+  },
+  "ingame.m15.auc": {
+   "value": 0.8020555412112345,
+   "n": 7725,
+   "better": "higher"
+  },
+  "ingame.m20.gainVsSide": {
+   "value": -0.20751271646247016,
+   "n": 7276,
+   "better": "lower",
+   "lo": -0.21923772175120723,
+   "hi": -0.19476944824443873
+  },
+  "ingame.m20.accuracy": {
+   "value": 0.767042330951072,
+   "n": 7276,
+   "better": "higher"
+  },
+  "ingame.m20.auc": {
+   "value": 0.8450401071134968,
+   "n": 7276,
+   "better": "higher"
+  },
+  "ingame.m25.gainVsSide": {
+   "value": -0.23808549643077265,
+   "n": 6152,
+   "better": "lower",
+   "lo": -0.2526838776945315,
+   "hi": -0.2240041354264171
+  },
+  "ingame.m25.accuracy": {
+   "value": 0.7838101430429129,
+   "n": 6152,
+   "better": "higher"
+  },
+  "ingame.m25.auc": {
+   "value": 0.8664237394090737,
+   "n": 6152,
+   "better": "higher"
+  },
+  "ingame.m30.gainVsSide": {
+   "value": -0.20733660152285438,
+   "n": 3658,
+   "better": "lower",
+   "lo": -0.22370670560954842,
+   "hi": -0.19059937995615006
+  },
+  "ingame.m30.accuracy": {
+   "value": 0.7613449972662657,
+   "n": 3658,
+   "better": "higher"
+  },
+  "ingame.m30.auc": {
+   "value": 0.8445740468243429,
+   "n": 3658,
+   "better": "higher"
+  }
+ }
+}

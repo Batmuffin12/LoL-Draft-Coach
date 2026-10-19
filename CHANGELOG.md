@@ -2,6 +2,19 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [1.0.3] — 2026-10-19
+
+### Changed
+- **Rune pages and summoner spells: the most taken option** (was: the best smoothed win rate among common ones). On newer games the win-rate picks did no better, and the most taken page is what far more players already run (35% vs 24%; spells 81% vs 63%). The reason reads "Most taken: N of M games" (D37).
+- **Champion strength is smoothed more** (300 prior games, 1,000 in Emerald–Diamond): better predictions in Emerald–Diamond, unchanged elsewhere (D37).
+
+### Added
+- `pnpm --filter @ldc/server scorecard`: is the advice getting better or worse? Scores the draft per band, the personal term, rune pages, spells, items and an in-game win chance on games newer than the data they were built from; `--set` scores a candidate config on the same games and says whether to ship it (docs/engine/README.md).
+- An in-game win chance model from what the scoreboard shows (milestone 10; not shown yet): 67% of games called right at minute 10, 72% at 15, 77% at 20.
+
+### Fixed
+- The backtest matches the shipped engine again: draft features sum over the ten picks, "engine as is" counts only the terms in the shown chance, the personal test starts from each player's own win rate.
+
 ## [1.0.2] — 2026-10-14
 
 ### Changed
