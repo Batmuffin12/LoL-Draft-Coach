@@ -55,5 +55,10 @@ describe("backtestItems", () => {
     expect(r.agree.n).toBe(4);
     expect(r.agree.winAdded).toBeGreaterThan(0.3);
     expect(r.disagree.winAdded).toBeLessThan(0);
+    // Ours (3006) and the most bought (3007) differ at every purchase: buying ours added more.
+    expect(r.popularAgree.n).toBe(6);
+    expect(r.oursVsPopular.n).toBe(10);
+    expect(r.oursVsPopular.value).toBeCloseTo(r.agree.winAdded - r.popularAgree.winAdded);
+    expect(r.oursVsPopular.lo).toBeGreaterThan(0);
   });
 });

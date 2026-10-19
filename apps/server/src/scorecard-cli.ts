@@ -19,7 +19,6 @@ import { dirname, join } from "node:path";
 import { DataDragon } from "@ldc/ddragon";
 import { completedItems, parseEngineConfig, type EngineConfig } from "@ldc/engine";
 import {
-  backtestItems,
   draftMetrics,
   draftRun,
   fitWinModel,
@@ -28,9 +27,11 @@ import {
   pairedChange,
   personalMetrics,
   personalRun,
+  scoreItems,
   trainBuilds,
   verdict,
   winModelPredictions,
+  type ItemBacktestResult,
   type Metric,
   type Metrics,
 } from "@ldc/meta";
@@ -60,14 +61,14 @@ interface Saved {
 
 const fmtNum = (key: string, v: number | undefined) => {
   if (v === undefined || !Number.isFinite(v)) return "—";
-  if (/accuracy|taken|NearEven|ece|Ece|delivered|promised|top[13]|winAdded/.test(key)) return `${(v * 100).toFixed(2)}%`;
+  if (/accuracy|taken|NearEven|ece|Ece|delivered|promised|top[13]|winAdded|VsPopular/.test(key)) return `${(v * 100).toFixed(2)}%`;
   return v.toFixed(4);
 };
 const fmt = (key: string, m: Metric | undefined) =>
   m ? `${fmtNum(key, m.value)}${m.lo !== undefined ? ` [${fmtNum(key, m.lo)}, ${fmtNum(key, m.hi)}]` : ""}` : "—";
 
 /** Main numbers decide; guardrails must not get worse. */
-const isMain = (key: string) => /^draft\.b\d\.(gainVsSide|change)$/.test(key) || /^personal\.(gainVsOff|change)$/.test(key) || /^loadout\.\w+\.delivered$/.test(key);
+const isMain = (key: string) => /^draft\.b\d\.(gainVsSide|change)$/.test(key) || /^personal\.(gainVsOff|change)$/.test(key) || /^loadout\.\w+\.delivered$/.test(key) || key === "items.oursVsPopular";
 
 if (opt("--compare")) {
   const [a, b] = [opt("--compare")!, args[args.indexOf("--compare") + 2]];
@@ -191,15 +192,23 @@ if (!skip.has("loadout") || !skip.has("items") || !skip.has("ingame")) {
     show(`Rune pages and spells (bands ${buildBands.join("+")}): ${cut} games to learn from, ${test.length} to check${candidate ? " (candidate)" : ""}`, m);
   }
   if (!skip.has("items")) {
-    const r = backtestItems({ train: function* () { for (const x of train()) if (x.timeline) yield x; }, test: test.filter((x) => x.timeline), now, meta: config.meta, loadout: (candidate ?? config.engine).loadout, completed });
-    const m: Metrics = {
-      "items.top1": { value: r.ranked.top1, n: r.purchases, better: "higher" },
-      "items.top3": { value: r.ranked.top3, n: r.purchases, better: "higher" },
-      "items.winAddedOurs": { value: r.agree.winAdded, n: r.agree.n, better: "higher" },
-      "items.winAddedOther": { value: r.disagree.winAdded, n: r.disagree.n, better: "info" },
-    };
+    // Builds are learned once; the current config and a candidate are scored on the same purchases.
+    const trained = trainBuilds(function* () { for (const x of train()) if (x.timeline) yield x; }, now, config.meta, completed);
+    const checked = test.filter((x) => x.timeline);
+    const itemMetrics = (r: ItemBacktestResult, prefix: string): Metrics => ({
+      [`${prefix}.top1`]: { value: r.ranked.top1, n: r.purchases, better: "higher" },
+      [`${prefix}.top3`]: { value: r.ranked.top3, n: r.purchases, better: "higher" },
+      [`${prefix}.popular.top1`]: { value: r.popular.top1, n: r.purchases, better: "info" },
+      [`${prefix}.popular.top3`]: { value: r.popular.top3, n: r.purchases, better: "info" },
+      [`${prefix}.winAddedOurs`]: { value: r.agree.winAdded, n: r.agree.n, better: "higher" },
+      [`${prefix}.winAddedPopular`]: { value: r.popularAgree.winAdded, n: r.popularAgree.n, better: "info" },
+      [`${prefix}.winAddedOther`]: { value: r.disagree.winAdded, n: r.disagree.n, better: "info" },
+      [`${prefix}.oursVsPopular`]: { value: r.oursVsPopular.value, n: r.oursVsPopular.n, better: "higher", lo: r.oursVsPopular.lo, hi: r.oursVsPopular.hi },
+    });
+    const m = itemMetrics(scoreItems(trained, checked, (candidate ?? config.engine).loadout, completed), "items");
+    if (candidate) Object.assign(m, itemMetrics(scoreItems(trained, checked, config.engine.loadout, completed), "items.current"));
     Object.assign(result, m);
-    show(`Items: ${r.purchases} held-out purchases${candidate ? " (candidate)" : ""}`, m);
+    show(`Items: ${m["items.top1"]!.n} held-out purchases${candidate ? " (candidate; items.current = the current config)" : ""}`, m);
   }
   if (!skip.has("ingame")) {
     // Timelines with the scoreboard fields (levels, CS, kills, monsters: stored since 2026-10-08).

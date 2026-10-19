@@ -31,6 +31,31 @@ export interface ItemBacktestResult {
    */
   agree: { n: number; winAdded: number };
   disagree: { n: number; winAdded: number };
+  /** The same for purchases that matched the most-bought #1. */
+  popularAgree: { n: number; winAdded: number };
+  /**
+   * Purchases where our #1 and the most-bought #1 differ: mean win added of buying ours minus
+   * buying the most-bought one, with a 95% interval. Above 0 = our pick is the better advice.
+   */
+  oursVsPopular: { n: number; value: number; lo: number; hi: number };
+}
+
+/** Running mean and variance of win added. */
+class Tally {
+  n = 0;
+  sum = 0;
+  sq = 0;
+  add(x: number) {
+    this.n++;
+    this.sum += x;
+    this.sq += x * x;
+  }
+  get mean() {
+    return this.n ? this.sum / this.n : NaN;
+  }
+  get variance() {
+    return this.n > 1 ? (this.sq - (this.sum * this.sum) / this.n) / (this.n - 1) : NaN;
+  }
 }
 
 function expectedAt(table: ExpectedWinTable, minute: number, goldDiff: number): number {
@@ -76,14 +101,20 @@ export function trainBuilds(train: MatchSummary[] | (() => Iterable<MatchSummary
 }
 
 export function backtestItems(input: ItemBacktestInput): ItemBacktestResult {
-  const { byKey, attributes, traitCuts, table } = trainBuilds(input.train, input.now, input.meta, input.completed);
+  return scoreItems(trainBuilds(input.train, input.now, input.meta, input.completed), input.test, input.loadout, input.completed);
+}
 
+/** Scores held-out purchases against builds from `trainBuilds` (train once, score several loadout configs). */
+export function scoreItems(trained: ReturnType<typeof trainBuilds>, test: MatchSummary[], loadout: LoadoutConfig, completed: ReadonlySet<number>): ItemBacktestResult {
+  const { byKey, attributes, traitCuts, table } = trained;
   let purchases = 0;
   const hits = { r1: 0, r3: 0, p1: 0, p3: 0 };
-  const agree = { n: 0, sum: 0 };
-  const disagree = { n: 0, sum: 0 };
+  const agree = new Tally();
+  const disagree = new Tally();
+  const popularAgree = new Tally();
+  const split = { ours: new Tally(), popular: new Tally() };
 
-  for (const m of input.test) {
+  for (const m of test) {
     const t = m.timeline;
     if (!t) continue;
     const teamGold = new Map<number, number[]>();
@@ -96,8 +127,8 @@ export function backtestItems(input: ItemBacktestInput): ItemBacktestResult {
       const build = byKey.get(`${p.championId}|${p.position}`);
       if (!build) return;
       const enemies = m.participants.filter((q) => q.teamId !== p.teamId).map((q) => q.championId);
-      const input2 = { build, enemies, laneOpponent: null, attributes, traitCuts, config: input.loadout };
-      const bought = completedPurchases(t, i, input.completed).slice(0, input.loadout.slots);
+      const input2 = { build, enemies, laneOpponent: null, attributes, traitCuts, config: loadout };
+      const bought = completedPurchases(t, i, completed).slice(0, loadout.slots);
       const owned = new Set<number>();
       bought.forEach((x, k) => {
         const slot = k + 1;
@@ -116,18 +147,25 @@ export function backtestItems(input: ItemBacktestInput): ItemBacktestResult {
         const f = Math.min(Math.floor(x.sec / 60), mine.length - 1, theirs.length - 1);
         const diff = f >= 0 ? mine[f]! - theirs[f]! : 0;
         const wa = (p.win ? 1 : 0) - expectedAt(table, Math.floor(x.sec / 60), diff);
-        const side = ours[0] === x.itemId ? agree : disagree;
-        side.n++;
-        side.sum += wa;
+        (ours[0] === x.itemId ? agree : disagree).add(wa);
+        if (popular[0] === x.itemId) popularAgree.add(wa);
+        if (ours[0] !== popular[0]) {
+          if (ours[0] === x.itemId) split.ours.add(wa);
+          else if (popular[0] === x.itemId) split.popular.add(wa);
+        }
       });
     });
   }
   const rate = (k: number) => (purchases ? k / purchases : NaN);
+  const value = split.ours.mean - split.popular.mean;
+  const se = Math.sqrt(split.ours.variance / split.ours.n + split.popular.variance / split.popular.n);
   return {
     purchases,
     ranked: { top1: rate(hits.r1), top3: rate(hits.r3) },
     popular: { top1: rate(hits.p1), top3: rate(hits.p3) },
-    agree: { n: agree.n, winAdded: agree.n ? agree.sum / agree.n : NaN },
-    disagree: { n: disagree.n, winAdded: disagree.n ? disagree.sum / disagree.n : NaN },
+    agree: { n: agree.n, winAdded: agree.mean },
+    disagree: { n: disagree.n, winAdded: disagree.mean },
+    popularAgree: { n: popularAgree.n, winAdded: popularAgree.mean },
+    oursVsPopular: { n: split.ours.n + split.popular.n, value, lo: value - 1.96 * se, hi: value + 1.96 * se },
   };
 }
