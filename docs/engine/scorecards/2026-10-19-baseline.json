@@ -1,0 +1,295 @@
+{
+ "label": "2026-10-19-baseline",
+ "createdAt": "2026-10-19T16:25:51.644Z",
+ "games": {
+  "band1": 24559,
+  "band2": 50000,
+  "band3": 44580,
+  "builds": 94580
+ },
+ "set": [],
+ "metrics": {
+  "draft.b1.gainVsSide": {
+   "value": -0.003879992278586153,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.005541272312111849,
+   "hi": -0.0021449324375464388
+  },
+  "draft.b1.logLoss": {
+   "value": 0.6891085094856464,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b1.accuracy": {
+   "value": 0.5381666666666667,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b1.auc": {
+   "value": 0.5505108289978912,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b1.ece": {
+   "value": 0.015674125346822505,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b1.slope": {
+   "value": 0.9326073247388432,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b1.pickEce": {
+   "value": 0.004236365233164486,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b1.pickNearEven": {
+   "value": 0.9023666666666667,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b2.gainVsSide": {
+   "value": -0.004285022479872946,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.006154768867308307,
+   "hi": -0.0023119420061266287
+  },
+  "draft.b2.logLoss": {
+   "value": 0.688847108916384,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b2.accuracy": {
+   "value": 0.53625,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b2.auc": {
+   "value": 0.553870735879207,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b2.ece": {
+   "value": 0.01376509292643029,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b2.slope": {
+   "value": 0.8515958197776912,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b2.pickEce": {
+   "value": 0.0034559531115098295,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b2.pickNearEven": {
+   "value": 0.8754916666666667,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b3.gainVsSide": {
+   "value": -0.00031722170973991215,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.002345997279418898,
+   "hi": 0.0015654636203135063
+  },
+  "draft.b3.logLoss": {
+   "value": 0.6927128853233341,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b3.accuracy": {
+   "value": 0.5235833333333333,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b3.auc": {
+   "value": 0.5348926530398095,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b3.ece": {
+   "value": 0.022470194892681324,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b3.slope": {
+   "value": 0.5239102462505488,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b3.pickEce": {
+   "value": 0.006415144390111105,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b3.pickNearEven": {
+   "value": 0.8534583333333333,
+   "n": 120000,
+   "better": "info"
+  },
+  "loadout.page.taken": {
+   "value": 0.24145304584680397,
+   "n": 78566,
+   "better": "higher"
+  },
+  "loadout.page.delivered": {
+   "value": -0.0070063055966565575,
+   "n": 18970,
+   "better": "higher",
+   "lo": -0.014102668160269415,
+   "hi": 0.00009005696695629957
+  },
+  "loadout.page.promised": {
+   "value": 0.006636304621173974,
+   "n": 18970,
+   "better": "info"
+  },
+  "loadout.spells.taken": {
+   "value": 0.6299798895196396,
+   "n": 78566,
+   "better": "higher"
+  },
+  "loadout.spells.delivered": {
+   "value": -0.00016554954735914076,
+   "n": 49495,
+   "better": "higher",
+   "lo": -0.0045581322161784765,
+   "hi": 0.004227033121460195
+  },
+  "loadout.spells.promised": {
+   "value": 0.0036001127584064643,
+   "n": 49495,
+   "better": "info"
+  },
+  "items.top1": {
+   "value": 0.4553907318016371,
+   "n": 294793,
+   "better": "higher"
+  },
+  "items.top3": {
+   "value": 0.769146485839216,
+   "n": 294793,
+   "better": "higher"
+  },
+  "items.winAddedOurs": {
+   "value": 0.006569990912206307,
+   "n": 134246,
+   "better": "higher"
+  },
+  "items.winAddedOther": {
+   "value": -0.0038045681326959123,
+   "n": 160547,
+   "better": "info"
+  },
+  "ingame.m5.gainVsSide": {
+   "value": -0.04388158790748364,
+   "n": 7820,
+   "better": "lower",
+   "lo": -0.0501549302550367,
+   "hi": -0.037906221656067156
+  },
+  "ingame.m5.accuracy": {
+   "value": 0.6236572890025576,
+   "n": 7820,
+   "better": "higher"
+  },
+  "ingame.m5.auc": {
+   "value": 0.6655229449901608,
+   "n": 7820,
+   "better": "higher"
+  },
+  "ingame.m10.gainVsSide": {
+   "value": -0.09191377952589141,
+   "n": 7776,
+   "better": "lower",
+   "lo": -0.10031327648994036,
+   "hi": -0.08335437167226319
+  },
+  "ingame.m10.accuracy": {
+   "value": 0.6675668724279835,
+   "n": 7776,
+   "better": "higher"
+  },
+  "ingame.m10.auc": {
+   "value": 0.7350227382963134,
+   "n": 7776,
+   "better": "higher"
+  },
+  "ingame.m15.gainVsSide": {
+   "value": -0.15463594665511704,
+   "n": 7725,
+   "better": "lower",
+   "lo": -0.1655062996956482,
+   "hi": -0.14422726456265922
+  },
+  "ingame.m15.accuracy": {
+   "value": 0.7233656957928802,
+   "n": 7725,
+   "better": "higher"
+  },
+  "ingame.m15.auc": {
+   "value": 0.8020555412112345,
+   "n": 7725,
+   "better": "higher"
+  },
+  "ingame.m20.gainVsSide": {
+   "value": -0.20751271646247016,
+   "n": 7276,
+   "better": "lower",
+   "lo": -0.21923772175120723,
+   "hi": -0.19476944824443873
+  },
+  "ingame.m20.accuracy": {
+   "value": 0.767042330951072,
+   "n": 7276,
+   "better": "higher"
+  },
+  "ingame.m20.auc": {
+   "value": 0.8450401071134968,
+   "n": 7276,
+   "better": "higher"
+  },
+  "ingame.m25.gainVsSide": {
+   "value": -0.23808549643077265,
+   "n": 6152,
+   "better": "lower",
+   "lo": -0.2526838776945315,
+   "hi": -0.2240041354264171
+  },
+  "ingame.m25.accuracy": {
+   "value": 0.7838101430429129,
+   "n": 6152,
+   "better": "higher"
+  },
+  "ingame.m25.auc": {
+   "value": 0.8664237394090737,
+   "n": 6152,
+   "better": "higher"
+  },
+  "ingame.m30.gainVsSide": {
+   "value": -0.20733660152285438,
+   "n": 3658,
+   "better": "lower",
+   "lo": -0.22370670560954842,
+   "hi": -0.19059937995615006
+  },
+  "ingame.m30.accuracy": {
+   "value": 0.7613449972662657,
+   "n": 3658,
+   "better": "higher"
+  },
+  "ingame.m30.auc": {
+   "value": 0.8445740468243429,
+   "n": 3658,
+   "better": "higher"
+  }
+ }
+}

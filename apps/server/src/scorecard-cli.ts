@@ -5,7 +5,7 @@
  *   pnpm --filter @ldc/server scorecard --set rating.priorGames.meta=1000 --set loadout.pickBy=winRate
  *                                                                a candidate change, scored on the same games (paired)
  *   pnpm --filter @ldc/server scorecard --compare a b             two saved scorecards side by side
- * Other flags: --bands 1,2 --folds 3 --fold-games 4000 --skip personal,loadout,items,ingame
+ * Other flags: --bands 1,2 --folds 3 --fold-games 4000 --check-games 8000 --skip personal,loadout,items,ingame
  *
  * Every number is judged on games newer than the data it was built from: the draft on the newest
  * folds (each predicted from a snapshot of the games before it), runes, spells and items on the
@@ -165,25 +165,33 @@ if (!skip.has("personal")) {
 
 // Runes, spells and items: band 2 and the band above (as the app builds them), newest quarter held out.
 if (!skip.has("loadout") || !skip.has("items") || !skip.has("ingame")) {
+  // Streamed in time order (tens of thousands of games with timelines don't fit in memory at once):
+  // the oldest 75% to learn from, the newest quarter (at most --check-games) kept to check.
   const buildBands = [2, ...buildBandsFor([2 as RankBandId], config.bands)];
-  const matches = load(`SELECT summary FROM matches WHERE source = 'collector' AND band IN (${buildBands.map(() => "?").join(",")})`, ...buildBands).sort((a, b) => a.endedAt - b.endedAt);
-  const cut = Math.floor(matches.length * 0.75);
-  const train = matches.slice(0, cut);
-  const test = matches.slice(cut);
-  const now = train.length ? train[train.length - 1]!.endedAt + 1 : 0;
+  const where = `source = 'collector' AND band IN (${buildBands.map(() => "?").join(",")})`;
+  const count = (db.$client.prepare(`SELECT COUNT(*) AS n FROM matches WHERE ${where}`).get(...buildBands) as { n: number }).n;
+  const cut = Math.floor(count * 0.75);
+  const checkGames = Number(opt("--check-games") ?? 8000);
+  function* stream(offset: number, limit: number): Generator<MatchSummary> {
+    const rows = db.$client.prepare(`SELECT summary FROM matches WHERE ${where} ORDER BY ended_at, match_id LIMIT ? OFFSET ?`).iterate(...buildBands, limit, offset) as Iterable<{ summary: string }>;
+    for (const r of rows) yield JSON.parse(r.summary) as MatchSummary;
+  }
+  const train = () => stream(0, cut);
+  const test = [...stream(Math.max(cut, count - checkGames), count)];
+  let now = 0;
+  for (const m of train()) now = Math.max(now, m.endedAt + 1);
   const ddragon = new DataDragon({ cacheDir: join(dirname(env.DATABASE_PATH), "ddragon") });
   await ddragon.load();
   const completed = completedItems(ddragon.data.itemInfo, config.engine.loadout.items);
-  games.builds = matches.length;
+  games.builds = count;
   if (!skip.has("loadout")) {
     const { byKey } = trainBuilds(train, now, config.meta, completed);
     const m = loadoutMetrics(byKey, test, (candidate ?? config.engine).loadout);
     Object.assign(result, m);
-    show(`Rune pages and spells (bands ${buildBands.join("+")}): ${train.length} games to learn from, ${test.length} to check${candidate ? " (candidate)" : ""}`, m);
+    show(`Rune pages and spells (bands ${buildBands.join("+")}): ${cut} games to learn from, ${test.length} to check${candidate ? " (candidate)" : ""}`, m);
   }
   if (!skip.has("items")) {
-    const timed = (list: MatchSummary[]) => list.filter((x) => x.timeline);
-    const r = backtestItems({ train: timed(train), test: timed(test), now, meta: config.meta, loadout: (candidate ?? config.engine).loadout, completed });
+    const r = backtestItems({ train: function* () { for (const x of train()) if (x.timeline) yield x; }, test: test.filter((x) => x.timeline), now, meta: config.meta, loadout: (candidate ?? config.engine).loadout, completed });
     const m: Metrics = {
       "items.top1": { value: r.ranked.top1, n: r.purchases, better: "higher" },
       "items.top3": { value: r.ranked.top3, n: r.purchases, better: "higher" },
@@ -195,14 +203,15 @@ if (!skip.has("loadout") || !skip.has("items") || !skip.has("ingame")) {
   }
   if (!skip.has("ingame")) {
     // Timelines with the scoreboard fields (levels, CS, kills, monsters: stored since 2026-10-08).
-    const timed = matches.filter((x) => x.timeline?.levels && x.timeline.kills && x.timeline.cs && x.timeline.monsters);
-    const tcut = Math.floor(timed.length * 0.75);
+    const scored = (x: MatchSummary) => Boolean(x.timeline?.levels && x.timeline.kills && x.timeline.cs && x.timeline.monsters);
     const itemGold = (id: number) => ddragon.data.itemInfo.get(id)?.gold ?? 0;
     const minutes = config.meta.winModel.minutes;
-    const model = fitWinModel(timed.slice(0, tcut), minutes, itemGold);
+    let learned = 0;
+    const model = fitWinModel((function* () { for (const x of train()) if (scored(x)) { learned++; yield x; } })(), minutes, itemGold);
+    const checked = test.filter(scored);
     const m: Metrics = {};
     for (const minute of minutes) {
-      const { model: p, side } = winModelPredictions(model, timed.slice(tcut), minute, itemGold);
+      const { model: p, side } = winModelPredictions(model, checked, minute, itemGold);
       if (!p.length) continue;
       const s = score(p);
       m[`ingame.m${minute}.gainVsSide`] = { value: s.logLoss - score(side).logLoss, n: p.length, better: "lower", ...ci(pairedLogLossInterval(p, side)) };
@@ -210,7 +219,7 @@ if (!skip.has("loadout") || !skip.has("items") || !skip.has("ingame")) {
       m[`ingame.m${minute}.auc`] = { value: auc(p), n: p.length, better: "higher" };
     }
     Object.assign(result, m);
-    show(`In-game win chance (scoreboard only): ${tcut} games to learn from, ${timed.length - tcut} to check`, m);
+    show(`In-game win chance (scoreboard only): ${learned} games to learn from, ${checked.length} to check`, m);
   }
 }
 db.$client.close();

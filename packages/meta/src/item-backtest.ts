@@ -6,7 +6,7 @@ import type { MetaConfig } from "./config";
 
 export interface ItemBacktestInput {
   /** Matches to learn builds from (band and the band above), and held-out newer ones with timelines. */
-  train: MatchSummary[];
+  train: MatchSummary[] | (() => Iterable<MatchSummary>);
   test: MatchSummary[];
   now: number;
   meta: MetaConfig;
@@ -48,11 +48,15 @@ function expectedAt(table: ExpectedWinTable, minute: number, goldDiff: number): 
  * the items the player had already finished) and checks the top-1 / top-3 hit rate against
  * a "most bought" baseline, and whether purchases that agree with our #1 add win.
  */
-/** Builds (keyed "championId|role") learned from `train` as of `now`, with the attributes and trait cuts behind them. */
-export function trainBuilds(train: MatchSummary[], now: number, meta: MetaConfig, completed: ReadonlySet<number>) {
+/**
+ * Builds (keyed "championId|role") learned from `train` as of `now`, with the attributes and trait
+ * cuts behind them. `train` is read twice (attributes first), so it can stream from a database.
+ */
+export function trainBuilds(train: MatchSummary[] | (() => Iterable<MatchSummary>), now: number, meta: MetaConfig, completed: ReadonlySet<number>) {
   const { aggregation, builds } = meta;
+  const games = typeof train === "function" ? train : () => train;
   const band = new BandAggregator({ band: 0, now, config: aggregation, metrics: [] });
-  for (const m of train) band.add(m);
+  for (const m of games()) band.add(m);
   const base = band.finish();
   const attributes = new Map(base.attributes.map((a) => [a.championId, a]));
   const traitCuts = traitCutsFrom(base.champions, attributes);
@@ -66,7 +70,7 @@ export function trainBuilds(train: MatchSummary[], now: number, meta: MetaConfig
     attributes,
     traitCuts,
   });
-  for (const m of train) agg.add(m);
+  for (const m of games()) agg.add(m);
   const byKey = new Map<string, ChampionBuild>(agg.finish().map((b) => [`${b.championId}|${b.role}`, b]));
   return { byKey, attributes, traitCuts, table: agg.expectedWinTable() };
 }

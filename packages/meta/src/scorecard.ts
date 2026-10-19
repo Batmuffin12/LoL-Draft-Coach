@@ -85,6 +85,8 @@ export interface DraftRun {
   picks: Prediction[];
   folds: number;
   foldGames: number;
+  /** The champion-strength prior the newest fold's snapshot used (configured or estimated). */
+  metaPrior: number;
 }
 
 /**
@@ -106,13 +108,14 @@ export function draftRun(
   // At most 4,000 games a fold, and at least half the games before the first fold.
   const foldGames = opts.foldGames ?? Math.max(1, Math.min(4000, Math.floor(sorted.length / (2 * folds))));
   const counted = new Set<string>((engine.rating.inChance ?? TERM_NAMES).filter((t) => t !== "personal"));
-  const run: DraftRun = { games: [], side: [], picks: [], folds, foldGames };
+  const run: DraftRun = { games: [], side: [], picks: [], folds, foldGames, metaPrior: engine.rating.priorGames.meta };
   for (let f = 0; f < folds; f++) {
     const start = sorted.length - (folds - f) * foldGames;
     if (start <= 0) continue;
     const train = sorted.slice(0, start);
     const test = sorted.slice(start, start + foldGames);
     const index = indexAsOf(train, band, aggregation, engine, metrics);
+    run.metaPrior = index.metaPrior;
     const blueTeam = (m: MatchSummary) => Math.min(...m.participants.map((p) => p.teamId));
     const blueWins = train.filter((m) => m.participants.find((p) => p.teamId === blueTeam(m))!.win).length;
     const side = rating((blueWins + 1) / (train.length + 2));
@@ -141,6 +144,7 @@ export function draftMetrics(run: DraftRun, prefix: string): Metrics {
     [`${prefix}.slope`]: metric(calibrationSlope(run.games), n, "info"),
     [`${prefix}.pickEce`]: metric(expectedCalibrationError(run.picks), run.picks.length, "lower"),
     [`${prefix}.pickNearEven`]: metric(run.picks.length ? near / run.picks.length : NaN, run.picks.length, "info"),
+    [`${prefix}.metaPrior`]: metric(run.metaPrior, n, "info"),
   };
 }
 

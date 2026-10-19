@@ -111,19 +111,18 @@ function solve(a: number[][], b: number[]): number[] | null {
   return m.map((row, i) => row[n]! / row[i]!);
 }
 
-/** Fits one regression per checkpoint minute on every game whose timeline reaches it. */
-export function fitWinModel(matches: MatchSummary[], minutes: number[], itemGold: (id: number) => number): WinModel {
-  const weights = minutes.map((minute) => {
-    const rows: number[][] = [];
-    const y: boolean[] = [];
-    for (const m of matches) {
+/** Fits one regression per checkpoint minute on every game whose timeline reaches it (one pass, so `matches` can stream). */
+export function fitWinModel(matches: Iterable<MatchSummary>, minutes: number[], itemGold: (id: number) => number): WinModel {
+  const rows = minutes.map(() => ({ x: [] as number[][], y: [] as boolean[] }));
+  for (const m of matches) {
+    minutes.forEach((minute, k) => {
       const x = scoreboardAt(m, minute, itemGold);
-      if (!x) continue;
-      rows.push(x);
-      y.push(blueWon(m));
-    }
-    return rows.length >= 50 ? fitLogistic(rows, y) : [0, ...WIN_FEATURES.map(() => 0)];
-  });
+      if (!x) return;
+      rows[k]!.x.push(x);
+      rows[k]!.y.push(blueWon(m));
+    });
+  }
+  const weights = rows.map((r) => (r.x.length >= 50 ? fitLogistic(r.x, r.y) : [0, ...WIN_FEATURES.map(() => 0)]));
   return { minutes: [...minutes], weights, features: WIN_FEATURES };
 }
 
