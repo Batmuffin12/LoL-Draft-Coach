@@ -571,3 +571,49 @@ export interface SpikeCheck {
   signAgreement: number | null;
   strongPairs: number;
 }
+
+/**
+ * A live game as the Live Client Data API shows it (milestone 10), after `sanitizeLiveGame()`
+ * (packages/live-client): no summoner names or Riot IDs anywhere. Players are referred to by
+ * their index in `players`; only what every player sees in the client is kept.
+ */
+export interface LiveGame {
+  /** Seconds since the game started. */
+  gameTime: number;
+  gameMode: string;
+  mapNumber: number;
+  /** Index of the local player in `players`, when found. */
+  me: number | null;
+  /** The local player's current gold (the client shows only your own). */
+  myGold: number | null;
+  players: LivePlayer[];
+  /** Game events in order; killer, victim and assisters are player indexes (null: not a player). */
+  events: LiveEvent[];
+}
+
+export interface LivePlayer {
+  /** Champion display name as the client sends it (map to an id with Data Dragon). */
+  championName: string;
+  /** "ORDER" (blue) or "CHAOS" (red). */
+  team: string;
+  /** Assigned position when the client knows it ("TOP", "JUNGLE", …; empty in some modes). */
+  position: string;
+  level: number;
+  isDead: boolean;
+  respawnTimer: number;
+  isBot: boolean;
+  items: { itemId: number; count: number; slot: number }[];
+  scores: { kills: number; deaths: number; assists: number; creepScore: number; wardScore: number };
+}
+
+export interface LiveEvent {
+  id: number;
+  /** Riot's event name: "ChampionKill", "DragonKill", "TurretKilled", … */
+  type: string;
+  time: number;
+  killer: number | null;
+  victim: number | null;
+  assisters: number[];
+  /** Details, when the event has them: turret or inhibitor name, dragon type, stolen, acing team, and a killer or victim that is a game object (killerObject / victimObject: a turret, minion or monster). */
+  detail?: Record<string, string | number | boolean>;
+}

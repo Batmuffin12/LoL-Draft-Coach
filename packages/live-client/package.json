@@ -1,0 +1,21 @@
+{
+  "name": "@ldc/live-client",
+  "version": "1.0.3",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "record": "tsx src/record-cli.ts"
+  },
+  "dependencies": {
+    "@ldc/shared": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsx": "^4"
+  }
+}

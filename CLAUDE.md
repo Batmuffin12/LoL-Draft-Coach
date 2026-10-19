@@ -59,6 +59,7 @@ pnpm test             # vitest across all packages
 pnpm desktop          # build + launch the Electron panel
 pnpm --filter @ldc/lcu record   # record a live champ select into an anonymised fixture
 pnpm --filter @ldc/lcu mock     # fake League client replaying a fixture; then set LDC_LCU_OVERRIDE as printed
+pnpm --filter @ldc/live-client record   # record a live game into an anonymised fixture (start it, then play; saves when the game ends)
 pnpm --filter @ldc/sim mock mid-counter   # fake client on a simulated draft (packages/sim/scenarios); prints LDC_LCU_OVERRIDE and LDC_META_FILE
 pnpm --filter @ldc/server dev   # run the server locally (reads .env); SERVER_URL=http://localhost:8787 puts the desktop in server mode
 pnpm --filter @ldc/server invite "note"   # create a one-time invite code
