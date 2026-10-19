@@ -7,3 +7,4 @@ export * from "./draft-backtest";
 export * from "./personal-backtest";
 export * from "./spikes";
 export * from "./scorecard";
+export * from "./win-model";

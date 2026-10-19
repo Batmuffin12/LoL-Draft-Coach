@@ -25,6 +25,7 @@
       "minZ": 2
     }
   },
+  "winModel": { "minutes": [5, 10, 15, 20, 25, 30] },
   "spikes": {
     "publish": false,
     "windowMinutes": 3,

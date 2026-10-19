@@ -39,6 +39,8 @@ export const MetaConfigSchema = z.object({
       minZ: z.number().min(0),
     }),
   }),
+  /** In-game win chance from the scoreboard (win-model.ts): one fitted model per checkpoint minute. */
+  winModel: z.object({ minutes: z.array(z.number().int().positive()).min(1) }).default({ minutes: [5, 10, 15, 20, 25, 30] }),
   /** Power spikes per champion-role, measured from timelines of all bands (docs/ENGINE-PLAN.md). */
   spikes: z.object({
     /**

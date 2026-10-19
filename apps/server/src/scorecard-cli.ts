@@ -5,11 +5,12 @@
  *   pnpm --filter @ldc/server scorecard --set rating.priorGames.meta=1000 --set loadout.pickBy=winRate
  *                                                                a candidate change, scored on the same games (paired)
  *   pnpm --filter @ldc/server scorecard --compare a b             two saved scorecards side by side
- * Other flags: --bands 1,2 --folds 3 --fold-games 4000 --skip personal,loadout,items
+ * Other flags: --bands 1,2 --folds 3 --fold-games 4000 --skip personal,loadout,items,ingame
  *
  * Every number is judged on games newer than the data it was built from: the draft on the newest
  * folds (each predicted from a snapshot of the games before it), runes, spells and items on the
- * newest quarter, the personal term on each player's later games from their earlier ones.
+ * newest quarter, the personal term on each player's later games from their earlier ones, and
+ * the in-game win chance (scoreboard only, milestone 10) on the newest quarter of timelines.
  * The rule for a candidate: ship it when a main number gets better (its interval leaves 0) and no
  * guardrail gets worse; otherwise keep the current config.
  */
@@ -21,6 +22,7 @@ import {
   backtestItems,
   draftMetrics,
   draftRun,
+  fitWinModel,
   indexAsOf,
   loadoutMetrics,
   pairedChange,
@@ -28,6 +30,7 @@ import {
   personalRun,
   trainBuilds,
   verdict,
+  winModelPredictions,
   type Metric,
   type Metrics,
 } from "@ldc/meta";
@@ -35,6 +38,7 @@ import type { MatchSummary, RankBandId, UserMatch } from "@ldc/shared";
 import { findConfigDir, loadServerConfig } from "./config";
 import { openDb } from "./db";
 import { readServerEnv } from "./env";
+import { auc, pairedLogLossInterval, score } from "@ldc/meta";
 import { buildBandsFor, playstyleMetrics } from "./meta-job";
 
 const args = process.argv.slice(2);
@@ -112,6 +116,7 @@ const bands = opt("--bands") ? opt("--bands")!.split(",").map(Number) : bandsWit
 const load = (sql: string, ...params: unknown[]) => (db.$client.prepare(sql).all(...params) as { summary: string }[]).map((r) => JSON.parse(r.summary) as MatchSummary);
 
 const result: Metrics = {};
+const ci = ([lo, hi]: [number, number]) => ({ lo, hi });
 const changes: Metrics = {};
 const games: Record<string, number> = {};
 const show = (title: string, m: Metrics) => {
@@ -159,7 +164,7 @@ if (!skip.has("personal")) {
 }
 
 // Runes, spells and items: band 2 and the band above (as the app builds them), newest quarter held out.
-if (!skip.has("loadout") || !skip.has("items")) {
+if (!skip.has("loadout") || !skip.has("items") || !skip.has("ingame")) {
   const buildBands = [2, ...buildBandsFor([2 as RankBandId], config.bands)];
   const matches = load(`SELECT summary FROM matches WHERE source = 'collector' AND band IN (${buildBands.map(() => "?").join(",")})`, ...buildBands).sort((a, b) => a.endedAt - b.endedAt);
   const cut = Math.floor(matches.length * 0.75);
@@ -187,6 +192,25 @@ if (!skip.has("loadout") || !skip.has("items")) {
     };
     Object.assign(result, m);
     show(`Items: ${r.purchases} held-out purchases${candidate ? " (candidate)" : ""}`, m);
+  }
+  if (!skip.has("ingame")) {
+    // Timelines with the scoreboard fields (levels, CS, kills, monsters: stored since 2026-10-08).
+    const timed = matches.filter((x) => x.timeline?.levels && x.timeline.kills && x.timeline.cs && x.timeline.monsters);
+    const tcut = Math.floor(timed.length * 0.75);
+    const itemGold = (id: number) => ddragon.data.itemInfo.get(id)?.gold ?? 0;
+    const minutes = config.meta.winModel.minutes;
+    const model = fitWinModel(timed.slice(0, tcut), minutes, itemGold);
+    const m: Metrics = {};
+    for (const minute of minutes) {
+      const { model: p, side } = winModelPredictions(model, timed.slice(tcut), minute, itemGold);
+      if (!p.length) continue;
+      const s = score(p);
+      m[`ingame.m${minute}.gainVsSide`] = { value: s.logLoss - score(side).logLoss, n: p.length, better: "lower", ...ci(pairedLogLossInterval(p, side)) };
+      m[`ingame.m${minute}.accuracy`] = { value: s.accuracy, n: s.decided, better: "higher" };
+      m[`ingame.m${minute}.auc`] = { value: auc(p), n: p.length, better: "higher" };
+    }
+    Object.assign(result, m);
+    show(`In-game win chance (scoreboard only): ${tcut} games to learn from, ${timed.length - tcut} to check`, m);
   }
 }
 db.$client.close();
