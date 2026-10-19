@@ -46,11 +46,15 @@ function namesOf(p: Record<string, unknown>): string[] {
   return out;
 }
 
-/** All player names in a raw response: what must never appear in anything we keep. */
+/**
+ * All player names in a raw response: what must never appear in anything we keep. A tag line on
+ * its own ("EUW", "1234") names nobody and matches ordinary data, so only full names and Riot IDs.
+ */
 export function playerNames(raw: unknown): string[] {
   const r = raw as { activePlayer?: Record<string, unknown>; allPlayers?: Record<string, unknown>[] };
+  const tags = new Set([...(r.allPlayers ?? []), r.activePlayer ?? {}].map((p) => p.riotIdTagLine));
   const all = [...(r.allPlayers ?? []).flatMap(namesOf), ...(r.activePlayer ? namesOf(r.activePlayer) : [])];
-  return [...new Set(all.filter((n) => n.length > 0))];
+  return [...new Set(all.filter((n) => n.length > 0 && !tags.has(n)))];
 }
 
 /**
@@ -118,8 +122,20 @@ export function sanitizeLiveGame(raw: unknown): LiveGame | null {
   };
 }
 
-/** Names from `names` that appear anywhere in `value` (empty when clean): the leak check. */
+/**
+ * Where a name from `names` is left in `value` (empty when clean): the leak check. Looks at text
+ * values only (keys and numbers can't hold a name): a value equal to a name, ignoring case, or
+ * containing a name of 5+ characters. Returns the paths, never the names.
+ */
+export function leakPaths(value: unknown, names: readonly string[], path = "$"): string[] {
+  if (Array.isArray(value)) return value.flatMap((v, i) => leakPaths(v, names, `${path}[${i}]`));
+  if (value && typeof value === "object") return Object.entries(value).flatMap(([k, v]) => leakPaths(v, names, `${path}.${k}`));
+  if (typeof value !== "string") return [];
+  const v = value.toLowerCase();
+  return names.some((n) => n.length >= 3 && (v === n.toLowerCase() || (n.length >= 5 && v.includes(n.toLowerCase())))) ? [path] : [];
+}
+
+/** Names from `names` that are left in `value` (empty when clean), by the same rule as `leakPaths`. */
 export function leakedNames(value: unknown, names: readonly string[]): string[] {
-  const text = JSON.stringify(value);
-  return names.filter((n) => n.length >= 3 && text.includes(n));
+  return names.filter((n) => leakPaths(value, [n]).length > 0);
 }

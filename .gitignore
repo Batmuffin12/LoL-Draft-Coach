@@ -51,6 +51,7 @@ pnpm-debug.log*
 # --- Local caches & raw (non-anonymised) recordings ---
 .cache/
 packages/lcu/fixtures/raw/
+packages/live-client/fixtures/raw/
 
 # --- OS / editor ---
 .DS_Store

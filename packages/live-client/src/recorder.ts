@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { LiveGame } from "@ldc/shared";
 import { identityKeys, type LiveFixture } from "./fixture";
-import { leakedNames, playerNames, sanitizeLiveGame } from "./sanitize";
+import { leakPaths, playerNames, sanitizeLiveGame } from "./sanitize";
 
 /**
  * Records a live game into an anonymised fixture: each raw snapshot is sanitized at once, and
@@ -37,23 +37,40 @@ export class LiveRecorder {
     return this.frames.length;
   }
 
-  /** The fixture, after the leak checks (throws when a name or identity key is left). */
+  /** The fixture without the leak checks: only for the gitignored local folder. */
+  private unchecked(description: string): LiveFixture {
+    return { format: 1, description, recordedAt: new Date(this.startedAt ?? this.now()).toISOString(), everySeconds: this.everySeconds, frames: this.frames, events: this.events };
+  }
+
+  /** The fixture, after the leak checks (throws when a name or identity key is left; the message holds paths, never names). */
   fixture(description = ""): LiveFixture {
-    const f: LiveFixture = { format: 1, description, recordedAt: new Date(this.startedAt ?? this.now()).toISOString(), everySeconds: this.everySeconds, frames: this.frames, events: this.events };
-    const leaks = leakedNames(f, [...this.names]);
-    if (leaks.length) throw new Error(`Refusing to write: ${leaks.length} player name(s) left in the recording`);
+    const f = this.unchecked(description);
+    const leaks = [...new Set(leakPaths(f, [...this.names]).map((p) => p.replace(/\[\d+\]/g, "[]")))];
+    if (leaks.length) throw new Error(`Refusing to write: a player name may be left at ${leaks.slice(0, 5).join(", ")}`);
     const keys = identityKeys(f);
     if (keys.length) throw new Error(`Refusing to write: identity keys left (${keys.slice(0, 3).join(", ")})`);
     return f;
   }
 
-  /** Writes the fixture to `dir`; returns the file path, or null when nothing was recorded. */
+  /** Writes the checked fixture to `dir`; returns the file path, or null when nothing was recorded. */
   async save(dir: string, description = ""): Promise<string | null> {
     if (!this.frames.length) return null;
-    const f = this.fixture(description);
-    await mkdir(dir, { recursive: true });
-    const file = join(dir, `live-game-${f.recordedAt.replace(/[:.]/g, "-")}.json`);
-    await writeFile(file, JSON.stringify(f) + "\n", "utf8");
-    return file;
+    return write(dir, this.fixture(description));
   }
+
+  /**
+   * Writes the sanitized recording to a gitignored local folder without the leak checks: a
+   * checkpoint during the game, and the fallback when `save` refuses, so a game is never lost.
+   */
+  async saveLocal(dir: string, description = ""): Promise<string | null> {
+    if (!this.frames.length) return null;
+    return write(dir, this.unchecked(description));
+  }
+}
+
+async function write(dir: string, f: LiveFixture): Promise<string> {
+  await mkdir(dir, { recursive: true });
+  const file = join(dir, `live-game-${f.recordedAt.replace(/[:.]/g, "-")}.json`);
+  await writeFile(file, JSON.stringify(f) + "\n", "utf8");
+  return file;
 }

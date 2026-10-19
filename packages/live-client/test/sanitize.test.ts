@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FIXTURES_DIR, identityKeys, leakedNames, LiveRecorder, playerNames, sanitizeLiveGame } from "../src/index";
+import { FIXTURES_DIR, identityKeys, leakedNames, leakPaths, LiveRecorder, playerNames, sanitizeLiveGame } from "../src/index";
 
 /** A raw `allgamedata` response in Riot's format (their sample, with Riot ID fields as the client sends today). */
 function raw(gameTime = 600) {
@@ -86,7 +87,38 @@ describe("LiveRecorder", () => {
     // A champion name equal to a player's name can't be told apart: refuse rather than risk it.
     r.allPlayers[0]!.championName = "Gene";
     rec.add(r);
-    expect(() => rec.fixture()).toThrow(/player name/);
+    expect(() => rec.fixture()).toThrow(/player name may be left at \$\.frames\[\]\.game\.players\[\]\.championName$/);
+    expect(() => rec.fixture()).not.toThrow(/Gene/);
+  });
+
+  it("keeps a refused recording in the local folder, so the game isn't lost", async () => {
+    const rec = new LiveRecorder(10);
+    const r = raw();
+    r.allPlayers[0]!.championName = "Gene";
+    rec.add(r);
+    const dir = mkdtempSync(join(tmpdir(), "ldc-live-"));
+    try {
+      await expect(rec.save(dir)).rejects.toThrow(/player name/);
+      const file = await rec.saveLocal(dir);
+      expect(JSON.parse(readFileSync(file!, "utf8")).frames).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("leak check", () => {
+  it("checks full names and Riot IDs, not a tag line on its own", () => {
+    expect(playerNames(raw())).toEqual(expect.arrayContaining(["Tuxedo", "Tuxedo#EUW", "Gene#NA1"]));
+    expect(playerNames(raw())).not.toContain("EUW");
+    expect(playerNames(raw())).not.toContain("123");
+  });
+
+  it("looks at text values only: equal to a name (any case), or containing a name of 5+ letters", () => {
+    const names = ["Gene", "Tuxedo", "Helper#123"];
+    expect(leakPaths({ wardScore: 3, gene: 1, n: 1234 }, names)).toEqual([]);
+    expect(leakPaths({ a: "GENE", b: "Genesis", c: ["x", "my tuxedo"] }, names)).toEqual(["$.a", "$.c[1]"]);
+    expect(leakedNames({ a: "Helper#123" }, names)).toEqual(["Helper#123"]);
   });
 });
 
@@ -95,6 +127,6 @@ describe("committed live fixtures", () => {
     readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith(".json") ? [join(dir, n)] : []));
 
   it("hold no identity keys", () => {
-    for (const f of files(FIXTURES_DIR)) expect(identityKeys(JSON.parse(readFileSync(f, "utf8"))), f).toEqual([]);
+    for (const f of files(join(FIXTURES_DIR, "recorded"))) expect(identityKeys(JSON.parse(readFileSync(f, "utf8"))), f).toEqual([]);
   });
 });
