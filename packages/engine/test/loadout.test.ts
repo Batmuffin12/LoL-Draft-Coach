@@ -69,11 +69,20 @@ describe("buildLoadout", () => {
     expect(l.starting?.value).toEqual([1055, 2003]);
   });
 
+  it("as shipped, picks the most taken page and spells, explained by how many players take them", () => {
+    expect(shipped.pickBy).toBe("popular");
+    const l = buildLoadout(input());
+    expect(l.page?.value.runes[0]).toBe(8010);
+    expect(l.page?.reasons[0]?.id).toBe("loadout.page.popular");
+    expect(l.spells?.value).toEqual([4, 12]);
+    expect(l.spells?.reasons[0]?.id).toBe("loadout.spells.popular");
+  });
+
   it("switches to the page players use into the lane opponent when the matchup is common enough", () => {
     const into = buildLoadout(input({ laneOpponent: 99, config: { ...cfg, minMatchupGames: 30 } }));
     expect(into.page?.value.runes[0]).toBe(8008);
     expect(into.page?.reasons[0]?.id).toBe("loadout.page.matchup");
-    expect(buildLoadout(input({ laneOpponent: 99, config: { ...cfg, minMatchupGames: 50 } })).page?.value.runes[0]).toBe(8005);
+    expect(buildLoadout(input({ laneOpponent: 99, config: { ...cfg, minMatchupGames: 50 } })).page?.value.runes[0]).toBe(8010);
   });
 
   it("suggests situational runes against this enemy team only, never ones already on the page", () => {

@@ -246,7 +246,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     // …with the loadout from the band's builds.
     const loadout = coach.state.myPick!.loadout!;
     expect(loadout.page?.runes.map((r) => r.id)).toEqual([8112, 8139, 8138, 8135, 8226, 8210]);
-    expect(loadout.page?.reason).toBe("Most successful common page: 53.3% win rate (300 games, 75% take it)");
+    expect(loadout.page?.reason).toBe("Most taken: 300 of 400 games");
     expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
     expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
     expect(loadout.items[0]!.top.reasons[0]).toBe("66% buy it as item 1; it helps +1.2 points (200 games)");

@@ -280,7 +280,7 @@
       "3": { "meta": 1, "lane": 1.1, "counter": 1.1, "synergy": 1, "team": 1.1, "personal": 1 },
       "4": { "meta": 1, "lane": 1.2, "counter": 1.2, "synergy": 1.1, "team": 1.2, "personal": 0.9 }
     },
-    "priorGames": { "meta": 150, "pair": 400 },
+    "priorGames": { "meta": 300, "pair": 400, "metaByBand": { "3": 1000 } },
     "minGames": { "meta": 30, "pair": 15 },
     "counterWeight": 0.4,
     "synergyWeight": 0.5,
@@ -350,6 +350,7 @@
     "maxSituational": 3,
     "alternatives": 2,
     "solidGames": 100,
+    "pickBy": "popular",
     "laneWeight": 2,
     "minItemRoleShare": 0.05,
     "personalMinGames": 5,
