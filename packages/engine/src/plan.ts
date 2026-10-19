@@ -1,7 +1,7 @@
 import type { ChampionAttributes, ChampionId, Reason } from "@ldc/shared";
 import type { EngineConfig } from "./config";
 import { reason } from "./explain";
-import type { LiveInput } from "./live";
+import type { LiveInput } from "./rating-engine";
 import { placeDraft } from "./draft-roles";
 import { deltaWin } from "./rating";
 import { powerSpikes, spikeReason } from "./spikes";
