@@ -37,6 +37,8 @@ export class MetaIndex {
   private readonly trends: Map<string, TrendingChampion>;
   /** Roles seen in the data, most games first (positions come from Riot's data, never from code). */
   readonly roles: Position[];
+  /** Prior games for champion strength: configured, or estimated from this snapshot (config metaAuto). */
+  readonly metaPrior: number;
 
   constructor(
     readonly snapshot: MetaSnapshot,
@@ -57,6 +59,9 @@ export class MetaIndex {
     this.roles = Object.entries(snapshot.roleGames)
       .sort((x, y) => y[1] - x[1])
       .map(([r]) => r);
+    const auto = cfg.priorGames.metaAuto;
+    const estimated = auto ? estimateMetaPrior(snapshot.champions) : null;
+    this.metaPrior = auto && estimated !== null ? Math.min(auto.max, Math.max(auto.min, estimated)) : cfg.priorGames.meta;
   }
 
   /** All of a champion's builds (one per role it's played in), most games first. */
@@ -130,7 +135,7 @@ export class MetaIndex {
   /** Meta strength: rating of the champion's smoothed win rate in the role (0 = an average champion). */
   metaRating(id: ChampionId, role: Position): number {
     const s = this.champion(id, role);
-    return rating(smoothRate(s.wins, s.games, 0.5, this.cfg.priorGames.meta));
+    return rating(smoothRate(s.wins, s.games, 0.5, this.metaPrior));
   }
 
   /** How much better `a` does against `b` than their meta strengths predict. */
@@ -162,6 +167,22 @@ export class MetaIndex {
     const s = this.duo(a, ra, b, rb);
     return { delta: rating(smoothRate(s.wins, s.games, expected, this.cfg.priorGames.pair)) - rating(expected), n: s.n };
   }
+}
+
+/**
+ * Empirical-Bayes prior games for champion win rates: p(1 − p) / τ², where τ² is how much the
+ * champion-roles' win rates differ beyond what sampling noise explains (method of moments,
+ * weighted by games). Infinity when they differ no more than noise; null without data.
+ */
+export function estimateMetaPrior(stats: readonly { games: number; wins: number }[]): number | null {
+  const rows = stats.filter((s) => s.games >= 1);
+  const games = rows.reduce((s, r) => s + r.games, 0);
+  if (rows.length < 2 || games <= 0) return null;
+  const p = rows.reduce((s, r) => s + r.wins, 0) / games;
+  const pq = p * (1 - p);
+  if (pq <= 0) return null;
+  const spread = rows.reduce((s, r) => s + r.games * ((r.wins / r.games - p) ** 2 - pq / r.games), 0) / games;
+  return spread > 0 ? pq / spread : Infinity;
 }
 
 /** Pairs are stored once (lower champion id first); flips wins when looking from the other side. */

@@ -64,7 +64,8 @@ describe("draft-level backtest", () => {
     const index = indexAsOf([...train, ...valid], 2, aggregation, engine);
     const games = draftGames(index, test, 2, engine);
     expect(games).toHaveLength(test.length);
-    const asIs = predictDrafts(games, ENGINE_AS_IS);
+    // The lane term alone, at half weight (each lane matchup is seen from both laners' picks).
+    const asIs = predictDrafts(games, { ...only(ENGINE_AS_IS, ["lane"]), weights: { ...only(ENGINE_AS_IS, ["lane"]).weights, lane: 0.5 } });
     const side = predictDrafts(games, sideOnly(draftGames(index, train, 2, engine)));
     expect(score(asIs).logLoss).toBeLessThan(score(side).logLoss);
     const [lo, hi] = pairedLogLossInterval(asIs, side);
@@ -85,6 +86,7 @@ describe("draft-level backtest", () => {
       matchId: `N${i}`,
       blueWon: i % 5 < 3, // blue wins 60%
       x: { meta: ((i * 37) % 11) - 5, lane: ((i * 13) % 7) - 3, counter: 0, synergy: 0, team: ((i * 7) % 5) - 2 },
+      picks: [],
     }));
     const m = fitDraftModel(noise, 1e6);
     for (const w of Object.values(m.weights)) expect(Math.abs(w - 1)).toBeLessThan(0.05);

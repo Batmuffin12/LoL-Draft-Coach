@@ -148,12 +148,12 @@ export function withoutPersonal(cfg: EngineConfig): EngineConfig {
   return { ...cfg, rating: { ...cfg.rating, personal: { ...cfg.rating.personal, comfortScale: 0, learningPenalty: 0, experience: undefined, skill: undefined } } };
 }
 
-/** The same config with some terms weighted 0 in every band (for ablations). */
+/** The same config with some terms weighted 0 in every band, and only those counted in the chance (for ablations). */
 export function onlyTerms(cfg: EngineConfig, keep: TermName[]): EngineConfig {
   const bands = Object.fromEntries(
     Object.entries(cfg.rating.bands).map(([b, w]) => [b, Object.fromEntries(Object.entries(w).map(([t, v]) => [t, keep.includes(t as TermName) ? v : 0])) as typeof w]),
   );
-  return { ...cfg, rating: { ...cfg.rating, bands } };
+  return { ...cfg, rating: { ...cfg.rating, bands, inChance: [...keep] } };
 }
 
 /** Predicts every positioned participant of `test` from a snapshot built on `train`. */

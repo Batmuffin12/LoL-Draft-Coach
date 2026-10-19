@@ -48,26 +48,31 @@ function expectedAt(table: ExpectedWinTable, minute: number, goldDiff: number): 
  * the items the player had already finished) and checks the top-1 / top-3 hit rate against
  * a "most bought" baseline, and whether purchases that agree with our #1 add win.
  */
-export function backtestItems(input: ItemBacktestInput): ItemBacktestResult {
-  const { aggregation, builds } = input.meta;
-  const band = new BandAggregator({ band: 0, now: input.now, config: aggregation, metrics: [] });
-  for (const m of input.train) band.add(m);
+/** Builds (keyed "championId|role") learned from `train` as of `now`, with the attributes and trait cuts behind them. */
+export function trainBuilds(train: MatchSummary[], now: number, meta: MetaConfig, completed: ReadonlySet<number>) {
+  const { aggregation, builds } = meta;
+  const band = new BandAggregator({ band: 0, now, config: aggregation, metrics: [] });
+  for (const m of train) band.add(m);
   const base = band.finish();
   const attributes = new Map(base.attributes.map((a) => [a.championId, a]));
   const traitCuts = traitCutsFrom(base.champions, attributes);
   const agg = new BuildAggregator({
-    now: input.now,
+    now,
     halfLifeDays: aggregation.halfLifeDays,
     windowDays: aggregation.windowDays,
     minDurationSec: aggregation.minDurationSec,
     config: builds,
-    completed: input.completed,
+    completed,
     attributes,
     traitCuts,
   });
-  for (const m of input.train) agg.add(m);
+  for (const m of train) agg.add(m);
   const byKey = new Map<string, ChampionBuild>(agg.finish().map((b) => [`${b.championId}|${b.role}`, b]));
-  const table = agg.expectedWinTable();
+  return { byKey, attributes, traitCuts, table: agg.expectedWinTable() };
+}
+
+export function backtestItems(input: ItemBacktestInput): ItemBacktestResult {
+  const { byKey, attributes, traitCuts, table } = trainBuilds(input.train, input.now, input.meta, input.completed);
 
   let purchases = 0;
   const hits = { r1: 0, r3: 0, p1: 0, p3: 0 };

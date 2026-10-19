@@ -14,6 +14,7 @@
     "test": "vitest run",
     "collect": "tsx --env-file-if-exists=../../.env src/collect-cli.ts",
     "backtest": "tsx --env-file-if-exists=../../.env src/backtest-cli.ts",
+    "scorecard": "tsx --env-file-if-exists=../../.env src/scorecard-cli.ts",
     "spikes": "tsx --env-file-if-exists=../../.env src/spikes-cli.ts",
     "backup": "tsx --env-file-if-exists=../../.env src/backup-cli.ts"
   },

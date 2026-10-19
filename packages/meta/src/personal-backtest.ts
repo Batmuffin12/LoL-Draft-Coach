@@ -1,5 +1,5 @@
-import { assessPick, computeComfort, winOf, type EngineConfig, type LiveInput, type MetaIndex, type PlayerGame } from "@ldc/engine";
-import type { RankBandId, UserMatch } from "@ldc/shared";
+import { assessPick, computeComfort, rating, winOf, type EngineConfig, type LiveInput, type MetaIndex, type PlayerGame } from "@ldc/engine";
+import { TERM_NAMES, type RankBandId, type UserMatch } from "@ldc/shared";
 import { draftFor, type Prediction } from "./backtest";
 
 /**
@@ -7,14 +7,21 @@ import { draftFor, type Prediction } from "./backtest";
  * games can't test (they are anonymous). For each game, comfort is rebuilt from that player's
  * strictly earlier games only (no mastery: today's mastery would leak the future), the pick is
  * scored in its real draft, and the game's personal and other rating points are kept, so the
- * personal term's strength can be judged: as is, off, or scaled.
+ * personal term's strength can be judged: as is, off, or scaled. Every prediction starts from the
+ * player's own earlier win rate, so the term is credited only for what it adds beyond how good
+ * the player is overall (not for differences between players).
  */
+/** Earlier games of the player count against this many even games for their baseline win rate. */
+const BASELINE_PRIOR = 20;
+
 export interface PersonalGame {
   matchId: string;
   won: boolean;
-  /** Rating points of the personal term, and of every other term together. */
+  /** Rating points of the personal term, and of the other terms in the shown chance (config inChance). */
   personal: number;
   rest: number;
+  /** The player's win rate in their earlier games, smoothed toward 50%. */
+  baseline: number;
   /** Games the player had on this champion before this one. */
   priorGames: number;
 }
@@ -44,9 +51,12 @@ export function personalGames(histories: UserMatch[][], index: MetaIndex, band: 
           band,
         };
         const terms = assessPick(input, me.championId).terms ?? [];
+        const counted = new Set<string>(engine.rating.inChance ?? TERM_NAMES);
         const personal = terms.filter((t) => t.name === "personal").reduce((s, t) => s + t.rating, 0);
-        const rest = terms.filter((t) => t.name !== "personal").reduce((s, t) => s + t.rating, 0);
-        out.push({ matchId: m.match.matchId, won: me.win, personal, rest, priorGames: played.filter((g) => g.championId === me.championId).length });
+        const rest = terms.filter((t) => t.name !== "personal" && counted.has(t.name)).reduce((s, t) => s + t.rating, 0);
+        const wins = played.filter((g) => g.win).length;
+        const baseline = (wins + BASELINE_PRIOR / 2) / (played.length + BASELINE_PRIOR);
+        out.push({ matchId: m.match.matchId, won: me.win, personal, rest, baseline, priorGames: played.filter((g) => g.championId === me.championId).length });
       }
       if (me?.position) played.push({ championId: me.championId, position: me.position, win: me.win, endedAt: m.match.endedAt });
     }
@@ -54,9 +64,9 @@ export function personalGames(histories: UserMatch[][], index: MetaIndex, band: 
   return out;
 }
 
-/** Predictions with the personal term scaled by `scale` (1 = as configured, 0 = off). */
+/** Predictions from the player's baseline with the personal term scaled by `scale` (1 = as configured, 0 = off). */
 export function personalPredictions(games: PersonalGame[], scale: number): Prediction[] {
-  return games.map((g) => ({ p: winOf(g.rest + scale * g.personal), won: g.won, matchId: g.matchId }));
+  return games.map((g) => ({ p: winOf(rating(g.baseline) + g.rest + scale * g.personal), won: g.won, matchId: g.matchId }));
 }
 
 /**

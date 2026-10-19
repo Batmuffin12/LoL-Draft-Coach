@@ -14,11 +14,13 @@ import { draftFor, withoutPersonal, type Prediction } from "./backtest";
 export const DRAFT_TERMS = TERM_NAMES.filter((t) => t !== "personal");
 export type DraftTerm = (typeof DRAFT_TERMS)[number];
 
-/** One game seen by the engine: per term, blue's rating points minus red's (averaged over picks). */
+/** One game seen by the engine: per term, blue's rating points minus red's (summed over picks). */
 export interface DraftGame {
   matchId: string;
   blueWon: boolean;
   x: Record<DraftTerm, number>;
+  /** Each player's shown win chance for their pick, and their result. */
+  picks: Prediction[];
 }
 
 /** Splits by time: oldest `1 − valid − test` to train, then validation, newest to test. */
@@ -39,9 +41,10 @@ export function indexAsOf(train: MatchSummary[], band: RankBandId, aggregation: 
 
 /**
  * Each game's term features: every player's pick is scored as if they picked last (as in
- * `predict`), and a term's feature is the mean over the ten picks of its rating points, signed
- * for blue. With every weight 1 and no intercept, the game's prediction is the engine's average
- * view of the draft.
+ * `predict`), and a term's feature is the sum over the ten picks of its rating points, signed
+ * for blue (ratings add up, as in DraftGap: a team's chance is its five picks together). Pair
+ * terms (lane, counter, synergy) are seen from both picks of the pair, so they count twice: a
+ * fitted weight near 0.5 for them is "right as designed".
  */
 export function draftGames(index: MetaIndex, matches: MatchSummary[], band: RankBandId, engine: EngineConfig): DraftGame[] {
   const cfg = withoutPersonal(engine);
@@ -50,6 +53,7 @@ export function draftGames(index: MetaIndex, matches: MatchSummary[], band: Rank
     if (!m.participants.every((p) => p.position)) continue;
     const blueTeam = Math.min(...m.participants.map((p) => p.teamId));
     const x = Object.fromEntries(DRAFT_TERMS.map((t) => [t, 0])) as Record<DraftTerm, number>;
+    const picks: Prediction[] = [];
     m.participants.forEach((p, i) => {
       const input: LiveInput = {
         draft: draftFor(m, i),
@@ -65,12 +69,14 @@ export function draftGames(index: MetaIndex, matches: MatchSummary[], band: Rank
         band,
       };
       const sign = p.teamId === blueTeam ? 1 : -1;
-      for (const t of assessPick(input, p.championId).terms ?? []) {
-        if (t.name in x) x[t.name as DraftTerm] += (sign * t.rating) / m.participants.length;
+      const pick = assessPick(input, p.championId);
+      for (const t of pick.terms ?? []) {
+        if (t.name in x) x[t.name as DraftTerm] += sign * t.rating;
       }
+      if (pick.expectedWin != null) picks.push({ p: pick.expectedWin, won: p.win, matchId: m.matchId });
     });
     const blueWon = m.participants.find((p) => p.teamId === blueTeam)!.win;
-    out.push({ matchId: m.matchId, blueWon, x });
+    out.push({ matchId: m.matchId, blueWon, x, picks });
   }
   return out;
 }
@@ -82,6 +88,12 @@ export interface DraftModel {
 }
 
 export const ENGINE_AS_IS: DraftModel = { intercept: 0, weights: Object.fromEntries(DRAFT_TERMS.map((t) => [t, 1])) as Record<DraftTerm, number> };
+
+/** The shipped engine's view: weight 1 on the terms in the shown chance (config inChance), 0 on the rest. */
+export function engineAsIs(engine: EngineConfig): DraftModel {
+  const counted = engine.rating.inChance;
+  return counted ? only(ENGINE_AS_IS, DRAFT_TERMS.filter((t) => counted.includes(t))) : ENGINE_AS_IS;
+}
 
 /** The same model with only these terms (the others weigh 0). */
 export function only(model: DraftModel, keep: readonly DraftTerm[]): DraftModel {

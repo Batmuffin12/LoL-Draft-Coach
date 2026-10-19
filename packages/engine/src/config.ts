@@ -280,8 +280,13 @@ export const EngineConfigSchema = z.object({
   rating: z.object({
     /** Term weights per rank band. */
     bands: z.record(z.string().regex(/^\d+$/), z.object({ meta: weight, lane: weight, counter: weight, synergy: weight, team: weight, personal: weight })),
-    /** Prior games: how strongly thin statistics are pulled toward what was expected. */
-    priorGames: z.object({ meta: z.number().min(0), pair: z.number().min(0) }),
+    /**
+     * Prior games: how strongly thin statistics are pulled toward what was expected. With
+     * `metaAuto`, the meta prior is estimated from each band's snapshot instead (empirical Bayes:
+     * how much champions' win rates really differ beyond sampling noise, as p(1 − p) / spread²),
+     * clamped to [min, max]; `meta` is the fallback when there is nothing to estimate from.
+     */
+    priorGames: z.object({ meta: z.number().min(0), pair: z.number().min(0), metaAuto: z.object({ min: z.number().min(0), max: z.number().min(0) }).optional() }),
     /** Statistics with fewer games are not shown as reasons ("not enough data"). */
     minGames: z.object({ meta: z.number().int().min(0), pair: z.number().int().min(0) }),
     /** Cross-lane opponents and allies matter less than the lane opponent (0..1). */
@@ -423,6 +428,13 @@ export const EngineConfigSchema = z.object({
      * your own games on it (at least personalMinGames), picks the most taken options and hides win rates.
      */
     solidGames: z.number().int().min(1),
+    /**
+     * How a rune page and summoner spells are chosen with solid data: "popular" = the most taken
+     * option, "winRate" = the best smoothed win rate among common options (bestOption). Production
+     * games (2026-10-17): win-rate picks promised about +2 points over the most taken option and
+     * delivered about 0 on newer games, so the most taken option is the default.
+     */
+    pickBy: z.enum(["popular", "winRate"]).default("winRate"),
     /** Your lane opponent counts this many times in the enemy team's traits (items answer your lane first). */
     laneWeight: z.number().min(1),
     /** An item is suggested in a role only if at least this share of its buyers play that role (role-locked items stay in their role). */

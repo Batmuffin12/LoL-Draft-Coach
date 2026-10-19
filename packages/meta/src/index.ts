@@ -6,3 +6,4 @@ export * from "./item-backtest";
 export * from "./draft-backtest";
 export * from "./personal-backtest";
 export * from "./spikes";
+export * from "./scorecard";

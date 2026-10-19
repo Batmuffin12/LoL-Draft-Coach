@@ -19,7 +19,7 @@ import {
   DRAFT_TERMS,
   draftGames,
   experienceCurve,
-  ENGINE_AS_IS,
+  engineAsIs,
   expectedCalibrationError,
   fitDraftModel,
   indexAsOf,
@@ -102,9 +102,9 @@ for (const keep of sets) {
   console.log(`  ${keep.join(" + ").padEnd(40)} ${fmt(score(p), p)}`);
 }
 
-console.log("\nTeam-needs strength (teamRatingScale; the one hand-set term):");
+console.log("\nTeam-needs strength (teamRatingScale; the one hand-set term), with the team term counted in the chance:");
 for (const scale of [0, 10, 20, 40, 80]) {
-  const engine = { ...bt.engine, rating: { ...bt.engine.rating, teamRatingScale: scale } };
+  const engine = onlyTerms({ ...bt.engine, rating: { ...bt.engine.rating, teamRatingScale: scale } }, ["meta", "team"]);
   const p = preds(engine);
   console.log(`  ${String(scale).padStart(3)}${scale === config.engine.rating.teamRatingScale ? " (current)" : "          "}  ${fmt(score(p), p)}`);
 }
@@ -148,25 +148,27 @@ Draft level (one prediction per game): train ${split.train.length}, validation $
   console.log("[interval] = 95% range of log-loss(model) − log-loss(side only) on the same games; entirely below 0 = a real gain.");
   const sideLine = line("Side only (blue's win rate)", side);
   console.log(sideLine.text);
-  console.log(line("Meta only", { ...only(ENGINE_AS_IS, ["meta"]), intercept: side.intercept }, sideLine.p).text);
-  console.log(line("Engine as is", { ...ENGINE_AS_IS, intercept: side.intercept }, sideLine.p).text);
+  // Terms summed over the ten picks; pair terms are seen from both picks of the pair, so they enter at half weight.
+  const every: DraftModel = { intercept: side.intercept, weights: { meta: 1, lane: 0.5, counter: 0.5, synergy: 0.5, team: 1 } };
+  const asIs = { ...engineAsIs(config.engine), intercept: side.intercept };
+  console.log(line("Engine as is (terms in the chance)", asIs, sideLine.p).text);
+  console.log(line("Every term", every, sideLine.p).text);
   for (const t of DRAFT_TERMS) {
-    console.log(line(`  without ${t}`, { ...only(ENGINE_AS_IS, DRAFT_TERMS.filter((x) => x !== t)), intercept: side.intercept }, sideLine.p).text);
+    console.log(line(`  without ${t}`, only(every, DRAFT_TERMS.filter((x) => x !== t)), sideLine.p).text);
   }
   const fitted = fitDraftModel(validGames);
   const fittedLine = line("Weights fitted on validation", fitted, sideLine.p);
   console.log(fittedLine.text);
-  const asIs = predictDrafts(testGames, { ...ENGINE_AS_IS, intercept: side.intercept });
-  console.log(`  fitted vs engine as is: ${ivl(fittedLine.p, asIs)}`);
+  console.log(`  fitted vs engine as is: ${ivl(fittedLine.p, predictDrafts(testGames, asIs))}`);
   console.log(`  fitted weights: ${DRAFT_TERMS.map((t) => `${t} ${fitted.weights[t].toFixed(2)}`).join(", ")}; blue side ${fitted.intercept >= 0 ? "+" : ""}${fitted.intercept.toFixed(1)} points`);
-  console.log("  (a weight near 0 means the term adds nothing; near 1, it is right as designed; a negative weight hurts.)");
+  console.log("  (a weight near 0 means the term adds nothing; near 1 (0.5 for lane, counter, synergy), it is right as designed; a negative weight hurts.)");
 }
 
 // The personal term, on users' own games: comfort from each player's earlier games only.
 {
   const index = indexAsOf(matches, band, config.meta.aggregation, config.engine, playstyleMetrics(config.engine));
   const games = personalGames(histories, index, band, config.engine);
-  console.log(`\nPersonal term on users' own games (${histories.length} users, ${games.length} games after each user's first 20):`);
+  console.log(`\nPersonal term on users' own games (${histories.length} users, ${games.length} games after each user's first 20; from each player's earlier win rate):`);
   if (games.length) {
     const off = personalPredictions(games, 0);
     for (const scale of [0, 0.5, 1, 1.5, 2]) {

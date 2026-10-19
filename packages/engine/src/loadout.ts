@@ -141,6 +141,15 @@ export function bestOption<T extends OptionStat>(options: T[], build: ChampionBu
 }
 
 /**
+ * The option the loadout suggests with solid data: the most taken one (taken in at least
+ * `minGames` games), or the best common one by win rate (config `pickBy`).
+ */
+export function chooseOption<T extends OptionStat>(options: T[], build: ChampionBuild, cfg: LoadoutConfig): T | null {
+  if (cfg.pickBy === "winRate") return bestOption(options, build, cfg);
+  return options.find((o) => o.n >= cfg.minGames) ?? null;
+}
+
+/**
  * How much the enemy team is above the band in a trait, 0..1: 0 at or below the band's
  * average, 1 at the most extreme value.
  */
@@ -310,8 +319,9 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   const personal = thin && input.personal && input.personal.n >= cfg.personalMinGames ? input.personal : null;
   let personalUsed = false;
   const champion = roleBuild.championId;
-  /** Thin data: the most taken option (win rates from a handful of games are noise); else the best common one. */
-  const pick = <T extends OptionStat>(list: T[], b: ChampionBuild) => (thin ? (list[0] ?? null) : bestOption(list, b, cfg));
+  /** Thin data: the most taken option (win rates from a handful of games are noise); else per config pickBy. */
+  const pick = <T extends OptionStat>(list: T[], b: ChampionBuild) => (thin ? (list[0] ?? null) : chooseOption(list, b, cfg));
+  const byWinRate = cfg.pickBy === "winRate";
 
   const matchup = !thin && input.laneOpponent !== null ? build.matchupPages.find((p) => p.enemy === input.laneOpponent && p.n >= cfg.minMatchupGames) : undefined;
   const pageValue = (p: RunePageStat) => ({ primaryStyle: p.primaryStyle, subStyle: p.subStyle, runes: p.runes, statPerks: p.statPerks, games: p.games, wins: p.wins, n: p.n });
@@ -323,7 +333,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     page = choice(matchup ?? pick(build.pages, build), pageValue, (p) => [
       matchup
         ? reason("loadout.page.matchup", { enemy: matchup.enemy, winRate: winRate(p), games: p.n })
-        : thin
+        : thin || !byWinRate
           ? reason("loadout.page.popular", { count: p.n, games: build.n })
           : reason("loadout.page", { winRate: winRate(p), games: p.n, share: p.n / build.n }),
     ]);
@@ -348,9 +358,9 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     spells = choice(personal.spells[0], (o) => o.spells, (o) => [reason("loadout.spells.personal", { count: o.n, games: personal.n, champion })]);
   } else {
     const roleThin = roleBuild.n < cfg.solidGames;
-    const o = roleThin ? (roleBuild.spells[0] ?? null) : bestOption(roleBuild.spells, roleBuild, cfg);
+    const o = roleThin ? (roleBuild.spells[0] ?? null) : chooseOption(roleBuild.spells, roleBuild, cfg);
     spells = choice(o, (x) => x.spells, (x) =>
-      roleThin ? [reason("loadout.spells.popular", { count: x.n, games: roleBuild.n })] : [reason("loadout.spells", { winRate: winRate(x), games: x.n, share: x.n / roleBuild.n })],
+      roleThin || !byWinRate ? [reason("loadout.spells.popular", { count: x.n, games: roleBuild.n })] : [reason("loadout.spells", { winRate: winRate(x), games: x.n, share: x.n / roleBuild.n })],
     );
   }
   // Skill order and starting items: the most common choice (taken by most players), not the best win rate.

@@ -59,10 +59,11 @@ describe("item minutes", () => {
 });
 
 describe("buildLoadout", () => {
-  it("picks the most successful common rune page, smoothed, and spells, skills and starting items", () => {
-    const l = buildLoadout(input());
+  it("by win rate: picks the most successful common rune page, smoothed, and spells, skills and starting items", () => {
+    const l = buildLoadout(input({ config: { ...cfg, pickBy: "winRate" } }));
     // 8005 wins 55% in 300 games; 8021's 75% in 20 games is too rare (2%) to suggest.
     expect(l.page?.value.runes[0]).toBe(8005);
+    expect(l.page?.reasons[0]?.id).toBe("loadout.page");
     expect(l.spells?.value).toEqual([4, 12]);
     expect(l.skills?.value).toEqual({ first: [1, 3, 2], order: [1, 3, 2] });
     expect(l.starting?.value).toEqual([1055, 2003]);
