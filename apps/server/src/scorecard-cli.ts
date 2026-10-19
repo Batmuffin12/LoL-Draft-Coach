@@ -61,7 +61,7 @@ interface Saved {
 
 const fmtNum = (key: string, v: number | undefined) => {
   if (v === undefined || !Number.isFinite(v)) return "—";
-  if (/accuracy|taken|NearEven|ece|Ece|delivered|promised|top[13]|winAdded|VsPopular/.test(key)) return `${(v * 100).toFixed(2)}%`;
+  if (/accuracy|taken|NearEven|ece|Ece|delivered|promised|top[13]|Top3|winAdded|VsPopular/.test(key)) return `${(v * 100).toFixed(2)}%`;
   return v.toFixed(4);
 };
 const fmt = (key: string, m: Metric | undefined) =>
@@ -204,6 +204,13 @@ if (!skip.has("loadout") || !skip.has("items") || !skip.has("ingame")) {
       [`${prefix}.winAddedPopular`]: { value: r.popularAgree.winAdded, n: r.popularAgree.n, better: "info" },
       [`${prefix}.winAddedOther`]: { value: r.disagree.winAdded, n: r.disagree.n, better: "info" },
       [`${prefix}.oursVsPopular`]: { value: r.oursVsPopular.value, n: r.oursVsPopular.n, better: "higher", lo: r.oursVsPopular.lo, hi: r.oursVsPopular.hi },
+      ...Object.fromEntries(
+        r.bySlot.flatMap((x) => [
+          [`${prefix}.slot${x.slot}.top3`, { value: x.top3, n: x.purchases, better: "info" }],
+          [`${prefix}.slot${x.slot}.popularTop3`, { value: x.popularTop3, n: x.purchases, better: "info" }],
+          [`${prefix}.slot${x.slot}.oursVsPopular`, { value: x.oursVsPopular.value, n: x.oursVsPopular.n, better: "info", lo: x.oursVsPopular.lo, hi: x.oursVsPopular.hi }],
+        ]),
+      ),
     });
     const m = itemMetrics(scoreItems(trained, checked, (candidate ?? config.engine).loadout, completed), "items");
     if (candidate) Object.assign(m, itemMetrics(scoreItems(trained, checked, config.engine.loadout, completed), "items.current"));

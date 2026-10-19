@@ -1,0 +1,230 @@
+{
+ "label": "2026-10-19-items",
+ "createdAt": "2026-10-19T18:57:03.844Z",
+ "games": {
+  "band1": 25061,
+  "band2": 50181,
+  "band3": 44907,
+  "builds": 95088
+ },
+ "set": [],
+ "metrics": {
+  "draft.b1.gainVsSide": {
+   "value": -0.0044438102109563005,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.005813841730977199,
+   "hi": -0.003171172307816352
+  },
+  "draft.b1.logLoss": {
+   "value": 0.6885557696753969,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b1.accuracy": {
+   "value": 0.5369166666666667,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b1.auc": {
+   "value": 0.5545332424721737,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b1.ece": {
+   "value": 0.013538337875606345,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b1.slope": {
+   "value": 1.2590407575810505,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b1.pickEce": {
+   "value": 0.004658226161021362,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b1.pickNearEven": {
+   "value": 0.9481666666666667,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b1.metaPrior": {
+   "value": 300,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b2.gainVsSide": {
+   "value": -0.004233654769039585,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.005965629543351936,
+   "hi": -0.0023568098389030625
+  },
+  "draft.b2.logLoss": {
+   "value": 0.6889207665100768,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b2.accuracy": {
+   "value": 0.5388333333333334,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b2.auc": {
+   "value": 0.5534258158423982,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b2.ece": {
+   "value": 0.019601414753405346,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b2.slope": {
+   "value": 0.9468045729416228,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b2.pickEce": {
+   "value": 0.002684110177231702,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b2.pickNearEven": {
+   "value": 0.913775,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b2.metaPrior": {
+   "value": 300,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b3.gainVsSide": {
+   "value": -0.001247258173409982,
+   "n": 12000,
+   "better": "lower",
+   "lo": -0.002330955355862108,
+   "hi": -0.00010089467540740466
+  },
+  "draft.b3.logLoss": {
+   "value": 0.6917686547537891,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b3.accuracy": {
+   "value": 0.5220833333333333,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b3.auc": {
+   "value": 0.5307619001380075,
+   "n": 12000,
+   "better": "higher"
+  },
+  "draft.b3.ece": {
+   "value": 0.014383406339145898,
+   "n": 12000,
+   "better": "lower"
+  },
+  "draft.b3.slope": {
+   "value": 0.7840207205427986,
+   "n": 12000,
+   "better": "info"
+  },
+  "draft.b3.pickEce": {
+   "value": 0.003197697880630928,
+   "n": 120000,
+   "better": "lower"
+  },
+  "draft.b3.pickNearEven": {
+   "value": 0.9916916666666666,
+   "n": 120000,
+   "better": "info"
+  },
+  "draft.b3.metaPrior": {
+   "value": 1000,
+   "n": 12000,
+   "better": "info"
+  },
+  "loadout.page.taken": {
+   "value": 0.3457612016293279,
+   "n": 78560,
+   "better": "higher"
+  },
+  "loadout.page.delivered": {
+   "value": -0.005253520207849619,
+   "n": 27163,
+   "better": "higher",
+   "lo": -0.011185069199106303,
+   "hi": 0.0006780287834070647
+  },
+  "loadout.page.promised": {
+   "value": -0.002092506562844229,
+   "n": 27163,
+   "better": "info"
+  },
+  "loadout.spells.taken": {
+   "value": 0.8093304480651731,
+   "n": 78560,
+   "better": "higher"
+  },
+  "loadout.spells.delivered": {
+   "value": -0.0004099547869964857,
+   "n": 63581,
+   "better": "higher",
+   "lo": -0.004285902192234906,
+   "hi": 0.0034659926182419353
+  },
+  "loadout.spells.promised": {
+   "value": 0.00018501754020470827,
+   "n": 63581,
+   "better": "info"
+  },
+  "items.top1": {
+   "value": 0.4511860741775095,
+   "n": 295049,
+   "better": "higher"
+  },
+  "items.top3": {
+   "value": 0.7690281953167101,
+   "n": 295049,
+   "better": "higher"
+  },
+  "items.popular.top1": {
+   "value": 0.4912336594938468,
+   "n": 295049,
+   "better": "info"
+  },
+  "items.popular.top3": {
+   "value": 0.793746123525245,
+   "n": 295049,
+   "better": "info"
+  },
+  "items.winAddedOurs": {
+   "value": 0.006827023331981364,
+   "n": 133122,
+   "better": "higher"
+  },
+  "items.winAddedPopular": {
+   "value": 0.0026765168554832076,
+   "n": 144938,
+   "better": "info"
+  },
+  "items.winAddedOther": {
+   "value": -0.004040394745780377,
+   "n": 161927,
+   "better": "info"
+  },
+  "items.oursVsPopular": {
+   "value": 0.017270969558311658,
+   "n": 25942,
+   "better": "higher",
+   "lo": 0.0055902184063160425,
+   "hi": 0.02895172071030727
+  }
+ }
+}

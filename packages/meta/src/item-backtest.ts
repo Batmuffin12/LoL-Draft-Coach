@@ -37,7 +37,16 @@ export interface ItemBacktestResult {
    * Purchases where our #1 and the most-bought #1 differ: mean win added of buying ours minus
    * buying the most-bought one, with a 95% interval. Above 0 = our pick is the better advice.
    */
-  oursVsPopular: { n: number; value: number; lo: number; hi: number };
+  oursVsPopular: Difference;
+  /** The same per build slot (1 = first completed item), for the core vs later items. */
+  bySlot: { slot: number; purchases: number; top1: number; top3: number; popularTop1: number; popularTop3: number; oursVsPopular: Difference }[];
+}
+
+export interface Difference {
+  n: number;
+  value: number;
+  lo: number;
+  hi: number;
 }
 
 /** Running mean and variance of win added. */
@@ -56,6 +65,24 @@ class Tally {
   get variance() {
     return this.n > 1 ? (this.sq - (this.sum * this.sum) / this.n) / (this.n - 1) : NaN;
   }
+}
+
+/** Mean of `a` minus mean of `b`, with a 95% interval (normal approximation). */
+function difference(a: Tally, b: Tally): Difference {
+  const value = a.mean - b.mean;
+  const se = Math.sqrt(a.variance / a.n + b.variance / b.n);
+  return { n: a.n + b.n, value, lo: value - 1.96 * se, hi: value + 1.96 * se };
+}
+
+/** Hit counts and the ours-vs-most-bought split for one group of purchases. */
+class SlotTally {
+  purchases = 0;
+  r1 = 0;
+  r3 = 0;
+  p1 = 0;
+  p3 = 0;
+  ours = new Tally();
+  popular = new Tally();
 }
 
 function expectedAt(table: ExpectedWinTable, minute: number, goldDiff: number): number {
@@ -107,12 +134,11 @@ export function backtestItems(input: ItemBacktestInput): ItemBacktestResult {
 /** Scores held-out purchases against builds from `trainBuilds` (train once, score several loadout configs). */
 export function scoreItems(trained: ReturnType<typeof trainBuilds>, test: MatchSummary[], loadout: LoadoutConfig, completed: ReadonlySet<number>): ItemBacktestResult {
   const { byKey, attributes, traitCuts, table } = trained;
-  let purchases = 0;
-  const hits = { r1: 0, r3: 0, p1: 0, p3: 0 };
+  const all = new SlotTally();
+  const slots = new Map<number, SlotTally>();
   const agree = new Tally();
   const disagree = new Tally();
   const popularAgree = new Tally();
-  const split = { ours: new Tally(), popular: new Tally() };
 
   for (const m of test) {
     const t = m.timeline;
@@ -135,13 +161,8 @@ export function scoreItems(trained: ReturnType<typeof trainBuilds>, test: MatchS
         const ranked = rankSlot(input2, slot, owned);
         owned.add(x.itemId);
         if (!ranked.length) return;
-        purchases++;
         const ours = ranked.slice(0, 3).map((r) => r.itemId);
         const popular = [...ranked].sort((a, b) => b.share - a.share).slice(0, 3).map((r) => r.itemId);
-        if (ours[0] === x.itemId) hits.r1++;
-        if (ours.includes(x.itemId)) hits.r3++;
-        if (popular[0] === x.itemId) hits.p1++;
-        if (popular.includes(x.itemId)) hits.p3++;
         const mine = teamGold.get(p.teamId) ?? [];
         const theirs = [...teamGold].find(([id]) => id !== p.teamId)?.[1] ?? [];
         const f = Math.min(Math.floor(x.sec / 60), mine.length - 1, theirs.length - 1);
@@ -149,23 +170,40 @@ export function scoreItems(trained: ReturnType<typeof trainBuilds>, test: MatchS
         const wa = (p.win ? 1 : 0) - expectedAt(table, Math.floor(x.sec / 60), diff);
         (ours[0] === x.itemId ? agree : disagree).add(wa);
         if (popular[0] === x.itemId) popularAgree.add(wa);
-        if (ours[0] !== popular[0]) {
-          if (ours[0] === x.itemId) split.ours.add(wa);
-          else if (popular[0] === x.itemId) split.popular.add(wa);
+        if (!slots.has(slot)) slots.set(slot, new SlotTally());
+        for (const tally of [all, slots.get(slot)!]) {
+          tally.purchases++;
+          if (ours[0] === x.itemId) tally.r1++;
+          if (ours.includes(x.itemId)) tally.r3++;
+          if (popular[0] === x.itemId) tally.p1++;
+          if (popular.includes(x.itemId)) tally.p3++;
+          if (ours[0] !== popular[0]) {
+            if (ours[0] === x.itemId) tally.ours.add(wa);
+            else if (popular[0] === x.itemId) tally.popular.add(wa);
+          }
         }
       });
     });
   }
-  const rate = (k: number) => (purchases ? k / purchases : NaN);
-  const value = split.ours.mean - split.popular.mean;
-  const se = Math.sqrt(split.ours.variance / split.ours.n + split.popular.variance / split.popular.n);
+  const rate = (t: SlotTally, k: number) => (t.purchases ? k / t.purchases : NaN);
   return {
-    purchases,
-    ranked: { top1: rate(hits.r1), top3: rate(hits.r3) },
-    popular: { top1: rate(hits.p1), top3: rate(hits.p3) },
+    purchases: all.purchases,
+    ranked: { top1: rate(all, all.r1), top3: rate(all, all.r3) },
+    popular: { top1: rate(all, all.p1), top3: rate(all, all.p3) },
     agree: { n: agree.n, winAdded: agree.mean },
     disagree: { n: disagree.n, winAdded: disagree.mean },
     popularAgree: { n: popularAgree.n, winAdded: popularAgree.mean },
-    oursVsPopular: { n: split.ours.n + split.popular.n, value, lo: value - 1.96 * se, hi: value + 1.96 * se },
+    oursVsPopular: difference(all.ours, all.popular),
+    bySlot: [...slots]
+      .sort(([a], [b]) => a - b)
+      .map(([slot, t]) => ({
+        slot,
+        purchases: t.purchases,
+        top1: rate(t, t.r1),
+        top3: rate(t, t.r3),
+        popularTop1: rate(t, t.p1),
+        popularTop3: rate(t, t.p3),
+        oursVsPopular: difference(t.ours, t.popular),
+      })),
   };
 }

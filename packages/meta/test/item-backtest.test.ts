@@ -60,5 +60,6 @@ describe("backtestItems", () => {
     expect(r.oursVsPopular.n).toBe(10);
     expect(r.oursVsPopular.value).toBeCloseTo(r.agree.winAdded - r.popularAgree.winAdded);
     expect(r.oursVsPopular.lo).toBeGreaterThan(0);
+    expect(r.bySlot).toEqual([expect.objectContaining({ slot: 1, purchases: 10, top1: r.ranked.top1, popularTop1: r.popular.top1, oursVsPopular: r.oursVsPopular })]);
   });
 });

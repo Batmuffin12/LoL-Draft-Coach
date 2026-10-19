@@ -31,7 +31,8 @@ Tuning on the same games again and again overfits them: re-check a setting on a 
 
 ## Results
 
-| Run | Draft Iron–Silver / Gold–Plat / Emerald–Diamond (gain vs side, accuracy) | Rune page taken / delivered | In game, minute 10 / 15 / 20 accuracy |
-| --- | --- | --- | --- |
-| [2026-10-19 baseline](scorecards/2026-10-19-baseline.json) | −0.0039 · 53.8%, −0.0043 · 53.6%, −0.0003 · 52.4% | 24% / −0.70 pts | 67% / 72% / 77% |
-| [2026-10-19 tuned (v1.0.3)](scorecards/2026-10-19-tuned.json) | −0.0039 · 53.8%, −0.0044 · 53.8%, −0.0015 · 52.4% | 35% / −0.63 pts | 67% / 72% / 77% |
+| Run | Draft Iron–Silver / Gold–Plat / Emerald–Diamond (gain vs side, accuracy) | Rune page taken / delivered | In game, minute 10 / 15 / 20 accuracy | Items: ours vs most bought |
+| --- | --- | --- | --- | --- |
+| [2026-10-19 baseline](scorecards/2026-10-19-baseline.json) | −0.0039 · 53.8%, −0.0043 · 53.6%, −0.0003 · 52.4% | 24% / −0.70 pts | 67% / 72% / 77% | not measured |
+| [2026-10-19 tuned (v1.0.3)](scorecards/2026-10-19-tuned.json) | −0.0039 · 53.8%, −0.0044 · 53.8%, −0.0015 · 52.4% | 35% / −0.63 pts | 67% / 72% / 77% | not measured |
+| [2026-10-19 items](scorecards/2026-10-19-items.json) (newer copy, same config) | −0.0044 · 53.7%, −0.0042 · 53.9%, −0.0012 · 52.2% | 35% / −0.53 pts | not run | +1.73 pts [0.56, 2.90]; top 1 45.1% vs 49.1% |
