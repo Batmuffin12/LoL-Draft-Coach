@@ -189,7 +189,7 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
 describe("compliance", () => {
   it("the panel code never calls LCU endpoints that act on champ select", () => {
     const dir = join(__dirname, "..", "src");
-    const files = ["main/index.ts", "main/coach.ts", "main/personal-coach.ts", "main/profile-source.ts", "preload/index.ts"];
+    const files = ["main/index.ts", "main/coach.ts", "main/personal-coach.ts", "main/import-flow.ts", "main/draft-panel.ts", "main/lobby-views.ts", "main/profile-source.ts", "preload/index.ts"];
     for (const f of files) {
       const text = readFileSync(join(dir, f), "utf8");
       expect(text, f).not.toMatch(/method:\s*"(POST|PATCH|PUT|DELETE)"|\/actions\/\d|lol-champ-select\/v1\/session\/actions/);

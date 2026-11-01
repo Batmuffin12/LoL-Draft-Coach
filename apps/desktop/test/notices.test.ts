@@ -178,9 +178,9 @@ describe("PersonalCoach import clicks that can't write anything", () => {
 
   it("says the client isn't connected, as a failure on the card", async () => {
     const c = make();
-    (c as unknown as { shownLoadout: unknown }).shownLoadout = { loadout: {}, champion: "Ahri" };
+    (c as unknown as { imports: { shown: unknown } }).imports.shown = { loadout: {}, champion: "Ahri" };
     await c.importLoadout("all");
-    expect((c as unknown as { importLines: unknown }).importLines).toEqual([{ text: "The League client isn't connected: open it, then import again", failed: true }]);
+    expect((c as unknown as { imports: { lines: unknown } }).imports.lines).toEqual([{ text: "The League client isn't connected: open it, then import again", failed: true }]);
   });
 });
 
