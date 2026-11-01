@@ -140,7 +140,9 @@ export function BuildPath({ loadout, tight = false, winAdded = false }: { loadou
                     </span>
                   ))
                 ) : (
-                  <span className="micro">{t("build.noAlt")}</span>
+                  <span className="micro" title={t("build.noAlt")} aria-label={t("build.noAlt")}>
+                    —
+                  </span>
                 ))}
             </span>
           </div>

@@ -60,7 +60,7 @@ export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
         <Facts
           flow
           rows={[
-            ...(noGames.length ? [{ label: t("matchups.none"), items: noGames.map((m) => ({ text: m.champion!.name, champion: m.champion })) }] : []),
+            ...(noGames.length ? [{ label: t("matchups.noneRow"), items: noGames.map((m) => ({ text: m.champion!.name, champion: m.champion })) }] : []),
             ...(open.length ? [{ label: t("matchups.open"), items: open.map((m) => ({ text: positionLabel(m.role) })) }] : []),
           ]}
         />

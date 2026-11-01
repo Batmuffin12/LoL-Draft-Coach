@@ -82,7 +82,7 @@ function Row({ row, onOpen }: { row: ExploreRow; onOpen: (row: ExploreRow) => vo
       <span className={cx("c-num", wr)}>{rateOf(row.winRate, row.games)}</span>
       <span className="c-num plain">{rate(row.pickRate, 1)}</span>
       <span className="c-num plain">{rate(row.banRate, 1)}</span>
-      <span className={cx("c-num plain", !row.yours && "muted")}>{row.yours ? games(row.yours.games) : "·"}</span>
+      <span className="c-num plain">{row.yours ? games(row.yours.games) : ""}</span>
     </button>
   );
 }
