@@ -5,6 +5,10 @@ export const IPC = {
   state: "coach:state",
   ready: "coach:ready",
   setDocked: "coach:set-docked",
+  minimize: "coach:minimize",
+  dismissNotice: "coach:dismiss-notice",
+  restartToUpdate: "coach:restart-to-update",
+  reportError: "coach:report-error",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
@@ -187,6 +191,8 @@ export interface MyPickView {
   loadout: LoadoutView | null;
   /** The result of the last import click (e.g. "Rune page created"), or null. */
   importMessage: string | null;
+  /** The message says something didn't work. */
+  importFailed?: boolean;
   /** True when the champion is only hovered (not locked in yet). */
   hovering?: boolean;
   /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
@@ -211,7 +217,13 @@ export interface BanView {
 /** The live meta the picks are based on. */
 export type MetaView =
   | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
-  | { state: "error"; message: string };
+  | { state: "error"; message: string; noSnapshot?: boolean };
+
+/** A problem shown at the top of the panel: one per cause (the key), until the cause ends or you dismiss it. */
+export interface NoticeView {
+  key: string;
+  text: string;
+}
 
 export interface SessionView {
   /** "2 losses in a row. A short break before the next game usually helps." */
@@ -543,7 +555,7 @@ export interface ViewState {
   month: MonthView | null;
   /** A break suggestion after a losing streak or a long session (your games only), until the session is over. */
   session: SessionView | null;
-  notices: string[];
+  notices: NoticeView[];
   /** This app's version, and a newer one already downloaded that installs when the app closes. */
   app: { version: string; updateReady: string | null };
   docked: boolean;
@@ -551,6 +563,14 @@ export interface ViewState {
   roleLabels: Record<string, string>;
   /** The panel's fixed wording (explain templates "ui.*", without the prefix). */
   copy: Record<string, string>;
+}
+
+/** Champ select or a game: not the moment to restart the panel. */
+const NO_RESTART_PHASES = new Set(["ChampSelect", "GameStart", "InProgress", "Reconnect"]);
+
+/** A downloaded update can be installed now: one is ready, and you're not in champ select or a game. */
+export function canRestartToUpdate(s: Pick<ViewState, "app" | "draft" | "status">): boolean {
+  return s.app.updateReady !== null && s.draft === null && !NO_RESTART_PHASES.has(s.status.gameflowPhase ?? "");
 }
 
 export function emptyViewState(): ViewState {

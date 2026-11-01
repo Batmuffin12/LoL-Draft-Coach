@@ -10,7 +10,7 @@ import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
 import type { MetaSnapshot, UserMatch } from "@ldc/shared";
-import { IPC, type ViewState } from "../shared/view";
+import { canRestartToUpdate, IPC, type ViewState } from "../shared/view";
 import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
@@ -21,10 +21,10 @@ import { MetaSource } from "./meta-source";
 import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach, uiCopy } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
-import { startAutoUpdate } from "./updater";
+import { restartToUpdate, startAutoUpdate } from "./updater";
 import { reportError, reportProblem, startCrashReports } from "./crash-reports";
 import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
-import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
+import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, shouldRestoreForDraft, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
@@ -93,6 +93,11 @@ async function startDocking(coach: Coach): Promise<void> {
   let last: Rect | null = null;
   setInterval(() => {
     if (!win || win.isDestroyed() || !coach.state.docked) return;
+    // Moving a minimized window would bring it back. Forget the last spot, so a restore always redocks.
+    if (win.isMinimized()) {
+      last = null;
+      return;
+    }
     const physical = finder.find();
     if (!physical) return;
     // GetWindowRect returns physical pixels; Electron positions windows in DIPs.
@@ -344,9 +349,14 @@ async function main(): Promise<void> {
     if (perf) perf.send(win, IPC.state, s);
     else win.webContents.send(IPC.state, s);
   });
+  let hadDraft = false;
   coach.on("state", (s) => {
     latest = s;
     pusher.push(s);
+    // A draft began while minimized: back on screen, without taking focus from the client.
+    const hasDraft = s.draft !== null;
+    if (win && !win.isDestroyed() && shouldRestoreForDraft({ hadDraft, hasDraft, minimized: win.isMinimized(), phase: s.status.gameflowPhase })) win.showInactive();
+    hadDraft = hasDraft;
   });
   ipcMain.on(IPC.ready, () => {
     perf?.mark("rendererReady");
@@ -357,6 +367,16 @@ async function main(): Promise<void> {
     (kind === "runes" || kind === "items" || kind === "all") && (pageKey === undefined || typeof pageKey === "string") ? coach.importLoadout(kind, pageKey) : undefined,
   );
   ipcMain.handle(IPC.retry, () => coach.retryNow());
+  ipcMain.on(IPC.minimize, () => win?.minimize());
+  ipcMain.on(IPC.restartToUpdate, () => {
+    if (canRestartToUpdate(coach.state)) restartToUpdate();
+  });
+  ipcMain.on(IPC.reportError, (_e, detail: unknown) => {
+    if (typeof detail === "string") reportProblem(`Panel render error: ${detail.slice(0, 4000)}`);
+  });
+  ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
+    if (typeof key === "string") coach.dismissNotice(key);
+  });
 
   await coach.start();
   coach.setAppVersion(app.getVersion());

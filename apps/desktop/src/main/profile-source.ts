@@ -11,7 +11,7 @@ import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
 import { loadProfile, profileFromMatches, type PersonalProfile } from "./profile";
 import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile, type ServerSyncState } from "./server-client";
-import { retryDelay, serverProblem } from "./server-problem";
+import { reportUnexpected, retryDelay, serverProblem, serverProblemText } from "./server-problem";
 
 /** A sync the server says failed. */
 type SyncFailure = Extract<ServerSyncState, { state: "error" }>;
@@ -403,7 +403,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       await this.clearCache();
       this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null, inviteCode: null });
     } catch (err) {
-      this.setAccount({ state: "error", message: (err as Error).message });
+      reportUnexpected("Registering", err);
+      this.setAccount({ state: "error", message: serverProblemText(err) });
       return;
     }
     // Registered, and the invite is used: from here a failure is the server's, retried like any other, never a failed registration.
@@ -438,7 +439,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       await this.client?.deleteMe();
       await this.signOut();
     } catch (err) {
-      this.setAccount({ message: (err as Error).message });
+      reportUnexpected("Deleting data", err);
+      this.setAccount({ message: `Your data wasn't deleted. ${serverProblemText(err)}` });
     }
   }
 
@@ -688,6 +690,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "idle" });
       return;
     }
+    reportUnexpected("Coach server", err);
     this.scheduleRetry();
     const problem = serverProblem(err);
     if (!this.matches.size) {

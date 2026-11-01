@@ -1,5 +1,6 @@
 import type { CoachStatus } from "@ldc/shared";
 import logo from "../logo.svg";
+import { t } from "../format";
 import { Chip } from "./Chip";
 
 export interface StatusHeaderProps {
@@ -10,6 +11,7 @@ export interface StatusHeaderProps {
   /** Band, game count and offline state. */
   metaTitle?: string;
   onDock: () => void;
+  onMinimize: () => void;
   onClose: () => void;
 }
 
@@ -19,8 +21,8 @@ const LCU_LABEL: Record<CoachStatus["lcu"], string> = {
   disconnected: "Client closed",
 };
 
-/** The 44px title bar and drag region: logo, connection dot, app name, live-meta chip, dock and close. */
-export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onClose }: StatusHeaderProps) {
+/** The 44px title bar and drag region: logo, connection dot, app name, live-meta chip, dock, minimize and close. */
+export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onMinimize, onClose }: StatusHeaderProps) {
   const label = LCU_LABEL[lcu];
   return (
     <header className="header">
@@ -36,6 +38,9 @@ export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onClose
         aria-pressed={docked}
       >
         {docked ? "◧" : "□"}
+      </button>
+      <button className="icon-btn" onClick={onMinimize} title={t("window.minimize")} aria-label={t("window.minimize")}>
+        –
       </button>
       <button className="icon-btn" onClick={onClose} title="Close">
         ×

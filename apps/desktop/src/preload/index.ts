@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC, type ViewState } from "../shared/view";
 
-/** The only API the renderer gets: view state, docking, account actions, close. No secrets, no Node. */
+/** The only API the renderer gets: view state, docking, account actions, minimize, close. No secrets, no Node. */
 const api = {
   onState(cb: (state: ViewState) => void): () => void {
     const listener = (_e: unknown, s: ViewState) => cb(s);
@@ -29,6 +29,21 @@ const api = {
   /** Tries again now what failed (your games, the live meta); resolves when that is done. */
   retry(): Promise<void> {
     return ipcRenderer.invoke(IPC.retry);
+  },
+  /** Installs the downloaded update and restarts; the main process refuses during champ select or a game. */
+  restartToUpdate(): void {
+    ipcRenderer.send(IPC.restartToUpdate);
+  },
+  /** A render error's detail, for crash reports (scrubbed in the main process). */
+  reportError(detail: string): void {
+    ipcRenderer.send(IPC.reportError, detail);
+  },
+  dismissNotice(key: string): void {
+    ipcRenderer.send(IPC.dismissNotice, key);
+  },
+  /** The main process minimizes: a sandboxed renderer has no way to. */
+  minimize(): void {
+    ipcRenderer.send(IPC.minimize);
   },
   close(): void {
     window.close();

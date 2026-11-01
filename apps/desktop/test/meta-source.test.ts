@@ -35,7 +35,7 @@ describe("MetaSource after a failure", () => {
     const statuses: MetaStatus[] = [];
     m.on("status", (s) => statuses.push(s));
     await m.refresh(2);
-    expect(statuses.at(-1)).toMatchObject({ state: "error", message: "down" });
+    expect(statuses.at(-1)).toMatchObject({ state: "error", message: "Can't reach the coach server: check your internet connection." });
     await m.refresh(2);
     expect(calls).toBe(2);
     expect(statuses.at(-1)).toMatchObject({ state: "ready", band: 2 });
@@ -102,6 +102,17 @@ function fakeClient(responses: (() => Awaited<ReturnType<ServerClient["meta"]>>)
 }
 
 describe("MetaSource", () => {
+  it("tells 'nothing for this rank yet' apart from a failure, without showing the server's wording", async () => {
+    const noSnapshot = () => {
+      throw new ServerError(404, "no_snapshot", "No meta snapshot for band 2 yet.");
+    };
+    const src = new MetaSource({ client: () => fakeClient([noSnapshot]).client, cacheDir: tmp("ldc-meta-") });
+    const seen: MetaStatus[] = [];
+    src.on("status", (s) => seen.push(s));
+    await src.refresh(2);
+    expect(seen.at(-1)).toMatchObject({ state: "error", noSnapshot: true });
+  });
+
   it("uses a fixed snapshot (LDC_META_FILE) for any band without asking a server", async () => {
     const { client, calls } = fakeClient([]);
     const source = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-fixed-"), fixed: snapshot() });
@@ -166,7 +177,7 @@ describe("MetaSource", () => {
     const seen: MetaStatus[] = [];
     src.on("status", (s) => seen.push(s));
     await src.refresh(2);
-    expect(seen.at(-1)).toMatchObject({ state: "error" });
+    expect(seen.at(-1)).toEqual({ state: "error", message: "Can't reach the coach server: check your internet connection." });
     const none = new MetaSource({ client: () => null, cacheDir: tmp("ldc-meta-") });
     const st: MetaStatus[] = [];
     none.on("status", (s) => st.push(s));
@@ -315,6 +326,8 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     lcu.push("/lol-gameflow/v1/gameflow-phase", "InProgress");
     await waitFor(() => coach!.state.draft === null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, loadout: { canImport: false } });
+    // The button is gone, and the card says why.
+    expect(coach.state.myPick).toMatchObject({ importMessage: "Import works during champ select", importFailed: false });
     lcu.push("/lol-gameflow/v1/gameflow-phase", "EndOfGame");
     await waitFor(() => coach!.state.myPick === null);
     expect(coach.state.picks).toEqual([]);

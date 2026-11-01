@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cx, initials } from "../format";
 
 export interface IconLike {
@@ -23,8 +24,14 @@ export interface ChampIconProps {
   title?: string;
 }
 
-/** Champion, item, rune or spell art from Data Dragon; a monogram on track when there is no image. */
+/** Show the image: there is one, and it isn't the one that failed to load. Pure. */
+export function showsArt(iconUrl: string | null, failedUrl: string | null): iconUrl is string {
+  return iconUrl !== null && iconUrl !== failedUrl;
+}
+
+/** Champion, item, rune or spell art from Data Dragon; a monogram on track when there is no image, or it fails to load. */
 export function ChampIcon({ champ, size = 56, framed, round, state, kind = "champ", me, acting, lit, count, title }: ChampIconProps) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const shown = state ?? (champ ? "picked" : "empty");
   const style = { width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.32)) };
   const many = count !== undefined && count > 1;
@@ -32,7 +39,7 @@ export function ChampIcon({ champ, size = 56, framed, round, state, kind = "cham
   if (!champ || shown === "empty") return <span className={className} style={style} aria-hidden="true" />;
   return (
     <span className={className} style={style} title={title ?? champ.name}>
-      {champ.iconUrl ? <img src={champ.iconUrl} alt={champ.name} width={size} height={size} /> : initials(champ.name)}
+      {showsArt(champ.iconUrl, failedUrl) ? <img src={champ.iconUrl} alt={champ.name} width={size} height={size} onError={() => setFailedUrl(champ.iconUrl)} /> : initials(champ.name)}
       {many && <span className="count">{count}</span>}
     </span>
   );

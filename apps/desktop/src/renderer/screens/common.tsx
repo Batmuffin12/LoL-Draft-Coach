@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { AccountView, ViewState } from "../../shared/view";
+import { canRestartToUpdate, type AccountView, type ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count, profileProgress, t, versionText } from "../format";
+import { count, cx, profileProgress, t, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
@@ -29,6 +29,7 @@ export function Header({ state }: { state: ViewState }) {
       metaText={metaText}
       metaTitle={metaTitle}
       onDock={() => window.coach.setDocked(!state.docked)}
+      onMinimize={() => window.coach.minimize()}
       onClose={() => window.coach.close()}
     />
   );
@@ -57,12 +58,14 @@ export function ProgressRow({ text, done, total }: { text: string; done?: number
 export function Notices({ state, extra }: { state: ViewState; extra?: string | null }) {
   const { profile } = state.status;
   const canRetry = state.account?.state === "registered";
-  const items: { tone: "warn" | "info"; text: string; retry?: boolean }[] = [
-    ...state.notices.map((text) => ({ tone: "warn" as const, text })),
-    ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message, retry: canRetry }] : []),
-    ...(profile.state === "ready" && profile.problem ? [{ tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.`, retry: canRetry }] : []),
-    ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}`, retry: canRetry }] : []),
-    ...(extra ? [{ tone: "info" as const, text: extra }] : []),
+  const items: { key: string; tone: "warn" | "info"; text: string; dismiss?: string; retry?: boolean }[] = [
+    ...state.notices.map((n) => ({ key: n.key, tone: "warn" as const, text: n.text, dismiss: n.key })),
+    ...(profile.state === "error" ? [{ key: "profile", tone: "warn" as const, text: profile.message, retry: canRetry }] : []),
+    ...(profile.state === "ready" && profile.problem ? [{ key: "profile", tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.`, retry: canRetry }] : []),
+    ...(state.meta?.state === "error"
+      ? [state.meta.noSnapshot ? { key: "meta", tone: "info" as const, text: t("meta.noSnapshot") } : { key: "meta", tone: "warn" as const, text: `${state.meta.message} ${t("meta.ownGames")}`, retry: canRetry }]
+      : []),
+    ...(extra ? [{ key: "extra", tone: "info" as const, text: extra }] : []),
   ];
   const line = profileProgress(profile);
   const progress = line && <ProgressRow text={line.text} {...(line.total !== undefined ? { done: line.done ?? 0, total: line.total } : {})} />;
@@ -71,7 +74,7 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
     <div className="notices">
       {progress}
       {items.map((n) => (
-        <Notice key={n.text} tone={n.tone}>
+        <Notice key={n.key} tone={n.tone} dismissLabel={t("notice.dismiss")} onDismiss={n.dismiss ? () => window.coach.dismissNotice(n.dismiss!) : undefined}>
           {n.text}
           {n.retry && (
             <>
@@ -104,43 +107,76 @@ function RetryLink() {
 }
 
 /** A small text action for the one-line footer. */
-function FootLink({ onClick, danger, children }: { onClick: () => void; danger?: boolean; children: string }) {
+function FootLink({ onClick, danger, gold, children }: { onClick: () => void; danger?: boolean; gold?: boolean; children: string }) {
   return (
-    <button type="button" className={danger ? "foot-link danger" : "foot-link"} onClick={onClick}>
+    <button type="button" className={cx("foot-link", danger && "danger", gold && "gold")} onClick={onClick}>
       {children}
     </button>
   );
 }
 
+/** A question in place of the footer's links: what it costs, do it, or don't. While it runs, only what's happening. */
+export function ConfirmRow({ ask, yes, busyText, no, busy, danger, onYes, onNo }: { ask: string; yes: string; busyText: string; no: string; busy: boolean; danger?: boolean; onYes: () => void; onNo: () => void }) {
+  if (busy) {
+    return (
+      <div className="foot-row" role="status">
+        <span className="micro who">{busyText}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="foot-row">
+      <span className="micro who">{ask}</span>
+      <FootLink danger={danger} onClick={onYes}>
+        {yes}
+      </FootLink>
+      <FootLink onClick={onNo}>{no}</FootLink>
+    </div>
+  );
+}
+
 /** Who the app is connected as, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
-export function AccountFooter({ account, app }: { account: AccountView | null; app: ViewState["app"] }) {
-  const [confirming, setConfirming] = useState(false);
+export function AccountFooter({ state }: { state: ViewState }) {
+  const { account, app } = state;
+  const [confirming, setConfirming] = useState<"signOut" | "delete" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = (action: () => Promise<void>) => {
+    setBusy(true);
+    void action().finally(() => {
+      setBusy(false);
+      setConfirming(null);
+    });
+  };
   return (
     <>
       {account === null ? (
         <span className="micro">Developer mode: games from the Riot API key in .env.</span>
       ) : account.state === "registered" ? (
-        confirming ? (
-          <div className="foot-row">
-            <span className="micro who">Delete everything the coach stores about you?</span>
-            <FootLink danger onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
-              Delete
-            </FootLink>
-            <FootLink onClick={() => setConfirming(false)}>Keep</FootLink>
-          </div>
+        confirming === "delete" ? (
+          <ConfirmRow ask={t("account.delete.ask")} yes={t("account.delete")} busyText={t("account.delete.busy")} no={t("account.delete.no")} busy={busy} danger onYes={() => run(() => window.coach.deleteData())} onNo={() => setConfirming(null)} />
+        ) : confirming === "signOut" ? (
+          <ConfirmRow ask={t("account.signOut.ask")} yes={t("account.signOut")} busyText={t("account.signOut.busy")} no={t("account.signOut.no")} busy={busy} onYes={() => run(() => window.coach.signOut())} onNo={() => setConfirming(null)} />
         ) : (
           <div className="foot-row">
             <span className="micro who" title={`Connected as ${account.riotId}`}>
               {account.riotId}
             </span>
-            <FootLink onClick={() => void window.coach.signOut()}>Sign out</FootLink>
-            <FootLink onClick={() => setConfirming(true)}>Delete my data</FootLink>
+            <FootLink onClick={() => setConfirming("signOut")}>{t("account.signOut")}</FootLink>
+            <FootLink onClick={() => setConfirming("delete")}>{t("account.deleteLink")}</FootLink>
           </div>
         )
       ) : null}
       {account?.state === "registered" && account.message && <span className="micro neg">{account.message}</span>}
       <span className="legal">
         {app.version && <span className={app.updateReady ? "ver ready" : "ver"}>{versionText(app)} · </span>}
+        {canRestartToUpdate(state) && (
+          <>
+            <FootLink gold onClick={() => window.coach.restartToUpdate()}>
+              {t("update.restart")}
+            </FootLink>
+            {" · "}
+          </>
+        )}
         {RIOT_NOTICE}
       </span>
     </>
