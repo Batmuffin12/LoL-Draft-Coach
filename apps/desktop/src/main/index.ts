@@ -366,6 +366,9 @@ async function main(): Promise<void> {
   ipcMain.on(IPC.restartToUpdate, () => {
     if (canRestartToUpdate(coach.state)) restartToUpdate();
   });
+  ipcMain.on(IPC.reportError, (_e, detail: unknown) => {
+    if (typeof detail === "string") reportProblem(`Panel render error: ${detail.slice(0, 4000)}`);
+  });
   ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
     if (typeof key === "string") coach.dismissNotice(key);
   });

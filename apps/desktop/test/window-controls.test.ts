@@ -1,6 +1,8 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { ChampIcon, showsArt } from "../src/renderer/components/ChampIcon";
+import { CrashScreen, ErrorBoundary } from "../src/renderer/components/ErrorBoundary";
 import { StatusHeader } from "../src/renderer/components/StatusHeader";
 import { setCopy, t } from "../src/renderer/format";
 import { findConfigDir, loadConfig } from "../src/main/config";
@@ -115,6 +117,54 @@ describe("LoadoutFooter", () => {
     const out = html({ importMessage: "Import works during champ select", loadout: { ...loadout, canImport: false } });
     expect(out).toContain("Import works during champ select");
     expect(out).not.toContain("Import runes");
+  });
+});
+
+describe("ErrorBoundary", () => {
+  it("catches a render error and shows Reload and Close, from the config's wording", () => {
+    expect(ErrorBoundary.getDerivedStateFromError()).toEqual({ failed: true });
+    const boundary = new ErrorBoundary({ children: "panel" });
+    expect(boundary.render()).toBe("panel");
+    boundary.state = { failed: true };
+    const html = renderToStaticMarkup(createElement("div", null, boundary.render()));
+    expect(html).toContain("Something went wrong");
+    expect(html).toContain(">Reload<");
+    expect(html).toContain(">Close<");
+    expect(html).toContain('role="alert"');
+  });
+
+  it("still has its words before any config arrived", () => {
+    setCopy({});
+    const html = renderToStaticMarkup(createElement(CrashScreen));
+    setCopy(uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates));
+    expect(html).toContain(">Reload<");
+    expect(html).not.toContain("crash.");
+  });
+
+  it("sends what happened to crash reports", () => {
+    const reportError = vi.fn();
+    vi.stubGlobal("window", { coach: { reportError } });
+    new ErrorBoundary({ children: null }).componentDidCatch(new Error("boom"), { componentStack: "\n at App" });
+    vi.unstubAllGlobals();
+    expect(reportError).toHaveBeenCalledWith("boom\n at App");
+  });
+});
+
+describe("ChampIcon", () => {
+  const champ = { name: "Ahri", iconUrl: "https://x/ahri.png" };
+
+  it("shows the image, and the initials without one", () => {
+    expect(renderToStaticMarkup(createElement(ChampIcon, { champ }))).toContain("<img");
+    const none = renderToStaticMarkup(createElement(ChampIcon, { champ: { name: "Ahri", iconUrl: null } }));
+    expect(none).not.toContain("<img");
+    expect(none).toContain(">A");
+  });
+
+  it("falls back to the initials only for the image that failed: a new one gets its chance", () => {
+    expect(showsArt("https://x/a.png", null)).toBe(true);
+    expect(showsArt("https://x/a.png", "https://x/a.png")).toBe(false);
+    expect(showsArt("https://x/b.png", "https://x/a.png")).toBe(true);
+    expect(showsArt(null, null)).toBe(false);
   });
 });
 
