@@ -47,8 +47,9 @@ describe("AccountFooter", () => {
 
   it("starts with the links only: nothing is asked, and nothing happens without a confirmation", () => {
     const html = renderToStaticMarkup(createElement(AccountFooter, { state: { ...emptyViewState(), account, app: { version: "1.0.0", updateReady: null } } }));
-    expect(html).toContain("Sign out");
-    expect(html).toContain("Delete my data");
+    expect(html).toContain("Account");
+    expect(html).not.toContain("Sign out");
+    expect(html).not.toContain("Delete my data");
     expect(html).not.toContain("invite code");
   });
 

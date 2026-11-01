@@ -50,4 +50,15 @@ describe("the footer", () => {
     expect(lobby({ account: registered })).toContain("How it works");
     expect(lobby({ account: null })).toContain("How it works");
   });
+
+  it("keeps signing out and deleting behind Account, closed at first", () => {
+    const html = lobby({ account: registered });
+    expect(html).toMatch(/aria-expanded="false"[^>]*>Account</);
+    expect(html).not.toContain(t("account.signOut"));
+    expect(html).not.toContain(t("account.deleteLink"));
+  });
+
+  it("has Riot's notice in full", () => {
+    expect(lobby({ account: registered })).toContain("isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.");
+  });
 });

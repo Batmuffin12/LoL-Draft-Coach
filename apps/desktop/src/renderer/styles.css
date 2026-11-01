@@ -109,7 +109,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* Window: flat, framed like the client's edge */
 .window { height: 100vh; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--frame); overflow: hidden; }
 .window .scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.window .foot { flex-shrink: 0; padding: 8px 16px 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.window .foot { flex-shrink: 0; padding: 6px 16px 8px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 .window.loading { align-items: center; justify-content: center; color: var(--muted); }
 
 /* Section: flat, a head with a hairline rule, no card */
@@ -228,7 +228,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table .trow:hover { background: var(--card-raised); }
 .table .trow.sel { background: var(--card); }
 .table .c-champ { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.table .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-heading); line-height: var(--lh-heading); min-width: 0; overflow-wrap: break-word; }
+.table .nm { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-body); line-height: var(--lh-body); min-width: 0; overflow-wrap: break-word; }
 .table .nm.col { display: flex; flex-direction: column; gap: 0; line-height: 18px; }
 .table .nm .why { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: 14px; color: var(--muted); }
 .table .thead .c-num { text-align: right; font-size: var(--fs-label); color: var(--muted); }
@@ -276,8 +276,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .tree.shards { gap: 4px; }
 .swap { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--warn-tint); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .swap b { color: var(--warn); font-weight: 600; }
-.swap.one-line { padding: 2px 8px; }
-.swap.one-line .wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icons { display: flex; align-items: center; gap: 6px; }
 
 /* Skill grid */
@@ -427,15 +425,14 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 
 /* Footer pieces */
 .foot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
-.foot-row .who { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.foot-row .who { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
 .foot-row .actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
-.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); text-decoration: underline; }
+.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
 .foot-link:hover { color: var(--text); text-decoration: underline; }
 .foot-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .foot-link.danger { color: var(--red); }
 .foot-link.gold { color: var(--gold); }
-.legal { font-size: var(--fs-legal); line-height: var(--lh-legal); color: var(--muted); }
-.legal .ver { color: var(--text); }
+.legal { font-size: var(--fs-legal); line-height: var(--lh-legal); color: var(--faint); }
 .legal .ver.ready { color: var(--gold); }
 
 /* Thin, dark scrollbar (lobby and undocked only: champ-select screens fit without one) */
@@ -452,7 +449,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table.newchamps .thead, .table.newchamps .trow { grid-template-columns: minmax(0, 1fr) 84px 50px 70px; }
 .table.newchamps .trow { min-height: 0; padding: 5px 6px; }
 .table.newchamps .like { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: var(--fs-caption); color: var(--muted); }
-.table.newchamps .nm { font-size: var(--fs-heading); line-height: var(--lh-heading); overflow-wrap: normal; word-break: normal; }
+.table.newchamps .nm { overflow-wrap: normal; word-break: normal; }
+.table.newchamps.no-like .thead, .table.newchamps.no-like .trow { grid-template-columns: minmax(0, 1fr) 50px 70px; }
 .table .c-num.ease { font-size: var(--fs-label); color: var(--muted); }
 .table .c-num.ease.easy { color: var(--positive); }
 .table .c-num.ease.hard { color: var(--negative); }
@@ -562,7 +560,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .games-summary { text-align: right; }
 .explore .table { flex: 1; min-height: 0; }
 .explore-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.explore-list .trow { flex-shrink: 0; min-height: 40px; padding: 2px 6px; cursor: default; content-visibility: auto; contain-intrinsic-size: auto 40px; }
+.explore-list .trow { flex-shrink: 0; min-height: 36px; padding: 1px 6px; cursor: default; content-visibility: auto; contain-intrinsic-size: auto 36px; }
 .explore-list button.trow { cursor: pointer; }
 .explore-list .trow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .explore-list .none { padding: 12px 6px; }
