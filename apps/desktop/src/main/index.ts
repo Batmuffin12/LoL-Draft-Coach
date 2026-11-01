@@ -22,7 +22,7 @@ import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach, uiCopy } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { restartToUpdate, startAutoUpdate } from "./updater";
-import { reportError, reportProblem, startCrashReports } from "./crash-reports";
+import { logProblem } from "./problem-log";
 import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, shouldRestoreForDraft, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
@@ -117,31 +117,12 @@ async function startDocking(coach: Coach): Promise<void> {
 }
 
 /** A setting baked into the installer at build time (electron-builder extraMetadata), if any. */
-function builtIn(key: "ldcDefaultServerUrl" | "ldcSentryDsn"): string | null {
+function builtIn(key: "ldcDefaultServerUrl"): string | null {
   try {
     const pkg = JSON.parse(readFileSync(join(app.getAppPath(), "package.json"), "utf8")) as Record<string, unknown>;
     return typeof pkg[key] === "string" ? pkg[key] : null;
   } catch {
     return null;
-  }
-}
-
-/**
- * Crash reports: on in installers built with LDC_SENTRY_DSN (LDC_SENTRY_DSN in a development
- * build too). The SDK must start before Electron's "ready" (~60 ms); builds without a DSN skip
- * it. LDC_CRASH_TEST=1 sends a test error report once the panel is up.
- */
-function startCrashReportsEarly(): void {
-  const dsn = builtIn("ldcSentryDsn") ?? (!app.isPackaged ? (process.env.LDC_SENTRY_DSN ?? null) : null);
-  if (!dsn) return;
-  try {
-    startCrashReports(dsn, app.getVersion());
-    console.log("Crash reports on (Sentry)");
-  } catch (err) {
-    return console.warn(`Crash reports off: ${(err as Error).message}`);
-  }
-  if (process.env.LDC_CRASH_TEST === "1") {
-    setTimeout(() => reportError(new Error("LoL Draft Coach test crash (LDC_CRASH_TEST)")), 8_000);
   }
 }
 
@@ -230,7 +211,7 @@ async function followServerConfig(serverProfiles: ServerProfileSource, coach: Pe
   const remoteConfig = new ConfigSource({
     client: () => serverProfiles.serverClient,
     cacheFile: join(app.getPath("userData"), "config", "server-config.json"),
-    onRejected: (err) => reportProblem(`Server config rejected: ${err.message}`),
+    onRejected: (err) => logProblem(`Server config rejected: ${err.message}`),
   });
   remoteConfig.on("config", (c) => coach.setConfig(c));
   await remoteConfig.loadCached();
@@ -375,8 +356,8 @@ async function main(): Promise<void> {
   ipcMain.on(IPC.restartToUpdate, () => {
     if (canRestartToUpdate(coach.state)) restartToUpdate();
   });
-  ipcMain.on(IPC.reportError, (_e, detail: unknown) => {
-    if (typeof detail === "string") reportProblem(`Panel render error: ${detail.slice(0, 4000)}`);
+  ipcMain.on(IPC.logError, (_e, detail: unknown) => {
+    if (typeof detail === "string") logProblem(`Panel render error: ${detail.slice(0, 4000)}`);
   });
   ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
     if (typeof key === "string") coach.dismissNotice(key);
@@ -422,6 +403,5 @@ if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
     win.show();
     win.focus();
   });
-  if (!perf) startCrashReportsEarly();
   void main();
 }

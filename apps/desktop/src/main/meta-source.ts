@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import type { MetaSnapshot, RankBandId } from "@ldc/shared";
-import { reportUnexpected, serverProblemText } from "./server-problem";
+import { logUnexpected, serverProblemText } from "./server-problem";
 import { MetaSnapshotSchema, ServerError, type ServerClient } from "./server-client";
 
 /** What the panel shows about the live meta. */
@@ -116,7 +116,7 @@ export class MetaSource extends EventEmitter<{ snapshot: [MetaSnapshot]; status:
       if (this.current) this.use(band, this.current.etag, this.current.snapshot, true);
       else if (err instanceof ServerError && err.code === "no_snapshot") this.emit("status", { state: "error", message: err.message, noSnapshot: true });
       else this.emit("status", { state: "error", message: serverProblemText(err) });
-      reportUnexpected("Live meta", err);
+      logUnexpected("Live meta", err);
     }
   }
 }

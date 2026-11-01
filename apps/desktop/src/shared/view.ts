@@ -11,7 +11,7 @@ export const IPC = {
   minimize: "coach:minimize",
   dismissNotice: "coach:dismiss-notice",
   restartToUpdate: "coach:restart-to-update",
-  reportError: "coach:report-error",
+  logError: "coach:log-error",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",

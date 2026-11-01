@@ -1,4 +1,4 @@
-import { reportProblem } from "./crash-reports";
+import { logProblem } from "./problem-log";
 import { ServerError } from "./server-client";
 
 /** Waits before trying the server again after a failure: 1, 2, 5, then every 10 minutes. */
@@ -11,7 +11,7 @@ export function retryDelay(failures: number, delays: readonly number[] = SERVER_
 
 /**
  * What the panel says when the server failed, one wording per kind of failure. Never the raw
- * error: addresses, HTTP details and validation dumps go to crash reports (reportUnexpected).
+ * error: addresses, HTTP details and validation dumps go to the local log (logUnexpected).
  * What the server itself says to players (a refused invite code) stays as it is. Pure.
  */
 export function serverProblemText(err: unknown): string {
@@ -37,8 +37,8 @@ export function serverProblem(err: unknown): string {
   return `${serverProblemText(err)} Trying again automatically.`;
 }
 
-/** Sends the technical detail of a failure that isn't everyday (not offline, asleep or refused) to crash reports. */
-export function reportUnexpected(where: string, err: unknown): void {
+/** Logs the technical detail of a failure that isn't everyday (not offline, asleep or refused) locally. */
+export function logUnexpected(where: string, err: unknown): void {
   const everyday = err instanceof ServerError && err.code !== "server_error" && err.code !== "bad_response";
-  if (!everyday) reportProblem(`${where}: ${(err as Error).message}`);
+  if (!everyday) logProblem(`${where}: ${(err as Error).message}`);
 }

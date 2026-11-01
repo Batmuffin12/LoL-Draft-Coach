@@ -35,9 +35,9 @@ const api = {
   restartToUpdate(): void {
     ipcRenderer.send(IPC.restartToUpdate);
   },
-  /** A render error's detail, for crash reports (scrubbed in the main process). */
-  reportError(detail: string): void {
-    ipcRenderer.send(IPC.reportError, detail);
+  /** A render error's detail, for the local log (scrubbed in the main process). */
+  logError(detail: string): void {
+    ipcRenderer.send(IPC.logError, detail);
   },
   dismissNotice(key: string): void {
     ipcRenderer.send(IPC.dismissNotice, key);
