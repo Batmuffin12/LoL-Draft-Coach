@@ -244,8 +244,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .mrow.you { padding: 8px 10px; }
 .mrow .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
 .mrow .v { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
-.no-games { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.no-games .icons { gap: 4px; }
 
 /* Reasons: + green, − amber, › gold for why-not */
 .reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
@@ -515,7 +513,9 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .shift .chg { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-caption); }
 .shift .chg.faint { opacity: 0.6; }
 .champcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.champcard { display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
+.trends { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.goals { display: flex; flex-direction: column; }
+.champcard { display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
 .champcard .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
 
 /* Pool: coverage matrix, then your next step */

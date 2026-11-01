@@ -77,14 +77,13 @@ export function MonthReport({ month: m }: { month: MonthView }) {
           <span className="micro" title={fits ? undefined : hidden.join("\n") || undefined}>{`${t("month.average")} · ${m.steadyNote}`}</span>
           {fits && shown.length > 0 && (
             <span className="caption trends">
-              {shown.map((s, i) => (
+              {shown.map((s) => (
                 <span key={s.label} title={s.title}>
-                  {i > 0 && " · "}
                   {`${s.label} `}
                   <span className={s.tone ?? undefined}>{`${s.from ?? "—"} → ${s.to}`}</span>
                 </span>
               ))}
-              {rest.length > 0 && <span title={rest.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`).join("\n")}>{` · ${t("month.more", { n: rest.length })}`}</span>}
+              {rest.length > 0 && <span title={rest.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`).join("\n")}>{t("month.more", { n: rest.length })}</span>}
             </span>
           )}
         </Section>
@@ -96,7 +95,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
               const wr = winTone(c.winRate);
               return (
                 <div key={c.champion.id} className="champcard">
-                  <ChampIcon champ={c.champion} size={28} />
+                  <ChampIcon champ={c.champion} size={24} />
                   <span className="who">
                     <span className="t-heading">{c.champion.name}</span>
                     <span className="micro">
@@ -116,7 +115,6 @@ export function MonthReport({ month: m }: { month: MonthView }) {
                   {met.length > 1 ? ` ${t("month.goalsMore", { n: met.length - 1 })}` : ""}
                 </span>
               )}
-              {met.length > 0 && m.focus.current && " · "}
               {m.focus.current && <span className="gold">{m.focus.current}</span>}
             </span>
           )}

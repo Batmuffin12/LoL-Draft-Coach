@@ -1,6 +1,7 @@
 import type { MatchupRowView } from "../../shared/view";
 import { cx, positionLabel, rate, signedOrDash, t, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
+import { Facts } from "./Facts";
 
 /** Within this (points of win chance either way) a pair plays as expected: "Even". */
 const VERDICT_DEAD_ZONE = 0.01;
@@ -44,7 +45,7 @@ function Row({ m }: { m: MatchupRowView }) {
 /**
  * Your champion against (or with) each champion in the draft: your lane opponent first as a gold
  * row, then the others with games for the pair; pairs without games and seats not picked yet
- * are one line each.
+ * are labelled rows.
  */
 export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
   const picked = rows.filter((r) => r.champion);
@@ -57,17 +58,15 @@ export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
       {shown.map((m) => (
         <Row key={m.champion!.id} m={m} />
       ))}
-      {noGames.length > 0 && (
-        <div className="no-games">
-          <span className="icons">
-            {noGames.map((m) => (
-              <ChampIcon key={m.champion!.id} champ={m.champion} size={20} />
-            ))}
-          </span>
-          <span className="micro">{t("matchups.noGames", { names: noGames.map((m) => m.champion!.name).join(", ") })}</span>
-        </div>
+      {(noGames.length > 0 || open.length > 0) && (
+        <Facts
+          flow
+          rows={[
+            ...(noGames.length ? [{ label: t("matchups.none"), items: noGames.map((m) => ({ text: m.champion!.name, champion: m.champion })) }] : []),
+            ...(open.length ? [{ label: t("matchups.open"), items: open.map((m) => ({ text: positionLabel(m.role) })) }] : []),
+          ]}
+        />
       )}
-      {open.length > 0 && <span className="micro">{t("matchups.open", { roles: open.map((m) => positionLabel(m.role)).join(", ") })}</span>}
     </div>
   );
 }

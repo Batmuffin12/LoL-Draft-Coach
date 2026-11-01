@@ -451,8 +451,8 @@ describe("gamePlan", () => {
       attr(301, { physicalShare: 0.8, magicShare: 0.2, powerCurve: curve(0.55, 0.48) }),
     ];
     const plan = text(gamePlan(input(draft([201, 301]), { index: index(s) }), 102));
-    expect(plan).toMatch(/^Lane: favoured into #201 \(\+\d+\.\d% vs what both usually win, 300 games\)/);
-    expect(plan).toMatch(/Your team wins long games more often than theirs/);
+    expect(plan).toMatch(/^Lane: favoured into #201 \(\+\d+\.\d%, 300 games\)/);
+    expect(plan).toMatch(/Your team wins long games more often/);
     expect(plan).toMatch(/Their damage is about \d+% physical/);
     expect(plan).toMatch(/#201 is their main engage/);
     expect(text(gamePlan(input(draft([201]), { index: index(s) }), 101))).toMatch(/^Lane: hard into #201/);
