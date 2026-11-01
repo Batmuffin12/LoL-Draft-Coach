@@ -172,7 +172,7 @@ describe("situational items", () => {
     const deps = { data: withItems, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, itemMechanics: config.engine.loadout.itemMechanics };
     const v = toLoadoutView(l, deps).situational;
     expect(v.map((x) => x.id)).toEqual([3033]); // Sorcerer's Shoes neither cuts healing nor gives magic resist
-    expect(v[0]!.reasons).toEqual(["Their team heals a lot: Mortal Reminder cuts their healing (Wounds)", "Players buy it 1.9× as often into teams like this (420 games)"]);
+    expect(v[0]!.reasons).toEqual(["Their team heals a lot: cuts their healing (Wounds)", "Players buy it 1.9× as often into teams like this (420 games)"]);
   });
 });
 
@@ -185,7 +185,7 @@ describe("slot item reasons against this team", () => {
     const lift = (trait: string) => ({ id: `loadout.item.lift.${trait}`, slots: { id: 6655, lift: "1.5", value: 0.7, games: 300 } });
     const withReason = (trait: string): Loadout => ({ ...loadout(false), items: [{ slot: 1, minute: 11, top: { ...ranked(6655, 0.58, 0.014, 11), reasons: [lift(trait)] }, alternatives: [] }] });
     const deps = { data: withText, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, itemMechanics: config.engine.loadout.itemMechanics };
-    expect(toLoadoutView(withReason("magic"), deps).items[0]!.top.reasons).toEqual(["Their team is mostly magic damage: Luden's Companion gives magic resist"]);
+    expect(toLoadoutView(withReason("magic"), deps).items[0]!.top.reasons).toEqual(["Their team is mostly magic damage: gives magic resist"]);
     expect(toLoadoutView(withReason("physical"), deps).items[0]!.top.reasons).toEqual([]); // no armor in its text: a correlation, not said
   });
 });

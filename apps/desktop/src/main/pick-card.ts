@@ -18,7 +18,7 @@ import {
   type RankBandConfig,
 } from "@ldc/engine";
 import type { BanSuggestion, ChampionId, DraftState, Position, RankBandId, Reason, UserMatch } from "@ldc/shared";
-import type { BanView, ChampView, MyPickView } from "../shared/view";
+import type { BanView, ChampView, ImportLine, MyPickView } from "../shared/view";
 import type { LoadedConfig } from "./config";
 import { champView, type ChampionLookup } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
@@ -67,7 +67,7 @@ export function cardLoadout(championId: ChampionId, ctx: PickCardContext): Loado
 }
 
 /** The "Your pick" card for a champion: how it looks in this draft and its loadout. */
-export function pickCardView(championId: ChampionId, hovering: boolean, loadout: Loadout | null, importMessage: string | null, ctx: PickCardContext): MyPickView {
+export function pickCardView(championId: ChampionId, hovering: boolean, loadout: Loadout | null, importLines: ImportLine[], ctx: PickCardContext): MyPickView {
   const { live, lookup, say, config } = ctx;
   const assessed = live ? assessPick(live, championId) : null;
   const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
@@ -92,7 +92,7 @@ export function pickCardView(championId: ChampionId, hovering: boolean, loadout:
           spikeSlots: live && ctx.role ? powerSpikes(live.index, championId, ctx.role, config.engine.spikes).filter((s) => s.kind === "item").map((s) => s.at) : [],
         })
       : null,
-    importMessage,
+    importLines,
     hovering,
     matchups: ctx.index ? draftMatchups(ctx.draft, ctx.index, championId, ctx.role, lookup, config.app.sharedLanes) : null,
     plan: [...(live ? gamePlan(live, championId) : []), ...ctx.recordVsLane(championId)].map(say),

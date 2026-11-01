@@ -105,16 +105,21 @@ describe("ConfirmRow", () => {
 describe("LoadoutFooter", () => {
   const champion = { id: 103, name: "Ahri", iconUrl: null };
   const loadout = { canImport: true, page: {}, spells: null, items: [], commonPath: null, starting: null, games: 100, source: "Gold", thinNote: null };
-  const pick = (over: object) => ({ champion, hovering: false, role: "middle", expectedWin: null, reasons: [], loadout, importMessage: null, ...over }) as unknown as MyPickView;
+  const pick = (over: object) => ({ champion, hovering: false, role: "middle", expectedWin: null, reasons: [], loadout, importLines: [], ...over }) as unknown as MyPickView;
   const html = (over: object) => renderToStaticMarkup(createElement(LoadoutFooter, { pick: pick(over), runes: { key: null, choose: () => {} } }));
 
   it("announces the outcome in a live region, in a failure tone when it failed", () => {
-    expect(html({ importMessage: "Rune page updated in your client" })).toMatch(/class="import-status caption text" role="status">Rune page updated/);
-    expect(html({ importMessage: "Couldn't set the rune page", importFailed: true })).toMatch(/class="import-status caption neg" role="status">Couldn&#x27;t set the rune page/);
+    const out = html({ importLines: [{ text: "Rune page updated in your client", failed: false }, { text: "Couldn't set the spells", failed: true }] });
+    expect(out).toContain('role="status"');
+    expect(out).toMatch(/class="caption text">Rune page updated/);
+    expect(out).toMatch(/class="caption neg">Couldn&#x27;t set the spells/);
+    // The result takes the place of the build's source line, so the footer stays about the same height.
+    expect(out).not.toContain("From 100 games");
+    expect(html({})).toContain("From 100 games");
   });
 
   it("explains why the button is gone after champ select", () => {
-    const out = html({ importMessage: "Import works during champ select", loadout: { ...loadout, canImport: false } });
+    const out = html({ importLines: [{ text: "Import works during champ select", failed: false }], loadout: { ...loadout, canImport: false } });
     expect(out).toContain("Import works during champ select");
     expect(out).not.toContain("Import runes");
   });

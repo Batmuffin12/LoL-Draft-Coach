@@ -24,10 +24,10 @@ import {
   type Loadout,
 } from "@ldc/engine";
 import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
-import type { MyPickView, NewChampRoleView } from "../shared/view";
+import type { ImportLine, MyPickView, NewChampRoleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption } from "./advice-log";
-import { importShownLoadout, type ImportResult } from "./loadout-import";
+import { importShownLoadout } from "./loadout-import";
 import { growthFocusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
 import { monthView } from "./month-view";
@@ -91,8 +91,7 @@ export class PersonalCoach extends Coach {
   private metaIndex: MetaIndex | null = null;
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
-  private importMessage: string | null = null;
-  private importFailed = false;
+  private importLines: ImportLine[] = [];
   /** The client's gameflow phase, as this coach last heard it ("" before the first). */
   private clientPhase = "";
   /** Your role choices in the lobby before a queue (from the client), or null. */
@@ -147,18 +146,15 @@ export class PersonalCoach extends Coach {
     this.clearNotice("import");
     if (!this.config.app.import.enabled) return void this.notice("import", this.say("import.off"));
     if (!shown) return void this.notice("import", this.say(this.draft ? "import.nothing" : "import.onlyChampSelect"));
-    let result: ImportResult;
-    if (!creds) result = { message: this.say("import.noClient"), failed: true };
+    if (!creds) this.importLines = [{ text: this.say("import.noClient"), failed: true }];
     else {
       try {
-        result = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config, pageKey);
+        this.importLines = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config, pageKey);
       } catch (err) {
         reportProblem(`Import: ${(err as Error).message}`);
-        result = { message: this.say("import.failed.other"), failed: true };
+        this.importLines = [{ text: this.say("import.failed.other"), failed: true }];
       }
     }
-    this.importMessage = result.message;
-    this.importFailed = result.failed;
     this.onDraft();
   }
 
@@ -661,7 +657,7 @@ export class PersonalCoach extends Coach {
     // Out of champ select: keep showing your pick and its loadout. Import only works in champ select, and the card says so.
     const inGame = GAME_PHASES.has(this.clientPhase);
     const hint = this.keptPick?.loadout && this.config.app.import.enabled ? this.say("import.onlyChampSelect") : null;
-    const kept = this.draft || !inGame ? null : this.keptPick && { ...this.keptPick, importMessage: hint, importFailed: false, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
+    const kept = this.draft || !inGame ? null : this.keptPick && { ...this.keptPick, importLines: hint ? [{ text: hint, failed: false }] : [], loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
     this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [], filledNote: null });
   }
 
@@ -697,12 +693,9 @@ export class PersonalCoach extends Coach {
   /** The card for a champion, keeping its loadout for the import button (a message from an earlier import goes with another champion). */
   private card(championId: ChampionId, hovering: boolean, ctx: PickCardContext): MyPickView {
     const loadout = cardLoadout(championId, ctx);
-    if (this.shownLoadout?.loadout.championId !== championId) {
-      this.importMessage = null;
-      this.importFailed = false;
-    }
+    if (this.shownLoadout?.loadout.championId !== championId) this.importLines = [];
     const nameOf = (id: number) => ctx.lookup(id)?.name ?? `#${id}`;
     this.shownLoadout = loadout ? { loadout, champion: nameOf(championId) } : null;
-    return { ...pickCardView(championId, hovering, loadout, this.importMessage, ctx), importFailed: this.importFailed };
+    return pickCardView(championId, hovering, loadout, this.importLines, ctx);
   }
 }

@@ -296,7 +296,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(lcu.writes).toEqual([]);
     // One button for the rune page and the spells, one for the item set.
     await coach.importLoadout("runes");
-    expect(coach.state.myPick!.importMessage).toBe("Rune page created in your client · Summoner spells set");
+    expect(coach.state.myPick!.importLines.map((l) => l.text)).toEqual(["Rune page created in your client", "Summoner spells set"]);
     await coach.importLoadout("items");
     expect(lcu.writes.map((w) => `${w.method} ${w.path}`)).toEqual([
       "POST /lol-perks/v1/pages",
@@ -310,7 +310,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const set = (lcu.writes[1]!.body as { itemSets: { associatedChampions: number[]; blocks: { items: { id: string }[] }[] }[] }).itemSets[0]!;
     expect(set.associatedChampions).toEqual([103]);
     expect(set.blocks.map((b) => b.items.map((i) => i.id))).toEqual([["1056", "2003"], ["6655", "3020"]]);
-    expect(coach.state.myPick!.importMessage).toBe("Item set saved: open the shop in game to see it");
+    expect(coach.state.myPick!.importLines.map((l) => l.text)).toEqual(["Item set saved: open the shop in game to see it"]);
 
     // The second rune option: its own page goes to the client, and a page no longer offered writes nothing.
     lcu.writes.length = 0;
@@ -319,7 +319,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     lcu.writes.length = 0;
     await coach.importLoadout("all", "no longer offered");
     expect(lcu.writes).toEqual([]);
-    expect(coach.state.myPick!.importMessage).toBe("The rune options just changed, so nothing was imported: check them and import again");
+    expect(coach.state.myPick!.importLines).toEqual([{ text: "The rune options just changed: check them and import again", failed: true }]);
 
     // Champ select often ends seconds after you lock in: the card and its loadout stay until the game is over.
     lcu.push("/lol-champ-select/v1/session", null, "Delete");
@@ -327,7 +327,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     await waitFor(() => coach!.state.draft === null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, loadout: { canImport: false } });
     // The button is gone, and the card says why.
-    expect(coach.state.myPick).toMatchObject({ importMessage: "Import works during champ select", importFailed: false });
+    expect(coach.state.myPick).toMatchObject({ importLines: [{ text: "Import works during champ select", failed: false }] });
     lcu.push("/lol-gameflow/v1/gameflow-phase", "EndOfGame");
     await waitFor(() => coach!.state.myPick === null);
     expect(coach.state.picks).toEqual([]);

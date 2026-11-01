@@ -17,24 +17,19 @@ const LATER_ROWS = 3;
 const tip = (i: LoadoutItemView) => [i.name, ...i.reasons].join("\n");
 const lower = (s: string) => s.replace(/^./, (c) => c.toLowerCase());
 
-/** Item icons with the items named and their reasons, wrapping ("Vs this team", the role quest). */
-function ItemLine({ items }: { items: LoadoutItemView[] }) {
+/** One row per item: its icon and name, then why ("Vs this team", the role quest, "Later: pick by situation"). */
+function ItemRows({ items }: { items: LoadoutItemView[] }) {
   return (
-    <div className="item-line">
-      <span className="icons">
-        {items.map((i) => (
-          <ChampIcon key={i.id} champ={i} kind="game" size={22} title={tip(i)} />
-        ))}
-      </span>
-      <span className="caption">
-        {items.map((i, k) => (
-          <span key={i.id}>
-            {k > 0 && "; "}
+    <div className="item-rows">
+      {items.map((i) => (
+        <div key={i.id} className="later-row" title={tip(i)}>
+          <ChampIcon champ={i} kind="game" size={22} title="" />
+          <span className="caption wrap">
             <b className="text">{i.name}</b>
-            {i.reasons[0] ? ` ${lower(i.reasons[0])}` : ""}
+            {i.reasons[0] ? `: ${lower(i.reasons[0])}` : ""}
           </span>
-        ))}
-      </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -97,25 +92,17 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
       </Section>
       {vsTeam.length > 0 && (
         <Section title={t("build.vsTeam")}>
-          <ItemLine items={vsTeam} />
+          <ItemRows items={vsTeam} />
         </Section>
       )}
       {l.quest.length > 0 && (
         <Section title={t("build.quest")}>
-          <ItemLine items={l.quest} />
+          <ItemRows items={l.quest} />
         </Section>
       )}
       {l.laterPool.length > 0 && (
         <Section title={t("build.later")} gold={false}>
-          {l.laterPool.slice(0, LATER_ROWS).map((i) => (
-            <div key={i.id} className="later-row" title={tip(i)}>
-              <ChampIcon champ={i} kind="game" size={22} title="" />
-              <span className="caption">
-                <span className="text">{i.name}</span>
-                {i.reasons[0] ? ` — ${lower(i.reasons[0])}` : ""}
-              </span>
-            </div>
-          ))}
+          <ItemRows items={l.laterPool.slice(0, LATER_ROWS)} />
         </Section>
       )}
     </>

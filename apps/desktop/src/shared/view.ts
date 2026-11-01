@@ -181,6 +181,12 @@ export interface MatchupRowView {
   partner?: boolean;
 }
 
+/** One outcome of an import click; `failed`: this part didn't work. */
+export interface ImportLine {
+  text: string;
+  failed: boolean;
+}
+
 /** The champion the local player has locked in, and how it looks in this draft. */
 export interface MyPickView {
   champion: ChampView;
@@ -189,10 +195,8 @@ export interface MyPickView {
   expectedWin: number | null;
   reasons: ReasonView[];
   loadout: LoadoutView | null;
-  /** The result of the last import click (e.g. "Rune page created"), or null. */
-  importMessage: string | null;
-  /** The message says something didn't work. */
-  importFailed?: boolean;
+  /** What the last import click did, one line per outcome ("Rune page created"); empty before any. */
+  importLines: ImportLine[];
   /** True when the champion is only hovered (not locked in yet). */
   hovering?: boolean;
   /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */

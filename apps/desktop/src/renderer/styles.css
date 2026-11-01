@@ -305,8 +305,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .path .opt { display: flex; align-items: center; gap: 4px; }
 .path .alts-col > .micro { text-align: right; }
 .later-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.item-line { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
-.item-line .icons { flex-shrink: 0; gap: 4px; }
+.item-rows { display: flex; flex-direction: column; gap: 4px; }
 
 /* Draft board (undocked only) */
 .board { display: flex; flex-direction: column; gap: 12px; }
@@ -343,6 +342,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* Notice: one per problem, at the top of the scrolling area */
 .notice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); background: var(--warn-tint); color: var(--warn); }
 .notice.info { background: var(--card); color: var(--muted); }
+.import-status { display: flex; flex-direction: column; }
 .import-status:empty { display: none; }
 .crash { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .notice .g { font-weight: 700; font-family: var(--font-display); }

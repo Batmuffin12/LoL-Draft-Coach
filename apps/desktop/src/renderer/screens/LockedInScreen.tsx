@@ -59,10 +59,15 @@ export function LoadoutFooter({ pick, runes }: { pick: MyPickView; runes: RuneCh
         </Button>
       )}
       {/* Always in the page, so screen readers announce a new message. */}
-      <span className={cx("import-status caption", pick.importFailed ? "neg" : "text")} role="status">
-        {pick.importMessage}
-      </span>
-      <LoadoutSource pick={pick} />
+      <div className="import-status" role="status">
+        {pick.importLines.map((l) => (
+          <span key={l.text} className={cx("caption", l.failed ? "neg" : "text")}>
+            {l.text}
+          </span>
+        ))}
+      </div>
+      {/* What a click did takes the place of where the build comes from, to keep the screen's height. */}
+      {(!kind || pick.importLines.length === 0) && <LoadoutSource pick={pick} />}
     </>
   );
 }

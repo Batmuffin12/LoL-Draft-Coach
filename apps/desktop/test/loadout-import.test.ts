@@ -64,7 +64,7 @@ describe("importing a rune option by its key", () => {
   it("a key no longer offered writes nothing at all, says so, and closes the writer", async () => {
     for (const kind of ["runes", "all"] as const) {
       const { msg, calls, closed } = await run(two, kind, runePageKey(value(9999)));
-      expect(msg).toEqual({ message: config.explain.templates["import.runes.stale"], failed: true });
+      expect(msg).toEqual([{ text: config.explain.templates["import.runes.stale"], failed: true }]);
       expect(calls).toEqual([]);
       expect(closed()).toBe(1);
     }
@@ -80,14 +80,14 @@ describe("importLoadout", () => {
   it("writes the rune page (shards in the client's order) and the spells, and says both", async () => {
     const { w, calls } = writer();
     const msg = await importLoadout("runes", { loadout, champion: "Ahri" }, w, { say, mapId: 11 });
-    expect(msg).toBe("import.runes.created · import.spells.done");
+    expect(msg).toEqual(["import.runes.created", "import.spells.done"]);
     expect(calls[0]).toEqual(["page", { name: "Ahri", primaryStyleId: 8100, subStyleId: 8200, selectedPerkIds: [8112, 8139, 8138, 8135, 8226, 8210, 5005, 5008, 5001] }]);
     expect(calls[1]).toEqual(["spells", [4, 14]]);
   });
 
   it("still sets the spells when the rune pages are full", async () => {
     const { w, calls } = writer({ importRunePage: async () => Promise.reject(new LcuWriteError("full", 400, "pagesFull")) });
-    expect(await importLoadout("runes", { loadout, champion: "Ahri" }, w, { say, mapId: 11 })).toBe("import.runes.full · import.spells.done");
+    expect(await importLoadout("runes", { loadout, champion: "Ahri" }, w, { say, mapId: 11 })).toEqual(["import.runes.full", "import.spells.done"]);
     expect(calls).toEqual([["spells", [4, 14]]]);
   });
 
@@ -96,7 +96,7 @@ describe("importLoadout", () => {
     const raw = new LcuWriteError("LCU PATCH /lol-champ-select/v1/session/my-selection failed with HTTP 500", 500, "failed");
     const { w, calls } = writer({ importSpells: async () => Promise.reject(raw) });
     const msg = await importLoadout("runes", { loadout, champion: "Ahri" }, w, { say, mapId: 11, report });
-    expect(msg).toBe("import.runes.created · import.failed.spells");
+    expect(msg).toEqual(["import.runes.created", "import.failed.spells"]);
     expect(calls).toHaveLength(1);
     expect(report.mock.calls[0]![0]).toMatch(/HTTP 500/);
   });
@@ -104,13 +104,13 @@ describe("importLoadout", () => {
   it("writes no empty item set", async () => {
     const { w, calls } = writer();
     const empty = { ...loadout, starting: null, boots: null, core: null, items: [], situational: [] } as unknown as Loadout;
-    expect(await importLoadout("items", { loadout: empty, champion: "Ahri" }, w, { say, mapId: 11 })).toBe("");
+    expect(await importLoadout("items", { loadout: empty, champion: "Ahri" }, w, { say, mapId: 11 })).toEqual([]);
     expect(calls).toEqual([]);
   });
 
   it("writes one item set: start, boots, core, later, situational and the other options", async () => {
     const { w, calls } = writer();
-    expect(await importLoadout("items", { loadout, champion: "Ahri" }, w, { say, mapId: 11 })).toBe("import.items.done");
+    expect(await importLoadout("items", { loadout, champion: "Ahri" }, w, { say, mapId: 11 })).toEqual(["import.items.done"]);
     const set = (calls[0] as [string, { blocks: { type: string; items: number[] }[]; mapId: number }])[1];
     expect(set.mapId).toBe(11);
     expect(set.blocks.map((b) => [b.type, b.items])).toEqual([
@@ -130,10 +130,11 @@ describe("importShownLoadout: every click ends in a message", () => {
 
   it("reports success, from the config's wording, and closes the writer", async () => {
     const w = full();
-    expect(await importShownLoadout("all", shown, w, config)).toEqual({
-      message: "Rune page created in your client · Summoner spells set · Item set saved: open the shop in game to see it",
-      failed: false,
-    });
+    expect(await importShownLoadout("all", shown, w, config)).toEqual([
+      { text: "Rune page created in your client", failed: false },
+      { text: "Summoner spells set", failed: false },
+      { text: "Item set saved: open the shop in game to see it", failed: false },
+    ]);
     expect(w.close).toHaveBeenCalled();
   });
 
@@ -141,18 +142,20 @@ describe("importShownLoadout: every click ends in a message", () => {
     vi.mocked(reportProblem).mockClear();
     const w = full({ importItemSet: async () => Promise.reject(new LcuWriteError("LCU GET /lol-summoner/v1/current-summoner failed with HTTP 500", 500, "failed")) });
     const r = await importShownLoadout("items", shown, w, config);
-    expect(r).toEqual({ message: "Couldn't save the item set: try again", failed: true });
+    expect(r).toEqual([{ text: "Couldn't save the item set: try again", failed: true }]);
     expect(vi.mocked(reportProblem).mock.calls[0]![0]).toMatch(/current-summoner/);
   });
 
-  it("marks full rune pages as a failure too, even though the spells worked", async () => {
+  it("marks full rune pages as a failure, on their own line: the spells worked", async () => {
     const r = await importShownLoadout("runes", shown, full({ importRunePage: async () => Promise.reject(new LcuWriteError("full", 400, "pagesFull")) }), config);
-    expect(r.failed).toBe(true);
-    expect(r.message).toContain("rune pages are in use");
+    expect(r).toEqual([
+      { text: config.explain.templates["import.runes.full"], failed: true },
+      { text: "Summoner spells set", failed: false },
+    ]);
   });
 
   it("says so when there was nothing to write, rather than nothing at all", async () => {
     const empty = { loadout: { ...loadout, page: null, spells: null } as unknown as Loadout, champion: "Ahri" };
-    expect(await importShownLoadout("runes", empty, full(), config)).toEqual({ message: "Nothing to import for this champion yet", failed: true });
+    expect(await importShownLoadout("runes", empty, full(), config)).toEqual([{ text: "Nothing to import for this champion yet", failed: true }]);
   });
 });

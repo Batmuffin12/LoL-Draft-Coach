@@ -176,9 +176,7 @@ describe("PersonalCoach import clicks that can't write anything", () => {
     const c = make();
     (c as unknown as { shownLoadout: unknown }).shownLoadout = { loadout: {}, champion: "Ahri" };
     await c.importLoadout("all");
-    const inner = c as unknown as { importMessage: string; importFailed: boolean };
-    expect(inner.importMessage).toBe("The League client isn't connected: open it, then import again");
-    expect(inner.importFailed).toBe(true);
+    expect((c as unknown as { importLines: unknown }).importLines).toEqual([{ text: "The League client isn't connected: open it, then import again", failed: true }]);
   });
 });
 
