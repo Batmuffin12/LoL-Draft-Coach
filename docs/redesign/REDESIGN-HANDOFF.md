@@ -6,6 +6,19 @@
 **Design system:** LoL Draft Coach, https://claude.ai/code/artifact/b363bca5-38a1-4353-b220-3b88f6bf8afa (same tokens as `apps/desktop/src/renderer/styles.css`)
 **Mockups in this folder:** `mockups/*.html`, one per screen. Open them in a browser: each is a static 440 × 720 picture of the screen. They are the visual target. The numbers in them are sample data: never copy a number, champion, item or rune from a mockup into code.
 
+> **Later polish pass (stage I, owner's decision: simplicity first).** Where this document and the mockups disagree with the list below, the list wins.
+>
+> - **Tokens:** `styles.css` is the truth. Surfaces lifted a step, `--warn` #ff9e7a, `--faint` for legal text, corners `--radius-xs` 4, `--radius-sm` 6, `--radius-md` 8 (buttons and controls `sm`, cards `md`, tags and skill cells `xs`; pills only for status chips and dots).
+> - **Primary button:** filled gold, `--on-gold` text. Disabled stays outlined.
+> - **Case:** sentence case in tabs, choices, table heads and chips. Caps only on `.label`, `.t-call`, buttons and the app name.
+> - **Gold:** you and the brand only. Section heads are muted; "Your next step" and "This game" keep gold. An item's gold ring means it adds the most in its step.
+> - **Navigation:** two visible levels. `Segmented` for where you are (main tabs, text sub-tabs, the same Runes · Build · Matchups in Locked in and Explore). `ChoiceGroup` for what a screen shows: attached segments, roles as the client's position icons (CommunityDragon, through `packages/ddragon`), words if they fail to load.
+> - **Tour:** four steps ("2 of 4" in text). What it used to explain is now a one-time note where it applies (`first-use.ts`): notes never cover their target or the block they explain.
+> - **This month (replaces 4.5's `SlopeChart`, and `mockups/Month.html`'s chart):** only real changes, as rows sorted by size ("Vision 56 → 50 −6"), then "Other 4: about the same" with their numbers on hover. No dots or legend.
+> - **Style (changes 4.4 and `mockups/Style.html`):** when no axis stands out, a sentence as a heading replaces the radar, with the scores on hover. The numbers below stay.
+> - **Empty states:** one centred message, no heading over nothing, progress where it's known.
+> - **Footer (replaces 3.3):** Riot ID, "How it works" and "Account" on one row; Account opens sign out and delete in place. The notice is unchanged.
+
 ---
 
 ## 1. What and why
@@ -36,10 +49,10 @@ All of these already come from `docs/SPEC.md`, `CLAUDE.md` and the design system
 
 - **Fits 440 × 720 with no scrollbar**, at zoom 1, on every screen. If a screen overflows, first remove repetition, then close a secondary block, then tighten spacing. Never shrink below the type scale and never cut text. Check with `LDC_SCREENSHOT` (it logs the overflow): the overflow must be **0**.
 - **No text is ever cut.** No `text-overflow: ellipsis`, no `-webkit-line-clamp`, no "…" anywhere. Remove the `.one-line` and `.clamp2` uses on these screens, and remove the classes when nothing uses them. Long text wraps between words.
-- **Tokens only.** Colors, spacing (2, 4, 6, 8, 10, 12, 16, 20, 24), radii (3, 4, pill, circles for runes and dots) and type all come from the `:root` variables in `styles.css`. No new hex values in components. The mockups use the same variable names (`--bg`, `--card`, `--line-strong`, `--gold-tint`, `--positive`, `--negative`, `--track` …), so they map one to one.
-- **Type scale only** (`--fs-*`): hero 32, number 22, title 20, heading 16, body 14, caption 13, label 12, micro 12, legal 11. **One hero number per screen**: the timer in champ select, the goal value on Last game, the current win rate on This month. Tabular figures everywhere.
+- **Tokens only.** Colors, spacing (2, 4, 6, 8, 10, 12, 16, 20, 24), radii (4, 6, 8, pill, circles for runes and dots) and type all come from the `:root` variables in `styles.css`. No new hex values in components. The mockups use the same variable names (`--bg`, `--card`, `--line-strong`, `--gold-tint`, `--positive`, `--negative`, `--track` …), so they map one to one.
+- **Type scale only** (`--fs-*`): hero 34, number 23, title 21, heading 17, body 15, caption 14, label 13, micro 13, legal 12, tiny 11. **One hero number per screen**: the timer in champ select, the goal value on Last game, the current win rate on This month. Tabular figures everywhere.
 - **Color meaning:** gold means you and the brand. `positive` (green) raises your chance and `negative` (amber) lowers it, always with a printed sign and a true minus (−). Red only for the enemy, destructive actions and the timer at 10 s or less. Win rates are colored from 50%: above 50.5% `positive`, below 49.5% `negative`.
-- **One primary button per screen** (`btn primary`: gold border, `--gold-tint` fill, `--gold-bright` text).
+- **One primary button per screen** (`btn primary`: filled `--gold`, `--on-gold` text).
 - **Accessible:** real `<button>`, `<input>` and `<label>` elements, a 2px gold focus ring with offset on everything focusable, an `aria-label` on icon-only buttons, and charts in SVG with `role="img"` and an `aria-label` that says what they show.
 - **Voice:** "you" and "your team", never other players' names. Suggest, never decide. Describe a single game, never grade it. No emoji, no exclamation marks.
 - **Riot notice:** in full in the lobby footer and on Connect. It must be fully visible: it is clipped today.
@@ -61,7 +74,7 @@ All of these already come from `docs/SPEC.md`, `CLAUDE.md` and the design system
 No change. It is the same on every screen, Connect included: status dot, "Draft Coach", the patch chip when known, dock and close buttons.
 
 ### 3.3 Lobby footer (`AccountFooter`)
-- First row: your Riot ID (when registered), then "Sign out" and "Delete my data" as foot links.
+- First row: your Riot ID (when registered), then "How it works" and "Account"; Account opens "Sign out" and "Delete my data" in place.
 - Then the full Riot notice in `legal`, wrapping and fully visible. Deleting your data is still confirmed in place in the footer.
 
 ### 3.4 Notices
@@ -200,6 +213,8 @@ All three tabs share the band and the footer.
 
 ### 4.4 Lobby › Style (`mockups/Style.html`)
 
+*Polish pass: roles are `RoleChoice`, not pills; the radar goes when no axis stands out (see the top of this document).*
+
 **Role pills** replace the role sub-tabs:
 - "Bot · 50", "Jungle · 18" … from `playstyle[].role` and `.games`, using the `pill` style.
 - On the right, the micro "dashed = rank average".
@@ -230,6 +245,8 @@ All three tabs share the band and the footer.
 **Empty:** the current caption.
 
 ### 4.5 Lobby › This month (`mockups/Month.html`)
+
+*Polish pass: the header and Champions sections stand; `SlopeChart` is replaced by `StyleShifts` (see the top of this document).*
 
 **Header section:**
 - Head: "{period} · {games} games" in a gold label, and "{n} games before" on the right.
