@@ -133,6 +133,12 @@ function overrideCredentials(): LcuCredentials | null {
   return m ? { port: Number(m[1]), password: m[2]!, protocol: "https" } : null;
 }
 
+/** Dev aid: LDC_DDRAGON_URL points Data Dragon and CommunityDragon at a local stand-in (scripts/perf). Development builds only. */
+function devDdragonUrls(): { baseUrl: string; communityDragonUrl: string } | null {
+  const url = process.env.LDC_DDRAGON_URL;
+  return url && !app.isPackaged ? { baseUrl: url, communityDragonUrl: `${url}/cdragon/` } : null;
+}
+
 /** Dev aid: LDC_META_FILE=snapshot.json (from `pnpm --filter @ldc/sim mock`) replaces the live meta. Development builds only. */
 function devMetaFile(): MetaSnapshot | null {
   const file = process.env.LDC_META_FILE;
@@ -303,7 +309,7 @@ async function main(): Promise<void> {
   const connector = new LcuConnector({
     discover: async () => override ?? discoverCredentials({ installDir: env.lolInstallDir }),
   });
-  const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
+  const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon"), ...devDdragonUrls() });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
   const profiles = await createProfileSource(env, config);
   // Live meta snapshots come from the coach server (none in dev-only direct mode).

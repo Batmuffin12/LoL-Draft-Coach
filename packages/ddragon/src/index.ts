@@ -110,6 +110,8 @@ export interface DataDragonOptions {
   cacheDir: string;
   locale?: string;
   baseUrl?: string;
+  /** Where the CommunityDragon game data files are read from (a local stand-in when measuring). */
+  communityDragonUrl?: string;
   fetch?: typeof fetch;
 }
 
@@ -203,7 +205,8 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
       raw = JSON.parse(await readFile(file, "utf8"));
     } catch {
       try {
-        raw = { styles: await this.getJson(`${COMMUNITY_DRAGON_GAME_DATA}v1/perkstyles.json`), perks: await this.getJson(`${COMMUNITY_DRAGON_GAME_DATA}v1/perks.json`) };
+        const base = this.opts.communityDragonUrl ?? COMMUNITY_DRAGON_GAME_DATA;
+        raw = { styles: await this.getJson(`${base}v1/perkstyles.json`), perks: await this.getJson(`${base}v1/perks.json`) };
       } catch {
         return null;
       }

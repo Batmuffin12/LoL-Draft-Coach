@@ -6,6 +6,10 @@
  *   tsx scripts/perf/desktop.ts startup <runs> <out.json>
  *   tsx scripts/perf/desktop.ts replay <scenario> <seconds> <out.json> [clicks JSON] [rounds]
  *   tsx scripts/perf/desktop.ts screens <outDir>
+ *
+ * Cold starts ask the real Data Dragon unless LDC_PERF_DDRAGON_DIR names a copy of a panel's Data Dragon
+ * cache: then a local stub serves it, with LDC_PERF_DDRAGON_DELAYS ("tail", "hang" or ms; default 0) on
+ * versions.json. LDC_PERF_DDRAGON_FIRST: the number of the first start, to carry "tail" across batches.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -15,6 +19,7 @@ import type { Fixture } from "@ldc/lcu";
 import { MockLcuServer } from "@ldc/lcu/testing";
 import { history, loadScenario } from "@ldc/sim";
 import { world } from "../../packages/sim/scenarios/_world";
+import { startDdragonStub, stubDelay } from "./ddragon-stub";
 import { HIGHLIGHT_IDS } from "../../apps/desktop/src/shared/ui-state";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -176,16 +181,21 @@ function baseEnv(setup: Setup, lcu: string, opts: { profile?: boolean; serverUrl
 async function startup(runs: number, out: string): Promise<void> {
   const setup = await scenarioSetup("mid-counter", 0);
   const results: unknown[] = [];
+  const { LDC_PERF_DDRAGON_DIR: stubDir, LDC_PERF_DDRAGON_DELAYS: delays = "0", LDC_PERF_DDRAGON_FIRST: first = "0" } = process.env;
+  const stub = stubDir ? await startDdragonStub(stubDir) : null;
   for (let i = 0; i <= runs; i++) {
     const file = join(local, `perf-startup-${i}.json`);
     rmSync(file, { force: true });
+    // The warm-up fills the cache, so it always gets an answer.
+    stub?.setDelay(i === 0 ? 0 : stubDelay(delays, Number(first) + i - 1));
     await withMock(setup, 0, async (lcu) => {
-      const r = await launch({ ...baseEnv(setup, lcu), LDC_PERF: file, LDC_PERF_MODE: "startup", LDC_PERF_T0: String(Date.now()) });
+      const r = await launch({ ...baseEnv(setup, lcu), ...(stub ? { LDC_DDRAGON_URL: stub.url } : {}), LDC_PERF: file, LDC_PERF_MODE: "startup", LDC_PERF_T0: String(Date.now()) });
       if (!existsSync(file)) throw new Error(`startup run ${i} wrote no results (exit ${r.code}):\n${r.stdout.slice(-2000)}`);
     });
     if (i > 0) results.push(JSON.parse(readFileSync(file, "utf8")));
     process.stdout.write(`startup ${i === 0 ? "warm-up" : `${i}/${runs}`} done\n`);
   }
+  stub?.stop();
   writeFileSync(out, JSON.stringify(results));
 }
 

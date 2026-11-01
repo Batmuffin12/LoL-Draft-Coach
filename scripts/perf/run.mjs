@@ -75,6 +75,9 @@ function startup() {
     return t === undefined ? NaN : t - r.marks.spawn;
   };
   for (const m of ["ready", "windowCreated", "firstPaint", "firstContentfulPaint", "firstState", "firstScreen", "fullScreen"]) metrics[`desktop.coldStart.${m}`] = dist(runs.map((r) => since(r, m)));
+  const firstEvent = (r, source) => (r.emits.find((e) => e.source === source)?.at ?? NaN) - r.marks.spawn;
+  metrics["desktop.coldStart.ddragonEvent"] = dist(runs.map((r) => firstEvent(r, "ddragon:patch")));
+  metrics["desktop.coldStart.clientConnected"] = dist(runs.map((r) => firstEvent(r, "lcu:gameflowPhase")));
   metrics["desktop.coldStart.pushes"] = dist(runs.map((r) => r.pushes.length), "count");
   metrics["desktop.coldStart.profileLoad"] = dist(runs.map((r) => r.emits.filter((e) => e.source === "profiles:profile").reduce((n, e) => n + e.ms, 0)));
   metrics["desktop.coldStart.mainBusy"] = dist(runs.map((r) => r.emits.reduce((n, e) => n + e.ms, 0)));
