@@ -6,6 +6,7 @@ export const IPC = {
   ready: "coach:ready",
   setDocked: "coach:set-docked",
   minimize: "coach:minimize",
+  dismissNotice: "coach:dismiss-notice",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
@@ -191,6 +192,12 @@ export interface BanView {
 export type MetaView =
   | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
   | { state: "error"; message: string };
+
+/** A problem shown at the top of the panel: one per cause (the key), until the cause ends or you dismiss it. */
+export interface NoticeView {
+  key: string;
+  text: string;
+}
 
 export interface SessionView {
   /** "2 losses in a row. A short break before the next game usually helps." */
@@ -520,7 +527,7 @@ export interface ViewState {
   month: MonthView | null;
   /** A break suggestion after a losing streak or a long session (your games only), until the session is over. */
   session: SessionView | null;
-  notices: string[];
+  notices: NoticeView[];
   /** This app's version, and a newer one already downloaded that installs when the app closes. */
   app: { version: string; updateReady: string | null };
   docked: boolean;

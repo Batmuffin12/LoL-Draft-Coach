@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { AccountView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count, versionText } from "../format";
+import { count, t, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
@@ -57,12 +57,12 @@ export function ProgressRow({ text, done, total }: { text: string; done?: number
 /** One notice per problem, at the top of the scrolling area; loading shows as a progress row. */
 export function Notices({ state, extra }: { state: ViewState; extra?: string | null }) {
   const { profile } = state.status;
-  const items: { tone: "warn" | "info"; text: string }[] = [
-    ...state.notices.map((text) => ({ tone: "warn" as const, text })),
-    ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message }] : []),
-    ...(profile.state === "ready" && profile.problem ? [{ tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.` }] : []),
-    ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
-    ...(extra ? [{ tone: "info" as const, text: extra }] : []),
+  const items: { key: string; tone: "warn" | "info"; text: string; dismiss?: string }[] = [
+    ...state.notices.map((n) => ({ key: n.key, tone: "warn" as const, text: n.text, dismiss: n.key })),
+    ...(profile.state === "error" ? [{ key: "profile", tone: "warn" as const, text: profile.message }] : []),
+    ...(profile.state === "ready" && profile.problem ? [{ key: "profile", tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.` }] : []),
+    ...(state.meta?.state === "error" ? [{ key: "meta", tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
+    ...(extra ? [{ key: "extra", tone: "info" as const, text: extra }] : []),
   ];
   const progress =
     profile.state === "loading" ? (
@@ -75,7 +75,7 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
     <div className="notices">
       {progress}
       {items.map((n) => (
-        <Notice key={n.text} tone={n.tone}>
+        <Notice key={n.key} tone={n.tone} dismissLabel={t("notice.dismiss")} onDismiss={n.dismiss ? () => window.coach.dismissNotice(n.dismiss!) : undefined}>
           {n.text}
         </Notice>
       ))}

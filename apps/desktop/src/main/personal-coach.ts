@@ -38,6 +38,7 @@ import { champView } from "./draft-view";
 import { capital } from "./reason-view";
 import { adviceNotes, pickViews, queuePreviewRoles, roleView } from "./role-view";
 import { readClientState } from "./client-state";
+import { reportProblem } from "./crash-reports";
 import { banningNow, draftScoring, laneOpponent, lockedPick, queuePreviewWanted, queueSupported, recordVsLane } from "./draft-facts";
 import { lastGameView, sessionView } from "./last-game-view";
 import { currentGame, hasGame, lastClientGame, NewGameWaiter } from "./game-wait";
@@ -217,6 +218,7 @@ export class PersonalCoach extends Coach {
     });
     this.p.connector.on("status", (s) => {
       if (s === "connected") void this.onClientConnected();
+      else this.clearNotice("clientAccount");
     });
     this.p.connector.on("gameflowPhase", (phase) => {
       if (phase === "InProgress") void this.onGameStarted();
@@ -352,6 +354,7 @@ export class PersonalCoach extends Coach {
    * so we take the Riot ID from the client and let the profile source resolve it.
    */
   private async onClientConnected(): Promise<void> {
+    this.clearNotice("clientAccount");
     try {
       const { me, ranked, intendedPositions, perks, shardRows, owned } = await readClientState(this.p.connector);
       this.intendedPositions = intendedPositions;
@@ -373,7 +376,7 @@ export class PersonalCoach extends Coach {
         if (last && this.profile && !hasGame(this.profile.matches, last.gameId)) void this.gameWaiter.wait(last.gameId);
       } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
-      this.notice(`Could not read your account from the client: ${(err as Error).message}`);
+      if (this.notice("clientAccount", this.wording("notice.clientAccount"))) reportProblem(`Reading the client account: ${(err as Error).message}`);
     }
   }
 
@@ -528,7 +531,8 @@ export class PersonalCoach extends Coach {
     const { queueId } = await currentGame(connector);
     this.queueId = queueId;
     this.queueSupported = queueSupported(this.draft, queueId, config.app.supportedQueues);
-    if (!this.queueSupported) this.notice("This queue isn't supported yet — suggestions are for Ranked and Normal Draft.");
+    if (this.queueSupported || !this.draft) this.clearNotice("queue");
+    else this.notice("queue", this.wording("notice.queue"));
     this.onDraft();
   }
 
@@ -564,6 +568,7 @@ export class PersonalCoach extends Coach {
       this.recorder.newChampSelect();
       void this.onChampSelectStart();
     }
+    if (!this.draft && this.hadDraft) this.clearNotice("queue");
     this.hadDraft = this.draft !== null;
     // While your history loads, bans still come from the live meta alone (picks wait for your history).
     const loading = !this.profile && this.draft !== null && this.queueSupported && this.metaIndex !== null && banningNow(this.draft);

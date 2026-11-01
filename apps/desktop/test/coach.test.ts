@@ -81,6 +81,6 @@ describe("Coach app version", () => {
     c.updateReady("1.0.1");
     c.updateReady("1.0.1");
     expect(c.state.app).toEqual({ version: "1.0.0", updateReady: "1.0.1" });
-    expect(c.state.notices).toEqual(["Version 1.0.1 is ready and installs when you close the app."]);
+    expect(c.state.notices).toEqual([{ key: "update", text: "Version 1.0.1 is ready and installs when you close the app." }]);
   });
 });

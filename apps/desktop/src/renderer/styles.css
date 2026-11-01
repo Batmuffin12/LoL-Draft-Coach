@@ -343,6 +343,10 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .notice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); background: var(--warn-tint); color: var(--warn); }
 .notice.info { background: var(--card); color: var(--muted); }
 .notice .g { font-weight: 700; font-family: var(--font-display); }
+.notice .body { flex: 1; min-width: 0; }
+.notice .dismiss { all: unset; flex-shrink: 0; width: 16px; text-align: center; cursor: pointer; color: inherit; opacity: 0.7; }
+.notice .dismiss:hover { opacity: 1; }
+.notice .dismiss:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .notice strong { color: var(--text); font-weight: 600; }
 
 /* Progress: a micro line and a thin bar instead of a boxed notice */

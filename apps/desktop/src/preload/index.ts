@@ -26,6 +26,9 @@ const api = {
   importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     return ipcRenderer.invoke(IPC.importLoadout, kind);
   },
+  dismissNotice(key: string): void {
+    ipcRenderer.send(IPC.dismissNotice, key);
+  },
   /** The main process minimizes: a sandboxed renderer has no way to. */
   minimize(): void {
     ipcRenderer.send(IPC.minimize);

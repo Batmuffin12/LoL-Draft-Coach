@@ -363,6 +363,9 @@ async function main(): Promise<void> {
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
   ipcMain.on(IPC.minimize, () => win?.minimize());
+  ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
+    if (typeof key === "string") coach.dismissNotice(key);
+  });
   ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
 
   await coach.start();
