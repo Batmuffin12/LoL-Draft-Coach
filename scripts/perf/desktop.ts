@@ -251,8 +251,62 @@ async function screens(outDir: string): Promise<void> {
   writeFileSync(join(outDir, "overflow.json"), JSON.stringify(overflow, null, 2));
 }
 
+/**
+ * Browse and My games on a bigger synthetic world than the regression screens': each shot's screenshot, overflow and
+ * what the state leaves out (LDC_EXPLORE_DUMP), to compare with `meta`. `old`: a snapshot from before bans and builds;
+ * `empty`: a history with no games. `closed`: no client at all, on a port nothing listens to.
+ */
+async function exploreShots(outDir: string, meta: string, old: string, hist: string, empty: string): Promise<void> {
+  mkdirSync(outDir, { recursive: true });
+  const shots: { name: string; click: string; meta?: string | null; history?: string; closed?: boolean }[] = [
+    { name: "list", click: "Champions>Browse" },
+    { name: "list-support-pick", click: "Champions>Browse>Support>Pick" },
+    { name: "list-ban", click: "Champions>Browse>Ban" },
+    { name: "search", click: "Champions>Browse>type:KAI'SA" },
+    { name: "search-none", click: "Champions>Browse>type:zzz" },
+    { name: "long-name-runes", click: "Champions>Browse>type:nunu>Nunu & Willump" },
+    { name: "long-name-build", click: "Champions>Browse>type:nunu>Nunu & Willump>Build" },
+    { name: "thin-runes", click: "Champions>Browse>type:kaisa>Kai'Sa" },
+    { name: "thin-build", click: "Champions>Browse>type:kaisa>Kai'Sa>Build" },
+    { name: "ahri-runes", click: "Champions>Browse>type:ahri>Ahri" },
+    { name: "ahri-build", click: "Champions>Browse>type:ahri>Ahri>Build" },
+    { name: "ahri-matchups", click: "Champions>Browse>type:ahri>Ahri>Matchups" },
+    { name: "back-keeps-search", click: "Champions>Browse>Pick>type:ahri>Ahri>‹ Back" },
+    { name: "old-list", click: "Champions>Browse", meta: old },
+    { name: "old-detail", click: "Champions>Browse>Ahri", meta: old },
+    { name: "no-snapshot", click: "Champions>Browse", meta: null },
+    { name: "games", click: "Me>My games" },
+    { name: "games-by-champion", click: "Me>My games>By champion" },
+    { name: "games-by-champion-open", click: "Me>My games>By champion>Ahri" },
+    { name: "games-closed-client", click: "Me>My games", closed: true },
+    { name: "games-empty", click: "Me>My games", history: empty },
+  ];
+  const overflow: Record<string, string> = {};
+  for (const s of shots) {
+    const setup: Setup = { fixture: idleFixture("None"), meta: s.meta === null ? null : (s.meta ?? meta), timeScale: 0 };
+    const shoot = async (lcu: string) => {
+      const r = await launch({
+        ...baseEnv(setup, lcu),
+        LDC_PROFILE_FILE: s.history ?? hist,
+        LDC_SCREENSHOT: join(outDir, `g-${s.name}.png`),
+        LDC_EXPLORE_DUMP: join(outDir, `g-${s.name}.json`),
+        LDC_SCREENSHOT_DELAY_MS: "6000",
+        LDC_SCREENSHOT_CLICK: s.click,
+      });
+      const m = /scroll overflow (-?\d+|null)px/.exec(r.stdout);
+      overflow[s.name] = m?.[1] ?? "?";
+      for (const c of s.click.split(">")) if (!r.stdout.includes(`clicked "${c}": true`)) console.warn(`${s.name}: "${c}" was not found`);
+    };
+    if (s.closed) await shoot("1:closed");
+    else await withMock(setup, 0, shoot);
+    process.stdout.write(`${s.name}: overflow ${overflow[s.name]}px\n`);
+  }
+  writeFileSync(join(outDir, "g-overflow.json"), JSON.stringify(overflow, null, 2));
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-if (cmd === "startup") await startup(Number(args[0] ?? 10), args[1]!);
+if (cmd === "explore") await exploreShots(args[0]!, args[1]!, args[2]!, args[3]!, args[4]!);
+else if (cmd === "startup") await startup(Number(args[0] ?? 10), args[1]!);
 else if (cmd === "replay") await replay(args[0]!, Number(args[1] ?? 60), args[2]!, args[3] ? (JSON.parse(args[3]) as string[]) : [], Number(args[4] ?? 1));
 else if (cmd === "screens") await screens(args[0]!);
 else {
