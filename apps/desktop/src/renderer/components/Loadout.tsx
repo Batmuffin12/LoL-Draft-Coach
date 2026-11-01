@@ -45,7 +45,7 @@ export function RunesTab({ loadout: l }: { loadout: LoadoutView }) {
       {p && (
         <Section title="Runes" aside={<Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} />}>
           {p.primaryTree && p.secondaryTree ? (
-            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={l.situationalRunes} />
+            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} />
           ) : (
             <div className="icons">
               {[...p.runes, ...p.shards].map((r, i) => (

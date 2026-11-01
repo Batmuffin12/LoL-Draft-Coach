@@ -1,7 +1,7 @@
 import type { StaticData } from "@ldc/ddragon";
-import { renderReason, type Loadout, type LoadoutChoice, type RankBandConfig, type RankedItem } from "@ldc/engine";
-import type { ChampionId, Reason, RankBandId } from "@ldc/shared";
-import type { ChoiceNumbers, IconView, ItemOptionView, LoadoutItemView, LoadoutView, RuneTreeView } from "../shared/view";
+import { renderReason, runePageKey, type Loadout, type LoadoutChoice, type PageKind, type RankBandConfig, type RankedItem, type RuneSwap } from "@ldc/engine";
+import type { ChampionId, Reason, RankBandId, RunePageStat } from "@ldc/shared";
+import type { ChoiceNumbers, IconView, ItemOptionView, LoadoutItemView, LoadoutView, RunePageView, RuneTreeView } from "../shared/view";
 
 export interface LoadoutViewDeps {
   data: StaticData | null;
@@ -67,6 +67,66 @@ export function groupRepeats(ids: number[]): { ids: number[]; counts: number[] }
   return { ids: [...counts.keys()], counts: [...counts.values()] };
 }
 
+/** What drawing a rune page needs from the view being built. */
+interface PageViewParts {
+  deps: LoadoutViewDeps;
+  rune: (id: number) => IconView;
+  first: (rs: Reason[]) => string | null;
+  numbers: (c: LoadoutChoice<unknown>) => ChoiceNumbers;
+  withReasons: (v: IconView, rs: Reason[]) => LoadoutItemView;
+}
+
+/** The swaps that fit a page: from one of its two trees (another tree is a different page), and answered by the rune's own text. */
+function swapViews(swaps: RuneSwap[], inTrees: ReadonlySet<number>, { deps, rune, withReasons }: PageViewParts): LoadoutItemView[] {
+  return swaps
+    .filter((r) => !inTrees.size || inTrees.has(r.runeId))
+    .flatMap((r) => {
+      const rules = deps.runeMechanics;
+      if (!rules) return [withReasons(rune(r.runeId), r.reasons)];
+      // The mechanic must be in the rune's own text (Data Dragon), else it's only a correlation.
+      const effect = runeText(deps.data, r.runeId);
+      const pattern = rules[r.trait];
+      if (!effect || !pattern || !new RegExp(pattern, "i").test(effect)) return [];
+      const view = rune(r.runeId);
+      const say = (id: string, slots: Reason["slots"]) => renderReason({ id, slots }, deps.templates, deps.championName);
+      return [
+        {
+          ...view,
+          reasons: [say(`loadout.rune.why.${r.trait}`, { rune: view.name, effect }), say("loadout.rune.backing", { lift: r.lift.toFixed(1), games: r.games })],
+        },
+      ];
+    });
+}
+
+/** One rune page on its trees, with its own swaps; `option` is how the switch reads it (null with no second option). */
+function runePageView(c: LoadoutChoice<RunePageStat>, swaps: RuneSwap[], option: { label: string; share: number | null } | null, parts: PageViewParts): RunePageView {
+  const { deps, rune, first, numbers } = parts;
+  const p = c.value;
+  // Stored in Riot's match order (defense, flex, offense); shown like the client (offense, flex, defense).
+  const shardIds = [...p.statPerks].reverse();
+  const primaryTree = runeTree(deps.data, p.primaryStyle, false);
+  const secondaryTree = runeTree(deps.data, p.subStyle, true);
+  const inTrees = new Set([primaryTree, secondaryTree].flatMap((t) => t?.rows.flat().map((r) => r.id) ?? []));
+  return {
+    key: runePageKey(p),
+    primary: rune(p.primaryStyle),
+    secondary: rune(p.subStyle),
+    runes: p.runes.map(rune),
+    shards: shardIds.flatMap((id) => {
+      const s = deps.perk?.(id);
+      return s ? [{ id, name: s.name, iconUrl: s.iconUrl }] : [];
+    }),
+    reason: first(c.reasons),
+    primaryTree,
+    secondaryTree,
+    shardRows: shardRowsView(deps.shardRows ?? [], shardIds, deps.perk),
+    situationalRunes: swapViews(swaps, inTrees, parts),
+    optionLabel: option?.label ?? null,
+    share: option?.share ?? null,
+    ...numbers(c),
+  };
+}
+
 /** Builds what the "Your pick" card shows from an engine loadout: Data Dragon names and icons, reasons in words. */
 export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   const d = deps.data;
@@ -98,8 +158,6 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
       return answers(r.itemId, trait) ? [renderReason({ id: `loadout.item.why.${trait}`, slots: { item: item(r.itemId).name } }, deps.templates, deps.championName)] : [];
     });
   const option = (r: RankedItem): ItemOptionView => ({ ...item(r.itemId), reasons: slotReasons(r), share: r.share, winAdded: thin ? null : r.winAdded });
-  // Stored in Riot's match order (defense, flex, offense); shown like the client (offense, flex, defense).
-  const shardIds = l.page ? [...l.page.value.statPerks].reverse() : [];
   const start = l.starting ? groupRepeats(l.starting.value) : null;
 
   const ids = deps.bands.bands.map((b) => b.id).sort((a, b) => a - b);
@@ -109,10 +167,9 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   const ranges = bandNames.map((n) => /^(.+) to (.+)$/.exec(n));
   const source = bandNames.length > 1 && ranges.every(Boolean) ? `${ranges[0]![1]} to ${ranges.at(-1)![2]}` : bandNames.join(" + ");
 
-  const primaryTree = l.page ? runeTree(d, l.page.value.primaryStyle, false) : null;
-  const secondaryTree = l.page ? runeTree(d, l.page.value.subStyle, true) : null;
-  // "Swap in" only what fits the shown page: a rune from one of its two trees (another tree is a different page).
-  const inTrees = new Set([primaryTree, secondaryTree].flatMap((t) => t?.rows.flat().map((r) => r.id) ?? []));
+  const parts: PageViewParts = { deps, rune, first, numbers, withReasons };
+  const alt = l.pageAlt;
+  const optionLabel = (kind: PageKind, enemy: ChampionId | null) => renderReason({ id: `ui.runes.option.${kind}`, slots: enemy === null ? {} : { enemy } }, deps.templates, deps.championName);
   return {
     games: l.games,
     source,
@@ -122,40 +179,8 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
           ...(l.source.personalGames ? [renderReason({ id: "loadout.thin.personal", slots: { personalGames: l.source.personalGames } }, deps.templates, deps.championName)] : []),
         ].join(". ")
       : null,
-    page: l.page
-      ? {
-          primary: rune(l.page.value.primaryStyle),
-          secondary: rune(l.page.value.subStyle),
-          runes: l.page.value.runes.map(rune),
-          shards: shardIds.flatMap((id) => {
-            const p = deps.perk?.(id);
-            return p ? [{ id, name: p.name, iconUrl: p.iconUrl }] : [];
-          }),
-          reason: first(l.page.reasons),
-          primaryTree,
-          secondaryTree,
-          shardRows: shardRowsView(deps.shardRows ?? [], shardIds, deps.perk),
-          ...numbers(l.page),
-        }
-      : null,
-    situationalRunes: l.situationalRunes
-      .filter((r) => !inTrees.size || inTrees.has(r.runeId))
-      .flatMap((r) => {
-        const rules = deps.runeMechanics;
-        if (!rules) return [withReasons(rune(r.runeId), r.reasons)];
-        // The mechanic must be in the rune's own text (Data Dragon), else it's only a correlation.
-        const effect = runeText(d, r.runeId);
-        const pattern = rules[r.trait];
-        if (!effect || !pattern || !new RegExp(pattern, "i").test(effect)) return [];
-        const view = rune(r.runeId);
-        const say = (id: string, slots: Reason["slots"]) => renderReason({ id, slots }, deps.templates, deps.championName);
-        return [
-          {
-            ...view,
-            reasons: [say(`loadout.rune.why.${r.trait}`, { rune: view.name, effect }), say("loadout.rune.backing", { lift: r.lift.toFixed(1), games: r.games })],
-          },
-        ];
-      }),
+    page: l.page ? runePageView(l.page, l.situationalRunes, alt ? { label: optionLabel(alt.main.kind, alt.main.enemy), share: alt.main.share } : null, parts) : null,
+    pageAlt: alt ? runePageView(alt, alt.situationalRunes, { label: optionLabel(alt.kind, null), share: alt.share }, parts) : null,
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons), ...numbers(l.spells) } : null,
     skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), basic: [1, 2, 3].map(key), ult: key(4), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
     starting: l.starting && start ? { items: start.ids.map(item), counts: start.counts, reason: first(l.starting.reasons), ...numbers(l.starting) } : null,
