@@ -525,25 +525,16 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .bl .val { text-align: right; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* This month: win rate before → now, the role bar, the slope chart, champion cards */
+/* This month: win rate before → now, the role bar, what moved in your style, champion cards */
 .winline { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .roles { display: flex; flex-direction: column; gap: 4px; }
 .rolebar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; gap: 2px; }
-.shifts { display: flex; flex-direction: column; }
-.shift { display: grid; grid-template-columns: 112px minmax(0, 1fr) 66px 30px; align-items: center; gap: 8px; min-height: 18px; }
-.shift .nm { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
-.shift.real .nm { font-weight: 600; }
-.shift .track { position: relative; height: 6px; border-radius: 3px; background: var(--track); }
-.shift .avg { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--line-strong); }
-.shift .gap { position: absolute; top: 0; bottom: 0; border-radius: 3px; opacity: 0.45; background: var(--line-strong); }
-.shift.real .gap { opacity: 1; }
-.shift .gap.pos, .shift .dot.pos { background: var(--positive); }
-.shift .gap.neg, .shift .dot.neg { background: var(--negative); }
-.shift .dot { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--text); border: 2px solid var(--bg); }
-.shift .dot.before, .shift .dot.before.pos, .shift .dot.before.neg { width: 12px; height: 12px; top: -3px; margin-left: -6px; background: var(--bg); border: 2px solid var(--line-strong); }
-.shift .val { text-align: right; font-size: var(--fs-caption); white-space: nowrap; }
-.shift .chg { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-caption); }
-.shift .chg.faint { color: var(--muted); }
+.shifts { display: flex; flex-direction: column; gap: 3px; }
+.shift { display: grid; grid-template-columns: minmax(0, 1fr) 72px 40px; align-items: baseline; gap: 8px; font-size: var(--fs-body); line-height: var(--lh-body); }
+.shift .val { text-align: right; white-space: nowrap; }
+.shift .val b { font-weight: 600; }
+.shift .chg { text-align: right; font-family: var(--font-display); font-weight: 600; }
+.style-even { padding: 8px 0 4px; }
 .champcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .trends { display: flex; flex-wrap: wrap; gap: 0 12px; }
 .goals { display: flex; flex-direction: column; }

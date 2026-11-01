@@ -402,7 +402,7 @@ export interface MonthView {
   /** "Sep 7 – Oct 6". */
   period: string;
   games: number;
-  /** "Grey lines: no real change over 64 games." */
+  /** "Real changes over 64 games". */
   steadyNote: string;
   /** "Rank: Gold IV, from Silver I", or null without a rank. */
   rank: string | null;

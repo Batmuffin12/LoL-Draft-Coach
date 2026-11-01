@@ -24,8 +24,8 @@ describe("plural forms", () => {
   });
 
   it("the month's note and the reasons say 1 game", () => {
-    expect(say("month.steady", { games: 1 })).toBe("bold = a real change over 1 game");
-    expect(say("month.steady", { games: 20 })).toBe("bold = a real change over 20 games");
+    expect(say("month.realChanges", { games: 1 })).toBe("Real changes over 1 game");
+    expect(say("month.realChanges", { games: 20 })).toBe("Real changes over 20 games");
     expect(say("meta.strong", { role: "middle", winRate: 0.5, games: 1 })).toContain("(1 game)");
   });
 

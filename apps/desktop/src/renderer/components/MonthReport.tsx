@@ -3,9 +3,9 @@ import { cx, gameCount, isThin, pct, t, tip, winToneOf } from "../format";
 import { useFitLevel } from "../hooks";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
-import { SlopeChart } from "./SlopeChart";
+import { StyleShifts } from "./StyleShifts";
 
-/** Number trends shown under the chart (only real changes); the rest go in "+n more". */
+/** Number trends shown under the style rows (only real changes); the rest go in "+n more". */
 const TRENDS = 3;
 /** Champion cards. */
 const CHAMPIONS = 3;
@@ -76,9 +76,8 @@ export function MonthReport({ month: m }: { month: MonthView }) {
     <>
       <Header m={m} brief={level > 2} />
       {m.role && m.axes.length > 0 && (
-        <Section title={t("month.style", { role: m.role.toLowerCase() })}>
-          <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />
-          <span className="micro" {...tip(hidden.join("\n"))}>{`${t("month.average")} · ${m.steadyNote}`}</span>
+        <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={<span className="micro" {...tip(hidden.join("\n"))}>{m.steadyNote}</span>}>
+          <StyleShifts axes={m.axes} />
           {showTrends && shown.length > 0 && (
             <span className="caption trends">
               {shown.map((s) => (

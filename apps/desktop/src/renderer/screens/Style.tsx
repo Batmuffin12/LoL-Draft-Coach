@@ -7,7 +7,12 @@ import { StyleRadar } from "../components/StyleRadar";
 import { gameCount, lobbyEmpty, roleName, t, tip } from "../format";
 import { useFits, useRolePill } from "../hooks";
 
-/** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
+/** No axis stands out: a chart would only say what one sentence can. */
+export function isEvenStyle(axes: ViewState["playstyle"][number]["axes"]): boolean {
+  return axes.length > 0 && axes.every((a) => a.level === "mid");
+}
+
+/** Your style per role: role choice, the radar against your rank (or a sentence when you're close to it on everything), a one-line summary, then your numbers vs your rank. */
 export function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
   // Many strengths and weak spots: the note under your numbers moves to hover.
@@ -21,6 +26,7 @@ export function Style({ state }: { state: ViewState }) {
   const p = state.playstyle.find((x) => x.role === sub) ?? state.playstyle[0]!;
   // How you play (pool, classes, damage) and the side split are on hover over the numbers' head.
   const how = [...(p.how ? howLines(p.how) : []), ...(state.side ? [state.side] : [])].join("\n");
+  const even = isEvenStyle(p.axes);
   return (
     <>
       <section className="section style-top">
@@ -29,10 +35,18 @@ export function Style({ state }: { state: ViewState }) {
           about={(role) => summary(state.playstyle.find((x) => x.role === role)!)}
           value={p.role}
           onChange={setSub}
-          end={`${gameCount(p.games)} · ${t("style.dashed")}`}
+          end={even ? gameCount(p.games) : `${gameCount(p.games)} · ${t("style.dashed")}`}
         />
-        <StyleRadar axes={p.axes} role={roleName(p.role)} />
-        {p.summary.length > 0 && <Facts rows={p.summary} flow />}
+        {even ? (
+          <p className="t-heading style-even" {...tip(p.axes.map((a) => `${a.label} ${a.score}`).join("\n"))}>
+            {p.summary[0]?.items[0]?.text}
+          </p>
+        ) : (
+          <>
+            <StyleRadar axes={p.axes} role={roleName(p.role)} />
+            {p.summary.length > 0 && <Facts rows={p.summary} flow />}
+          </>
+        )}
       </section>
       {p.numbers.length > 0 && (
         <Section title={t("style.numbers")} aside={<span className="micro" {...tip(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n"))}>{t("style.legend")}</span>}>
