@@ -8,6 +8,7 @@ import { Segmented } from "../components/Segmented";
 import { WinChance } from "../components/WinChance";
 import { Window } from "../components/Window";
 import { count, positionLabel, t } from "../format";
+import { shownPage, type RuneChoice } from "../rune-choice";
 import { Header, Notices } from "./common";
 
 type ImportKind = "runes" | "items" | "all";
@@ -32,8 +33,6 @@ function importKind(l: LoadoutView): ImportKind | null {
 }
 
 const IMPORT_LABEL: Record<ImportKind, string> = { all: "import.all", runes: "import.runes", items: "import.items" };
-const IMPORT_TITLE =
-  "Creates (or updates) an 'LDC:' rune page, sets your two summoner spells in champ select (Flash keeps its key) and saves an item set for this champion. Only when you click.";
 
 /** "From 2,140 games in Gold to Platinum · rough guide": wraps, never cut. */
 function LoadoutSource({ pick }: { pick: MyPickView }) {
@@ -48,13 +47,14 @@ function LoadoutSource({ pick }: { pick: MyPickView }) {
 }
 
 /** The Runes and Build footer: one import button (on your click only), what it did, and where the build comes from. */
-export function LoadoutFooter({ pick }: { pick: MyPickView }) {
+export function LoadoutFooter({ pick, runes }: { pick: MyPickView; runes: RuneChoice }) {
   const { busy, run } = useImport();
   const kind = pick.loadout ? importKind(pick.loadout) : null;
+  const pageKey = pick.loadout ? shownPage(pick.loadout, runes.key)?.key : undefined;
   return (
     <>
       {kind && (
-        <Button variant="primary" wide disabled={busy !== null} onClick={() => run(kind)} title={IMPORT_TITLE}>
+        <Button variant="primary" wide disabled={busy !== null} onClick={() => run(kind, pageKey)} title={t("import.title")}>
           {busy ? t("import.busy") : t(IMPORT_LABEL[kind])}
         </Button>
       )}
@@ -65,7 +65,7 @@ export function LoadoutFooter({ pick }: { pick: MyPickView }) {
 }
 
 /** The body of one loadout tab (or why there is none). */
-export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }) {
+export function LoadoutBody({ pick, tab, runes }: { pick: MyPickView; tab: LoadoutTab; runes: RuneChoice }) {
   if (tab === "matchups") return <MatchupsPlanTab pick={pick} />;
   if (!pick.loadout) {
     return (
@@ -74,7 +74,7 @@ export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }
       </Section>
     );
   }
-  return tab === "runes" ? <RunesTab loadout={pick.loadout} /> : <BuildTab loadout={pick.loadout} />;
+  return tab === "runes" ? <RunesTab loadout={pick.loadout} runes={runes} /> : <BuildTab loadout={pick.loadout} />;
 }
 
 /** Your champion, "Locked in · Mid vs Zed", and its win chance, over the tabs. */
@@ -101,7 +101,7 @@ function loadoutTabs(): { value: LoadoutTab; label: string }[] {
 }
 
 /** Locked in (and after champ select until the game ends): Runes · Build · Matchups & plan, Runes first. */
-export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: MyPickView; note?: ReactNode }) {
+export function LockedInScreen({ state, pick, note, runes }: { state: ViewState; pick: MyPickView; note?: ReactNode; runes: RuneChoice }) {
   const [tab, setTab] = useState<LoadoutTab>("runes");
   const meta = state.meta?.state === "ready" ? state.meta : null;
   return (
@@ -117,12 +117,12 @@ export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: 
         tab === "matchups" ? (
           <span className="micro">{meta ? t("matchups.source", { games: count(meta.matches) }) : t("matchups.empty")}</span>
         ) : (
-          <LoadoutFooter pick={pick} />
+          <LoadoutFooter pick={pick} runes={runes} />
         )
       }
     >
       <Notices state={state} extra={typeof note === "string" ? note : null} />
-      <LoadoutBody pick={pick} tab={tab} />
+      <LoadoutBody pick={pick} tab={tab} runes={runes} />
     </Window>
   );
 }

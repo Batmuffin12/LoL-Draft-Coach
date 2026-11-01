@@ -109,7 +109,7 @@ export interface PageAlt extends LoadoutChoice<RunePageStat> {
   share: number;
   situationalRunes: RuneSwap[];
   /** How `page` reads next to it. Share null: a matchup page, because snapshots don't publish the matchup's games. */
-  main: { kind: PageKind; share: number | null; enemy: ChampionId | null };
+  main: { kind: PageKind; share: number | null };
 }
 
 export interface Loadout {
@@ -406,10 +406,10 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   const intoLane = !ownPage && matchup ? matchup : null;
   const second = page ? secondPage({ page: page.value, build, personal: ownPage, matchup: intoLane !== null, usual: pick(build.pages, build), config: cfg }) : null;
   const mainOption = (p: LoadoutChoice<RunePageStat>): PageAlt["main"] => {
-    if (ownPage) return { kind: "personal", share: p.n / ownPage.n, enemy: null };
-    if (intoLane) return { kind: "matchup", share: null, enemy: intoLane.enemy };
+    if (ownPage) return { kind: "personal", share: p.n / ownPage.n };
+    if (intoLane) return { kind: "matchup", share: null };
     const top = build.pages[0];
-    return { kind: top && runePageKey(top) === runePageKey(p.value) ? "popular" : "best", share: p.n / build.n, enemy: null };
+    return { kind: top && runePageKey(top) === runePageKey(p.value) ? "popular" : "best", share: p.n / build.n };
   };
   const pageAlt: PageAlt | null =
     page && second

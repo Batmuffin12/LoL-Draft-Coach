@@ -274,6 +274,9 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .tree.shards { gap: 4px; }
 .swap { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--warn-tint); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .swap b { color: var(--warn); font-weight: 600; }
+.swap.one-line { padding: 2px 8px; }
+.swap.one-line .wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rune-options .pills { margin-bottom: 0; }
 .icons { display: flex; align-items: center; gap: 6px; }
 
 /* Skill grid */

@@ -66,7 +66,7 @@ describe("the second rune option", () => {
     expect(key(l.page)).toBe(8010);
     expect(chooseOption(build.pages, build, cfg)?.runes[0]).toBe(8010);
     expect(key(l.pageAlt)).toBe(8005);
-    expect(l.pageAlt).toMatchObject({ kind: "second", share: 0.3, n: 300, winRate: 0.55, main: { kind: "popular", share: 0.6, enemy: null } });
+    expect(l.pageAlt).toMatchObject({ kind: "second", share: 0.3, n: 300, winRate: 0.55, main: { kind: "popular", share: 0.6 } });
     expect(l.pageAlt!.reasons[0]).toMatchObject({ id: "loadout.page.second", slots: { count: 300, games: 1000 } });
   });
 
@@ -99,7 +99,7 @@ describe("the second rune option", () => {
     const l = buildLoadout(input({ laneOpponent: 99 }));
     expect(key(l.page)).toBe(8008);
     expect(key(l.pageAlt)).toBe(8010);
-    expect(l.pageAlt).toMatchObject({ kind: "usual", share: 0.6, main: { kind: "matchup", share: null, enemy: 99 } });
+    expect(l.pageAlt).toMatchObject({ kind: "usual", share: 0.6, main: { kind: "matchup", share: null } });
     expect(l.pageAlt!.reasons[0]).toMatchObject({ id: "loadout.page.usual", slots: { count: 600, games: 1000 } });
   });
 

@@ -78,8 +78,8 @@ describe("rune trees", () => {
 
 describe("rune options", () => {
   const value = { primaryStyle: 8200, subStyle: 8100, runes: [8214, 8226, 8210, 8139], statPerks: [5001, 5008, 5005], games: 300, wins: 150, n: 300 };
-  const alt = (over: Partial<NonNullable<Loadout["pageAlt"]>> = {}): NonNullable<Loadout["pageAlt"]> => ({ value, winRate: 0.5, n: 300, reasons: [{ id: "loadout.page.second", slots: { count: 300, games: 2000 } }], kind: "second", share: 0.15, situationalRunes: [], main: { kind: "popular", share: 0.45, enemy: null }, ...over });
-  const render = (l: Loadout) => toLoadoutView(l, { data, templates: config.explain.templates, championName: (id) => (id === 238 ? "Zed" : "Ahri"), bands: config.bands, band: config.bands.defaultBand, canImport: false });
+  const alt = (over: Partial<NonNullable<Loadout["pageAlt"]>> = {}): NonNullable<Loadout["pageAlt"]> => ({ value, winRate: 0.5, n: 300, reasons: [{ id: "loadout.page.second", slots: { count: 300, games: 2000 } }], kind: "second", share: 0.15, situationalRunes: [], main: { kind: "popular", share: 0.45 }, ...over });
+  const render = (l: Loadout) => toLoadoutView(l, { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false });
 
   it("draws the second page whole, with its label, share, win rate and own key", () => {
     const v = render({ ...loadout(false), pageAlt: alt() });
@@ -94,9 +94,9 @@ describe("rune options", () => {
     expect(render({ ...loadout(true), pageAlt: alt() }).pageAlt).toMatchObject({ winRate: null, share: 0.15 });
   });
 
-  it("names a matchup page by its enemy, with no share (the snapshot has no matchup total)", () => {
-    const v = render({ ...loadout(false), pageAlt: alt({ kind: "usual", main: { kind: "matchup", share: null, enemy: 238 } }) });
-    expect(v.page).toMatchObject({ optionLabel: "Into Zed", share: null });
+  it("gives a matchup page no share (the snapshot has no matchup total)", () => {
+    const v = render({ ...loadout(false), pageAlt: alt({ kind: "usual", main: { kind: "matchup", share: null } }) });
+    expect(v.page).toMatchObject({ optionLabel: "This lane", share: null });
     expect(v.pageAlt!.optionLabel).toBe("Usual");
   });
 
@@ -127,7 +127,7 @@ describe("situational runes", () => {
       kind: "second",
       share: 0.15,
       situationalRunes: [swap(8139), swap(8226)],
-      main: { kind: "popular", share: 0.45, enemy: null },
+      main: { kind: "popular", share: 0.45 },
     };
     // 8139 is on the first page's Domination tree, not on the second page's Sorcery ones.
     const l: Loadout = { ...loadout(false), situationalRunes: [swap(8139)], pageAlt: alt };

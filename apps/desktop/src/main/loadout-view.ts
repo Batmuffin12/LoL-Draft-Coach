@@ -169,7 +169,7 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
 
   const parts: PageViewParts = { deps, rune, first, numbers, withReasons };
   const alt = l.pageAlt;
-  const optionLabel = (kind: PageKind, enemy: ChampionId | null) => renderReason({ id: `ui.runes.option.${kind}`, slots: enemy === null ? {} : { enemy } }, deps.templates, deps.championName);
+  const optionLabel = (kind: PageKind) => renderReason({ id: `ui.runes.option.${kind}`, slots: {} }, deps.templates, deps.championName);
   return {
     games: l.games,
     source,
@@ -179,8 +179,8 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
           ...(l.source.personalGames ? [renderReason({ id: "loadout.thin.personal", slots: { personalGames: l.source.personalGames } }, deps.templates, deps.championName)] : []),
         ].join(". ")
       : null,
-    page: l.page ? runePageView(l.page, l.situationalRunes, alt ? { label: optionLabel(alt.main.kind, alt.main.enemy), share: alt.main.share } : null, parts) : null,
-    pageAlt: alt ? runePageView(alt, alt.situationalRunes, { label: optionLabel(alt.kind, null), share: alt.share }, parts) : null,
+    page: l.page ? runePageView(l.page, l.situationalRunes, alt ? { label: optionLabel(alt.main.kind), share: alt.main.share } : null, parts) : null,
+    pageAlt: alt ? runePageView(alt, alt.situationalRunes, { label: optionLabel(alt.kind), share: alt.share }, parts) : null,
     spells: l.spells ? { spells: l.spells.value.map((id) => icon(d?.spellInfo, id)), reason: first(l.spells.reasons), ...numbers(l.spells) } : null,
     skills: l.skills ? { first: l.skills.value.first.map(key), order: l.skills.value.order.map(key), basic: [1, 2, 3].map(key), ult: key(4), reason: first(l.skills.reasons), ...numbers(l.skills) } : null,
     starting: l.starting && start ? { items: start.ids.map(item), counts: start.counts, reason: first(l.starting.reasons), ...numbers(l.starting) } : null,
