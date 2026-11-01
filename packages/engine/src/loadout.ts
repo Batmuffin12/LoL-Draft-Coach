@@ -1,4 +1,4 @@
-import type { ChampionAttributes, ChampionBuild, ChampionId, EnemyTrait, ItemSlotStat, OptionStat, Reason, RunePageStat, SituationalLift } from "@ldc/shared";
+import type { ChampionAttributes, ChampionBuild, ChampionId, EnemyTrait, ItemSlotStat, MetaSnapshot, OptionStat, Position, Reason, RunePageStat, SituationalLift } from "@ldc/shared";
 import type { LoadoutConfig } from "./config";
 import { reason } from "./explain";
 import { ENEMY_TRAITS, itemFitsRole, teamTraits } from "./items";
@@ -527,4 +527,34 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     core,
     items: shownItems,
   };
+}
+
+/**
+ * A champion in a role with no draft around it, for looking things up: what players of the band
+ * take, through `buildLoadout` with no enemies, your own games or other roles filling in. Null
+ * when the snapshot has no build for that role (older snapshots have none at all).
+ */
+export function browseLoadout(
+  snapshot: Pick<MetaSnapshot, "builds" | "traitCuts" | "itemRoles" | "roleRewards">,
+  championId: ChampionId,
+  role: Position,
+  config: LoadoutConfig,
+  boots: ReadonlySet<number> = new Set(),
+  buildsFrom?: (itemId: number) => number[],
+): Loadout | null {
+  const build = snapshot.builds?.find((b) => b.championId === championId && b.role === role);
+  if (!build) return null;
+  const traitCuts = snapshot.traitCuts ?? (Object.fromEntries(ENEMY_TRAITS.map((t) => [t, 0])) as Record<EnemyTrait, number>);
+  return buildLoadout({
+    build,
+    enemies: [],
+    laneOpponent: null,
+    attributes: new Map(),
+    traitCuts,
+    config,
+    boots,
+    ...(buildsFrom ? { buildsFrom } : {}),
+    ...(snapshot.roleRewards?.[role] ? { roleRewards: snapshot.roleRewards[role] } : {}),
+    ...(snapshot.itemRoles ? { itemRoles: snapshot.itemRoles } : {}),
+  });
 }
