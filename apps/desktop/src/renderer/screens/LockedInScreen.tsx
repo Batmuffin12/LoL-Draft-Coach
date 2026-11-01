@@ -7,7 +7,7 @@ import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { WinChance } from "../components/WinChance";
 import { Window } from "../components/Window";
-import { count, positionLabel, t } from "../format";
+import { count, cx, positionLabel, t } from "../format";
 import { Header, Notices } from "./common";
 
 type ImportKind = "runes" | "items" | "all";
@@ -58,7 +58,10 @@ export function LoadoutFooter({ pick }: { pick: MyPickView }) {
           {busy ? t("import.busy") : t(IMPORT_LABEL[kind])}
         </Button>
       )}
-      {pick.importMessage && <span className="caption text">{pick.importMessage}</span>}
+      {/* Always in the page, so screen readers announce a new message. */}
+      <span className={cx("import-status caption", pick.importFailed ? "neg" : "text")} role="status">
+        {pick.importMessage}
+      </span>
       <LoadoutSource pick={pick} />
     </>
   );

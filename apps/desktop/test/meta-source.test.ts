@@ -290,6 +290,8 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     lcu.push("/lol-gameflow/v1/gameflow-phase", "InProgress");
     await waitFor(() => coach!.state.draft === null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, loadout: { canImport: false } });
+    // The button is gone, and the card says why.
+    expect(coach.state.myPick).toMatchObject({ importMessage: "Import works during champ select", importFailed: false });
     lcu.push("/lol-gameflow/v1/gameflow-phase", "EndOfGame");
     await waitFor(() => coach!.state.myPick === null);
     expect(coach.state.picks).toEqual([]);

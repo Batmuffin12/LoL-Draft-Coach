@@ -148,6 +148,40 @@ describe("PersonalCoach notices (mock League client)", () => {
   });
 });
 
+describe("PersonalCoach import clicks that can't write anything", () => {
+  const fakeConnector = () => Object.assign(new FakeConnector(), { credentials: null }) as unknown as LcuConnector;
+  const make = (over: Partial<typeof config.app.import> = {}) =>
+    new PersonalCoach({
+      connector: fakeConnector(),
+      ddragon: new DataDragon({ cacheDir: tmp("ldc-n-"), fetch: fakeDdragonFetch() }),
+      config: { ...config, app: { ...config.app, import: { ...config.app.import, ...over } } },
+      profiles: null,
+      riotId: null,
+    });
+  const texts = (c: Coach) => c.state.notices.map((n) => n.text);
+
+  it("says import works during champ select when there's no card any more", async () => {
+    const c = make();
+    await c.importLoadout("all");
+    expect(texts(c)).toEqual(["Import works during champ select"]);
+  });
+
+  it("says so when import is switched off", async () => {
+    const c = make({ enabled: false });
+    await c.importLoadout("all");
+    expect(texts(c)).toEqual(["Import is switched off"]);
+  });
+
+  it("says the client isn't connected, as a failure on the card", async () => {
+    const c = make();
+    (c as unknown as { shownLoadout: unknown }).shownLoadout = { loadout: {}, champion: "Ahri" };
+    await c.importLoadout("all");
+    const inner = c as unknown as { importMessage: string; importFailed: boolean };
+    expect(inner.importMessage).toBe("The League client isn't connected: open it, then import again");
+    expect(inner.importFailed).toBe(true);
+  });
+});
+
 describe("the renderer's notices", () => {
   it("every notice wording exists in the explain config", () => {
     for (const id of ["dismiss", "schema", "championData", "clientAccount", "queue"]) expect(config.explain.templates[`ui.notice.${id}`], id).toBeTruthy();

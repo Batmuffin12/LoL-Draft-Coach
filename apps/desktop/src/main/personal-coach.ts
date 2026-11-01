@@ -27,7 +27,7 @@ import type { AdviceRecord, ChampionId, DraftState, MetaSnapshot, PickAdvice, Po
 import type { MyPickView, NewChampRoleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption } from "./advice-log";
-import { importShownLoadout } from "./loadout-import";
+import { importShownLoadout, type ImportResult } from "./loadout-import";
 import { growthFocusView } from "./focus-view";
 import { newChampsView } from "./newchamps-view";
 import { monthView } from "./month-view";
@@ -92,6 +92,7 @@ export class PersonalCoach extends Coach {
   /** The loadout shown in the Your pick card, for the import buttons. */
   private shownLoadout: { loadout: Loadout; champion: string } | null = null;
   private importMessage: string | null = null;
+  private importFailed = false;
   /** The client's gameflow phase, as this coach last heard it ("" before the first). */
   private clientPhase = "";
   /** Your role choices in the lobby before a queue (from the client), or null. */
@@ -134,14 +135,32 @@ export class PersonalCoach extends Coach {
    * Writes the shown loadout into the League client: "runes" = the rune page and your two
    * summoner spells, "items" = the item set, "all" = both, one after the other (the panel's one
    * import button). Called only from the player's click on an import button (CLAUDE.md: the single
-   * approved LCU write exception).
+   * approved LCU write exception). Every click ends in a message: on the card, or as a notice when
+   * the card has gone in the meantime.
    */
   async importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     const shown = this.shownLoadout;
     const creds = this.p.connector.credentials;
-    if (!shown || !creds || !this.config.app.import.enabled) return;
-    this.importMessage = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config);
+    this.clearNotice("import");
+    if (!this.config.app.import.enabled) return void this.notice("import", this.say("import.off"));
+    if (!shown) return void this.notice("import", this.say(this.draft ? "import.nothing" : "import.onlyChampSelect"));
+    let result: ImportResult;
+    if (!creds) result = { message: this.say("import.noClient"), failed: true };
+    else {
+      try {
+        result = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config);
+      } catch (err) {
+        reportProblem(`Import: ${(err as Error).message}`);
+        result = { message: this.say("import.failed.other"), failed: true };
+      }
+    }
+    this.importMessage = result.message;
+    this.importFailed = result.failed;
     this.onDraft();
+  }
+
+  private say(id: string): string {
+    return renderReason({ id, slots: {} }, this.config.explain.templates, String);
   }
   /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */
   private config: LoadedConfig;
@@ -565,6 +584,7 @@ export class PersonalCoach extends Coach {
     super.onDraft();
     if (this.draft && !this.hadDraft) {
       this.keptPick = null; // a new champ select: the last game's pick no longer applies
+      this.clearNotice("import");
       this.recorder.newChampSelect();
       void this.onChampSelectStart();
     }
@@ -618,9 +638,10 @@ export class PersonalCoach extends Coach {
   /** Out of champ select (or no history, or a queue we don't coach): your pick stays while the game it's for is on. */
   private showNoDraft(): void {
     this.shownLoadout = null;
-    // Out of champ select: keep showing your pick and its loadout (import only works in champ select).
+    // Out of champ select: keep showing your pick and its loadout. Import only works in champ select, and the card says so.
     const inGame = GAME_PHASES.has(this.clientPhase);
-    const kept = this.draft || !inGame ? null : this.keptPick && { ...this.keptPick, importMessage: null, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
+    const hint = this.keptPick?.loadout && this.config.app.import.enabled ? this.say("import.onlyChampSelect") : null;
+    const kept = this.draft || !inGame ? null : this.keptPick && { ...this.keptPick, importMessage: hint, importFailed: false, loadout: this.keptPick.loadout && { ...this.keptPick.loadout, canImport: false } };
     this.update({ picks: [], bans: [], hoverBans: null, hoverPick: null, myPick: kept, pickAdvice: { whyNot: null, confidence: null }, pickRole: this.profile ? mainRole(this.profile.games) : null, laneOpponent: null, enemyNotes: [], filledNote: null });
   }
 
@@ -656,9 +677,12 @@ export class PersonalCoach extends Coach {
   /** The card for a champion, keeping its loadout for the import button (a message from an earlier import goes with another champion). */
   private card(championId: ChampionId, hovering: boolean, ctx: PickCardContext): MyPickView {
     const loadout = cardLoadout(championId, ctx);
-    if (this.shownLoadout?.loadout.championId !== championId) this.importMessage = null;
+    if (this.shownLoadout?.loadout.championId !== championId) {
+      this.importMessage = null;
+      this.importFailed = false;
+    }
     const nameOf = (id: number) => ctx.lookup(id)?.name ?? `#${id}`;
     this.shownLoadout = loadout ? { loadout, champion: nameOf(championId) } : null;
-    return pickCardView(championId, hovering, loadout, this.importMessage, ctx);
+    return { ...pickCardView(championId, hovering, loadout, this.importMessage, ctx), importFailed: this.importFailed };
   }
 }

@@ -6,7 +6,8 @@ import { setCopy, t } from "../src/renderer/format";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
 import { AccountFooter, ConfirmRow, Notices } from "../src/renderer/screens/common";
-import { canRestartToUpdate, emptyViewState, type AccountView, type ViewState } from "../src/shared/view";
+import { LoadoutFooter } from "../src/renderer/screens/LockedInScreen";
+import { canRestartToUpdate, emptyViewState, type AccountView, type MyPickView, type ViewState } from "../src/shared/view";
 
 beforeAll(() => setCopy(uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates)));
 
@@ -96,6 +97,24 @@ describe("ConfirmRow", () => {
     expect(html).toContain("Deleting…");
     expect(html).toContain('role="status"');
     expect(html).not.toContain("<button");
+  });
+});
+
+describe("LoadoutFooter", () => {
+  const champion = { id: 103, name: "Ahri", iconUrl: null };
+  const loadout = { canImport: true, page: {}, spells: null, items: [], commonPath: null, starting: null, games: 100, source: "Gold", thinNote: null };
+  const pick = (over: object) => ({ champion, hovering: false, role: "middle", expectedWin: null, reasons: [], loadout, importMessage: null, ...over }) as unknown as MyPickView;
+  const html = (over: object) => renderToStaticMarkup(createElement(LoadoutFooter, { pick: pick(over) }));
+
+  it("announces the outcome in a live region, in a failure tone when it failed", () => {
+    expect(html({ importMessage: "Rune page updated in your client" })).toMatch(/class="import-status caption text" role="status">Rune page updated/);
+    expect(html({ importMessage: "Couldn't set the rune page", importFailed: true })).toMatch(/class="import-status caption neg" role="status">Couldn&#x27;t set the rune page/);
+  });
+
+  it("explains why the button is gone after champ select", () => {
+    const out = html({ importMessage: "Import works during champ select", loadout: { ...loadout, canImport: false } });
+    expect(out).toContain("Import works during champ select");
+    expect(out).not.toContain("Import runes");
   });
 });
 

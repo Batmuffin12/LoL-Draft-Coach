@@ -168,6 +168,8 @@ export interface MyPickView {
   loadout: LoadoutView | null;
   /** The result of the last import click (e.g. "Rune page created"), or null. */
   importMessage: string | null;
+  /** The message says something didn't work. */
+  importFailed?: boolean;
   /** True when the champion is only hovered (not locked in yet). */
   hovering?: boolean;
   /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
