@@ -61,7 +61,9 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
     ...state.notices.map((n) => ({ key: n.key, tone: "warn" as const, text: n.text, dismiss: n.key })),
     ...(profile.state === "error" ? [{ key: "profile", tone: "warn" as const, text: profile.message }] : []),
     ...(profile.state === "ready" && profile.problem ? [{ key: "profile", tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.` }] : []),
-    ...(state.meta?.state === "error" ? [{ key: "meta", tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
+    ...(state.meta?.state === "error"
+      ? [state.meta.noSnapshot ? { key: "meta", tone: "info" as const, text: t("meta.noSnapshot") } : { key: "meta", tone: "warn" as const, text: `${state.meta.message} ${t("meta.ownGames")}` }]
+      : []),
     ...(extra ? [{ key: "extra", tone: "info" as const, text: extra }] : []),
   ];
   const progress =

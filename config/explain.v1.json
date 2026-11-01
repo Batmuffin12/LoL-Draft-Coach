@@ -323,6 +323,8 @@
     "ui.import.busy": "Importing…",
     "ui.window.minimize": "Minimize",
     "ui.notice.dismiss": "Dismiss",
+    "ui.meta.noSnapshot": "No live data for your rank yet. Suggestions use your own games for now.",
+    "ui.meta.ownGames": "Suggestions use your own games for now.",
     "ui.notice.schema": "The League client sent draft data this app can't read, so the draft here may be out of date. An app update may fix this.",
     "ui.notice.championData": "Couldn't load champion names and icons. Trying again at your next champ select.",
     "ui.notice.clientAccount": "Couldn't read your account from the League client. Trying again when it reconnects.",

@@ -11,7 +11,7 @@ import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
 import { loadProfile, profileFromMatches, type PersonalProfile } from "./profile";
 import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile } from "./server-client";
-import { retryDelay, serverProblem } from "./server-problem";
+import { reportUnexpected, retryDelay, serverProblem, serverProblemText } from "./server-problem";
 
 /** The local player's Riot ID, read from the League client (or RIOT_ID in .env for the mock client). */
 export interface Identity {
@@ -365,7 +365,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "loading", done: 0, total: 0 });
       await this.waitForSync();
     } catch (err) {
-      this.setAccount({ state: "error", message: (err as Error).message });
+      reportUnexpected("Registering", err);
+      this.setAccount({ state: "error", message: serverProblemText(err) });
     }
   }
 
@@ -392,7 +393,8 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       await this.client?.deleteMe();
       await this.signOut();
     } catch (err) {
-      this.setAccount({ message: (err as Error).message });
+      reportUnexpected("Deleting data", err);
+      this.setAccount({ message: `Your data wasn't deleted. ${serverProblemText(err)}` });
     }
   }
 
@@ -588,6 +590,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "idle" });
       return;
     }
+    reportUnexpected("Coach server", err);
     const problem = serverProblem(err, this.scheduleRetry());
     if (!this.matches.size) {
       this.emit("status", { state: "error", message: problem });

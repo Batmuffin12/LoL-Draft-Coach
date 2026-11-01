@@ -238,7 +238,7 @@ describe("ServerProfileSource against the real server API", () => {
     await s.init();
     await s.load({ gameName: "Me", tagLine: "EUW" }, { bandFromApi: false });
     await s.register("coach.example", "AAAA-BBBB-CCCC");
-    expect(s.account.message).toMatch(/Can't reach the coach server at https:\/\/coach.example/);
+    expect(s.account.message).toBe("Can't reach the coach server: check your internet connection.");
   });
 });
 

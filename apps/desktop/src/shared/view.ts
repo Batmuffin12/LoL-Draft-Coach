@@ -191,7 +191,7 @@ export interface BanView {
 /** The live meta the picks are based on. */
 export type MetaView =
   | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
-  | { state: "error"; message: string };
+  | { state: "error"; message: string; noSnapshot?: boolean };
 
 /** A problem shown at the top of the panel: one per cause (the key), until the cause ends or you dismiss it. */
 export interface NoticeView {
