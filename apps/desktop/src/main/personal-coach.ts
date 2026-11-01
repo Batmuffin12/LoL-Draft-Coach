@@ -4,35 +4,32 @@ import {
   bandFromRankedEntries,
   computeComfort,
   deriveChampionAttributes,
-  advisePicks,
-  mainRole,
   renderReason,
-  adviseLivePicks,
-  assessPick,
   type GrowthFocus,
   MetaIndex,
   type ChampionAttributes,
   type ComfortStats,
 } from "@ldc/engine";
-import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
-import type { MyPickView, ViewState } from "../shared/view";
+import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, Position, RankBandId, Reason } from "@ldc/shared";
+import type { ViewState } from "../shared/view";
 import type { MetaSource } from "./meta-source";
-import { AdviceRecorder, adviceOption } from "./advice-log";
+import { AdviceRecorder } from "./advice-log";
 import { ImportFlow } from "./import-flow";
-import { bansNow, keptCard, loadingPanel, lockedPanel, noDraftPanel, pendingPick, suggestionPanel } from "./draft-panel";
+import { DraftSession, type DraftInputs } from "./draft-session";
 import { focusView, growthFor, lastGameFor, monthFor, roleAdvice, styleFor, type LobbyViewContext } from "./lobby-views";
 import { roleLabels, uiCopy, viewLimits, withBundledWording } from "./view-copy";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
 import { capital } from "./reason-view";
-import { queuePreviewRoles } from "./role-view";
-import { readClientState } from "./client-state";
+import { queuePreviewFor } from "./role-view";
+import { ClientFacts, parseRiotId } from "./client-state";
 import { logProblem } from "./problem-log";
-import { banningNow, draftScoring, laneOpponent, lockedPick, queuePreviewWanted, queueSupported, recordVsLane } from "./draft-facts";
+import { ProfileHealth } from "./server-problem";
+import { laneOpponent, recordVsLane } from "./draft-facts";
 import { sessionView } from "./last-game-view";
-import { currentGame, hasGame, lastClientGame, NewGameWaiter } from "./game-wait";
-import { draftNotes, type PickCardContext } from "./pick-card";
-import { profileFromMatches, type PersonalProfile } from "./profile";
+import { afterGame, hasGame, lastClientGame, NewGameWaiter } from "./game-wait";
+import type { PickCardContext } from "./pick-card";
+import type { PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
 export interface PersonalCoachDeps extends CoachDeps {
@@ -51,9 +48,6 @@ export interface PersonalCoachDeps extends CoachDeps {
 
 export { uiCopy, viewLimits } from "./view-copy";
 
-/** Client phases where a game is starting or running: the locked-in loadout stays only then. */
-const GAME_PHASES = new Set(["ChampSelect", "GameStart", "InProgress", "Reconnect"]);
-
 /**
  * Adds the personal coach on top of the live draft: gets the player's own history from
  * a ProfileSource, works out their band, and ranks their pool for each draft update.
@@ -65,24 +59,11 @@ export class PersonalCoach extends Coach {
   private identity: Identity | null = null;
   /** Comfort per role ("" = no role), computed lazily and reset when the profile changes. */
   private comfortByRole = new Map<string, Map<ChampionId, ComfortStats>>();
-  /** Riot's recommended positions per champion, read from the client. */
-  private intendedPositions = new Map<ChampionId, Position[]>();
   private attributes = new Map<ChampionId, ChampionAttributes>();
-  private pickable: ChampionId[] = [];
-  private queueSupported = true;
   /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
   private metaIndex: MetaIndex | null = null;
   /** The import button: the loadout on the card, and what the last click came to. */
-  private readonly imports = new ImportFlow({
-    config: () => this.config,
-    credentials: () => this.p.connector.credentials,
-    hasDraft: () => this.draft !== null,
-    notice: (key, text) => void this.notice(key, text),
-    clearNotice: (key) => this.clearNotice(key),
-    redraw: () => this.onDraft(),
-  });
-  /** The client's gameflow phase, as this coach last heard it ("" before the first). */
-  private clientPhase = "";
+  private readonly imports: ImportFlow;
   /** Your role choices in the lobby before a queue (from the client), or null. */
   private lobby: LobbyRoles | null = null;
   /** Waits for a game that just ended to reach your history. */
@@ -93,29 +74,19 @@ export class PersonalCoach extends Coach {
     pending: (waiting) => this.update({ lastGamePending: waiting }),
     gaveUp: (gaveUp) => this.update({ lastGameGaveUp: gaveUp }),
   });
-  /** Your games' source reported a problem, and hasn't recovered yet. */
-  private profileTroubled = false;
+  private readonly health = new ProfileHealth();
   /** The Riot ID logged into the League client (the local player's own), or null. */
   private clientRiotId: string | null = null;
-  /**
-   * The last "Your pick" card, kept after champ select ends (champ select often closes
-   * seconds after you lock in, e.g. in custom games) until the game is over.
-   */
-  private keptPick: MyPickView | null = null;
-  /** Rune and stat shard names from the client (Data Dragon has no shards), with mirror icons. */
-  private perks = new Map<number, { name: string; iconUrl: string | null }>();
-  /** The stat shard rows (offense, flex, defense) from the client, for drawing the whole rune page. */
-  private shardRows: number[][] = [];
+  /** What the client said about your runes, champions and positions. */
+  private readonly client: ClientFacts;
   /** What the coach showed when you locked in, until the game is over (the advice log). */
   private readonly recorder = new AdviceRecorder();
+  /** The current champ select, and your pick until its game is over. */
+  private readonly session: DraftSession;
   /** The advice log: your recent games with what the coach showed, newest first. */
   private advice: AdviceRecord[] = [];
   /** Your growth focus (main role and champion), recomputed when your games or the meta change. */
   private growth: GrowthFocus | null = null;
-  /** Champions you own, from the client (null until read: ownership unknown). */
-  private owned: Set<ChampionId> | null = null;
-  /** The queue of the current champ select (from the gameflow session). */
-  private queueId: number | null = null;
 
   /** Import buttons show when the config enables import and the client is connected. */
   private get canImport(): boolean {
@@ -134,6 +105,29 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
+    this.client = new ClientFacts(p.ddragon);
+    this.imports = new ImportFlow({
+      config: () => this.config,
+      connector: p.connector,
+      hasDraft: () => this.draft !== null,
+      notice: (key, text) => void this.notice(key, text),
+      clearNotice: (key) => this.clearNotice(key),
+      redraw: () => this.onDraft(),
+    });
+    this.session = new DraftSession({
+      connector: p.connector,
+      bundled: p.config,
+      imports: this.imports,
+      recorder: this.recorder,
+      draft: () => this.draft,
+      view: () => this.view,
+      update: (patch) => this.update(patch),
+      notice: (key, text) => void this.notice(key, text),
+      clearNotice: (key) => this.clearNotice(key),
+      wording: (id) => this.wording(id),
+      onStarted: () => this.retryAfterProblems(),
+      redraw: () => this.onDraft(),
+    });
     this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates), limits: viewLimits(p.config), ...(p.ui ? { ui: p.ui } : {}) };
   }
 
@@ -149,12 +143,16 @@ export class PersonalCoach extends Coach {
     this.onDraft();
   }
 
-  /** Stat shards from CommunityDragon when the client doesn't list them (an older client, the mock client). */
-  private async loadShardsFallback(): Promise<void> {
-    const s = await this.deps.ddragon.statShards().catch(() => null);
-    if (!s) return;
-    this.shardRows = s.rows;
-    for (const [id, p] of s.perks) if (!this.perks.has(id)) this.perks.set(id, p);
+  private get perks(): ClientFacts["perks"] {
+    return this.client.perks;
+  }
+
+  private get shardRows(): number[][] {
+    return this.client.shardRows;
+  }
+
+  private loadShardsFallback(): Promise<void> {
+    return this.client.loadShardsFallback();
   }
 
   /** The Riot ID of the player logged into the client, once known. */
@@ -206,13 +204,9 @@ export class PersonalCoach extends Coach {
       else this.clearNotice("clientAccount");
     });
     this.p.connector.on("gameflowPhase", (phase) => {
-      if (phase === "InProgress") void this.onGameStarted();
-      if (["Lobby", "None", "Matchmaking", "ReadyCheck"].includes(phase)) this.recorder.leftChampSelect();
       // New games are in the player's history once a game has ended (the advice for it is sent first).
       if (phase === "EndOfGame") void this.onGameEnded();
-      this.clientPhase = phase;
-      // The kept loadout is for the game being played: drop it as soon as the client is anywhere else.
-      if (!GAME_PHASES.has(phase)) this.keptPick = null;
+      this.session.phaseChanged(phase);
       this.onDraft();
       this.updateQueuePreview();
     });
@@ -227,9 +221,7 @@ export class PersonalCoach extends Coach {
 
   /** The server is back after a problem: a meta that failed meanwhile needn't wait for the next champ select. */
   private onProfileHealth(profile: CoachStatus["profile"]): void {
-    const troubled = profile.state === "error" || (profile.state === "ready" && profile.problem !== undefined);
-    if (this.profileTroubled && profile.state === "ready" && !troubled) this.refreshMeta(false);
-    if (troubled || profile.state === "ready") this.profileTroubled = troubled;
+    if (this.health.recovered(profile)) this.refreshMeta(false);
   }
 
   /** The Retry now link: tries again whatever failed. A meta that failed was never marked as checked, so this asks the server. */
@@ -237,19 +229,8 @@ export class PersonalCoach extends Coach {
     await Promise.all([this.p.profiles?.retry?.(), this.p.meta?.refresh(this.band)]);
   }
 
-  /** The game started: its id ties the advice shown in champ select to the game in your history. */
-  private async onGameStarted(): Promise<void> {
-    const { gameId, queueId } = await currentGame(this.p.connector);
-    this.recorder.gameStarted(gameId, queueId);
-  }
-
   private async onGameEnded(): Promise<void> {
-    const record = this.recorder.gameEnded();
-    if (record) await this.p.profiles?.recordAdvice(record).catch(() => {});
-    // The game just played: from the advice log, else the client's own last game.
-    const gameId = record?.gameId ?? (await lastClientGame(this.p.connector, this.config.app.history.queues))?.gameId ?? null;
-    if (gameId !== null) await this.gameWaiter.wait(gameId);
-    else await this.p.profiles?.refresh();
+    await afterGame(this.recorder.gameEnded(), { connector: this.p.connector, profiles: this.p.profiles, queues: this.config.app.history.queues, waiter: this.gameWaiter });
   }
 
   /** A champion from Data Dragon (undefined when it isn't loaded or unknown). */
@@ -331,12 +312,7 @@ export class PersonalCoach extends Coach {
   private async onClientConnected(): Promise<void> {
     this.clearNotice("clientAccount");
     try {
-      const { me, ranked, intendedPositions, perks, shardRows, owned } = await readClientState(this.p.connector);
-      this.intendedPositions = intendedPositions;
-      this.perks = perks;
-      this.shardRows = shardRows;
-      this.owned = owned;
-      if (!this.shardRows.length) await this.loadShardsFallback();
+      const { me, ranked } = await this.client.read(this.p.connector);
       this.updateRoleAdvice();
       this.onDraft();
       if (ranked) this.setBand(bandFromRankedEntries(ranked.queues, this.config.bands));
@@ -359,14 +335,10 @@ export class PersonalCoach extends Coach {
   private async loadFromRiotId(): Promise<void> {
     const { riotId, profiles } = this.p;
     if (!profiles || !riotId || this.identity) return;
-    const i = riotId.lastIndexOf("#");
-    const gameName = riotId.slice(0, i).trim();
-    const tagLine = riotId.slice(i + 1).trim();
-    if (i < 0 || !gameName || !tagLine) {
-      return this.setProfileError(`RIOT_ID must look like "Name#TAG", in quotes (got "${riotId}")`);
-    }
-    this.identity = { gameName, tagLine };
-    await profiles.load(this.identity, { bandFromApi: true });
+    const identity = parseRiotId(riotId);
+    if (!identity) return this.setProfileError(`RIOT_ID must look like "Name#TAG", in quotes (got "${riotId}")`);
+    this.identity = identity;
+    await profiles.load(identity, { bandFromApi: true });
   }
 
   private setBand(band: RankBandId): void {
@@ -423,8 +395,8 @@ export class PersonalCoach extends Coach {
       ...this.lobbyContext,
       now: Date.now(),
       attributes: () => this.attrs,
-      intendedPositions: this.intendedPositions,
-      owned: this.owned,
+      intendedPositions: this.client.intendedPositions,
+      owned: this.client.owned,
       comfortFor: (role: Position) => this.comfortFor(role),
       itemName: (id: number) => this.itemName(id),
       completedItems: () => this.completedItemSet(),
@@ -444,102 +416,45 @@ export class PersonalCoach extends Coach {
     return comfort;
   }
 
-  /** On a new champ select: read which champions are pickable and whether the queue is supported. */
-  private async onChampSelectStart(): Promise<void> {
-    const { connector, config } = this.p;
+  /** A problem from earlier gets another try when it matters most. */
+  private retryAfterProblems(): void {
     this.refreshMeta(false);
-    // A problem from earlier gets another try when it matters most.
     void this.p.profiles?.retry?.();
-    this.pickable = await connector.getPickableChampionIds().catch(() => []);
-    const { queueId } = await currentGame(connector);
-    this.queueId = queueId;
-    this.queueSupported = queueSupported(this.draft, queueId, config.app.supportedQueues);
-    if (this.queueSupported || !this.draft) this.clearNotice("queue");
-    else this.notice("queue", this.wording("notice.queue"));
-    this.onDraft();
   }
 
-  private hadDraft = false;
-
-  /**
-   * In the lobby with roles chosen: your best picks for each, ranked as a blind pick (nobody else
-   * has picked yet), so you can plan before the queue pops. Champ select replaces it with the real draft.
-   */
+  /** The Next game tab, while it's wanted. */
   private updateQueuePreview(): void {
-    const l = this.lobby;
-    if (!l || !this.profile || this.draft || !queuePreviewWanted(l, this.clientPhase, this.config.app.supportedQueues)) {
-      if (this.view.queuePreview) this.update({ queuePreview: null });
-      return;
-    }
-    const roles = queuePreviewRoles(l.positions, {
-      owned: this.owned,
-      comfortFor: (position) => this.comfortFor(position),
-      attributes: this.attributes,
-      intendedPositions: this.intendedPositions,
-      config: this.config,
-      band: this.band,
-      index: this.metaIndex,
-      lookup: this.championLookup,
-    });
-    this.update({ queuePreview: { roles } });
+    const preview = !this.profile
+      ? null
+      : queuePreviewFor(this.lobby, this.session.clientPhase, this.draft, {
+          owned: this.client.owned,
+          comfortFor: (position) => this.comfortFor(position),
+          attributes: this.attributes,
+          intendedPositions: this.client.intendedPositions,
+          config: this.config,
+          band: this.band,
+          index: this.metaIndex,
+          lookup: this.championLookup,
+        });
+    if (preview || this.view.queuePreview) this.update({ queuePreview: preview });
   }
 
   protected override onDraft(): void {
     super.onDraft();
-    if (this.draft && !this.hadDraft) {
-      this.keptPick = null; // a new champ select: the last game's pick no longer applies
-      this.clearNotice("import");
-      this.recorder.newChampSelect();
-      void this.onChampSelectStart();
-    }
-    if (!this.draft && this.hadDraft) this.clearNotice("queue");
-    const unsupportedQueue = this.draft !== null && !this.queueSupported;
-    if (unsupportedQueue !== this.view.unsupportedQueue) this.update({ unsupportedQueue });
-    this.hadDraft = this.draft !== null;
-    // While your history loads, bans still come from the live meta alone (picks wait for your history).
-    const loading = !this.profile && this.draft !== null && this.queueSupported && this.metaIndex !== null && banningNow(this.draft);
-    const profile = this.profile ?? (loading ? profileFromMatches([], []) : null);
-    if (!this.draft || !profile || !this.queueSupported) return this.showNoDraft();
-    const draft = this.draft;
-    const { engine } = this.config;
-    const { role, input, filled, live } = draftScoring({
-      draft,
-      games: profile.games,
-      loading,
-      pickable: this.pickable,
-      comfortFor: (r) => this.comfortFor(r),
-      attributes: this.attributes,
-      intendedPositions: this.intendedPositions,
-      band: this.band,
-      engine,
-      index: this.metaIndex,
-    });
-    const ctx = this.cardContext(live, draft, role, profile);
-    const notes = draftNotes(draft, role, live, filled, ctx);
-    const locked = lockedPick(draft);
-    if (locked !== null) {
-      const assessed = live ? assessPick(live, locked) : null;
-      this.recorder.locked(adviceOption(assessed ?? { championId: locked }), { role, band: this.band, queueId: this.queueId, now: Date.now() });
-      this.update(lockedPanel(role, notes, this.imports.card(locked, false, ctx)));
-      this.keptPick = this.view.myPick;
-      return;
-    }
-    const advice: PickAdvice = live ? adviseLivePicks(live) : advisePicks(input, this.config.explain.settings);
-    this.recorder.shown(advice.picks.map(adviceOption));
-    const bans = bansNow(ctx);
-    // Hovering (or selected, not locked yet): its loadout already, so there's time to read and import it.
-    const pending = pendingPick(draft);
-    const hoverCard = live && pending > 0 ? this.imports.card(pending, true, ctx) : null;
-    if (!hoverCard?.loadout) this.imports.forget();
-    this.update(loading ? loadingPanel(role, notes, bans) : suggestionPanel(advice, role, notes, bans, hoverCard, ctx));
+    this.session.render(this.draftInputs());
   }
 
-  /** Out of champ select (or no history, or a queue we don't coach): your pick stays while the game it's for is on. */
-  private showNoDraft(): void {
-    this.imports.forget();
-    const inGame = GAME_PHASES.has(this.clientPhase);
-    const kept = this.draft || !inGame ? null : keptCard(this.keptPick, this.imports.keptHint());
-    this.update(noDraftPanel(kept, this.profile ? mainRole(this.profile.games) : null));
+  private draftInputs(): DraftInputs {
+    return {
+      profile: this.profile,
+      index: this.metaIndex,
+      config: this.config,
+      band: this.band,
+      attributes: this.attributes,
+      intendedPositions: this.client.intendedPositions,
+      comfortFor: (role) => this.comfortFor(role),
+      cardContext: (live, draft, role, profile) => this.cardContext(live, draft, role, profile),
+    };
   }
 
   /** What champ select's cards need from the coach right now. */

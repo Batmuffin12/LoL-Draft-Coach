@@ -1,5 +1,5 @@
 import type { LcuConnector } from "@ldc/lcu";
-import type { UserMatch } from "@ldc/shared";
+import type { AdviceRecord, UserMatch } from "@ldc/shared";
 
 /** Your history has the game with this client game id (Match-V5 ids end with it). */
 export function hasGame(matches: UserMatch[] | undefined, gameId: number): boolean {
@@ -54,6 +54,17 @@ export class NewGameWaiter {
       if (run === this.run) this.deps.pending(false);
     }
   }
+}
+
+/**
+ * The game ended: sends what the coach showed for it, then waits for it to reach your history.
+ * The game: from the advice log, else the client's own last game.
+ */
+export async function afterGame(record: AdviceRecord | null, o: { connector: LcuConnector; profiles: { recordAdvice(r: AdviceRecord): Promise<unknown>; refresh(): Promise<void> } | null; queues: number[]; waiter: NewGameWaiter }): Promise<void> {
+  if (record) await o.profiles?.recordAdvice(record).catch(() => {});
+  const gameId = record?.gameId ?? (await lastClientGame(o.connector, o.queues))?.gameId ?? null;
+  if (gameId !== null) await o.waiter.wait(gameId);
+  else await o.profiles?.refresh();
 }
 
 /** The game being played (from the gameflow session): its id ties the advice shown in champ select to the game in your history. */

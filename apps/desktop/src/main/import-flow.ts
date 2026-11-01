@@ -1,5 +1,5 @@
 import { renderReason, type Loadout } from "@ldc/engine";
-import { LcuImporter, type LcuCredentials } from "@ldc/lcu";
+import { LcuImporter, type LcuConnector } from "@ldc/lcu";
 import type { ChampionId } from "@ldc/shared";
 import type { ImportLine, MyPickView } from "../shared/view";
 import type { LoadedConfig } from "./config";
@@ -10,7 +10,7 @@ import { logProblem } from "./problem-log";
 export interface ImportFlowDeps {
   config: () => LoadedConfig;
   /** The connected client's credentials, or null. */
-  credentials: () => LcuCredentials | null;
+  connector: Pick<LcuConnector, "credentials">;
   /** Champ select is on. */
   hasDraft: () => boolean;
   notice: (key: string, text: string) => void;
@@ -38,7 +38,7 @@ export class ImportFlow {
    */
   async run(kind: "runes" | "items" | "all", pageKey?: string): Promise<void> {
     const { deps, shown } = this;
-    const creds = deps.credentials();
+    const creds = deps.connector.credentials;
     deps.clearNotice("import");
     if (!deps.config().app.import.enabled) return deps.notice("import", this.say("import.off"));
     if (!shown) return deps.notice("import", this.say(deps.hasDraft() ? "import.nothing" : "import.onlyChampSelect"));

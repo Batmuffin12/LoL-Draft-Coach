@@ -1,5 +1,19 @@
 import { logProblem } from "./problem-log";
 import { ServerError } from "./server-client";
+import type { CoachStatus } from "@ldc/shared";
+
+/** Follows whether your games' source has a problem, to notice when it has recovered. */
+export class ProfileHealth {
+  private troubled = false;
+
+  /** True when this status ends a problem. */
+  recovered(profile: CoachStatus["profile"]): boolean {
+    const troubled = profile.state === "error" || (profile.state === "ready" && profile.problem !== undefined);
+    const recovered = this.troubled && profile.state === "ready" && !troubled;
+    if (troubled || profile.state === "ready") this.troubled = troubled;
+    return recovered;
+  }
+}
 
 /** Waits before trying the server again after a failure: 1, 2, 5, then every 10 minutes. */
 export const SERVER_RETRY_DELAYS_MS = [60_000, 120_000, 300_000, 600_000];

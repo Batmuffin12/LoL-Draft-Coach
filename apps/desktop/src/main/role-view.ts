@@ -1,8 +1,9 @@
 import { adviseLivePicks, advisePicks, poolCoverage, renderReason, weightsForBand, type adviseRoles, type ChampionAttributes, type ComfortStats, type EngineConfig, type MetaIndex, type RolePool } from "@ldc/engine";
-import type { ChampionId, PickAdvice, Position, RankBandId } from "@ldc/shared";
+import type { LobbyRoles } from "@ldc/lcu";
+import type { ChampionId, DraftState, PickAdvice, Position, RankBandId } from "@ldc/shared";
 import { POOL_COLUMNS, type PickView, type PoolNeed, type RoleView, type ViewState } from "../shared/view";
 import type { LoadedConfig } from "./config";
-import { blindDraft } from "./draft-facts";
+import { blindDraft, queuePreviewWanted } from "./draft-facts";
 import { champView, type ChampionLookup } from "./draft-view";
 import { reasonView } from "./reason-view";
 
@@ -136,6 +137,15 @@ export interface QueuePreviewContext {
   band: RankBandId;
   index: MetaIndex | null;
   lookup: ChampionLookup;
+}
+
+/**
+ * The Next game tab: in the lobby with roles chosen, so you can plan before the queue pops. Null
+ * when not wanted: champ select replaces it with the real draft.
+ */
+export function queuePreviewFor(lobby: LobbyRoles | null, phase: string, draft: DraftState | null, ctx: QueuePreviewContext): ViewState["queuePreview"] {
+  if (!lobby || draft || !queuePreviewWanted(lobby, phase, ctx.config.app.supportedQueues)) return null;
+  return { roles: queuePreviewRoles(lobby.positions, ctx) };
 }
 
 /** In the lobby with roles chosen: your best picks for each, ranked as a blind pick (nobody else has picked yet). Roles without picks are left out. */
