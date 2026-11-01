@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { PickAdviceView } from "../../shared/view";
-import { cx } from "../format";
+import { cx, tip } from "../format";
 
 export interface ChipProps {
   tone?: "clear" | "close" | "thin" | "warn" | "pos" | "neg";
@@ -11,7 +11,7 @@ export interface ChipProps {
 
 export function Chip({ tone, dot, title, children }: ChipProps) {
   return (
-    <span className={cx("chip", tone)} title={title}>
+    <span className={cx("chip", tone)} {...tip(title)}>
       {dot && <span className="dot" />}
       {children}
     </span>

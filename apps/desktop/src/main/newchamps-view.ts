@@ -35,11 +35,11 @@ export function learnView(p: LearningPlan, role: string, championId: number, dep
   const t = explain.templates;
   const say = (r: Reason) => renderReason(r, t, deps.championName, deps.itemName ? { item: deps.itemName } : {});
   const sayId = (id: string, slots: Reason["slots"] = {}) => say({ id, slots });
-  const pct = (v: number) => {
-    const s = (v * 100).toFixed(1);
-    return v > 0 ? `+${s}%` : `${s.replace("-", "\u2212")}%`;
-  };
-  const champions = (xs: LearningMatchup[]): FactItem[] => xs.map((x) => ({ text: `${deps.championName(x.championId)} ${pct(x.deltaWin)}`, champion: deps.champion(x.championId) }));
+  const champions = (xs: LearningMatchup[]): FactItem[] =>
+    xs.map((x) => {
+      const slots = { champion: x.championId, delta: x.deltaWin, games: x.games };
+      return { text: sayId("newchamp.learn.matchup", slots), champion: deps.champion(x.championId), title: sayId(x.deltaWin > 0 ? "newchamp.learn.matchup.more" : "newchamp.learn.matchup.fewer", slots) };
+    });
 
   let focus: LearnView["focus"] = null;
   if (p.focus) {

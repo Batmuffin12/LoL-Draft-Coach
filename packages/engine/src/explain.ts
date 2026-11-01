@@ -47,18 +47,22 @@ export interface ReasonNames {
   rune?: (id: number) => string;
 }
 
+/** A 0..1 difference as whole wins per 100 games, at least 1 (a reason only quotes a real difference). */
+const per100 = (v: number): number => Math.max(1, Math.round(Math.abs(v) * 100));
+
 export function renderReason(r: Reason, templates: Record<string, string>, championName: (id: ChampionId) => string, names: ReasonNames = {}): string {
   const t = templates[r.id];
   if (t === undefined) return r.id;
   return t.replace(/\{(\w+)(?::(\w+))?(?:\|([^|}]*)\|([^}]*))?\}/g, (_all, key: string, fmt: string | undefined, one?: string, many?: string) => {
     const v = r.slots[key];
-    if (one !== undefined) return v === 1 ? one : (many ?? "");
+    // The plural follows what's shown: {d:per100|win|wins} by the rounded number, not the raw share.
+    if (one !== undefined) return (fmt === "per100" && typeof v === "number" ? per100(v) : v) === 1 ? one : (many ?? "");
     if (v === undefined) return "";
     if (fmt === "pct" && typeof v === "number") return String(Math.round(v * 100));
     if (fmt === "pct1" && typeof v === "number") return (v * 100).toFixed(1);
     // A win-rate difference as whole wins per 100 games ("2 more wins per 100 games"), unsigned:
     // the template says more or fewer (research/answers/01-language.md).
-    if (fmt === "per100" && typeof v === "number") return String(Math.max(1, Math.round(Math.abs(v) * 100)));
+    if (fmt === "per100" && typeof v === "number") return String(per100(v));
     if (fmt === "signedPct1" && typeof v === "number") {
       const s = (v * 100).toFixed(1);
       return v > 0 && s !== "0.0" ? `+${s}` : s === "-0.0" ? "0.0" : s.replace("-", "−");

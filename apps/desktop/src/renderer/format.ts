@@ -1,5 +1,5 @@
 import type { CoachStatus, Term } from "@ldc/shared";
-import type { ReasonView } from "../shared/view";
+import { FALLBACK_MIN_GAMES, type ReasonView, type ViewState } from "../shared/view";
 
 /** Joins class names, skipping empty ones. */
 export function cx(...names: (string | false | null | undefined)[]): string {
@@ -16,16 +16,6 @@ export function rate(x: number | null | undefined, digits = 0): string {
   return x == null ? "—" : `${(x * 100).toFixed(digits)}%`;
 }
 
-/** A change in win chance as players read it: 0.021 → "+2.1%", −0.004 → "−0.4%". */
-export function signedPct(x: number): string {
-  return `${signed(x)}%`;
-}
-
-/** signedPct, or "—" when there is no number. */
-export function signedPctOrDash(x: number | null | undefined): string {
-  return x == null ? "—" : signedPct(x);
-}
-
 /** Signed points, or "—" when there is no number. */
 export function signedOrDash(x: number | null | undefined): string {
   return x == null ? "—" : signed(x);
@@ -34,6 +24,11 @@ export function signedOrDash(x: number | null | undefined): string {
 /** Games for a table: "1,240", and "12k" above 10,000. */
 export function games(n: number): string {
   return n >= 10_000 ? `${Math.round(n / 1000)}k` : count(n);
+}
+
+/** "1 game", "12 games", "12k games": the raw number picks the word. */
+export function gameCount(n: number): string {
+  return t("count.games", { games: games(n), n });
 }
 
 /** Color class for points of win chance: "pos", "neg", or "flat" within ±deadZone (and for no number). */
@@ -51,6 +46,60 @@ export function signed(x: number): string {
   const v = Math.round(x * 1000) / 10;
   if (v === 0) return "0.0";
   return `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
+}
+
+let minGames = FALLBACK_MIN_GAMES;
+
+/** Sets the shared minimum from the view state (config app.display.minGames). */
+export function setMinGames(n: number): void {
+  minGames = n;
+}
+
+/** Too few games to read much into their win rate. */
+export function isThin(games: number): boolean {
+  return games < minGames;
+}
+
+/** A win rate with the games behind it: whole below the shared minimum, else with `digits`. */
+export function rateOf(x: number | null | undefined, games: number, digits = 1): string {
+  return rate(x, isThin(games) ? 0 : digits);
+}
+
+/** winTone with the games behind it: neutral below the shared minimum. */
+export function winToneOf(x: number | null | undefined, games: number): "pos" | "neg" | "flat" {
+  return isThin(games) ? "flat" : winTone(x);
+}
+
+/** Points of win chance without a sign, for sentences that already say which way: −0.012 → "1.2". */
+export function points(x: number): string {
+  return Math.abs(Math.round(x * 1000) / 10).toFixed(1);
+}
+
+/** The same number as signed points, in wins: 0.012 → "about 1 more win per 100 games". Empty without a number. */
+export function winsPer100(x: number | null | undefined): string {
+  if (x == null) return "";
+  const per = 100;
+  const n = Math.round(Math.abs(x) * per);
+  return n === 0 ? t("units.under", { per }) : t(x > 0 ? "units.more" : "units.fewer", { n, per });
+}
+
+/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago". */
+export function ago(at: number, now: number): string {
+  const min = Math.max(0, Math.round((now - at) / 60_000));
+  if (min < 1) return t("time.justNow");
+  if (min < 60) return t("time.minutes", { n: min });
+  const h = Math.round(min / 60);
+  if (h < 24) return t("time.hours", { n: h });
+  const d = Math.round(h / 24);
+  return d === 1 ? t("time.yesterday") : t("time.days", { n: d });
+}
+
+/**
+ * Hover text that the keyboard can reach too: the element takes focus, and the stylesheet shows
+ * data-tip in a bar while it has keyboard focus (hover text never shows on focus by itself).
+ */
+export function tip(text: string | null | undefined): { title?: string; tabIndex?: number; "data-tip"?: string } {
+  return text ? { title: text, tabIndex: 0, "data-tip": text } : {};
 }
 
 /** Thousands separators: 1240 → "1,240". */
@@ -95,6 +144,34 @@ export function profileProgress(profile: CoachStatus["profile"]): { text: string
 export function needsClient(status: CoachStatus): boolean {
   const { profile } = status;
   return status.lcu !== "connected" && (profile.state === "idle" || (profile.state === "ready" && profile.games === 0));
+}
+
+/** Why champ select has no pick to suggest, as a copy key: the actual cause, never a promise that can't come true. */
+export function noPicksKey(state: Pick<ViewState, "unsupportedQueue" | "status">): string {
+  if (state.unsupportedQueue) return "pick.empty.queue";
+  const p = state.status.profile.state;
+  return p === "error" ? "pick.empty.error" : p === "loading" ? "pick.empty.loading" : p === "idle" ? "pick.empty.idle" : "pick.empty.none";
+}
+
+/** Why champ select has no ban to suggest, as a copy key: bans need the live meta first, then your games. */
+export function noBansKey(state: Pick<ViewState, "unsupportedQueue" | "status" | "meta">): string {
+  if (state.unsupportedQueue) return "ban.empty.queue";
+  const { meta } = state;
+  if (meta?.state === "error") return meta.noSnapshot ? "ban.empty.noSnapshot" : "ban.empty.metaError";
+  if (meta?.state !== "ready") return "ban.empty.noMeta";
+  const p = state.status.profile.state;
+  return p === "error" ? "ban.empty.error" : p === "loading" ? "ban.empty.loading" : p === "idle" ? "ban.empty.idle" : "ban.empty.none";
+}
+
+/**
+ * What a lobby tab says with nothing to show, by cause: open the client, your games failed to load,
+ * they're still coming ("<tab>.loading"), or they're here and there's nothing to show ("<tab>.empty").
+ */
+export function lobbyEmpty(status: CoachStatus, tab: string, slots: Record<string, string | number> = {}): string {
+  if (needsClient(status)) return t("profile.openClient");
+  const p = status.profile.state;
+  if (p === "error") return t("profile.emptyError");
+  return t(p === "ready" ? `${tab}.empty` : `${tab}.loading`, slots);
 }
 
 let roleNames: Record<string, string> = {};

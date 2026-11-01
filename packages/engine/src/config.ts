@@ -528,6 +528,8 @@ export const AppConfigSchema = z.object({
   supportedQueues: z.array(z.number().int()),
   /** One-click import of the rune page and item set into the client (only on the player's click). Off when missing. */
   import: z.object({ enabled: z.boolean() }).default({ enabled: false }),
+  /** What the panel shows: below `minGames` games a win rate is neutral and whole (no colour, no decimals). Absent (an older server): the bundled value. */
+  display: z.object({ minGames: z.number().int().positive() }).optional(),
   /** Positions that share a lane (bot and support): an ally there is your lane partner. */
   sharedLanes: z.array(z.array(z.string())).default([]),
   /**

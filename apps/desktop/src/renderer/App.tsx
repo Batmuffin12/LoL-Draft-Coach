@@ -6,7 +6,7 @@ import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { screenFor } from "./first-use";
-import { setCopy, setRoleLabels } from "./format";
+import { setCopy, setMinGames, setRoleLabels, t } from "./format";
 import { perfCommitted, perfReceived } from "./perf";
 import { useRuneChoice } from "./rune-choice";
 
@@ -35,10 +35,11 @@ export function App() {
   if (!state) return <div className="window loading">Starting…</div>;
   setRoleLabels(state.roleLabels);
   setCopy(state.copy);
+  setMinGames(state.limits.minGames);
   const { account, draft, myPick } = state;
   const screen = screenFor(state, tourOpen);
   if (screen === "connect" && account) return <ConnectScreen state={state} account={account} />;
-  if (screen === "lockedIn" && myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} note={draft ? undefined : "Champ select is over: your loadout stays here until the game ends."} />;
+  if (screen === "lockedIn" && myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} note={draft ? undefined : t("locked.after")} />;
   if (screen === "champSelect" && draft) return <ChampSelectScreen state={state} draft={draft} runes={runes} />;
   if (screen === "tour") {
     return (

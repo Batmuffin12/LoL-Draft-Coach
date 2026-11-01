@@ -1,4 +1,5 @@
 import type { IconView, LoadoutItemView, RuneTreeView } from "../../shared/view";
+import { tip } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 const lower = (s: string) => s.replace(/^./, (c) => c.toLowerCase());
@@ -44,7 +45,7 @@ export function RunePage({ primary, secondary, runes, shards, swaps, maxSwaps = 
   const hidden = swaps.slice(maxSwaps).map((s) => [s.name, ...s.reasons].join(": "));
   return (
     <div className="runes">
-      <div className="trees" title={rows.length === 0 ? hidden.join("\n") || undefined : undefined}>
+      <div className="trees" {...tip(rows.length === 0 ? hidden.join("\n") : null)}>
         <Tree tree={primary} chosen={chosen} keystones />
         <div className="right">
           <Tree tree={secondary} chosen={chosen} keystones={false} />
@@ -63,7 +64,7 @@ export function RunePage({ primary, secondary, runes, shards, swaps, maxSwaps = 
         </div>
       </div>
       {rows.map((s, i) => (
-        <div key={s.id} className={swaps.length > 1 ? "swap one-line" : "swap"} title={[s.name, ...s.reasons, ...(i === 0 ? hidden : [])].join("\n")}>
+        <div key={s.id} className={swaps.length > 1 ? "swap one-line" : "swap"} {...tip([s.name, ...s.reasons, ...(i === 0 ? hidden : [])].join("\n"))}>
           <ChampIcon champ={s} kind="game" round size={20} />
           <span className="wrap">
             <b>Swap in {s.name}</b>

@@ -11,34 +11,33 @@ import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { positionLabel, roleName, t } from "../format";
+import { noBansKey, noPicksKey, positionLabel, roleName, t } from "../format";
 import { useFitLevel, useNow } from "../hooks";
 import type { RuneChoice } from "../rune-choice";
 import { Header, Notices } from "./common";
 import { LoadoutBody, LoadoutFooter } from "./LockedInScreen";
 
 /** The call when it isn't your turn: who is acting, from the seats (no names). */
-function waitingText(draft: DraftView): string {
-  if (draft.timerPhase === "PLANNING") return "Bans next";
+export function waitingText(draft: Pick<DraftView, "timerPhase" | "myTeam" | "theirTeam">): string {
+  if (draft.timerPhase === "PLANNING") return t("phase.bansNext");
   const acting = (slots: DraftView["myTeam"]) => slots.find((s) => s.actingType)?.actingType ?? null;
   const ally = acting(draft.myTeam);
   const enemy = acting(draft.theirTeam);
-  const verb = (type: string) => (type === "ban" ? "banning" : "picking");
-  if (ally) return `Your team is ${verb(ally)}`;
-  if (enemy) return `They are ${verb(enemy)}`;
-  return "Waiting";
+  if (ally) return t(ally === "ban" ? "phase.allyBanning" : "phase.allyPicking");
+  if (enemy) return t(enemy === "ban" ? "phase.enemyBanning" : "phase.enemyPicking");
+  return t(draft.timerPhase === "FINALIZATION" ? "phase.setLoadout" : "phase.waiting");
 }
 
 /** The one draft fact the advice depends on, in the phase band. */
 function context(state: ViewState, banning: boolean): string | null {
   const role = state.pickRole ? positionLabel(state.pickRole) : null;
   if (banning) {
-    if (state.hoverBans) return `Hovering ${state.hoverBans.champion.name}${role ? ` for ${role.toLowerCase()}` : ""}`;
+    if (state.hoverBans) return role ? t("phase.hoveringFor", { champion: state.hoverBans.champion.name, role: role.toLowerCase() }) : t("phase.hovering", { champion: state.hoverBans.champion.name });
     return role;
   }
   const lane = state.laneOpponent;
   if (!lane) return role;
-  return `${positionLabel(lane.role)} · ${lane.champion ? `against ${lane.champion.name}` : `their ${roleName(lane.role)} not shown yet`}`;
+  return lane.champion ? t("phase.against", { role: positionLabel(lane.role), champion: lane.champion.name }) : t("phase.notShown", { role: positionLabel(lane.role), lane: roleName(lane.role) });
 }
 
 type PickTab = "picks" | "runes" | "build";
@@ -90,9 +89,9 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
         value={tab}
         onChange={setTab}
         options={[
-          { value: "picks", label: "Picks" },
-          { value: "runes", label: "Runes" },
-          { value: "build", label: "Build" },
+          { value: "picks", label: t("pick.tab") },
+          { value: "runes", label: t("runes.tab") },
+          { value: "build", label: t("build.tab") },
         ]}
       />
     </>
@@ -104,9 +103,8 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const footer = showLoadout ? (
     <LoadoutFooter pick={hover} runes={runes} />
   ) : (
-    <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
+    <span className="micro">{t(banning ? "ban.only" : "pick.only")}</span>
   );
-  const profile = state.status.profile;
   const picks = state.picks.slice(0, PICKS);
   const cur = picks[sel] ?? picks[0];
   const at = cur ? picks.indexOf(cur) : -1;
@@ -120,8 +118,8 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
       {showLoadout ? (
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
-        <Section title="Suggested bans">
-          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{state.meta?.state === "ready" ? "Ban suggestions appear once your match history has loaded." : "Ban suggestions need the live meta for your rank."}</p>}
+        <Section title={t("ban.head")}>
+          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{t(noBansKey(state))}</p>}
         </Section>
       ) : (
         <>
@@ -130,7 +128,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
             {cur ? (
               <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
             ) : (
-              <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
+              <p className="caption">{t(noPicksKey(state))}</p>
             )}
           </Section>
           {cur && picks.length > 1 && (
@@ -141,7 +139,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
         </>
       )}
       {!state.docked && (
-        <Section title="Draft" gold={false}>
+        <Section title={t("draft.head")} gold={false}>
           <DraftBoard draft={draft} />
         </Section>
       )}
