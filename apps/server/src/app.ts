@@ -16,7 +16,7 @@ import { metaSnapshots } from "./db/schema";
 import { WindowLimiter } from "./limits";
 import type { MetaJob } from "./meta-job";
 import { PROFILE_IDS_MAX, profileJson } from "./profile";
-import type { SyncScheduler } from "./sync-scheduler";
+import { recentlyFailed, type SyncScheduler } from "./sync-scheduler";
 
 export interface AppDeps {
   db: Db;
@@ -275,8 +275,9 @@ function meRoutes(app: App, deps: AppDeps, now: () => number): void {
     const query = ProfileQuery.safeParse({ ids: c.req.query("ids"), timelines: c.req.query("timelines") });
     if (!query.success) return c.json({ error: "invalid_query", message: `ids: up to ${PROFILE_IDS_MAX} match ids, comma-separated; timelines: 1.` }, 400);
     const user = c.get("user");
-    if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs)) {
-      deps.sync.request(user.id).catch(() => {});
+    // A sync that just failed isn't started again: its error stays readable below, and a panel can't keep restarting it.
+    if (deps.sync && deps.syncWhenStaleMs && (user.lastSyncAt === null || now() - user.lastSyncAt > deps.syncWhenStaleMs) && !recentlyFailed(deps.sync.state(user.id), now())) {
+      deps.sync.request(user.id).catch(() => {}); // Logged and kept as the sync state by the scheduler.
     }
     // ids and timelines let a panel that keeps its matches on disk ask for what it lacks (GET /me/profile?since=…&ids=…&timelines=1).
     const opts = { ids: query.data.ids, timelines: query.data.timelines === "1" };

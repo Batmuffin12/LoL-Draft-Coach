@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { bandFromRankedEntries, type AppConfig, type RankBandConfig } from "@ldc/engine";
-import { deathsBefore, participantIndex, RiotKeyError, summarizeMatch, summarizeTimeline, withEarlyDeaths, type Mastery, type RiotApi } from "@ldc/riot-api";
+import { deathsBefore, participantIndex, RiotApiError, RiotKeyError, RiotSchemaError, summarizeMatch, summarizeTimeline, withEarlyDeaths, type Mastery, type Match, type RiotApi, type Timeline } from "@ldc/riot-api";
 import type { User } from "./accounts";
 import type { Db } from "./db";
 import { isForeignPuuidError, isSamePlayer } from "./identity";
@@ -9,8 +9,30 @@ import { matches, rankHistory, userMasteries, userMatches, users, type StoredMas
 /** Maximum page size of Match-V5 "ids by puuid" (documented API limit). */
 const MATCH_IDS_PAGE = 100;
 
+/** Matches failing in a row (not unreadable ones) before a sync gives up: then it's Riot that is down, not one match. */
+const MAX_FAILURES_IN_A_ROW = 3;
+
 /** What syncing needs from the Riot API adapter. */
 export type SyncRiot = Pick<RiotApi, "accountByRiotId" | "masteriesByPuuid" | "leagueEntriesByPuuid" | "matchIdsByPuuid" | "match"> & Partial<Pick<RiotApi, "timeline">>;
+
+/** The stored account can't be synced any more; the message says what the player can do. */
+export class SyncAccountError extends Error {}
+
+/** What the player reads when a sync failed: plain words, never a Riot endpoint or a stack. */
+export function syncErrorMessage(err: unknown): string {
+  if (err instanceof RiotKeyError || err instanceof SyncAccountError) return err.message;
+  if (err instanceof RiotSchemaError) return "Riot sent data this server can't read yet.";
+  if (err instanceof RiotApiError) return err.status === 0 ? "Riot isn't answering right now." : `Riot isn't answering right now (HTTP ${err.status}).`;
+  if (err instanceof TypeError) return "Riot can't be reached right now.";
+  return "The coach server couldn't finish updating your games.";
+}
+
+/** A failure for the server's log, on one line: never a PUUID or a player's name. */
+export function syncLogText(err: unknown): string {
+  const text = err instanceof Error ? (err instanceof RiotApiError || err instanceof RiotSchemaError ? err.message : `${err.name}: ${err.message}`) : String(err);
+  // Riot IDs never get into these messages (SyncAccountError has none); a long id-like token would be a PUUID.
+  return text.replace(/\s+/g, " ").replace(/[\w-]{40,}/g, "[id]").slice(0, 300);
+}
 
 /**
  * The user's masteries and their PUUID for the server's current key. PUUIDs are encrypted
@@ -26,10 +48,10 @@ async function masteriesWithCurrentPuuid(db: Db, riot: SyncRiot, user: User): Pr
     const account = await riot.accountByRiotId(user.gameName, user.tagLine);
     if (!account || account.puuid === user.puuid) throw err;
     if (!(await isSamePlayer(db, riot, user, account.puuid, { storedPuuidForeign: true }))) {
-      throw new Error(`${user.gameName}#${user.tagLine} now belongs to a different Riot account; the user must register again.`);
+      throw new SyncAccountError("This Riot ID now belongs to a different Riot account: register again with a new invite code.");
     }
     if (db.select({ id: users.id }).from(users).where(eq(users.puuid, account.puuid)).get()) {
-      throw new Error(`${user.gameName}#${user.tagLine} is registered again as another user; this older user can be deleted.`);
+      throw new SyncAccountError("This Riot ID is registered again as another user: this older user can be deleted.");
     }
     db.update(users).set({ puuid: account.puuid }).where(eq(users.id, user.id)).run();
     return { puuid: account.puuid, masteries: await riot.masteriesByPuuid(account.puuid) };
@@ -41,6 +63,8 @@ export interface SyncSettings {
   bands: RankBandConfig;
   /** Engine `earlyDeathsMinute`: deaths before it are stamped on your games that have a timeline. */
   earlyDeathsMinute?: number;
+  /** The server's log: a match skipped, and why (no PUUIDs or names). */
+  log?: (msg: string) => void;
 }
 
 export interface SyncResult {
@@ -55,6 +79,69 @@ export interface SyncResult {
 export function sortMatchIdsNewestFirst(ids: string[]): string[] {
   const num = (id: string) => Number(/_(\d+)$/.exec(id)?.[1] ?? 0);
   return [...new Set(ids)].sort((a, b) => num(b) - num(a));
+}
+
+/** A game's summary with its timeline; data we can't summarize counts as unreadable, like data that fails the schema. */
+function gameSummary(match: Match, timeline: Timeline | null, earlyDeathsMinute: number | undefined) {
+  try {
+    let summary = summarizeMatch(match);
+    if (timeline) {
+      summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
+      if (earlyDeathsMinute) summary = withEarlyDeaths(summary, deathsBefore(timeline, match, earlyDeathsMinute * 60));
+    }
+    return summary;
+  } catch (err) {
+    throw new RiotSchemaError(`Riot match can't be summarized: ${(err as Error).message}`);
+  }
+}
+
+/** One game of the sync: fetched and stored. What it costs, and whether a new game was added. */
+async function syncGame(
+  ctx: { db: Db; riot: SyncRiot; userId: number; puuid: string; now: number; withTimeline: Set<string>; earlyDeathsMinute: number | undefined },
+  id: string,
+  isStored: boolean,
+): Promise<{ added: boolean; extraCalls: number }> {
+  const { db, riot } = ctx;
+  // The raw match is needed even when another user already stored it: only the raw
+  // payload says which participant this user was (stored summaries carry no PUUIDs).
+  const match = await riot.match(id);
+  const index = match ? participantIndex(match, ctx.puuid) : -1;
+  if (!match || index < 0) return { added: false, extraCalls: 0 };
+  // Your games also get their timeline (when you die, your gold at 15); a failed one is skipped.
+  const wantsTimeline = riot.timeline !== undefined && ctx.withTimeline.has(id);
+  const timeline = wantsTimeline
+    ? await riot.timeline!(id).catch((err: unknown) => {
+        if (err instanceof RiotKeyError) throw err;
+        return null;
+      })
+    : null;
+  const extraCalls = wantsTimeline ? 1 : 0;
+  const summary = gameSummary(match, timeline, ctx.earlyDeathsMinute);
+  if (isStored) {
+    // A stored game getting its timeline: only the summary changes.
+    if (summary.timeline) db.update(matches).set({ summary }).where(eq(matches.matchId, summary.matchId)).run();
+    return { added: false, extraCalls };
+  }
+  db.transaction((tx) => {
+    tx.insert(matches)
+      .values({
+        matchId: summary.matchId,
+        queueId: summary.queueId,
+        gameVersion: summary.gameVersion,
+        endedAt: summary.endedAt,
+        durationSec: summary.durationSec,
+        summary,
+        source: "user",
+        storedAt: ctx.now,
+      })
+      .onConflictDoNothing()
+      .run();
+    tx.insert(userMatches)
+      .values({ userId: ctx.userId, matchId: summary.matchId, participantIndex: index, endedAt: summary.endedAt })
+      .onConflictDoNothing()
+      .run();
+  });
+  return { added: true, extraCalls };
 }
 
 /**
@@ -133,61 +220,38 @@ export async function syncUser(
   const budget = history.callsPerSync ?? Infinity;
   let calls = 0;
 
+  const ctx = { db, riot, userId: user.id, puuid, now, withTimeline, earlyDeathsMinute: settings.earlyDeathsMinute };
   let added = 0;
   let done = 0;
+  // Failed for now (Riot 5xx, 429s, a timeout): nothing is stored, and the backlog keeps them so the next sync lists them again.
+  let retryLater = 0;
+  let failuresInARow = 0;
   for (let i = 0; i < work.length; i++) {
     const { id, stored: isStored } = work[i]!;
     if (calls >= budget) break;
     done++;
     calls++;
-    // The raw match is needed even when another user already stored it: only the raw
-    // payload says which participant this user was (stored summaries carry no PUUIDs).
-    const match = await riot.match(id);
-    const index = match ? participantIndex(match, puuid) : -1;
-    if (match && index >= 0) {
-      let summary = summarizeMatch(match);
-      // Your games also get their timeline (when you die, your gold at 15); a failed one is skipped.
-      if (riot.timeline && withTimeline.has(id)) {
-        calls++;
-        const timeline = await riot.timeline(id).catch((err: unknown) => {
-          if (err instanceof RiotKeyError) throw err;
-          return null;
-        });
-        if (timeline) {
-          summary = { ...summary, timeline: summarizeTimeline(timeline, match) };
-          if (settings.earlyDeathsMinute) summary = withEarlyDeaths(summary, deathsBefore(timeline, match, settings.earlyDeathsMinute * 60));
-        }
+    try {
+      const game = await syncGame(ctx, id, isStored);
+      calls += game.extraCalls;
+      if (game.added) added++;
+      failuresInARow = 0;
+    } catch (err) {
+      if (err instanceof RiotKeyError) throw err;
+      if (err instanceof RiotSchemaError) {
+        // Permanently bad data must not block every later sync. Not recorded anywhere: while the
+        // game is on a page being listed, a later sync reads it again (e.g. after a schema fix).
+        failuresInARow = 0;
+        settings.log?.(`sync: user ${user.id} skipped unreadable match ${id}: ${syncLogText(err)}`);
+      } else {
+        if (++failuresInARow >= MAX_FAILURES_IN_A_ROW) throw err;
+        retryLater++;
+        settings.log?.(`sync: user ${user.id} will retry match ${id}: ${syncLogText(err)}`);
       }
-      if (isStored) {
-        // A stored game getting its timeline: only the summary changes.
-        if (summary.timeline) db.update(matches).set({ summary }).where(eq(matches.matchId, summary.matchId)).run();
-        onProgress?.(i + 1, work.length);
-        continue;
-      }
-      db.transaction((tx) => {
-        tx.insert(matches)
-          .values({
-            matchId: summary.matchId,
-            queueId: summary.queueId,
-            gameVersion: summary.gameVersion,
-            endedAt: summary.endedAt,
-            durationSec: summary.durationSec,
-            summary,
-            source: "user",
-            storedAt: now,
-          })
-          .onConflictDoNothing()
-          .run();
-        tx.insert(userMatches)
-          .values({ userId: user.id, matchId: summary.matchId, participantIndex: index, endedAt: summary.endedAt })
-          .onConflictDoNothing()
-          .run();
-      });
-      added++;
     }
     onProgress?.(i + 1, work.length);
   }
-  const remaining = work.length - done;
+  const remaining = work.length - done + retryLater;
 
   db.transaction((tx) => {
     tx.insert(userMasteries)
