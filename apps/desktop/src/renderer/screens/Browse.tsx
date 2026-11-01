@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { filterExplore, type ExploreChampionView, type ExploreFilter, type ExploreList, type ExploreRow, type ExploreSort, type OwnRecord } from "../../shared/explore";
-import type { ViewState } from "../../shared/view";
+import type { MatchupRowView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
 import { BuildTab, RuneOptions } from "../components/Loadout";
 import { MatchupTable } from "../components/MatchupTable";
@@ -157,7 +157,7 @@ export function BrowseList({
           <Rows rows={rows} onOpen={openRow} />
           {rows.length === 0 && (
             <p className="caption none">
-              {filter.search ? t("explore.noMatch", { search: filter.search, role: where }) : t("explore.noRows", { role: where })}{" "}
+              {!filter.search ? t("explore.noRows", { role: where }) : filter.role ? t("explore.noMatchRole", { search: filter.search, role: where }) : t("explore.noMatch", { search: filter.search })}{" "}
               {filter.search && (
                 <button type="button" className="foot-link" onClick={() => change({ search: "" })}>
                   {t("explore.clear")}
@@ -268,14 +268,14 @@ function Runes({ view: v }: { view: ExploreChampionView }) {
 /** Spells, skills, the most taken path, then the items one by one with their pick rate and win added. */
 function Build({ view: v }: { view: ExploreChampionView }) {
   const l = v.loadout!;
-  // With a notice above, the screen runs short: after the path's rows get tighter (BuildTab), the core build goes, since the path below shows its items too.
-  const level = useFitLevel(v.champion.id, 2);
+  // With a notice above, the screen runs short: the core build goes, since the path below shows its items too, then the skills' level grid, keeping their max order.
+  const level = useFitLevel(v.champion.id, 3);
   const core = l.items.length > 0 && level < 2 ? v.core : null;
   return (
     <>
       {(l.spells || l.skills) && (
-        <Section className="explore-build">
-          <SkillGrid spells={l.spells} skills={l.skills} />
+        <Section>
+          <SkillGrid spells={l.spells} skills={l.skills} noGrid={level > 2} />
         </Section>
       )}
       {core && (
@@ -296,10 +296,11 @@ function Build({ view: v }: { view: ExploreChampionView }) {
 
 /** The lane opponents it does best and worst against, with games, and what + and − mean. */
 function Matchups({ view: v }: { view: ExploreChampionView }) {
-  const { best, worst } = v.matchups;
-  // A long screen: the note moves to hover over the heads.
-  const level = useFitLevel(v.champion.id, 1);
-  if (!best.length && !worst.length) return <Section><p className="caption">{t("explore.noMatchups")}</p></Section>;
+  // A long screen: the note moves to hover over the heads; with a notice above too, one row less each way.
+  const level = useFitLevel(v.champion.id, 2);
+  const rows = (list: MatchupRowView[]) => (level > 1 ? list.slice(0, -1) : list);
+  const [best, worst] = [rows(v.matchups.best), rows(v.matchups.worst)];
+  if (!v.matchups.best.length && !v.matchups.worst.length) return <Section><p className="caption">{t("explore.noMatchups")}</p></Section>;
   const note = t("explore.matchupsNote");
   return (
     <>

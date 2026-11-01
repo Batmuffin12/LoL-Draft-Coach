@@ -564,7 +564,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .sort.on { color: var(--gold-bright); }
 .sort.on::after { content: " \25BE"; }
 .sort:disabled { cursor: default; opacity: 0.5; }
-.section.explore-head { gap: 4px; padding-bottom: 6px; }
+.window.lobby .section.explore-head { gap: 4px; padding-top: 6px; padding-bottom: 6px; }
 .explore-head .pills { margin: 2px 0 0; }
 .explore-who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .btn.back { padding: 0 4px; min-height: 26px; margin-left: -4px; }
@@ -573,14 +573,14 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .explore-stats b { font-family: var(--font-display); font-size: var(--fs-heading); font-weight: 600; color: var(--text); }
 .explore-stats b.pos { color: var(--positive); }
 .explore-stats b.neg { color: var(--negative); }
-.section.core-row { flex-direction: row; align-items: center; gap: 10px; padding-top: 6px; padding-bottom: 6px; }
+.section.core-row { flex-direction: row; align-items: center; gap: 10px; }
 .core-row .icons { gap: 4px; }
 .win-added { display: block; font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-legal); line-height: 13px; }
 .path.with-added .step { min-height: 36px; padding: 1px 0; }
 .path.with-added .rate { font-size: var(--fs-body); line-height: 18px; }
 .path.with-added .main .nm { line-height: 16px; }
 .path.with-added .alts-col .micro { line-height: 15px; }
-.section.explore-build { padding-top: 6px; padding-bottom: 6px; }
+.window.lobby .explore-head ~ .section { padding-top: 6px; padding-bottom: 6px; }
 
 /* Pool: coverage matrix, then your next step */
 /* Cells stretch to their row's height (a label may wrap to two lines) so every row's line sits at one height; no column gap, so lines run unbroken. */

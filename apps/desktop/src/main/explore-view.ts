@@ -85,8 +85,7 @@ export function exploreListView(index: MetaIndex, deps: ExploreListDeps): Explor
 
 /** The lane opponents from at least `minGames` games: the best and the worst against what the two champions' usual win rates predict. */
 export function browseMatchups(index: MetaIndex, id: ChampionId, role: Position, lookup: ChampionLookup, minGames: number): ExploreChampionView["matchups"] {
-  const rows: MatchupRowView[] = index
-    .opponentsOf(id, role)
+  const rows: MatchupRowView[] = [...new Set(index.opponentsOf(id, role))]
     .map((enemy) => ({ enemy, stat: index.matchup(id, role, enemy, role) }))
     .filter(({ stat }) => stat.n >= minGames)
     .map(({ enemy, stat }) => ({ champion: champView(enemy, lookup), role, lane: false, winRate: rateOf(stat), delta: deltaWin(index.matchupDelta(id, role, enemy, role).delta), games: stat.n }));

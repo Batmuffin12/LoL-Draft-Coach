@@ -282,6 +282,11 @@ describe("a champion looked up", () => {
     expect(worst[0]!.delta!).toBeLessThan(0);
   });
 
+  it("lists an opponent once", () => {
+    const twice = exploreChampionView(index({ matchups: [[1, "middle", 5, "middle", 400, 240, 400], [5, "middle", 1, "middle", 400, 160, 400]] }), 1, "middle", detailDeps)!;
+    expect(twice.matchups.best.map((r) => r.champion!.id)).toEqual([5]);
+  });
+
   it("a pair that plays about even is neither best nor worst, and an all-even lane says so", () => {
     const even = exploreChampionView(index({ matchups: [[1, "middle", 5, "middle", 400, 208, 400]] }), 1, "middle", detailDeps)!;
     expect(even.matchups).toEqual({ best: [], worst: [] });
@@ -348,6 +353,7 @@ describe("the list as drawn", () => {
     const html = draw([row({ id: 1 })], filter({ search: "zzz", role: "jungle" }));
     expect(html).toContain("No champion matches &quot;zzz&quot; in Jungle.");
     expect(html).toContain(t("explore.clear"));
+    expect(draw([row({ id: 1 })], filter({ search: "zzz" }))).toContain("No champion matches &quot;zzz&quot;.");
   });
 
   it("without ban data the ban column can't be sorted, and a saved ban sort falls back", () => {

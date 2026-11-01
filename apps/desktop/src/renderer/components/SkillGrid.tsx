@@ -24,8 +24,8 @@ export function Stat({ winRate, n, title, short }: { winRate: number | null; n: 
   );
 }
 
-/** The two spells, the max order as keycaps with its numbers, then a Q/W/E/R × level 1–18 grid (the ultimate at 6, 11 and 16 on its own row). */
-export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: Skills | null }) {
+/** The two spells, the max order as keycaps with its numbers, then a Q/W/E/R × level 1–18 grid (the ultimate at 6, 11 and 16 on its own row). `noGrid`: a short screen keeps the max order only. */
+export function SkillGrid({ spells, skills, noGrid = false }: { spells: Spells | null; skills: Skills | null; noGrid?: boolean }) {
   const path = skills ? skillPath(skills.first, skills.order, skills.ult) : [];
   const spellTip = spells && [`${spells.spells.map((s) => s.name).join(" + ")}: ${rateOf(spells.winRate, spells.games)} WR, ${gameCount(spells.games)}`, spells.reason].filter(Boolean).join("\n");
   return (
@@ -51,7 +51,7 @@ export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: S
           </>
         )}
       </div>
-      {skills && (
+      {skills && !noGrid && (
         <div className="grid" role="table" aria-label="Skill per level">
           {[...skills.basic, skills.ult].map((k) => (
             <div key={k} className="g-row" role="row">
