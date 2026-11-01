@@ -552,8 +552,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .explore-list .trow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .explore-list .none { padding: 12px 6px; }
 .explore-list .more { align-self: center; padding: 8px; }
-.table .c-num.plain { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-caption); }
-.table .trow > .c-num { font-size: var(--fs-caption); }
+.explore .table .c-num.plain { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-caption); }
+.explore .table .trow > .c-num { font-size: var(--fs-caption); }
 /* Room for the scrollbar: heads line up with the rows under them */
 .table.explore-table .thead, .table.explore-table .trow { grid-template-columns: minmax(0, 1fr) 46px 46px 46px 30px; }
 .table.games-table .thead, .table.games-table .trow { grid-template-columns: minmax(0, 1fr) 42px 66px 38px; }
