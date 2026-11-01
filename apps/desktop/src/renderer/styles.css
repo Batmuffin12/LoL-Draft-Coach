@@ -400,8 +400,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* The lobby tour: all dimmed but a cut-out around the real element, with a small callout */
 .tour { position: fixed; inset: 0; z-index: 50; }
 .tour-shield { position: absolute; inset: 0; }
-.tour-dim { position: absolute; inset: 0; background: rgba(4, 7, 12, 0.72); }
-.tour-hole { position: absolute; border: 1px solid var(--gold); border-radius: var(--radius-sm); box-shadow: 0 0 0 2000px rgba(4, 7, 12, 0.72); transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
+.tour-dim { position: absolute; inset: 0; background: rgba(4, 7, 12, 0.62); }
+.tour-hole { position: absolute; border: 1px solid var(--gold); border-radius: var(--radius-sm); box-shadow: 0 0 0 2000px rgba(4, 7, 12, 0.62); transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
 .tour-callout { position: absolute; width: 316px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); }
 .tour-text { margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .tour-nav { display: flex; align-items: center; gap: 8px; }
