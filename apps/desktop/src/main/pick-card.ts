@@ -121,11 +121,16 @@ export function banViews(live: LiveInput, ctx: Pick<PickCardContext, "draft" | "
   };
 }
 
+/** "Only 0%" reads wrong: none at all, or too few to round to a percent, are said in words. */
+export function filledShareId(share: number): string {
+  return share === 0 ? "picks.filled.share.none" : Math.round(share * 100) === 0 ? "picks.filled.share.few" : "picks.filled.share";
+}
+
 /** Filled into a role you rarely play, as a labelled row. */
 export function filledRow(filled: NonNullable<ReturnType<typeof filledRole>>, say: Say): FactRow {
   return {
     label: say({ id: "picks.filled.label", slots: {} }),
-    items: [{ text: say({ id: "picks.filled.share", slots: { role: filled.role, share: filled.share, games: filled.games } }) }, { text: say({ id: "picks.filled.lean", slots: {} }) }],
+    items: [{ text: say({ id: filledShareId(filled.share), slots: { role: filled.role, share: filled.share, games: filled.games } }) }, { text: say({ id: "picks.filled.lean", slots: {} }) }],
   };
 }
 

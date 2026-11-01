@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findConfigDir, loadConfig } from "../src/main/config";
+import { filledShareId } from "../src/main/pick-card";
 import { uiCopy } from "../src/main/personal-coach";
 import { closeHighlight, draftHighlights, highlightVisit, LOBBY_TOUR, moveTour, placeCallout, placeNote, screenFor, skipStep, spotlight, startTour, tourRunning, tourSteps, type TourStep } from "../src/renderer/first-use";
 import { HIGHLIGHT_IDS, isHighlightId } from "../src/shared/ui-state";
@@ -214,6 +215,14 @@ describe("live highlights", () => {
     for (const id of HIGHLIGHT_IDS) expect(isHighlightId(id)).toBe(true);
     expect(isHighlightId("nope")).toBe(false);
     expect(isHighlightId(1)).toBe(false);
+  });
+});
+
+describe("being filled", () => {
+  it("never says only 0%", () => {
+    expect(filledShareId(0)).toBe("picks.filled.share.none");
+    expect(filledShareId(0.004)).toBe("picks.filled.share.few");
+    expect(filledShareId(0.12)).toBe("picks.filled.share");
   });
 });
 

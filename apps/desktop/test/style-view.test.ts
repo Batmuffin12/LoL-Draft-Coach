@@ -69,7 +69,7 @@ describe("style view", () => {
       { label: "Weak spots", items: [{ text: "Vision" }, { text: "Early deaths" }] },
     ]);
     expect(styleSummary([{ axis: "vision", level: "low" }], explain.templates)).toEqual([{ label: "Weak spots", items: [{ text: "Vision" }] }]);
-    expect(styleSummary([{ axis: "vision", level: "mid" }], explain.templates)).toEqual([{ label: "Your style", items: [{ text: "Close to your rank on every axis" }] }]);
+    expect(styleSummary([{ axis: "vision", level: "mid" }], explain.templates)).toEqual([{ label: "Your style", items: [{ text: "Your style is close to your rank's average" }] }]);
     expect(styleSummary([], explain.templates)).toEqual([]);
     for (const axis of Object.keys(explain.axes)) for (const level of ["high", "low"]) expect(explain.templates[`style.summary.${level}.${axis}`], `${level}.${axis}`).toBeTruthy();
   });
