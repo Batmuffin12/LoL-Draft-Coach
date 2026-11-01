@@ -7,7 +7,7 @@
  *   tsx scripts/perf/desktop.ts replay <scenario> <seconds> <out.json> [clicks JSON] [rounds]
  *   tsx scripts/perf/desktop.ts screens <outDir>
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -114,7 +114,17 @@ interface LaunchResult {
 /** App state the panel keeps between runs (advice log, account, caches): wiped so every run starts the same. Data Dragon's cache stays. */
 const APP_STATE = ["advice.json", "advice-outbox.json", "account.json", "profile-matches.json", "meta", "config"];
 
+/** The panel opens on top of everything: never during a game, and not when that can't be checked. Checked before each launch, because a game can start between two. */
+function refuseDuringGame(): void {
+  if (process.platform !== "win32") return;
+  const game = "League of Legends.exe";
+  const check = spawnSync("tasklist", ["/FI", `IMAGENAME eq ${game}`], { encoding: "utf8" });
+  if (check.status !== 0 || check.error) throw new Error("Couldn't check for a running game: not opening the panel");
+  if (check.stdout.includes(game)) throw new Error(`${game} is running: not opening the panel`);
+}
+
 function launch(env: Record<string, string>): Promise<LaunchResult> {
+  refuseDuringGame();
   for (const f of APP_STATE) rmSync(join(profileDir, f), { recursive: true, force: true });
   return new Promise((resolve) => {
     const child = spawn(electron, ["."], {
