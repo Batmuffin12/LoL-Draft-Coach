@@ -13,6 +13,12 @@ export async function lastClientGame(connector: LcuConnector, queues: number[]):
   return g && queues.includes(g.queueId) ? g : null;
 }
 
+/** A game that ended while the panel was closed (or before Riot published it): the client has it, your history doesn't yet. */
+export async function missedGame(connector: LcuConnector, queues: number[], matches: UserMatch[] | undefined): Promise<number | null> {
+  const last = await lastClientGame(connector, queues);
+  return last && matches && !hasGame(matches, last.gameId) ? last.gameId : null;
+}
+
 /**
  * Riot publishes a match a little after it ends, so one sync right after the game often finds
  * nothing new. Asks for a sync again on a backoff (config history.newGameRetrySeconds) until that

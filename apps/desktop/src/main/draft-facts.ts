@@ -44,6 +44,11 @@ export function banningNow(draft: DraftState): boolean {
   return draft.actions.some((a) => a.inProgress && !a.completed && a.type === "ban" && a.actorCellId === draft.localCellId);
 }
 
+/** Your record against the lane opponent in this draft, when there is a draft and a role. */
+export function recordInDraft(draft: DraftState | null, index: MetaIndex | null, matches: UserMatch[], championId: ChampionId, role: Position | null): Reason[] {
+  return recordVsLane(matches, championId, role, draft && role ? laneOpponent(draft, role, index) : null);
+}
+
 /** Your own games on this champion in this role against `enemy` (your lane opponent's champion); none: nothing to say. */
 export function recordVsLane(matches: UserMatch[], championId: ChampionId, role: Position | null, enemy: ChampionId | null): Reason[] {
   if (!enemy || !role) return [];

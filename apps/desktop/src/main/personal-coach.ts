@@ -2,7 +2,6 @@ import type { LobbyRoles } from "@ldc/lcu";
 import {
   completedItems,
   bandFromRankedEntries,
-  computeComfort,
   deriveChampionAttributes,
   renderReason,
   type GrowthFocus,
@@ -10,26 +9,25 @@ import {
   type ChampionAttributes,
   type ComfortStats,
 } from "@ldc/engine";
-import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, Position, RankBandId, Reason } from "@ldc/shared";
+import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, Position, RankBandId } from "@ldc/shared";
 import type { ViewState } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder } from "./advice-log";
 import { ImportFlow } from "./import-flow";
 import { DraftSession, type DraftInputs } from "./draft-session";
 import { focusView, growthFor, lastGameFor, monthFor, roleAdvice, styleFor, type LobbyViewContext } from "./lobby-views";
-import { roleLabels, uiCopy, viewLimits, withBundledWording } from "./view-copy";
+import { positionLabelFrom, roleLabels, uiCopy, viewLimits, withBundledWording } from "./view-copy";
 import { Coach, type CoachDeps } from "./coach";
 import type { LoadedConfig } from "./config";
-import { capital } from "./reason-view";
 import { queuePreviewFor } from "./role-view";
 import { ClientFacts, parseRiotId } from "./client-state";
 import { logProblem } from "./problem-log";
 import { ProfileHealth } from "./server-problem";
-import { laneOpponent, recordVsLane } from "./draft-facts";
+import { recordInDraft } from "./draft-facts";
 import { sessionView } from "./last-game-view";
-import { afterGame, hasGame, lastClientGame, NewGameWaiter } from "./game-wait";
+import { afterGame, hasGame, missedGame, NewGameWaiter } from "./game-wait";
 import type { PickCardContext } from "./pick-card";
-import type { PersonalProfile } from "./profile";
+import { ComfortCache, type PersonalProfile } from "./profile";
 import type { Identity, ProfileSource } from "./profile-source";
 
 export interface PersonalCoachDeps extends CoachDeps {
@@ -57,8 +55,7 @@ export class PersonalCoach extends Coach {
   private band: RankBandId;
   private profile: PersonalProfile | null = null;
   private identity: Identity | null = null;
-  /** Comfort per role ("" = no role), computed lazily and reset when the profile changes. */
-  private comfortByRole = new Map<string, Map<ChampionId, ComfortStats>>();
+  private readonly comfort = new ComfortCache();
   private attributes = new Map<ChampionId, ChampionAttributes>();
   /** The live meta of the player's band (engine v2), when a snapshot is loaded. */
   private metaIndex: MetaIndex | null = null;
@@ -134,7 +131,7 @@ export class PersonalCoach extends Coach {
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
   setConfig(config: LoadedConfig): void {
     this.config = withBundledWording(config, this.p.config);
-    this.comfortByRole.clear();
+    this.comfort.clear();
     this.update({ roleLabels: roleLabels(this.config.explain.templates), copy: uiCopy(this.config.explain.templates), limits: viewLimits(config, this.p.config) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
@@ -260,11 +257,7 @@ export class PersonalCoach extends Coach {
     }
   };
 
-  /** "Mid", "Jungle": the role's label from config, capitalised. */
-  private readonly positionLabel = (role: string) => {
-    const label = roleLabels(this.config.explain.templates)[role] ?? role;
-    return capital(label);
-  };
+  private readonly positionLabel = (role: string) => positionLabelFrom(this.config.explain.templates, role);
 
   /** What the focus and month report were last computed from (they change only with these). */
   private growthInputs: unknown[] = [];
@@ -283,12 +276,6 @@ export class PersonalCoach extends Coach {
     this.growth = growthFor(this.profile, this.lobbyContext);
     this.update({ focus: focusView(this.lobbyContext) });
     this.update({ month: monthFor(this.profile, Date.now(), this.lobbyContext) });
-  }
-
-  /** Your own games on this champion in this role against your lane opponent's champion (none: nothing to say). */
-  private recordVsLane(profile: PersonalProfile, championId: number, role: Position | null): Reason[] {
-    const enemy = this.draft && role ? laneOpponent(this.draft, role, this.metaIndex) : null;
-    return recordVsLane(profile.matches, championId, role, enemy);
   }
 
   /** A break suggestion after a losing streak or a long session, from your own games. */
@@ -323,8 +310,8 @@ export class PersonalCoach extends Coach {
         if (this.view.account) this.update({ account: { ...this.view.account, clientRiotId: this.clientRiotId } });
         await this.p.profiles?.load(this.identity, { bandFromApi: !ranked });
         // A game that ended while the panel was closed (or before Riot published it) isn't in the history yet: wait for it.
-        const last = await lastClientGame(this.p.connector, this.config.app.history.queues);
-        if (last && this.profile && !hasGame(this.profile.matches, last.gameId)) void this.gameWaiter.wait(last.gameId);
+        const missed = await missedGame(this.p.connector, this.config.app.history.queues, this.profile?.matches);
+        if (missed !== null) void this.gameWaiter.wait(missed);
       } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
       if (this.notice("clientAccount", this.wording("notice.clientAccount"))) logProblem(`Reading the client account: ${(err as Error).message}`);
@@ -374,7 +361,7 @@ export class PersonalCoach extends Coach {
     const { engine } = this.config;
     const first = this.profile === null;
     this.profile = profile;
-    this.comfortByRole.clear();
+    this.comfort.clear();
     this.attributes = deriveChampionAttributes(this.profile.samples, engine.teamNeeds.minAttributeSamples);
     this.updateFocus();
     this.updateSession();
@@ -407,13 +394,7 @@ export class PersonalCoach extends Coach {
 
   /** Comfort for a role, cached until the profile changes. */
   private comfortFor(role: Position | null): Map<ChampionId, ComfortStats> {
-    const key = role ?? "";
-    let comfort = this.comfortByRole.get(key);
-    if (!comfort) {
-      comfort = computeComfort(this.profile!.games, this.profile!.masteries, Date.now(), this.config.engine.comfort, role);
-      this.comfortByRole.set(key, comfort);
-    }
-    return comfort;
+    return this.comfort.get(role, this.profile!, this.config.engine.comfort);
   }
 
   /** A problem from earlier gets another try when it matters most. */
@@ -482,7 +463,7 @@ export class PersonalCoach extends Coach {
       canImport: this.canImport,
       perk: (id) => this.perks.get(id),
       shardRows: this.shardRows,
-      recordVsLane: (championId) => this.recordVsLane(profile, championId, role),
+      recordVsLane: (championId) => recordInDraft(this.draft, this.metaIndex, profile.matches, championId, role),
     };
   }
 }
