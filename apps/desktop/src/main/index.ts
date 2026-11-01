@@ -185,6 +185,9 @@ function scheduleScreenshot(coach: Coach): void {
       .catch(() => null);
     const step = await win?.webContents.executeJavaScript(`document.querySelector(".tour-text")?.textContent ?? ""`).catch(() => "");
     if (step) console.log(`LDC_SCREENSHOT: tour step: ${step}`);
+    // The first capture makes it paint; the second has the frame.
+    await win?.webContents.capturePage();
+    await new Promise((r) => setTimeout(r, 300));
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     const dump = process.env.LDC_VIEW_DUMP;
