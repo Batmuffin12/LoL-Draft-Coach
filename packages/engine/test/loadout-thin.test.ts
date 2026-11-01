@@ -69,6 +69,38 @@ describe("loadouts from few games (partial pooling, your own games, no win rates
     expect(buildLoadout(input({ build: solid, personal })).page?.value.runes[0]).toBe(8128);
   });
 
+  it("second option beside your own page: your next page", () => {
+    const personal = { championId: 950, n: 25, pages: [page(8112, 18, 11), page(8128, 7, 4)], spells: [], items: [] };
+    const l = buildLoadout(input({ personal }));
+    expect(l.pageAlt?.value.runes[0]).toBe(8128);
+    expect(l.pageAlt).toMatchObject({ kind: "personalOther", share: 7 / 25, main: { kind: "personal", share: 18 / 25 } });
+    expect(say(l.pageAlt!.reasons[0]!)).toBe("Your other page: 7 of your 25 Naafiri games");
+  });
+
+  it("second option beside your own page: without a second page of yours, what your rank takes", () => {
+    // Your one other game with 8128 is too few, so the band's top page (8 of the 13 pooled games).
+    const personal = { championId: 950, n: 25, pages: [page(8112, 24, 11), page(8128, 1, 1)], spells: [], items: [] };
+    const l = buildLoadout(input({ personal }));
+    expect(l.pageAlt).toMatchObject({ kind: "band", share: 8 / 13 });
+    expect(l.pageAlt?.value.runes[0]).toBe(8128);
+    expect(say(l.pageAlt!.reasons[0]!)).toBe("Taken in your rank: 8 of 13 games");
+  });
+
+  it("second option beside your own page: the band's top page when it's the same is skipped", () => {
+    const personal = { championId: 950, n: 25, pages: [page(8128, 25, 11)], spells: [], items: [] };
+    // The band's other page (8112) has 3 games: too few. None.
+    expect(buildLoadout(input({ personal })).pageAlt).toBeNull();
+  });
+
+  it("second option with thin band data: only when it clears the thresholds, never a win rate quoted", () => {
+    // 8112 in 3 of the 13 pooled games: under minGames.
+    expect(buildLoadout(input()).pageAlt).toBeNull();
+    const roomy = { ...mid, n: 40, games: 40, wins: 20, pages: [page(8128, 30, 15), page(8112, 10, 5)] };
+    const l = buildLoadout(input({ build: roomy, pooled: null }));
+    expect(l.pageAlt).toMatchObject({ kind: "second", share: 0.25 });
+    expect(say(l.pageAlt!.reasons[0]!)).toBe("Second most taken: 10 of 40 games");
+  });
+
   it("falls back to the items you finish most when the band has no purchases at all", () => {
     const personal = { championId: 950, n: 25, pages: [], spells: [], items: [{ itemId: 6692, n: 22 }, { itemId: 3814, n: 15 }] };
     const l = buildLoadout(input({ build: empty("middle", 0), pooled: null, personal }));

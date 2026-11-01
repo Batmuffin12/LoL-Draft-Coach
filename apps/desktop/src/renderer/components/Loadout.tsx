@@ -1,8 +1,10 @@
-import type { LoadoutItemView, LoadoutView, MyPickView } from "../../shared/view";
-import { t } from "../format";
+import type { LoadoutItemView, LoadoutView, MyPickView, RunePageView } from "../../shared/view";
+import { games, rate, t } from "../format";
+import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
 import { ChampIcon } from "./ChampIcon";
 import { MatchupTable } from "./MatchupTable";
+import { Pills } from "./Pills";
 import { RunePage } from "./RunePage";
 import { Section } from "./Section";
 import { SkillGrid, Stat } from "./SkillGrid";
@@ -37,15 +39,24 @@ function ItemLine({ items }: { items: LoadoutItemView[] }) {
   );
 }
 
-/** Runes on their full trees with the page's numbers; then spells and the skill grid (both as they were). */
-export function RunesTab({ loadout: l }: { loadout: LoadoutView }) {
-  const p = l.page;
+/** A rune option in the switch: what it is, how many take it and how it does ("Second · 15% · 55% WR"); games for a matchup page, which has no share. Short enough to stay on one row. */
+function optionText(o: RunePageView): string {
+  const taken = o.share !== null ? rate(o.share) : t("runes.optionGames", { games: games(o.games), n: o.games });
+  return [o.optionLabel, taken, o.winRate !== null ? t("runes.optionWinRate", { rate: rate(o.winRate) }) : null].filter(Boolean).join(" · ");
+}
+
+/** Runes on their full trees with the page's numbers, or a switch in place of that head when there's a second option; then spells and the skill grid (both as they were). */
+export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: RuneChoice }) {
+  const p = shownPage(l, runes.key);
+  const options = l.page && l.pageAlt ? [l.page, l.pageAlt] : [];
+  const head = options.length ? { className: "rune-options" } : { title: "Runes", aside: p && <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
   return (
     <>
       {p && (
-        <Section title="Runes" aside={<Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} />}>
+        <Section {...head}>
+          {options.length > 0 && <Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={runes.choose} />}
           {p.primaryTree && p.secondaryTree ? (
-            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={l.situationalRunes} />
+            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} />
           ) : (
             <div className="icons">
               {[...p.runes, ...p.shards].map((r, i) => (

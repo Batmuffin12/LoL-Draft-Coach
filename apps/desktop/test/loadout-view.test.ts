@@ -30,6 +30,7 @@ const loadout = (thin: boolean): Loadout => ({
   games: 2000,
   source: { games: 2000, roleGames: 2000, pooled: false, personalGames: 0, thin },
   page: { value: { primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8226, 8210], statPerks: [5011, 5008, 5005], games: 900, wins: 480, n: 900 }, winRate: 0.532, n: 900, reasons: [] },
+  pageAlt: null,
   situationalRunes: [],
   spells: { value: [4, 14], winRate: 0.528, n: 1870, reasons: [] },
   skills: { value: { first: [1, 3, 2], order: [1, 2, 3] }, winRate: 0.531, n: 1980, reasons: [] },
@@ -75,14 +76,65 @@ describe("rune trees", () => {
   });
 });
 
+describe("rune options", () => {
+  const value = { primaryStyle: 8200, subStyle: 8100, runes: [8214, 8226, 8210, 8139], statPerks: [5001, 5008, 5005], games: 300, wins: 150, n: 300 };
+  const alt = (over: Partial<NonNullable<Loadout["pageAlt"]>> = {}): NonNullable<Loadout["pageAlt"]> => ({ value, winRate: 0.5, n: 300, reasons: [{ id: "loadout.page.second", slots: { count: 300, games: 2000 } }], kind: "second", share: 0.15, situationalRunes: [], main: { kind: "popular", share: 0.45 }, ...over });
+  const render = (l: Loadout) => toLoadoutView(l, { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false });
+
+  it("draws the second page whole, with its label, share, win rate and own key", () => {
+    const v = render({ ...loadout(false), pageAlt: alt() });
+    expect(v.page).toMatchObject({ optionLabel: "Most taken", share: 0.45, winRate: 0.532, games: 900 });
+    expect(v.pageAlt).toMatchObject({ optionLabel: "Second", share: 0.15, winRate: 0.5, games: 300, reason: "Second most taken: 300 of 2,000 games" });
+    expect(v.pageAlt!.primaryTree!.style.name).toBe("Sorcery");
+    expect(v.pageAlt!.runes.map((r) => r.id)).toEqual(value.runes);
+    expect(v.pageAlt!.key).not.toBe(v.page!.key);
+  });
+
+  it("quotes no win rate with thin data", () => {
+    expect(render({ ...loadout(true), pageAlt: alt() }).pageAlt).toMatchObject({ winRate: null, share: 0.15 });
+  });
+
+  it("gives a matchup page no share (the snapshot has no matchup total)", () => {
+    const v = render({ ...loadout(false), pageAlt: alt({ kind: "usual", main: { kind: "matchup", share: null } }) });
+    expect(v.page).toMatchObject({ optionLabel: "This lane", share: null });
+    expect(v.pageAlt!.optionLabel).toBe("Usual");
+  });
+
+  it("has no switch without a second page", () => {
+    const v = render(loadout(false));
+    expect(v.pageAlt).toBeNull();
+    expect(v.page).toMatchObject({ optionLabel: null, share: null });
+  });
+});
+
 describe("situational runes", () => {
   it("suggests swapping in only runes from the shown page's two trees", () => {
     // 8139 is in Domination (the page's primary); 9999 is in neither tree (another page).
     const l = { ...loadout(false), situationalRunes: [8139, 9999].map((runeId) => ({ runeId, trait: "engage" as const, lift: 2, games: 300, reasons: [] })) };
     const deps = { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false };
-    expect(toLoadoutView(l, deps).situationalRunes.map((r) => r.id)).toEqual([8139]);
+    expect(toLoadoutView(l, deps).page!.situationalRunes.map((r) => r.id)).toEqual([8139]);
     // Without rune data the trees are unknown: nothing is filtered.
-    expect(toLoadoutView(l, { ...deps, data: null }).situationalRunes).toHaveLength(2);
+    expect(toLoadoutView(l, { ...deps, data: null }).page!.situationalRunes).toHaveLength(2);
+  });
+
+  it("works out the swaps for each page against that page's own trees", () => {
+    const swap = (runeId: number) => ({ runeId, trait: "engage" as const, lift: 2, games: 300, reasons: [] });
+    const alt: Loadout["pageAlt"] = {
+      value: { primaryStyle: 8200, subStyle: 8200, runes: [8214, 8226, 8210], statPerks: [5011, 5008, 5005], games: 300, wins: 150, n: 300 },
+      winRate: 0.5,
+      n: 300,
+      reasons: [],
+      kind: "second",
+      share: 0.15,
+      situationalRunes: [swap(8139), swap(8226)],
+      main: { kind: "popular", share: 0.45 },
+    };
+    // 8139 is on the first page's Domination tree, not on the second page's Sorcery ones.
+    const l: Loadout = { ...loadout(false), situationalRunes: [swap(8139)], pageAlt: alt };
+    const deps = { data, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false };
+    const v = toLoadoutView(l, deps);
+    expect(v.page!.situationalRunes.map((r) => r.id)).toEqual([8139]);
+    expect(v.pageAlt!.situationalRunes.map((r) => r.id)).toEqual([8226]);
   });
 
   it("with mechanic rules, keeps a swap only when the rune's own text answers the trait, and says why", () => {
@@ -96,7 +148,7 @@ describe("situational runes", () => {
     const swap = (runeId: number, trait: "engage" | "heal") => ({ runeId, trait, lift: 2.1, games: 340, reasons: [] });
     const l = { ...loadout(false), situationalRunes: [swap(8139, "engage"), swap(8126, "engage"), swap(8139, "heal")] };
     const deps = { data: withText, templates: config.explain.templates, championName: () => "Ahri", bands: config.bands, band: config.bands.defaultBand, canImport: false, runeMechanics: config.engine.loadout.runeMechanics };
-    const v = toLoadoutView(l, deps).situationalRunes;
+    const v = toLoadoutView(l, deps).page!.situationalRunes;
     expect(v.map((r) => r.id)).toEqual([8139]); // Cheap Shot's text doesn't answer crowd control; no rule for heal
     expect(v[0]!.reasons).toEqual([
       "Their team has a lot of crowd control. Taste of Blood: Gain Armor and Magic Resist when receiving crowd control.",

@@ -101,6 +101,30 @@ export interface ChoiceNumbers {
   games: number;
 }
 
+/** One rune page as the loadout shows it. */
+export interface RunePageView extends ChoiceNumbers {
+  /** Identifies the page, also when options reorder: what the import button sends back. */
+  key: string;
+  primary: IconView;
+  secondary: IconView;
+  /** Keystone first, then the other primary runes, then the secondary runes. */
+  runes: IconView[];
+  /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
+  shards: IconView[];
+  reason: string | null;
+  /** Both paths whole, so the page can be drawn on its trees (null without Data Dragon). */
+  primaryTree: RuneTreeView | null;
+  secondaryTree: RuneTreeView | null;
+  /** All stat shard rows (offense, flex, defense) and the chosen index in each (-1: unknown); null when the client doesn't list them. */
+  shardRows: { rows: IconView[][]; chosen: number[] } | null;
+  /** Runes worth a swap on this page against this team. */
+  situationalRunes: LoadoutItemView[];
+  /** How the option switch names it ("Most taken"); null with no second option, when there's no switch. */
+  optionLabel: string | null;
+  /** Share of the games behind it that took it; null when unknown (a matchup page) or with no switch. */
+  share: number | null;
+}
+
 /** Runes, spells, skill order and items for the locked-in champion (live meta only). */
 export interface LoadoutView {
   /** Games behind the build (your band plus the one above). */
@@ -109,21 +133,9 @@ export interface LoadoutView {
   source: string;
   /** Shown when the build rests on few games, e.g. "Not much data yet: treat it as a rough guide". */
   thinNote: string | null;
-  page: {
-    primary: IconView;
-    secondary: IconView;
-    /** Keystone first, then the other primary runes, then the secondary runes. */
-    runes: IconView[];
-    /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
-    shards: IconView[];
-    reason: string | null;
-    /** Both paths whole, so the page can be drawn on its trees (null without Data Dragon). */
-    primaryTree: RuneTreeView | null;
-    secondaryTree: RuneTreeView | null;
-    /** All stat shard rows (offense, flex, defense) and the chosen index in each (-1: unknown); null when the client doesn't list them. */
-    shardRows: { rows: IconView[][]; chosen: number[] } | null;
-  } & ChoiceNumbers | null;
-  situationalRunes: LoadoutItemView[];
+  page: RunePageView | null;
+  /** The second rune option; null when no other page has enough games. */
+  pageAlt: RunePageView | null;
   spells: ({ spells: IconView[]; reason: string | null } & ChoiceNumbers) | null;
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
   /** `basic`: the three basic ability keys (grid rows), `ult`: the ultimate's key (levels 6, 11, 16). */

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { ChampionAttributes, ChampionBuild } from "@ldc/shared";
-import { buildLoadout, parseEngineConfig, parseExplainConfig, rankItems, renderReason, type LoadoutInput } from "../src/index";
+import { buildLoadout, chooseOption, parseEngineConfig, parseExplainConfig, rankItems, renderReason, type LoadoutInput } from "../src/index";
 
 const read = (name: string) => JSON.parse(readFileSync(new URL(`../../../config/${name}`, import.meta.url), "utf8"));
 // Win added and lift alone (the popularity prior is tested separately).
@@ -55,6 +55,76 @@ describe("item minutes", () => {
     expect(s1!.minute).toBeCloseTo((400 * 12 + 300 * 13 + 50 * 14 + 20 * 14) / 770);
     expect(s1!.top.minute).toBe(s1!.top.itemId === 3071 ? 12 : s1!.top.itemId === 3078 ? 13 : 14);
     expect(s2!.minute).toBeCloseTo((200 * 20 + 150 * 21 + 100 * 21) / 450);
+  });
+});
+
+describe("the second rune option", () => {
+  const key = (l: { value: { runes: number[] } } | null) => l?.value.runes[0];
+
+  it("is the next most taken page, and leaves the first page as it was", () => {
+    const l = buildLoadout(input());
+    expect(key(l.page)).toBe(8010);
+    expect(chooseOption(build.pages, build, cfg)?.runes[0]).toBe(8010);
+    expect(key(l.pageAlt)).toBe(8005);
+    expect(l.pageAlt).toMatchObject({ kind: "second", share: 0.3, n: 300, winRate: 0.55, main: { kind: "popular", share: 0.6 } });
+    expect(l.pageAlt!.reasons[0]).toMatchObject({ id: "loadout.page.second", slots: { count: 300, games: 1000 } });
+  });
+
+  it("keeps the literal order: a different keystone isn't required", () => {
+    const sameKeystone = { ...page(8010, 300, 150), runes: [8010, 2, 3, 4, 5, 7] };
+    const l = buildLoadout(input({ build: { ...build, pages: [page(8010, 600, 300), sameKeystone, page(8005, 90, 50)] } }));
+    expect(l.pageAlt?.value.runes).toEqual(sameKeystone.runes);
+  });
+
+  it("hides a page below minGames or minShare", () => {
+    const of = (pages: ChampionBuild["pages"]) => buildLoadout(input({ build: { ...build, pages } })).pageAlt;
+    // 8021: 20 games of 1,000 is 2%, under minShare.
+    expect(of([page(8010, 900, 450), page(8021, 20, 15)])).toBeNull();
+    expect(cfg.minShare).toBe(0.08);
+    // At exactly the share it shows; just under it doesn't.
+    expect(key(of([page(8010, 900, 450), page(8021, 80, 40)]))).toBe(8021);
+    expect(of([page(8010, 900, 450), page(8021, 79, 40)])).toBeNull();
+    // Enough share but too few games: 4 of 20 games is 20%, under minGames (5).
+    const small = { ...build, n: 20, games: 20, wins: 10 };
+    expect(buildLoadout(input({ build: { ...small, pages: [page(8010, 16, 8), page(8021, cfg.minGames - 1, 2)] } })).pageAlt).toBeNull();
+    expect(buildLoadout(input({ build: { ...small, pages: [page(8010, 15, 8), page(8021, cfg.minGames, 2)] } })).pageAlt?.share).toBe(cfg.minGames / 20);
+  });
+
+  it("is null with one page or none", () => {
+    expect(buildLoadout(input({ build: { ...build, pages: [page(8010, 900, 450)] } })).pageAlt).toBeNull();
+    expect(buildLoadout(input({ build: { ...build, pages: [] } })).pageAlt).toBeNull();
+  });
+
+  it("beside a matchup page, offers the usual page; the matchup's share stays unknown", () => {
+    const l = buildLoadout(input({ laneOpponent: 99 }));
+    expect(key(l.page)).toBe(8008);
+    expect(key(l.pageAlt)).toBe(8010);
+    expect(l.pageAlt).toMatchObject({ kind: "usual", share: 0.6, main: { kind: "matchup", share: null } });
+    expect(l.pageAlt!.reasons[0]).toMatchObject({ id: "loadout.page.usual", slots: { count: 600, games: 1000 } });
+  });
+
+  it("beside a matchup page that is the usual page, offers the next one", () => {
+    const l = buildLoadout(input({ laneOpponent: 99, build: { ...build, matchupPages: [{ enemy: 99, ...page(8010, 40, 26) }] } }));
+    expect(key(l.page)).toBe(8010);
+    expect(l.pageAlt).toMatchObject({ kind: "second", main: { kind: "matchup" } });
+    expect(key(l.pageAlt)).toBe(8005);
+  });
+
+  it("when the page is the best by win rate, offers the most taken one", () => {
+    const l = buildLoadout(input({ config: { ...cfg, pickBy: "winRate" } }));
+    expect(key(l.page)).toBe(8005);
+    expect(key(l.pageAlt)).toBe(8010);
+    expect(l.pageAlt).toMatchObject({ kind: "popular", main: { kind: "best", share: 0.3 } });
+  });
+
+  it("gets swaps for its own page: a rune on it isn't suggested, one on the first page is", () => {
+    const lifts: ChampionBuild["lifts"] = [
+      { kind: "rune", id: 8005, trait: "magic", lift: 2.2, high: 0.2, low: 0.09, n: 900 },
+      { kind: "rune", id: 8010, trait: "magic", lift: 2, high: 0.2, low: 0.1, n: 900 },
+    ];
+    const l = buildLoadout(input({ build: { ...build, lifts }, enemies: [11, 12], config: { ...cfg, runeMechanics: undefined } as typeof cfg }));
+    expect(l.situationalRunes.map((r) => r.runeId)).toEqual([8005]);
+    expect(l.pageAlt!.situationalRunes.map((r) => r.runeId)).toEqual([8010]);
   });
 });
 

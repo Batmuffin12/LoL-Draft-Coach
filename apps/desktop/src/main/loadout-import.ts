@@ -1,4 +1,4 @@
-import { renderReason, type Loadout } from "@ldc/engine";
+import { renderReason, runePageKey, type Loadout } from "@ldc/engine";
 import { LcuWriteError, type LcuImporter } from "@ldc/lcu";
 import type { LoadedConfig } from "./config";
 
@@ -58,22 +58,38 @@ export async function importLoadout(kind: "runes" | "items", shown: { loadout: L
 }
 
 /**
+ * The rune option the player saw, found by its key because the options are rebuilt on every draft
+ * update and can reorder between render and click. Undefined when it's no longer offered; without
+ * a key, the first page.
+ */
+export function pageToImport(l: Pick<Loadout, "page" | "pageAlt">, pageKey?: string): Loadout["page"] | undefined {
+  if (pageKey === undefined) return l.page;
+  return [l.page, l.pageAlt].find((p) => p !== null && runePageKey(p.value) === pageKey);
+}
+
+/**
  * The panel's one import button: "runes" = the rune page and your two summoner spells, "items" =
- * the item set, "all" = both, one after the other. Returns what to tell the player and closes the
- * writer. Only ever called from the player's click (CLAUDE.md: the single approved LCU write exception).
+ * the item set, "all" = both, one after the other. `pageKey` is the rune option the player chose;
+ * when it's gone, nothing is written rather than a page they didn't see. Returns what to tell the
+ * player and closes the writer. Only ever called from the player's click (CLAUDE.md: the single
+ * approved LCU write exception).
  */
 export async function importShownLoadout(
   kind: "runes" | "items" | "all",
   shown: { loadout: Loadout; champion: string },
   writer: LoadoutWriter & Pick<LcuImporter, "close">,
   config: Pick<LoadedConfig, "explain" | "engine">,
+  pageKey?: string,
 ): Promise<string> {
   const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, config.explain.templates, String);
   try {
+    const page = kind === "items" ? shown.loadout.page : pageToImport(shown.loadout, pageKey);
+    if (page === undefined) return say("import.runes.stale");
+    const chosen = { ...shown, loadout: { ...shown.loadout, page } };
     const opts = { say, mapId: Number(config.engine.loadout.items.mapId) };
     const kinds = kind === "all" ? (["runes", "items"] as const) : [kind];
     const done: string[] = [];
-    for (const k of kinds) done.push(await importLoadout(k, shown, writer, opts));
+    for (const k of kinds) done.push(await importLoadout(k, chosen, writer, opts));
     return done.filter(Boolean).join(" · ");
   } finally {
     writer.close();

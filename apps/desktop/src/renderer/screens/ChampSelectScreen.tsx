@@ -10,6 +10,7 @@ import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
+import type { RuneChoice } from "../rune-choice";
 import { Header, Notices } from "./common";
 import { LoadoutBody, LoadoutFooter } from "./LockedInScreen";
 
@@ -52,7 +53,7 @@ function banRows(state: ViewState): BanRow[] {
 }
 
 /** Champ select: the ban screen on your ban turn, otherwise the pick screen. Fits 720px without scrolling. */
-export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: DraftView }) {
+export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; draft: DraftView; runes: RuneChoice }) {
   const now = useNow(250);
   const [tab, setTab] = useState<PickTab>("picks");
   const [sel, setSel] = useState(0);
@@ -95,7 +96,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
   );
   const showLoadout = hover && tab !== "picks";
   const footer = showLoadout ? (
-    <LoadoutFooter pick={hover} />
+    <LoadoutFooter pick={hover} runes={runes} />
   ) : (
     <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
   );
@@ -109,7 +110,7 @@ export function ChampSelectScreen({ state, draft }: { state: ViewState; draft: D
     <Window header={<Header state={state} />} band={band} footer={footer}>
       <Notices state={state} />
       {showLoadout ? (
-        <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} />
+        <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
         <Section title="Suggested bans">
           {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{state.meta?.state === "ready" ? "Ban suggestions appear once your match history has loaded." : "Ban suggestions need the live meta for your rank."}</p>}

@@ -32,9 +32,13 @@ export interface RunePageProps {
   swaps: LoadoutItemView[];
 }
 
+/** Swap rows that fit 720px under the trees; with more than one, each stays on one line and the row's tooltip has the rest. */
+const SWAP_ROWS = 2;
+
 /** The page on its full trees, like the build sites: taken runes lit, the rest grey. Then one line per situational swap. */
 export function RunePage({ primary, secondary, runes, shards, swaps }: RunePageProps) {
   const chosen = new Set(runes.map((r) => r.id));
+  const rows = swaps.slice(0, SWAP_ROWS);
   return (
     <div className="runes">
       <div className="trees">
@@ -55,8 +59,8 @@ export function RunePage({ primary, secondary, runes, shards, swaps }: RunePageP
           )}
         </div>
       </div>
-      {swaps.map((s) => (
-        <div key={s.id} className="swap" title={[s.name, ...s.reasons].join("\n")}>
+      {rows.map((s) => (
+        <div key={s.id} className={rows.length > 1 ? "swap one-line" : "swap"} title={[s.name, ...s.reasons].join("\n")}>
           <ChampIcon champ={s} kind="game" round size={20} />
           <span className="wrap">
             <b>Swap in {s.name}</b>

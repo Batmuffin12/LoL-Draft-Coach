@@ -2,7 +2,7 @@ import type { ChampionAttributes, ChampionBuild, ChampionId, EnemyTrait, ItemSlo
 import type { LoadoutConfig } from "./config";
 import { reason } from "./explain";
 import { ENEMY_TRAITS, itemFitsRole, teamTraits } from "./items";
-import type { PersonalBuild } from "./loadout-sources";
+import { runePageKey, type PersonalBuild } from "./loadout-sources";
 
 /** What the loadout is for: your champion and role, and what the draft shows of the enemy team. */
 export interface LoadoutInput {
@@ -96,6 +96,22 @@ export interface ItemSlotAdvice {
   alternatives: RankedItem[];
 }
 
+/** What a rune option is, for its label in the panel. */
+export type PageKind = "popular" | "best" | "matchup" | "personal" | "second" | "usual" | "personalOther" | "band";
+
+/** A rune swap against this team, with the trait it answers and the measured lift behind it. */
+export type RuneSwap = { runeId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] };
+
+/** The second rune option beside `page`: the page with its own swaps, and how both options read. */
+export interface PageAlt extends LoadoutChoice<RunePageStat> {
+  kind: PageKind;
+  /** Share of the games it comes from that took it (`n` over the build's, or your own, `n`). */
+  share: number;
+  situationalRunes: RuneSwap[];
+  /** How `page` reads next to it. Share null: a matchup page, because snapshots don't publish the matchup's games. */
+  main: { kind: PageKind; share: number | null };
+}
+
 export interface Loadout {
   championId: ChampionId;
   role: string;
@@ -103,9 +119,10 @@ export interface Loadout {
   games: number;
   source: LoadoutSource;
   page: LoadoutChoice<RunePageStat> | null;
+  /** The second rune option; null when no other page clears `minGames` and `minShare`. */
+  pageAlt: PageAlt | null;
   /** Runes worth a look against this enemy team (lift), with the reason. */
-  /** Rune swaps against this team, with the trait they answer and the measured lift behind them. */
-  situationalRunes: { runeId: number; trait: EnemyTrait; lift: number; games: number; reasons: Reason[] }[];
+  situationalRunes: RuneSwap[];
   spells: LoadoutChoice<number[]> | null;
   skills: LoadoutChoice<{ first: number[]; order: number[] }> | null;
   starting: LoadoutChoice<number[]> | null;
@@ -299,6 +316,36 @@ export function rankBoots(input: LoadoutInput): { top: RankedItem; alternatives:
   return top ? { top, alternatives: rest.slice(0, cfg.alternatives) } : null;
 }
 
+/** Where a loadout's page came from, for choosing the option beside it. */
+interface PageSource {
+  page: RunePageStat;
+  build: ChampionBuild;
+  personal: PersonalBuild | null;
+  matchup: boolean;
+  /** The page without a matchup: what the band usually takes. */
+  usual: RunePageStat | null;
+  config: LoadoutConfig;
+}
+
+/**
+ * The option beside `page`: a different page that clears `minGames` and `minShare` (options publish
+ * from 1 game). Normally the next most taken one; beside a matchup page, the usual page; beside
+ * your own page, your next one or else what your rank takes. Null when nothing clears them.
+ */
+function secondPage({ page, build, personal, matchup, usual, config: cfg }: PageSource): { page: RunePageStat; kind: PageKind; share: number; why: Reason } | null {
+  const key = runePageKey(page);
+  const clears = (o: RunePageStat, total: number) => runePageKey(o) !== key && o.n >= cfg.minGames && o.n / total >= cfg.minShare;
+  const fromBand = (kind: PageKind, id: string, o: RunePageStat | undefined) => (o ? { page: o, kind, share: o.n / build.n, why: reason(id, { count: o.n, games: build.n }) } : null);
+  const next = build.pages.find((o) => clears(o, build.n));
+  if (personal) {
+    const own = personal.pages.find((o) => clears(o, personal.n));
+    if (!own) return fromBand("band", "loadout.page.band", next);
+    return { page: own, kind: "personalOther", share: own.n / personal.n, why: reason("loadout.page.personalOther", { count: own.n, games: personal.n, champion: personal.championId }) };
+  }
+  if (matchup && usual && clears(usual, build.n)) return fromBand("usual", "loadout.page.usual", usual);
+  return next === build.pages[0] ? fromBand("popular", "loadout.page.popular", next) : fromBand("second", "loadout.page.second", next);
+}
+
 /**
  * The loadout for a locked-in (or hovered) champion: rune page (into the lane opponent when
  * that matchup is common enough), situational runes, summoner spells, skill order, starting
@@ -340,16 +387,34 @@ export function buildLoadout(input: LoadoutInput): Loadout {
   }
 
   // Runes taken more often against teams like this one, and not already on the page.
-  const onPage = new Set(page?.value.runes ?? []);
-  const seen = new Set<number>();
-  const situationalRunes = build.lifts
-    .filter((l) => l.kind === "rune" && l.lift >= cfg.minLift && !onPage.has(l.id) && traitIntensity(enemy[l.trait], input.traitCuts[l.trait]) > 0)
-    // Only traits a rune mechanic can answer (config); the view then checks the rune's own text.
-    .filter((l) => !cfg.runeMechanics || l.trait in cfg.runeMechanics)
-    .sort((a, b) => b.lift - a.lift)
-    .filter((l) => !seen.has(l.id) && seen.add(l.id))
-    .slice(0, cfg.maxSituational)
-    .map((l) => ({ runeId: l.id, trait: l.trait, lift: l.lift, games: l.n, reasons: [liftReason("rune", l, enemy)] }));
+  const swapsFor = (runes: number[]): RuneSwap[] => {
+    const onPage = new Set(runes);
+    const seen = new Set<number>();
+    return build.lifts
+      .filter((l) => l.kind === "rune" && l.lift >= cfg.minLift && !onPage.has(l.id) && traitIntensity(enemy[l.trait], input.traitCuts[l.trait]) > 0)
+      // Only traits a rune mechanic can answer (config); the view then checks the rune's own text.
+      .filter((l) => !cfg.runeMechanics || l.trait in cfg.runeMechanics)
+      .sort((a, b) => b.lift - a.lift)
+      .filter((l) => !seen.has(l.id) && seen.add(l.id))
+      .slice(0, cfg.maxSituational)
+      .map((l) => ({ runeId: l.id, trait: l.trait, lift: l.lift, games: l.n, reasons: [liftReason("rune", l, enemy)] }));
+  };
+  const situationalRunes = swapsFor(page?.value.runes ?? []);
+
+  // The second option, read beside the page above (which it never changes).
+  const ownPage = personal?.pages[0] ? personal : null;
+  const intoLane = !ownPage && matchup ? matchup : null;
+  const second = page ? secondPage({ page: page.value, build, personal: ownPage, matchup: intoLane !== null, usual: pick(build.pages, build), config: cfg }) : null;
+  const mainOption = (p: LoadoutChoice<RunePageStat>): PageAlt["main"] => {
+    if (ownPage) return { kind: "personal", share: p.n / ownPage.n };
+    if (intoLane) return { kind: "matchup", share: null };
+    const top = build.pages[0];
+    return { kind: top && runePageKey(top) === runePageKey(p.value) ? "popular" : "best", share: p.n / build.n };
+  };
+  const pageAlt: PageAlt | null =
+    page && second
+      ? { ...choice(second.page, pageValue, () => [second.why])!, kind: second.kind, share: second.share, situationalRunes: swapsFor(second.page.runes), main: mainOption(page) }
+      : null;
 
   // Spells depend on the role (Smite in the jungle), so they never come from other roles.
   let spells: LoadoutChoice<number[]> | null;
@@ -450,6 +515,7 @@ export function buildLoadout(input: LoadoutInput): Loadout {
     games: build.n,
     source: { games: build.n, roleGames: roleBuild.n, pooled: pooled !== null, personalGames: personalUsed ? (input.personal?.n ?? 0) : 0, thin },
     page,
+    pageAlt,
     situationalRunes,
     spells,
     skills,

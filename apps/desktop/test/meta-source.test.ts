@@ -71,7 +71,7 @@ function snapshot(createdAt = NOW): MetaSnapshot {
         timelineN: 300,
         games: 400,
         wins: 200,
-        pages: [{ primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8135, 8226, 8210], statPerks: [5001, 5008, 5005], games: 300, wins: 160, n: 300 }],
+        pages: [{ primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8135, 8226, 8210], statPerks: [5001, 5008, 5005], games: 300, wins: 160, n: 300 }, { primaryStyle: 8200, subStyle: 8100, runes: [8229, 8226, 8210, 8237, 8139, 8106], statPerks: [5001, 5008, 5005], games: 60, wins: 33, n: 60 }],
         spells: [{ spells: [4, 14], games: 350, wins: 180, n: 350 }],
         skills: [{ first: [1, 3, 2], order: [1, 2, 3], games: 250, wins: 125, n: 250 }],
         starting: [{ items: [1056, 2003], games: 280, wins: 140, n: 280 }],
@@ -258,7 +258,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(coach.state.pickAdvice.minGames).toEqual(config.engine.rating.minGames);
 
     // A new scoring config from the server applies immediately; wording an older server lacks falls back to the bundled copy.
-    const { ["loadout.page"]: _dropped, ...olderTemplates } = config.explain.templates;
+    const { ["loadout.page"]: _dropped, ["loadout.page.second"]: _reason, ["ui.runes.option.second"]: _label, ["import.runes.stale"]: _stale, ...olderTemplates } = config.explain.templates;
     coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: olderTemplates } });
     expect(coach.state.picks).toHaveLength(2);
 
@@ -271,6 +271,9 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const loadout = coach.state.myPick!.loadout!;
     expect(loadout.page?.runes.map((r) => r.id)).toEqual([8112, 8139, 8138, 8135, 8226, 8210]);
     expect(loadout.page?.reason).toBe("Most taken: 300 of 400 games");
+    // The second option, its wording from the bundled copy after the older server's config above.
+    expect(loadout.pageAlt).toMatchObject({ optionLabel: "Second", reason: "Second most taken: 60 of 400 games", share: 60 / 400, games: 60, winRate: 33 / 60 });
+    expect(loadout.page).toMatchObject({ optionLabel: "Most taken", share: 300 / 400 });
     expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
     expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
     expect(loadout.items[0]!.top.reasons[0]).toBe("66% buy it as item 1; it helps +1.2 points (200 games)");
@@ -297,6 +300,15 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(set.associatedChampions).toEqual([103]);
     expect(set.blocks.map((b) => b.items.map((i) => i.id))).toEqual([["1056", "2003"], ["6655", "3020"]]);
     expect(coach.state.myPick!.importMessage).toBe("Item set saved: open the shop in game to see it");
+
+    // The second rune option: its own page goes to the client, and a page no longer offered writes nothing.
+    lcu.writes.length = 0;
+    await coach.importLoadout("runes", loadout.pageAlt!.key);
+    expect((lcu.writes[0]!.body as { selectedPerkIds: number[] }).selectedPerkIds.slice(0, 6)).toEqual([8229, 8226, 8210, 8237, 8139, 8106]);
+    lcu.writes.length = 0;
+    await coach.importLoadout("all", "no longer offered");
+    expect(lcu.writes).toEqual([]);
+    expect(coach.state.myPick!.importMessage).toBe("The rune options just changed, so nothing was imported: check them and import again");
 
     // Champ select often ends seconds after you lock in: the card and its loadout stay until the game is over.
     lcu.push("/lol-champ-select/v1/session", null, "Delete");
