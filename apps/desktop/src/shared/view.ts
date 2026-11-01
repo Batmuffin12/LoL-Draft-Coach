@@ -356,8 +356,8 @@ export interface PlaystyleView {
   axes: AxisView[];
   /** Headline numbers against your rank (empty without the style config). */
   numbers: NumberView[];
-  /** One sentence from your high and low axes ("You out-farm your rank. Vision holds you back."), no numbers; null without axes. */
-  summary: string | null;
+  /** Your high and low axes as two short lists ("Strong": Out-farm your rank; "Weak spots": Vision), no numbers; empty without axes. */
+  summary: FactRow[];
   /** How you play the role in your last games; null without the style config. */
   how: {
     games: number;

@@ -1,6 +1,6 @@
 import { computePlaystyle, formatMetric, metricLabel, metricShort, playstyleRoles, renderReason, styleProfile, type EngineConfig, type ExplainConfig, type MetricReference, type MetricResult, type SideSplit, type StyleProfile } from "@ldc/engine";
 import type { ChampionId, Position, UserMatch } from "@ldc/shared";
-import type { NumberView, PlaystyleView } from "../shared/view";
+import type { FactRow, NumberView, PlaystyleView } from "../shared/view";
 
 /** One metric as a sentence:"CS at 10 min: you 56, typical in your rank 61". */
 export function metricSentence(m: MetricResult, explain: ExplainConfig): string {
@@ -60,30 +60,24 @@ export function sideView(s: SideSplit | null, explain: ExplainConfig): string | 
   });
 }
 
-/** "A", "A and B", "A, B and C" (the joining word from the templates). */
-export function listText(parts: string[], templates: Record<string, string>): string {
-  const and = templates["list.and"] ?? "and";
-  return parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} ${and} ${parts.at(-1)}`;
-}
-
 /**
- * One sentence about a role's style from its high and low axes, built from a sentence part per
- * axis and level ("You out-farm your rank and win lane early. Vision and early deaths hold you back.").
- * No numbers; null without axes.
+ * A role's style from its high and low axes, as two short lists built from a phrase per axis and
+ * level ("Strong": Out-farm your rank, Win lane early; "Weak spots": Vision, Early deaths). No numbers;
+ * one line when nothing stands out, empty without axes.
  */
-export function styleSummary(axes: { axis: string; level: "high" | "mid" | "low" }[], templates: Record<string, string>): string | null {
-  if (!axes.length) return null;
-  const part = (a: { axis: string }, level: string) => templates[`style.summary.${level}.${a.axis}`];
-  const high = axes.filter((a) => a.level === "high").map((a) => part(a, "high")).filter((x): x is string => !!x);
-  const low = axes.filter((a) => a.level === "low").map((a) => part(a, "low")).filter((x): x is string => !!x);
-  const say = (id: string, slots: Record<string, string | number>) => renderReason({ id, slots }, templates, String);
-  const out: string[] = [];
-  if (high.length) out.push(say("style.summary.strong", { parts: listText(high, templates) }));
-  if (low.length) {
-    const t = say("style.summary.weak", { parts: listText(low, templates), n: low.length });
-    out.push(t.charAt(0).toUpperCase() + t.slice(1));
-  }
-  return out.length ? out.join(" ") : say("style.summary.even", {});
+export function styleSummary(axes: { axis: string; level: "high" | "mid" | "low" }[], templates: Record<string, string>): FactRow[] {
+  if (!axes.length) return [];
+  const say = (id: string) => renderReason({ id, slots: {} }, templates, String);
+  const row = (level: "high" | "low", label: string): FactRow[] => {
+    const items = axes
+      .filter((a) => a.level === level)
+      .map((a) => templates[`style.summary.${level}.${a.axis}`])
+      .filter((x): x is string => !!x)
+      .map((x) => ({ text: x.charAt(0).toUpperCase() + x.slice(1) }));
+    return items.length ? [{ label: say(label), items }] : [];
+  };
+  const rows = [...row("high", "style.summary.strong"), ...row("low", "style.summary.weak")];
+  return rows.length ? rows : [{ label: say("style.summary.evenLabel"), items: [{ text: say("style.summary.even") }] }];
 }
 
 /**

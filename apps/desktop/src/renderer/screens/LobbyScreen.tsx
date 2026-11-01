@@ -251,6 +251,8 @@ function Learn({ learn, flow }: { learn: LearnView; flow: boolean }) {
 /** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
 function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
+  // Many strengths and weak spots: the note under your numbers moves to hover.
+  const fits = useFits(sub);
   if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your style per role shows here once your recent games are loaded."}</p>}</Section>;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
@@ -272,12 +274,12 @@ function Style({ state }: { state: ViewState }) {
           end={`${p.games} ${p.games === 1 ? "game" : "games"} · ${t("style.dashed")}`}
         />
         <StyleRadar axes={p.axes} role={roleName(p.role)} />
-        {p.summary && <span className="caption text">{p.summary}</span>}
+        {p.summary.length > 0 && <Facts rows={p.summary} flow />}
       </section>
       {p.numbers.length > 0 && (
-        <Section title={t("style.numbers")} aside={<span className="micro" title={how || undefined}>{t("style.legend")}</span>}>
+        <Section title={t("style.numbers")} aside={<span className="micro" title={(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n")) || undefined}>{t("style.legend")}</span>}>
           <NumberRows items={p.numbers} />
-          <span className="micro">{t("style.numbersNote")}</span>
+          {fits && <span className="micro">{t("style.numbersNote")}</span>}
         </Section>
       )}
     </>
