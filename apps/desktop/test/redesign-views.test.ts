@@ -71,7 +71,7 @@ describe("pool advice", () => {
     expect(a.coverage!.covers[2]).toEqual(expect.arrayContaining(["physical", "frontline"]));
     expect(a.coverage!.covers[3]).toBeUndefined();
     // The two champions past the matrix's columns are listed under it.
-    expect(a.also).toBe("Also rusty: Riven, Irelia");
+    expect(a.also).toEqual([{ label: "Also rusty", items: [{ text: "Riven", champion: expect.objectContaining({ id: 4, name: "Riven" }) }, { text: "Irelia", champion: expect.objectContaining({ id: 5, name: "Irelia" }) }] }]);
   });
 
   it("suggests the champion you know that fills the biggest gap, and says what nothing you know covers", () => {
@@ -87,9 +87,9 @@ describe("pool advice", () => {
       templates,
       lookup,
     );
-    expect(a.nextStep).toMatchObject({ champion: { name: "Yone" }, title: "Play Yone again", text: "It adds physical damage and a frontline to your top pool, and you already have games on it." });
+    expect(a.nextStep).toMatchObject({ champion: { name: "Yone" }, title: "Play Yone again", adds: { label: "It adds", items: [{ text: "Physical damage" }, { text: "Frontline" }] } });
     expect(a.nextStep!.evidence).toContain("3 of your last 5");
-    expect(a.missing).toBe("Still missing: crowd control. None of your top champions bring it.");
+    expect(a.missing).toEqual({ row: { label: "Still missing", items: [{ text: "Crowd control" }] }, note: "None of your top champions bring it" });
     const none = poolAdvice("top", pool([]), attributes, cov, templates, lookup);
     expect(none.nextStep).toBeNull();
     expect(none.missing).toBeNull();

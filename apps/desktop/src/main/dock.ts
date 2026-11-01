@@ -38,6 +38,28 @@ export function sameRect(a: Rect | null, b: Rect | null): boolean {
   return !!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }
 
+/** What decides whether a minimized panel comes back by itself. */
+export interface DraftRestoreInput {
+  /** The last state had a draft. */
+  hadDraft: boolean;
+  /** This state has a draft. */
+  hasDraft: boolean;
+  minimized: boolean;
+  /** The client's gameflow phase, if known. */
+  phase: string | null;
+}
+
+/** A game is starting or running: the panel never comes up over it. */
+const IN_GAME_PHASES = new Set(["GameStart", "InProgress", "Reconnect"]);
+
+/**
+ * Restore the minimized panel only at the moment a draft begins (no draft → draft): minimizing
+ * again during that draft sticks, and nothing happens during a game. Pure.
+ */
+export function shouldRestoreForDraft({ hadDraft, hasDraft, minimized, phase }: DraftRestoreInput): boolean {
+  return !hadDraft && hasDraft && minimized && !(phase !== null && IN_GAME_PHASES.has(phase));
+}
+
 export interface ClientWindowFinder {
   /** Physical-pixel bounds of the visible League client window, or null if not found / minimised. */
   find(): Rect | null;

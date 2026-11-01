@@ -8,7 +8,7 @@ import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
 import { Coach } from "../src/main/coach";
 import { readEnv } from "../src/main/env";
 import type { ViewState } from "../src/shared/view";
-import { fakeDdragonFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, stepUntil, waitFor } from "./helpers";
 
 let server: MockLcuServer | null = null;
 let coach: Coach | null = null;
@@ -36,7 +36,7 @@ describe("Coach (mock League client end to end)", () => {
     expect(me.position).toBe("middle");
 
     // Play until the local player's pick turn.
-    while (coach.state.draft?.localAction !== "pick" && server.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(server, coach, () => coach!.state.draft?.localAction === "pick");
     expect(coach.state.draft?.localAction).toBe("pick");
     // The phase length comes with the draft, for the draining line.
     expect(coach.state.draft!.totalSeconds).toBeGreaterThanOrEqual(Math.round(coach.state.draft!.timeLeftMs / 1000));
@@ -72,7 +72,7 @@ describe("readEnv", () => {
 });
 
 describe("Coach app version", () => {
-  it("shows its version, then an update that installs on restart (once, with a notice)", () => {
+  it("shows its version, then an update that installs on restart, in the footer and never as a notice", () => {
     const connector = new LcuConnector({ discover: async () => null, pollIntervalMs: 20 });
     const ddragon = new DataDragon({ cacheDir: mkdtempSync(join(tmpdir(), "ldc-v-")), fetch: fakeDdragonFetch() });
     const c = new Coach({ connector, ddragon });
@@ -81,6 +81,6 @@ describe("Coach app version", () => {
     c.updateReady("1.0.1");
     c.updateReady("1.0.1");
     expect(c.state.app).toEqual({ version: "1.0.0", updateReady: "1.0.1" });
-    expect(c.state.notices).toEqual(["Version 1.0.1 is ready and installs when you close the app."]);
+    expect(c.state.notices).toEqual([]);
   });
 });

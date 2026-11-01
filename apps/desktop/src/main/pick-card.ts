@@ -18,7 +18,7 @@ import {
   type RankBandConfig,
 } from "@ldc/engine";
 import type { BanSuggestion, ChampionId, DraftState, Position, RankBandId, Reason, UserMatch } from "@ldc/shared";
-import type { BanView, ChampView, MyPickView } from "../shared/view";
+import type { BanView, ChampView, FactRow, ImportLine, MyPickView } from "../shared/view";
 import type { LoadedConfig } from "./config";
 import { champView, type ChampionLookup } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
@@ -67,7 +67,7 @@ export function cardLoadout(championId: ChampionId, ctx: PickCardContext): Loado
 }
 
 /** The "Your pick" card for a champion: how it looks in this draft and its loadout. */
-export function pickCardView(championId: ChampionId, hovering: boolean, loadout: Loadout | null, importMessage: string | null, ctx: PickCardContext): MyPickView {
+export function pickCardView(championId: ChampionId, hovering: boolean, loadout: Loadout | null, importLines: ImportLine[], ctx: PickCardContext): MyPickView {
   const { live, lookup, say, config } = ctx;
   const assessed = live ? assessPick(live, championId) : null;
   const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
@@ -92,7 +92,7 @@ export function pickCardView(championId: ChampionId, hovering: boolean, loadout:
           spikeSlots: live && ctx.role ? powerSpikes(live.index, championId, ctx.role, config.engine.spikes).filter((s) => s.kind === "item").map((s) => s.at) : [],
         })
       : null,
-    importMessage,
+    importLines,
     hovering,
     matchups: ctx.index ? draftMatchups(ctx.draft, ctx.index, championId, ctx.role, lookup, config.app.sharedLanes) : null,
     plan: [...(live ? gamePlan(live, championId) : []), ...ctx.recordVsLane(championId)].map(say),
@@ -121,6 +121,14 @@ export function banViews(live: LiveInput, ctx: Pick<PickCardContext, "draft" | "
   };
 }
 
+/** Filled into a role you rarely play, as a labelled row. */
+export function filledRow(filled: NonNullable<ReturnType<typeof filledRole>>, say: Say): FactRow {
+  return {
+    label: say({ id: "picks.filled.label", slots: {} }),
+    items: [{ text: say({ id: "picks.filled.share", slots: { role: filled.role, share: filled.share, games: filled.games } }) }, { text: say({ id: "picks.filled.lean", slots: {} }) }],
+  };
+}
+
 /**
  * The draft's notes around the picks: their team in short (damage type, main engage, once two are
  * picked), who you face in lane (the client doesn't say enemy roles) and, filled into a role you
@@ -132,11 +140,11 @@ export function draftNotes(
   live: LiveInput | null,
   filled: ReturnType<typeof filledRole>,
   ctx: Pick<PickCardContext, "index" | "lookup" | "say">,
-): { enemyNotes: string[]; lane: { role: Position; champion: ChampView | null } | null; filledNote: string | null } {
+): { enemyNotes: string[]; lane: { role: Position; champion: ChampView | null } | null; filledNote: FactRow | null } {
   const { say } = ctx;
   return {
     enemyNotes: live ? enemyTeamNotes(live).map(say) : [],
     lane: role ? { role, champion: champView(laneOpponent(draft, role, ctx.index) ?? 0, ctx.lookup) } : null,
-    filledNote: filled && live ? say({ id: "picks.filled", slots: { role: filled.role, share: filled.share, games: filled.games } }) : null,
+    filledNote: filled && live ? filledRow(filled, say) : null,
   };
 }

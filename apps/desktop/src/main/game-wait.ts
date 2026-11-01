@@ -1,5 +1,5 @@
 import type { LcuConnector } from "@ldc/lcu";
-import type { UserMatch } from "@ldc/shared";
+import type { AdviceRecord, UserMatch } from "@ldc/shared";
 
 /** Your history has the game with this client game id (Match-V5 ids end with it). */
 export function hasGame(matches: UserMatch[] | undefined, gameId: number): boolean {
@@ -11,6 +11,12 @@ export async function lastClientGame(connector: LcuConnector, queues: number[]):
   const games = await connector.getRecentGames(1).catch(() => []);
   const g = games[0];
   return g && queues.includes(g.queueId) ? g : null;
+}
+
+/** A game that ended while the panel was closed (or before Riot published it): the client has it, your history doesn't yet. */
+export async function missedGame(connector: LcuConnector, queues: number[], matches: UserMatch[] | undefined): Promise<number | null> {
+  const last = await lastClientGame(connector, queues);
+  return last && matches && !hasGame(matches, last.gameId) ? last.gameId : null;
 }
 
 /**
@@ -29,6 +35,8 @@ export class NewGameWaiter {
       hasGame: (gameId: number) => boolean;
       /** The panel's "waiting for your last game" state. */
       pending: (waiting: boolean) => void;
+      /** Every retry is used and the game isn't there: the card stops promising a result. */
+      gaveUp?: (gaveUp: boolean) => void;
     },
   ) {}
 
@@ -38,6 +46,7 @@ export class NewGameWaiter {
     const refresh = () => profiles.refresh();
     const run = ++this.run;
     this.deps.pending(true);
+    this.deps.gaveUp?.(false);
     try {
       await refresh();
       for (const s of this.deps.retrySeconds()) {
@@ -46,10 +55,22 @@ export class NewGameWaiter {
         if (run !== this.run || this.deps.hasGame(gameId)) return;
         await refresh();
       }
+      if (run === this.run && !this.deps.hasGame(gameId)) this.deps.gaveUp?.(true);
     } finally {
       if (run === this.run) this.deps.pending(false);
     }
   }
+}
+
+/**
+ * The game ended: sends what the coach showed for it, then waits for it to reach your history.
+ * The game: from the advice log, else the client's own last game.
+ */
+export async function afterGame(record: AdviceRecord | null, o: { connector: LcuConnector; profiles: { recordAdvice(r: AdviceRecord): Promise<unknown>; refresh(): Promise<void> } | null; queues: number[]; waiter: NewGameWaiter }): Promise<void> {
+  if (record) await o.profiles?.recordAdvice(record).catch(() => {});
+  const gameId = record?.gameId ?? (await lastClientGame(o.connector, o.queues))?.gameId ?? null;
+  if (gameId !== null) await o.waiter.wait(gameId);
+  else await o.profiles?.refresh();
 }
 
 /** The game being played (from the gameflow session): its id ties the advice shown in champ select to the game in your history. */

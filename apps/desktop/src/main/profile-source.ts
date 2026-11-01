@@ -10,8 +10,14 @@ import type { AccountView } from "../shared/view";
 import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
 import { loadProfile, profileFromMatches, type PersonalProfile } from "./profile";
-import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile } from "./server-client";
-import { retryDelay, serverProblem } from "./server-problem";
+import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile, type ServerSyncState } from "./server-client";
+import { logUnexpected, retryDelay, serverProblem, serverProblemText } from "./server-problem";
+
+/** A sync the server says failed. */
+type SyncFailure = Extract<ServerSyncState, { state: "error" }>;
+
+/** With no answer after this long, the panel says the server is probably waking up. */
+const WAKE_NOTICE_MS = 4_000;
 
 /** The local player's Riot ID, read from the League client (or RIOT_ID in .env for the mock client). */
 export interface Identity {
@@ -39,6 +45,10 @@ export interface ProfileSource extends EventEmitter<ProfileSourceEvents> {
   load(identity: Identity, opts: { bandFromApi: boolean }): Promise<void>;
   /** A game just ended: fetch the new games. */
   refresh(): Promise<void>;
+  /** The League client isn't open: show what is saved on this PC, without asking the server. */
+  loadSaved?(): Promise<void>;
+  /** Something failed earlier: try it again now (does nothing when all is well, so it never wakes the server for no reason). */
+  retry?(): Promise<void>;
   /** Keeps what the coach showed for a game that has ended (the advice log). */
   recordAdvice(record: AdviceRecord): Promise<void>;
   /** Server mode: the current registration state. */
@@ -48,7 +58,7 @@ export interface ProfileSource extends EventEmitter<ProfileSourceEvents> {
 const riotIdOf = (i: Identity) => `${i.gameName}#${i.tagLine}`;
 const sameRiotId = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-const readyStatus = (games: PlayerGame[], backlog?: number | null): ProfileStatus => ({ state: "ready", games: games.length, role: mainRole(games), ...(backlog ? { backlog } : {}) });
+const readyStatus = (games: PlayerGame[], backlog?: number | null): Extract<ProfileStatus, { state: "ready" }> => ({ state: "ready", games: games.length, role: mainRole(games), ...(backlog ? { backlog } : {}) });
 
 /**
  * Dev-only: calls the Riot API from this process with the key in the local .env
@@ -179,6 +189,10 @@ export interface ServerProfileSourceDeps {
   cacheFile?: string;
   /** Waits before trying a failed server again (default SERVER_RETRY_DELAYS_MS). */
   retryDelaysMs?: number[];
+  /** With no answer after this long, say the server is waking up (default WAKE_NOTICE_MS). */
+  wakeNoticeMs?: number;
+  /** The panel's wording (explain templates "ui.*", without the prefix). */
+  copy?: Record<string, string>;
 }
 
 /** The match cache file: whose matches they are, and the matches as the server sent them. */
@@ -189,6 +203,8 @@ const MatchCacheSchema = z.object({
   // Kept so the coach works from this file while the server is down (caches before 0.9 lack them).
   masteries: z.array(z.looseObject({ championId: z.number(), level: z.number(), points: z.number() })).optional(),
   rankHistory: z.array(z.looseObject({ day: z.string(), queueType: z.string(), tier: z.string(), rank: z.string().nullable() })).optional(),
+  // Your rank band, for coaching from this file before the League client is open (caches before 1.0.4 lack it).
+  band: z.number().nullable().optional(),
 });
 
 /** Match ids asked for by name in one request (the server's PROFILE_IDS_MAX); more: the whole history. */
@@ -215,16 +231,21 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   private polling = false;
   private stopped = false;
   private view: AccountView;
-  /** The disk cache was read (once per registration). */
-  private cacheRead = false;
+  /** The disk cache's read, once per registration. */
+  private cacheRead: Promise<void> | null = null;
   /** Cache writes, one after another. */
   private cacheWrite: Promise<void> = Promise.resolve();
   private masteries: ServerProfile["masteries"] = [];
   private rankHistory: ServerProfile["rankHistory"] = [];
   /** Your games in the last profile emitted. */
   private games: PlayerGame[] = [];
-  /** The server answered with a profile since the start (or the last sign-in). */
-  private live = false;
+  /** A profile was emitted since the start (or the last sign-in). */
+  private shown = false;
+  /** Older games still loading on the server, and your rank band, as the server last said. */
+  private backlog: number | null | undefined = undefined;
+  private savedBand: number | null = null;
+  /** The server's last word on your games' sync was that it failed. */
+  private syncFailed = false;
   /** Server failures in a row, and the timer that tries again. */
   private failures = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -271,6 +292,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       return;
     }
     if (!sameRiotId(this.registeredAs, riotIdOf(identity))) {
+      this.cancelRetry();
       this.setAccount({
         state: "mismatch",
         message: `This app is set up for ${this.registeredAs}, but the League client is logged in as ${riotIdOf(identity)}. Register again to switch.`,
@@ -278,6 +300,23 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "error", message: `Registered as ${this.registeredAs}, not ${riotIdOf(identity)}.` });
       return;
     }
+    // The right account is back in the client.
+    if (this.view.state === "mismatch") this.setAccount({ state: "registered", message: null });
+    await this.fetchProfile();
+  }
+
+  async loadSaved(): Promise<void> {
+    if (!this.client || !this.registeredAs || this.shown) return;
+    await this.readCache();
+    if (this.savedBand !== null) this.emit("band", this.savedBand);
+    this.showSaved();
+  }
+
+  async retry(): Promise<void> {
+    if (!this.client || this.view.state !== "registered") return;
+    if (this.syncFailed) return this.refresh(); // Reading the profile wouldn't start it again (the server's cooldown).
+    if (this.failures === 0 && !this.retryTimer) return;
+    this.cancelRetry();
     await this.fetchProfile();
   }
 
@@ -360,12 +399,20 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.client = client;
       this.registeredAs = r.riotId;
       this.matches.clear();
+      this.forgetSaved();
       await this.clearCache();
       this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null, inviteCode: null });
-      this.emit("status", { state: "loading", done: 0, total: 0 });
+    } catch (err) {
+      logUnexpected("Registering", err);
+      this.setAccount({ state: "error", message: serverProblemText(err) });
+      return;
+    }
+    // Registered, and the invite is used: from here a failure is the server's, retried like any other, never a failed registration.
+    this.emit("status", { state: "loading", done: 0, total: 0 });
+    try {
       await this.waitForSync();
     } catch (err) {
-      this.setAccount({ state: "error", message: (err as Error).message });
+      this.onServerError(err);
     }
   }
 
@@ -392,14 +439,36 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       await this.client?.deleteMe();
       await this.signOut();
     } catch (err) {
-      this.setAccount({ message: (err as Error).message });
+      logUnexpected("Deleting data", err);
+      this.setAccount({ message: `Your data wasn't deleted. ${serverProblemText(err)}` });
     }
   }
 
-  private async fetchProfile(): Promise<void> {
+  /** What is saved on this PC, at once (the network can take minutes when the server sleeps). */
+  private showSaved(): void {
+    if (this.shown || !this.matches.size) return;
+    const { games } = this.emitProfile();
+    this.emit("status", readyStatus(games, this.backlog));
+  }
+
+  /** Says the server is probably waking up if the request takes long; returns what ends the wait. */
+  private wakeNotice(): () => void {
+    const timer = setTimeout(() => {
+      this.emit("status", this.matches.size ? { ...readyStatus(this.games, this.backlog), waking: true } : { state: "loading", done: 0, total: 0, waking: true });
+    }, this.deps.wakeNoticeMs ?? WAKE_NOTICE_MS);
+    timer.unref?.();
+    return () => clearTimeout(timer);
+  }
+
+  /** `failed`: the sync that just failed. That's what gets shown, and nothing waits for another. */
+  private async fetchProfile(failed?: SyncFailure): Promise<void> {
     if (!this.client) return;
+    let endWait = () => {};
     try {
       await this.readCache();
+      this.showSaved();
+      if (!failed && !this.matches.size) this.emit("status", { state: "loading", done: 0, total: 0 });
+      endWait = this.wakeNotice();
       const client = this.client;
       const newest = Math.max(0, ...[...this.matches.values()].map((m) => m.match.endedAt));
       const cached = this.matches.size > 0;
@@ -415,10 +484,13 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
           if (missing.some((id) => !got.has(id))) p = await client.profile();
         }
       }
-      if (this.apply(p)) this.saveCache();
+      endWait();
+      const sync = failed ?? p.sync;
+      if (this.apply({ ...p, sync })) this.saveCache();
       await this.flushOutbox();
-      if (p.sync.state === "running") await this.waitForSync();
+      if (sync.state === "running") await this.waitForSync();
     } catch (err) {
+      endWait();
       this.onServerError(err);
     }
   }
@@ -432,17 +504,21 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   }
 
   /** Fills the matches from the disk cache, once, when it belongs to this registration. */
-  private async readCache(): Promise<void> {
+  private readCache(): Promise<void> {
+    this.cacheRead ??= this.readCacheFile();
+    return this.cacheRead;
+  }
+
+  private async readCacheFile(): Promise<void> {
     const file = this.deps.cacheFile;
-    if (this.cacheRead || !file) return;
-    this.cacheRead = true;
-    if (this.matches.size || !this.registeredAs) return;
+    if (!file || this.matches.size || !this.registeredAs) return;
     try {
       const c = MatchCacheSchema.parse(JSON.parse(await readFile(file, "utf8")));
       if (c.serverUrl !== this.view.serverUrl || !sameRiotId(c.riotId, this.registeredAs)) return;
       for (const m of c.matches as unknown as UserMatch[]) this.matches.set(m.match.matchId, m);
       this.masteries = c.masteries ?? [];
       this.rankHistory = c.rankHistory ?? [];
+      this.savedBand = c.band ?? null;
     } catch {
       // No cache yet, or an unreadable one: the whole history comes from the server.
     }
@@ -453,7 +529,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     const serverUrl = this.view.serverUrl;
     const riotId = this.registeredAs;
     if (!file || !serverUrl || !riotId) return;
-    const body = JSON.stringify({ serverUrl, riotId, matches: [...this.matches.values()], masteries: this.masteries, rankHistory: this.rankHistory });
+    const body = JSON.stringify({ serverUrl, riotId, matches: [...this.matches.values()], masteries: this.masteries, rankHistory: this.rankHistory, band: this.savedBand });
     // Written next to it, then renamed: an app closed mid-write leaves the old cache, never half a file.
     this.cacheWrite = this.cacheWrite
       .then(() => mkdir(dirname(file), { recursive: true }))
@@ -468,7 +544,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   }
 
   private async clearCache(): Promise<void> {
-    this.cacheRead = true;
+    this.cacheRead = Promise.resolve();
     const file = this.deps.cacheFile;
     if (!file) return;
     await this.cacheWrite;
@@ -486,13 +562,16 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       dropped++;
     }
 
+    // Nothing new since the saved games on screen: no second round of working it all out.
+    const same = this.shown && !p.matches.length && !dropped && JSON.stringify(p.masteries) === JSON.stringify(this.masteries) && JSON.stringify(p.rankHistory) === JSON.stringify(this.rankHistory);
     this.masteries = p.masteries;
     this.rankHistory = p.rankHistory;
-    this.live = true;
+    this.backlog = p.user.historyBacklog;
+    this.savedBand = p.user.band;
     this.failures = 0;
     this.cancelRetry();
     if (this.bandFromApi && p.user.band !== null) this.emit("band", p.user.band);
-    const profile = this.emitProfile();
+    const games = same ? this.games : this.emitProfile().games;
     // The server's log, plus records still in the outbox (so a card doesn't vanish while unsent).
     // Re-sent on every poll: only a change rebuilds the post-game card.
     const advice = this.pending.reduce(mergeAdvice, p.advice);
@@ -500,31 +579,53 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.advice = advice;
       this.emit("advice", this.advice);
     }
-    if (p.sync.state === "running") this.emit("status", { state: "loading", done: p.sync.done, total: p.sync.total });
-    else if (p.sync.state === "error" && !profile.games.length) this.emit("status", { state: "error", message: `The server couldn't load your games: ${p.sync.message}` });
-    else this.emit("status", readyStatus(profile.games, p.user.historyBacklog));
+    this.syncFailed = p.sync.state === "error";
+    this.emit("status", this.statusAfter(p.sync, games));
     return p.matches.length > 0 || dropped > 0;
   }
 
-  /** Polls the server's sync for this player until it finishes, then fetches the new games. */
+  /**
+   * What the panel shows for this sync state. With games to coach from there is no loading state
+   * (a routine sync doesn't flash "loading"), and a failed sync is a note on them.
+   */
+  private statusAfter(sync: ServerSyncState, games: PlayerGame[]): ProfileStatus {
+    if (sync.state === "error") {
+      if (!games.length) return { state: "error", message: this.say("profile.syncFailedEmpty", sync.message) };
+      return { ...readyStatus(games, this.backlog), problem: this.say("profile.syncFailed", sync.message) };
+    }
+    if (sync.state === "running" && !games.length) return { state: "loading", done: sync.done, total: sync.total };
+    return readyStatus(games, this.backlog);
+  }
+
+  private say(key: string, reason: string): string {
+    return (this.deps.copy?.[key] ?? key).replace("{reason}", reason);
+  }
+
+  /**
+   * Polls the server's sync for this player until it finishes, then fetches the new games. A failed
+   * sync is shown once and nothing goes on asking: the next try comes with the next game, the next
+   * champ select or Retry now, so the server can sleep.
+   */
   private async waitForSync(): Promise<void> {
     if (!this.client || this.polling) return;
     this.polling = true;
+    let failed: SyncFailure | undefined;
     try {
       for (;;) {
         if (this.stopped) return;
         const s = await this.client.syncState();
         if (s.state === "running") {
-          this.emit("status", { state: "loading", done: s.done, total: s.total });
+          if (!this.matches.size) this.emit("status", { state: "loading", done: s.done, total: s.total });
           await new Promise((r) => setTimeout(r, this.deps.pollMs ?? 2_000));
           continue;
         }
+        if (s.state === "error") failed = s;
         break;
       }
     } finally {
       this.polling = false;
     }
-    await this.fetchProfile();
+    await this.fetchProfile(failed);
   }
 
   /** Emits the profile from the matches, masteries and rank history at hand. */
@@ -540,6 +641,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       })),
     );
     this.games = profile.games;
+    this.shown = true;
     this.emit("profile", { ...profile, rankHistory: this.rankHistory });
     return profile;
   }
@@ -548,7 +650,10 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
     this.masteries = [];
     this.rankHistory = [];
     this.games = [];
-    this.live = false;
+    this.shown = false;
+    this.backlog = undefined;
+    this.savedBand = null;
+    this.syncFailed = false;
     this.failures = 0;
     this.cancelRetry();
   }
@@ -559,17 +664,14 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
   }
 
   /** Tries the server again after a wait that grows with each failure in a row. */
-  private scheduleRetry(): number {
-    if (!this.retryTimer) this.failures++;
-    const wait = retryDelay(this.failures, this.deps.retryDelaysMs);
-    if (!this.retryTimer && !this.stopped) {
-      this.retryTimer = setTimeout(() => {
-        this.retryTimer = null;
-        void this.fetchProfile();
-      }, wait);
-      this.retryTimer.unref?.();
-    }
-    return wait;
+  private scheduleRetry(): void {
+    if (this.retryTimer || this.stopped) return;
+    this.failures++;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.fetchProfile();
+    }, retryDelay(this.failures, this.deps.retryDelaysMs));
+    this.retryTimer.unref?.();
   }
 
   private onServerError(err: unknown): void {
@@ -588,14 +690,16 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "idle" });
       return;
     }
-    const problem = serverProblem(err, this.scheduleRetry());
+    logUnexpected("Coach server", err);
+    this.scheduleRetry();
+    const problem = serverProblem(err);
     if (!this.matches.size) {
       this.emit("status", { state: "error", message: problem });
       return;
     }
     // Your games saved on this PC keep the coach going; the notice says what's wrong.
-    const games = this.live ? this.games : this.emitProfile().games;
-    this.emit("status", { state: "ready", games: games.length, role: mainRole(games), problem });
+    const games = this.shown ? this.games : this.emitProfile().games;
+    this.emit("status", { ...readyStatus(games, this.backlog), problem });
   }
 }
 

@@ -1,8 +1,11 @@
-import type { LoadoutItemView, LoadoutView, MyPickView } from "../../shared/view";
-import { t } from "../format";
+import type { LoadoutItemView, LoadoutView, MyPickView, RunePageView } from "../../shared/view";
+import { gameCount, isThin, rate, t, tip as focusTip } from "../format";
+import { useFitLevel } from "../hooks";
+import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
 import { ChampIcon } from "./ChampIcon";
 import { MatchupTable } from "./MatchupTable";
+import { Pills } from "./Pills";
 import { RunePage } from "./RunePage";
 import { Section } from "./Section";
 import { SkillGrid, Stat } from "./SkillGrid";
@@ -15,37 +18,44 @@ const LATER_ROWS = 3;
 const tip = (i: LoadoutItemView) => [i.name, ...i.reasons].join("\n");
 const lower = (s: string) => s.replace(/^./, (c) => c.toLowerCase());
 
-/** Item icons with the items named and their reasons, wrapping ("Vs this team", the role quest). */
-function ItemLine({ items }: { items: LoadoutItemView[] }) {
+/** One row per item: its icon and name, then why, on hover only when `brief` ("Vs this team", the role quest, "Later: pick by situation"). */
+function ItemRows({ items, brief }: { items: LoadoutItemView[]; brief: boolean }) {
   return (
-    <div className="item-line">
-      <span className="icons">
-        {items.map((i) => (
-          <ChampIcon key={i.id} champ={i} kind="game" size={22} title={tip(i)} />
-        ))}
-      </span>
-      <span className="caption">
-        {items.map((i, k) => (
-          <span key={i.id}>
-            {k > 0 && "; "}
+    <div className="item-rows">
+      {items.map((i) => (
+        <div key={i.id} className="later-row" {...focusTip(tip(i))}>
+          <ChampIcon champ={i} kind="game" size={22} title="" />
+          <span className="caption wrap">
             <b className="text">{i.name}</b>
-            {i.reasons[0] ? ` ${lower(i.reasons[0])}` : ""}
+            {!brief && i.reasons[0] ? ` — ${lower(i.reasons[0])}` : ""}
           </span>
-        ))}
-      </span>
+        </div>
+      ))}
     </div>
   );
 }
 
-/** Runes on their full trees with the page's numbers; then spells and the skill grid (both as they were). */
-export function RunesTab({ loadout: l }: { loadout: LoadoutView }) {
-  const p = l.page;
+/** A rune option in the switch: what it is, how many take it and how it does ("Second · 15% · 55% WR"); games for a matchup page, which has no share, and in place of a win rate from too few games. Short enough to stay on one row. */
+export function optionText(o: RunePageView): string {
+  const count = gameCount(o.games);
+  const thin = o.winRate === null || isThin(o.games);
+  return [o.optionLabel, o.share !== null ? rate(o.share) : thin ? null : count, thin ? count : t("runes.optionWinRate", { rate: rate(o.winRate) })].filter(Boolean).join(" · ");
+}
+
+/** Runes on their full trees with the page's numbers, or a switch in place of that head when there's a second option; then spells and the skill grid (both as they were). */
+export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: RuneChoice }) {
+  const p = shownPage(l, runes.key);
+  const options = l.page && l.pageAlt ? [l.page, l.pageAlt] : [];
+  const head = options.length ? { className: "rune-options" } : { title: "Runes", aside: p && <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
+  // With swaps and a notice or import result the screen runs short: first the second swap moves to hover, then the spells' head goes, then the first swap moves to hover too.
+  const level = useFitLevel(p?.key, 3);
   return (
     <>
       {p && (
-        <Section title="Runes" aside={<Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} />}>
+        <Section {...head}>
+          {options.length > 0 && <div data-tour="rune-options"><Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={runes.choose} /></div>}
           {p.primaryTree && p.secondaryTree ? (
-            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={l.situationalRunes} />
+            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} maxSwaps={level > 2 ? 0 : level > 0 ? 1 : undefined} />
           ) : (
             <div className="icons">
               {[...p.runes, ...p.shards].map((r, i) => (
@@ -56,7 +66,7 @@ export function RunesTab({ loadout: l }: { loadout: LoadoutView }) {
         </Section>
       )}
       {(l.spells || l.skills) && (
-        <Section title="Summoner spells & skill order">
+        <Section title={level > 1 ? undefined : "Summoner spells & skill order"}>
           <SkillGrid spells={l.spells} skills={l.skills} />
         </Section>
       )}
@@ -79,32 +89,27 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
   const stars = [...l.items.flatMap((s) => [s.top, ...s.alternatives]), ...(l.boots ? [l.boots.top, ...l.boots.alternatives] : [])].some((o) => o.winAdded !== null);
   const base = stars ? t("build.note") : l.items.length > 0 || l.boots !== null ? t("build.noteRate") : t("build.noteThin");
   const note = l.spikeSlots.length ? `${base} · ${t("build.spikeNote")}` : base;
+  // A full build with a notice or import result: first the items' reasons move to hover, then the path's rows get tighter, then the role quest moves to hover.
+  const level = useFitLevel(l.games, 3);
+  const questTip = level > 2 ? l.quest.map(tip).join("\n") : "";
   return (
     <>
-      <Section title={t("build.head")} aside={<span className="micro">{note}</span>}>
-        <BuildPath loadout={l} />
+      <Section title={t("build.head")} aside={<span className="micro" {...focusTip(questTip)}>{note}</span>}>
+        <BuildPath loadout={l} tight={level > 1} />
       </Section>
       {vsTeam.length > 0 && (
         <Section title={t("build.vsTeam")}>
-          <ItemLine items={vsTeam} />
+          <ItemRows items={vsTeam} brief={level > 0} />
         </Section>
       )}
-      {l.quest.length > 0 && (
+      {l.quest.length > 0 && level < 3 && (
         <Section title={t("build.quest")}>
-          <ItemLine items={l.quest} />
+          <ItemRows items={l.quest} brief={level > 0} />
         </Section>
       )}
       {l.laterPool.length > 0 && (
         <Section title={t("build.later")} gold={false}>
-          {l.laterPool.slice(0, LATER_ROWS).map((i) => (
-            <div key={i.id} className="later-row" title={tip(i)}>
-              <ChampIcon champ={i} kind="game" size={22} title="" />
-              <span className="caption">
-                <span className="text">{i.name}</span>
-                {i.reasons[0] ? ` — ${lower(i.reasons[0])}` : ""}
-              </span>
-            </div>
-          ))}
+          <ItemRows items={l.laterPool.slice(0, LATER_ROWS)} brief={level > 0} />
         </Section>
       )}
     </>

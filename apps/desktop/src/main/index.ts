@@ -10,7 +10,7 @@ import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
 import type { MetaSnapshot, UserMatch } from "@ldc/shared";
-import { IPC, type ViewState } from "../shared/view";
+import { canRestartToUpdate, IPC, type ViewState } from "../shared/view";
 import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
@@ -19,15 +19,17 @@ import { AdviceStore } from "./advice-store";
 import { ConfigSource } from "./config-source";
 import { MetaSource } from "./meta-source";
 import { MetaSnapshotSchema } from "./server-client";
-import { PersonalCoach } from "./personal-coach";
+import { PersonalCoach, uiCopy } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
-import { startAutoUpdate } from "./updater";
-import { reportError, reportProblem, startCrashReports } from "./crash-reports";
+import { restartToUpdate, startAutoUpdate } from "./updater";
+import { logProblem } from "./problem-log";
 import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
-import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, type Rect } from "./dock";
+import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, shouldRestoreForDraft, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
+import { isHighlightId } from "../shared/ui-state";
+import { UiStateStore } from "./ui-state";
 
 const DOCK_POLL_MS = 500;
 
@@ -77,7 +79,8 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
     },
   });
-  w.once("ready-to-show", () => w.show());
+  // Dev aid LDC_SCREENSHOT: a test run doesn't take focus from whatever you're doing.
+  w.once("ready-to-show", () => (process.env.LDC_SCREENSHOT ? w.showInactive() : w.show()));
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) void w.loadURL(devUrl);
   else void w.loadFile(join(__dirname, "../renderer/index.html"), perf ? { query: { perf: "1" } } : undefined);
@@ -93,6 +96,11 @@ async function startDocking(coach: Coach): Promise<void> {
   let last: Rect | null = null;
   setInterval(() => {
     if (!win || win.isDestroyed() || !coach.state.docked) return;
+    // Moving a minimized window would bring it back. Forget the last spot, so a restore always redocks.
+    if (win.isMinimized()) {
+      last = null;
+      return;
+    }
     const physical = finder.find();
     if (!physical) return;
     // GetWindowRect returns physical pixels; Electron positions windows in DIPs.
@@ -110,31 +118,12 @@ async function startDocking(coach: Coach): Promise<void> {
 }
 
 /** A setting baked into the installer at build time (electron-builder extraMetadata), if any. */
-function builtIn(key: "ldcDefaultServerUrl" | "ldcSentryDsn"): string | null {
+function builtIn(key: "ldcDefaultServerUrl"): string | null {
   try {
     const pkg = JSON.parse(readFileSync(join(app.getAppPath(), "package.json"), "utf8")) as Record<string, unknown>;
     return typeof pkg[key] === "string" ? pkg[key] : null;
   } catch {
     return null;
-  }
-}
-
-/**
- * Crash reports: on in installers built with LDC_SENTRY_DSN (LDC_SENTRY_DSN in a development
- * build too). The SDK must start before Electron's "ready" (~60 ms); builds without a DSN skip
- * it. LDC_CRASH_TEST=1 sends a test error report once the panel is up.
- */
-function startCrashReportsEarly(): void {
-  const dsn = builtIn("ldcSentryDsn") ?? (!app.isPackaged ? (process.env.LDC_SENTRY_DSN ?? null) : null);
-  if (!dsn) return;
-  try {
-    startCrashReports(dsn, app.getVersion());
-    console.log("Crash reports on (Sentry)");
-  } catch (err) {
-    return console.warn(`Crash reports off: ${(err as Error).message}`);
-  }
-  if (process.env.LDC_CRASH_TEST === "1") {
-    setTimeout(() => reportError(new Error("LoL Draft Coach test crash (LDC_CRASH_TEST)")), 8_000);
   }
 }
 
@@ -189,6 +178,16 @@ function scheduleScreenshot(coach: Coach): void {
       )
       .catch(() => null);
     console.log(`LDC_SCREENSHOT: layout ${layout}`);
+    // A window without focus may not have painted the last clicks yet: ask for a fresh frame, so the picture matches the layout above.
+    win?.webContents.invalidate();
+    await win?.webContents
+      .executeJavaScript(`new Promise((r) => { setTimeout(r, 1500); requestAnimationFrame(() => requestAnimationFrame(r)); })`)
+      .catch(() => null);
+    const step = await win?.webContents.executeJavaScript(`document.querySelector(".tour-text")?.textContent ?? ""`).catch(() => "");
+    if (step) console.log(`LDC_SCREENSHOT: tour step: ${step}`);
+    // The first capture makes it paint; the second has the frame.
+    await win?.webContents.capturePage();
+    await new Promise((r) => setTimeout(r, 300));
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     const dump = process.env.LDC_VIEW_DUMP;
@@ -223,7 +222,7 @@ async function followServerConfig(serverProfiles: ServerProfileSource, coach: Pe
   const remoteConfig = new ConfigSource({
     client: () => serverProfiles.serverClient,
     cacheFile: join(app.getPath("userData"), "config", "server-config.json"),
-    onRejected: (err) => reportProblem(`Server config rejected: ${err.message}`),
+    onRejected: (err) => logProblem(`Server config rejected: ${err.message}`),
   });
   remoteConfig.on("config", (c) => coach.setConfig(c));
   await remoteConfig.loadCached();
@@ -280,6 +279,7 @@ async function createProfileSource(env: AppEnv, config: ReturnType<typeof loadCo
     defaultServerUrl: env.serverUrl ?? builtIn("ldcDefaultServerUrl"),
     outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
     cacheFile: join(app.getPath("userData"), "profile-matches.json"),
+    copy: uiCopy(config.explain.templates),
   });
   await server.init();
   offerInvite = (code) => server.offerInvite(code);
@@ -319,6 +319,7 @@ async function main(): Promise<void> {
     if (profiles) perf.wrap("profiles", profiles);
     if (meta) perf.wrap("meta", meta);
   }
+  const uiState = new UiStateStore(join(app.getPath("userData"), "ui-state.json"));
   const coach = new PersonalCoach({
     connector,
     ddragon,
@@ -326,6 +327,7 @@ async function main(): Promise<void> {
     profiles,
     riotId: env.riotId,
     meta,
+    ui: await uiState.load(),
   });
   // Scoring config from the server (tuning without a release); the bundled copy until then.
   // Dev aid: LDC_BUNDLED_CONFIG=1 keeps this branch's config and wording against any server
@@ -343,16 +345,38 @@ async function main(): Promise<void> {
     if (perf) perf.send(win, IPC.state, s);
     else win.webContents.send(IPC.state, s);
   });
+  let hadDraft = false;
   coach.on("state", (s) => {
     latest = s;
     pusher.push(s);
+    // A draft began while minimized: back on screen, without taking focus from the client.
+    const hasDraft = s.draft !== null;
+    if (win && !win.isDestroyed() && shouldRestoreForDraft({ hadDraft, hasDraft, minimized: win.isMinimized(), phase: s.status.gameflowPhase })) win.showInactive();
+    hadDraft = hasDraft;
   });
   ipcMain.on(IPC.ready, () => {
     perf?.mark("rendererReady");
     if (latest) pusher.resend(latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
-  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
+  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown, pageKey: unknown) =>
+    (kind === "runes" || kind === "items" || kind === "all") && (pageKey === undefined || typeof pageKey === "string") ? coach.importLoadout(kind, pageKey) : undefined,
+  );
+  ipcMain.handle(IPC.retry, () => coach.retryNow());
+  ipcMain.on(IPC.minimize, () => win?.minimize());
+  ipcMain.on(IPC.restartToUpdate, () => {
+    if (canRestartToUpdate(coach.state)) restartToUpdate();
+  });
+  ipcMain.on(IPC.logError, (_e, detail: unknown) => {
+    if (typeof detail === "string") logProblem(`Panel render error: ${detail.slice(0, 4000)}`);
+  });
+  ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
+    if (typeof key === "string") coach.dismissNotice(key);
+  });
+  ipcMain.on(IPC.tourDone, () => coach.setUi(uiState.finishTour()));
+  ipcMain.on(IPC.highlightSeen, (_e, id: unknown) => {
+    if (isHighlightId(id)) coach.setUi(uiState.sawHighlight(id));
+  });
 
   await coach.start();
   coach.setAppVersion(app.getVersion());
@@ -390,6 +414,5 @@ if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
     win.show();
     win.focus();
   });
-  if (!perf) startCrashReportsEarly();
   void main();
 }

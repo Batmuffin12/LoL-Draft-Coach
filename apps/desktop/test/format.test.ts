@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Term } from "@ldc/shared";
-import { count, games, initials, pct, pickColumns, pickReasons, positionLabel, rate, roleName, setRoleLabels, signed, signedOrDash, skillPath, tone, versionText, winTone } from "../src/renderer/format";
+import type { CoachStatus, Term } from "@ldc/shared";
+import { findConfigDir, loadConfig } from "../src/main/config";
+import { uiCopy } from "../src/main/personal-coach";
+import { count, games, initials, needsClient, pct, pickColumns, pickReasons, positionLabel, profileProgress, rate, roleName, setCopy, setRoleLabels, signed, signedOrDash, skillPath, tone, versionText, winTone } from "../src/renderer/format";
+import { RESULT_WAIT_MS, resultOverdue } from "../src/shared/view";
 
 const term = (name: Term["name"], deltaWin: number, games = 100): Term => ({ name, deltaWin, games, rating: 0 });
 
@@ -14,6 +17,48 @@ describe("panel formats", () => {
     expect(positionLabel("middle")).toBe("Middle");
     expect(initials("Lee Sin")).toBe("LS");
     expect(initials("Kai'Sa")).toBe("Ka");
+  });
+});
+
+describe("waiting states", () => {
+  const copy = uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates);
+  const ready = { state: "ready" as const, games: 5, role: null };
+
+  it("never says 0 of 0, and gives no frozen count for older games", () => {
+    setCopy(copy);
+    expect(profileProgress({ state: "loading", done: 0, total: 0 })).toEqual({ text: "Checking for new games…" });
+    expect(profileProgress({ state: "loading", done: 3, total: 40 })).toEqual({ text: "Loading your match history: 3 of 40", done: 3, total: 40 });
+    expect(profileProgress({ ...ready, backlog: 412 })).toEqual({ text: "Older games still loading on the server" });
+    expect(profileProgress(ready)).toBeNull();
+    expect(profileProgress({ state: "idle" })).toBeNull();
+    expect(profileProgress({ state: "error", message: "x" })).toBeNull();
+  });
+
+  it("says when the server is waking up, over the other lines", () => {
+    setCopy(copy);
+    expect(profileProgress({ state: "loading", done: 0, total: 0, waking: true })).toEqual({ text: "Waking the coach server, up to a minute" });
+    expect(profileProgress({ ...ready, backlog: 3, waking: true })).toEqual({ text: "Waking the coach server, up to a minute" });
+  });
+
+  it("asks for the League client only when it's closed and nothing is saved", () => {
+    const status = (lcu: "connected" | "disconnected", profile: CoachStatus["profile"]): CoachStatus => ({ lcu, gameflowPhase: null, patch: null, band: null, profile });
+    expect(needsClient(status("disconnected", { state: "idle" }))).toBe(true);
+    expect(needsClient(status("disconnected", { ...ready, games: 0 }))).toBe(true);
+    expect(needsClient(status("disconnected", ready))).toBe(false);
+    expect(needsClient(status("disconnected", { state: "loading", done: 0, total: 0 }))).toBe(false);
+    expect(needsClient(status("connected", { state: "idle" }))).toBe(false);
+  });
+
+  it("stops promising a result once the panel gave up or the game is hours old", () => {
+    const now = 1_800_000_000_000;
+    const game = { result: null, endedAt: null, lockedAt: now - 60_000 };
+    expect(resultOverdue(game, { pending: true, gaveUp: false }, now)).toBe(false);
+    expect(resultOverdue(game, { pending: false, gaveUp: false }, now)).toBe(false);
+    expect(resultOverdue(game, { pending: false, gaveUp: true }, now)).toBe(true);
+    expect(resultOverdue({ ...game, lockedAt: now - RESULT_WAIT_MS - 1 }, { pending: false, gaveUp: false }, now)).toBe(true);
+    // Still asking: not yet, even for an old game. And a result always wins.
+    expect(resultOverdue({ ...game, lockedAt: now - RESULT_WAIT_MS - 1 }, { pending: true, gaveUp: false }, now)).toBe(false);
+    expect(resultOverdue({ ...game, result: "win" }, { pending: false, gaveUp: true }, now)).toBe(false);
   });
 });
 

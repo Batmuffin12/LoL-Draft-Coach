@@ -24,6 +24,7 @@ const deps = {
   champion: (id: number) => ({ id, name: id === 103 ? "Ahri" : `#${id}`, iconUrl: null }),
   positionLabel: (r: string) => (r === "middle" ? "Mid" : r),
   growth: null,
+  minGames: 10,
 };
 
 describe("month view", () => {
@@ -34,20 +35,20 @@ describe("month view", () => {
     expect(v.axes).toEqual([{ label: "Farming", from: 40, to: 47, changed: "up" }]);
     expect(v.role).toBe("Mid");
     expect(v.steadyNote).toBe("bold = a real change over 20 games");
-    expect(v.winRate).toEqual({ from: 0.45, to: 0.55, text: "win rate, up 10 points on your 16 games before" });
+    expect(v.winRate).toEqual({ from: 0.45, to: 0.55, text: "win rate, up 10 points" });
     expect(v.gamesBefore).toBe(16);
     expect(v.gamesBeforeText).toBe("16 games before");
   });
 
   it("says the win rate's direction and your roles as shares, without parsing the tiles", () => {
     const down = monthView({ ...report, winRate: 0.44, winRateBefore: 0.45, roles: [{ role: "middle", share: 0.66 }, { role: "jungle", share: 0.34 }] }, deps)!;
-    expect(down.winRate.text).toBe("win rate, down 1 point on your 16 games before");
+    expect(down.winRate.text).toBe("win rate, down 1 point");
     expect(down.roles).toEqual([
       { role: "Mid", share: 0.66, text: "Mid 66%" },
       { role: "jungle", share: 0.34, text: "jungle 34%" },
     ]);
-    expect(monthView({ ...report, winRateBefore: null, gamesBefore: 0 }, deps)!.winRate).toEqual({ from: null, to: 0.55, text: "win rate, with no games in the period before" });
-    expect(monthView({ ...report, winRateBefore: 0.552 }, deps)!.winRate.text).toBe("win rate, the same as your 16 games before");
+    expect(monthView({ ...report, winRateBefore: null, gamesBefore: 0 }, deps)!.winRate).toEqual({ from: null, to: 0.55, text: "win rate, no games before" });
+    expect(monthView({ ...report, winRateBefore: 0.552 }, deps)!.winRate.text).toBe("win rate, the same as before");
   });
 
   it("words the number trends, coloured by better or worse, and the pool focus", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RiotApi, RiotKeyError, RiotSchemaError } from "../src/index";
+import { RiotApi, RiotApiError, RiotKeyError, RiotSchemaError } from "../src/index";
 
 const okHeaders = { "x-app-rate-limit": "100:1", "x-method-rate-limit": "100:1" };
 
@@ -65,6 +65,32 @@ describe("RiotApi", () => {
     const err = await api(fetchFn, "personal").match("x").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(RiotKeyError);
     expect((err as Error).message).toMatch(/personal API key/);
+  });
+
+  it("gives up on a request Riot never answers", async () => {
+    /** Never answers, but ends when the request's signal fires (as fetch does). */
+    const hang = ((_: unknown, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason as Error)))) as typeof fetch;
+    const riot = new RiotApi({ apiKey: "k", keyType: "personal", platform: "euw1", region: "europe", fetch: hang, requestTimeoutMs: 5 });
+    const err = await riot.match("EUW1_1").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RiotApiError);
+    expect(err).toMatchObject({ status: 0, endpoint: "match-v5.match", message: expect.stringMatching(/didn't answer/) });
+    // The limiter isn't left waiting on it: the next call goes out.
+    await expect(riot.match("EUW1_2")).rejects.toBeInstanceOf(RiotApiError);
+  });
+
+  it("gives up on a body that stops arriving", async () => {
+    const stalled = ((_: unknown, init?: RequestInit) =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start: (c) => init!.signal!.addEventListener("abort", () => c.error(init!.signal!.reason)),
+          }),
+          { headers: okHeaders },
+        ),
+      )) as typeof fetch;
+    const riot = new RiotApi({ apiKey: "k", keyType: "personal", platform: "euw1", region: "europe", fetch: stalled, requestTimeoutMs: 5 });
+    await expect(riot.match("EUW1_1")).rejects.toMatchObject({ status: 0, message: expect.stringMatching(/didn't answer/) });
   });
 
   it("refuses to call without a key", async () => {

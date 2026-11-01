@@ -7,7 +7,7 @@
  *   tsx scripts/perf/desktop.ts replay <scenario> <seconds> <out.json> [clicks JSON] [rounds]
  *   tsx scripts/perf/desktop.ts screens <outDir>
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,7 @@ import type { Fixture } from "@ldc/lcu";
 import { MockLcuServer } from "@ldc/lcu/testing";
 import { history, loadScenario } from "@ldc/sim";
 import { world } from "../../packages/sim/scenarios/_world";
+import { HIGHLIGHT_IDS } from "../../apps/desktop/src/shared/ui-state";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const desktop = join(root, "apps", "desktop");
@@ -113,7 +114,17 @@ interface LaunchResult {
 /** App state the panel keeps between runs (advice log, account, caches): wiped so every run starts the same. Data Dragon's cache stays. */
 const APP_STATE = ["advice.json", "advice-outbox.json", "account.json", "profile-matches.json", "meta", "config"];
 
+/** The panel opens on top of everything: never during a game, and not when that can't be checked. Checked before each launch, because a game can start between two. */
+function refuseDuringGame(): void {
+  if (process.platform !== "win32") return;
+  const game = "League of Legends.exe";
+  const check = spawnSync("tasklist", ["/FI", `IMAGENAME eq ${game}`], { encoding: "utf8" });
+  if (check.status !== 0 || check.error) throw new Error("Couldn't check for a running game: not opening the panel");
+  if (check.stdout.includes(game)) throw new Error(`${game} is running: not opening the panel`);
+}
+
 function launch(env: Record<string, string>): Promise<LaunchResult> {
+  refuseDuringGame();
   for (const f of APP_STATE) rmSync(join(profileDir, f), { recursive: true, force: true });
   return new Promise((resolve) => {
     const child = spawn(electron, ["."], {
@@ -144,7 +155,14 @@ async function withMock<T>(setup: Setup, until: number, run: (lcuOverride: strin
   }
 }
 
+/** The measured screens stay comparable across versions: a profile past the tour and every first-time highlight. */
+function skipFirstUse(): void {
+  mkdirSync(profileDir, { recursive: true });
+  writeFileSync(join(profileDir, "ui-state.json"), JSON.stringify({ tourDone: true, highlightsSeen: HIGHLIGHT_IDS }));
+}
+
 function baseEnv(setup: Setup, lcu: string, opts: { profile?: boolean; serverUrl?: string } = {}): Record<string, string> {
+  skipFirstUse();
   return {
     LDC_ENV_FILE: envFile(opts.serverUrl),
     LDC_USER_DATA_DIR: profileDir,
@@ -198,10 +216,10 @@ export const SCREENS: { name: string; scenario: string; click?: string; connect?
   { name: "LockedIn-Build", scenario: "locked-solid", click: "Build" },
   { name: "LockedIn-Matchups", scenario: "locked-solid", click: "Matchups" },
   { name: "LastGame", scenario: "idle", click: "Last game" },
-  { name: "Style", scenario: "idle", click: "Style" },
-  { name: "Pool", scenario: "idle", click: "Pool" },
-  { name: "New", scenario: "idle", click: "New" },
-  { name: "Month", scenario: "idle", click: "This month" },
+  { name: "Style", scenario: "idle", click: "Me>Style" },
+  { name: "Pool", scenario: "idle", click: "Champions>Pool" },
+  { name: "New", scenario: "idle", click: "Champions>Try new" },
+  { name: "Month", scenario: "idle", click: "Me>This month" },
   { name: "NextGame", scenario: "lobby" },
 ];
 
@@ -221,7 +239,7 @@ async function screens(outDir: string): Promise<void> {
       });
       const m = /scroll overflow (-?\d+|null)px/.exec(r.stdout);
       overflow[s.name] = m && m[1] !== "null" ? Number(m[1]) : null;
-      if (s.click && !r.stdout.includes(`clicked "${s.click}": true`)) console.warn(`${s.name}: "${s.click}" was not found`);
+      for (const c of s.click?.split(">") ?? []) if (!r.stdout.includes(`clicked "${c}": true`)) console.warn(`${s.name}: "${c}" was not found`);
     });
     process.stdout.write(`screen ${s.name}: overflow ${overflow[s.name]}px\n`);
   }

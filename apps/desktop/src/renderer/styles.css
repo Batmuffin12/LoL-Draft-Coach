@@ -117,7 +117,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .section-head .rule { flex: 1; height: 1px; background: var(--line); min-width: 16px; }
 .section-head { flex-wrap: wrap; }
 /* Lobby screens: more air (champ select and locked in keep 10px) */
-.window.lobby .section { padding: 12px 16px; }
+.window.lobby .section { padding: 10px 16px; }
 .window.lobby .notices { padding: 12px 16px 0; }
 .notices { padding: 10px 16px 0; display: flex; flex-direction: column; gap: 8px; }
 
@@ -131,6 +131,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .status-dot.connected { background: var(--ok); }
 .status-dot.disconnected { background: var(--red); }
 .icon-btn { all: unset; width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); font-size: var(--fs-heading); border-radius: var(--radius-sm); cursor: pointer; }
+/* Hover text for the keyboard: a bar along the window's bottom while an element with hover text has keyboard focus (format.ts tip). */
+[data-tip]:focus-visible::after { content: attr(data-tip); position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 50; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--card-raised); color: var(--text); font-family: var(--font-sans); font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 400; letter-spacing: normal; text-transform: none; text-align: left; white-space: pre-line; pointer-events: none; }
 .icon-btn:hover { color: var(--text); background: var(--card); }
 .icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
@@ -244,8 +246,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .mrow.you { padding: 8px 10px; }
 .mrow .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
 .mrow .v { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
-.no-games { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.no-games .icons { gap: 4px; }
 
 /* Reasons: + green, − amber, › gold for why-not */
 .reasons { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
@@ -274,6 +274,9 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .tree.shards { gap: 4px; }
 .swap { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--warn-tint); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .swap b { color: var(--warn); font-weight: 600; }
+.swap.one-line { padding: 2px 8px; }
+.swap.one-line .wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rune-options .pills { margin-bottom: 0; }
 .icons { display: flex; align-items: center; gap: 6px; }
 
 /* Skill grid */
@@ -293,6 +296,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .path { display: flex; flex-direction: column; }
 .path .step { display: grid; grid-template-columns: 52px minmax(0, 1fr) 56px 116px; align-items: center; column-gap: 10px; min-height: 42px; padding: 4px 0; border-top: 1px solid var(--line); }
 .path .step:first-child { border-top: 0; }
+.path.tight .step { min-height: 34px; padding: 1px 0; }
 .path .when { display: flex; flex-direction: column; }
 .path .when .spike { color: var(--gold); text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
 .path .main { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -302,8 +306,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .path .opt { display: flex; align-items: center; gap: 4px; }
 .path .alts-col > .micro { text-align: right; }
 .later-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.item-line { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
-.item-line .icons { flex-shrink: 0; gap: 4px; }
+.item-rows { display: flex; flex-direction: column; gap: 4px; }
 
 /* Draft board (undocked only) */
 .board { display: flex; flex-direction: column; gap: 12px; }
@@ -325,8 +328,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .seg { display: flex; border-bottom: 1px solid var(--line); padding: 0 16px; gap: 20px; flex-shrink: 0; }
 .seg button { all: unset; cursor: pointer; padding: 8px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-button); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
-.seg.dense { gap: 10px; }
-.seg.dense button { letter-spacing: 0.03em; }
 .seg button.on { color: var(--gold-bright); border-bottom-color: var(--gold); }
 
 /* Keycaps */
@@ -342,7 +343,14 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* Notice: one per problem, at the top of the scrolling area */
 .notice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); background: var(--warn-tint); color: var(--warn); }
 .notice.info { background: var(--card); color: var(--muted); }
+.import-status { display: flex; flex-direction: column; }
+.import-status:empty { display: none; }
+.crash { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .notice .g { font-weight: 700; font-family: var(--font-display); }
+.notice .body { flex: 1; min-width: 0; }
+.notice .dismiss, .tour-note .dismiss { all: unset; flex-shrink: 0; width: 16px; text-align: center; cursor: pointer; color: inherit; opacity: 0.7; }
+.notice .dismiss:hover, .tour-note .dismiss:hover { opacity: 1; }
+.notice .dismiss:focus-visible, .tour-note .dismiss:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .notice strong { color: var(--text); font-weight: 600; }
 
 /* Progress: a micro line and a thin bar instead of a boxed notice */
@@ -351,8 +359,21 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .progress .p-bar { height: 3px; border-radius: 2px; background: var(--track); overflow: hidden; }
 .progress .p-bar span { display: block; height: 100%; background: var(--gold); }
 
-/* Pills: role switches in the lobby */
+/* Labelled rows: a short label, its values as separate entries */
+.facts { display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.fact { display: grid; grid-template-columns: 84px minmax(0, 1fr); column-gap: 8px; align-items: baseline; }
+.facts.wide .fact { grid-template-columns: 112px minmax(0, 1fr); }
+.fact-label { font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-caption); font-weight: 600; color: var(--muted); }
+.fact-items { display: flex; flex-direction: column; min-width: 0; }
+.fact-items.flow { flex-direction: row; flex-wrap: wrap; gap: 2px 10px; }
+.fact-item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+
+/* Pills: sub-tabs and role switches in the lobby */
 .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.pills.compact { margin-bottom: 2px; }
+.pills.compact .pill { padding: 2px 8px; }
+.subtabs { flex-shrink: 0; padding: 6px 16px; border-bottom: 1px solid var(--line); }
+.subtabs .pills { margin-bottom: 0; }
 .pills .end { margin-left: auto; text-align: right; }
 .pill { all: unset; box-sizing: border-box; font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer; }
 .pill:hover { color: var(--text); }
@@ -375,6 +396,25 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .connect-how .step b { font-family: var(--font-display); color: var(--gold); font-size: var(--fs-heading); line-height: var(--lh-heading); width: 12px; flex-shrink: 0; }
 .server-edit { display: flex; align-items: center; gap: 8px; }
 .server-edit input { flex: 1; min-width: 0; min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--fs-micro); }
+
+/* The lobby tour: all dimmed but a cut-out around the real element, with a small callout */
+.tour { position: fixed; inset: 0; z-index: 50; }
+.tour-shield { position: absolute; inset: 0; }
+.tour-dim { position: absolute; inset: 0; background: rgba(4, 7, 12, 0.62); }
+.tour-hole { position: absolute; border: 1px solid var(--gold); border-radius: var(--radius-sm); box-shadow: 0 0 0 2000px rgba(4, 7, 12, 0.62); transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
+.tour-callout { position: absolute; width: 316px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); }
+.tour-text { margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
+.tour-nav { display: flex; align-items: center; gap: 8px; }
+.tour-dots { flex: 1; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.tour-dots .d { width: 6px; height: 6px; border-radius: 50%; background: var(--line-strong); }
+.tour-dots .d.on { background: var(--gold); }
+.tour-actions { display: flex; gap: 6px; flex-shrink: 0; }
+/* Live screens: only a ring and a note. Clicks go through; nothing waits for them. */
+.tour-ring { position: fixed; z-index: 50; pointer-events: none; border: 2px solid var(--gold-bright); border-radius: var(--radius-sm); }
+.tour-note { position: fixed; z-index: 51; pointer-events: none; width: 300px; max-width: calc(100vw - 16px); display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
+.tour-note .dismiss { pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
+.window-buttons { display: flex; align-items: center; gap: 10px; }
 
 /* Footer pieces */
 .foot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
@@ -413,8 +453,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* Learning a champion in the role: its progress first; the next suggestions dimmed under "After …" */
 .plan.learning .learning-head { display: flex; align-items: center; gap: 8px; }
 .plan.learning .learning-head .micro { margin-left: auto; }
-.plan .notes { margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
-.plan .notes li::marker { color: var(--muted); }
 .after-learning { opacity: 0.6; }
 .learn-focus { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-left: 2px solid var(--gold); background: var(--track); border-radius: var(--radius-sm); }
 .learn-focus .games { display: flex; gap: 3px; }
@@ -468,8 +506,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .radar .pos { fill: var(--positive); }
 .radar .neg { fill: var(--negative); }
 .radar .text { fill: var(--text); }
-.bullets { display: flex; flex-direction: column; gap: 4px; }
-.bl { display: grid; grid-template-columns: 118px minmax(0, 1fr) 92px; align-items: center; gap: 10px; min-height: 26px; }
+.bullets { display: flex; flex-direction: column; gap: 3px; }
+.bl { display: grid; grid-template-columns: 118px minmax(0, 1fr) 92px; align-items: center; gap: 10px; min-height: 22px; }
 .bt { position: relative; height: 6px; border-radius: 3px; background: var(--track); }
 .bt .avg { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--line-strong); }
 .bt .me { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; border: 2px solid var(--bg); background: var(--text); }
@@ -483,7 +521,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .roles { display: flex; flex-direction: column; gap: 4px; }
 .rolebar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; gap: 2px; }
 .shifts { display: flex; flex-direction: column; }
-.shift { display: grid; grid-template-columns: 112px minmax(0, 1fr) 66px 30px; align-items: center; gap: 8px; min-height: 20px; }
+.shift { display: grid; grid-template-columns: 112px minmax(0, 1fr) 66px 30px; align-items: center; gap: 8px; min-height: 18px; }
 .shift .nm { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
 .shift.real .nm { font-weight: 600; }
 .shift .track { position: relative; height: 6px; border-radius: 3px; background: var(--track); }
@@ -498,14 +536,16 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .shift .chg { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-caption); }
 .shift .chg.faint { opacity: 0.6; }
 .champcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.champcard { display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
+.trends { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.goals { display: flex; flex-direction: column; }
+.champcard { display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
 .champcard .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
 
 /* Pool: coverage matrix, then your next step */
 /* Cells stretch to their row's height (a label may wrap to two lines) so every row's line sits at one height; no column gap, so lines run unbroken. */
 .mx { display: grid; align-items: stretch; }
-.mx > span { min-height: 34px; display: flex; align-items: center; }
-.mx-head { flex-direction: column; justify-content: center; gap: 4px; min-height: 76px; text-align: center; min-width: 0; overflow-wrap: break-word; }
+.mx > span { min-height: 28px; display: flex; align-items: center; }
+.mx-head { flex-direction: column; justify-content: center; gap: 2px; min-height: 72px; text-align: center; min-width: 0; overflow-wrap: break-word; }
 .mx-head .t-heading { max-width: 100%; }
 .mx-need, .mx-cell { border-top: 1px solid var(--line); }
 .mx-need { padding-right: 6px; }
@@ -514,7 +554,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .mx .dot { width: 14px; height: 14px; border-radius: 50%; }
 .mx .dot.yes { background: var(--positive); }
 .mx .dot.no { border: 1px dashed var(--line-strong); }
-.next-step { display: flex; gap: 12px; align-items: flex-start; padding: 12px; }
-.next-step .who { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.next-step { display: flex; gap: 12px; align-items: flex-start; padding: 8px 12px; }
+.next-step .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .missing { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.missing .caption { flex: 1; min-width: 180px; }
+.missing .who { flex: 1; min-width: 180px; display: flex; flex-direction: column; }

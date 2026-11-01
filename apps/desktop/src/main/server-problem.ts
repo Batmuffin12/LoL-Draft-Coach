@@ -1,4 +1,19 @@
+import { logProblem } from "./problem-log";
 import { ServerError } from "./server-client";
+import type { CoachStatus } from "@ldc/shared";
+
+/** Follows whether your games' source has a problem, to notice when it has recovered. */
+export class ProfileHealth {
+  private troubled = false;
+
+  /** True when this status ends a problem. */
+  recovered(profile: CoachStatus["profile"]): boolean {
+    const troubled = profile.state === "error" || (profile.state === "ready" && profile.problem !== undefined);
+    const recovered = this.troubled && profile.state === "ready" && !troubled;
+    if (troubled || profile.state === "ready") this.troubled = troubled;
+    return recovered;
+  }
+}
 
 /** Waits before trying the server again after a failure: 1, 2, 5, then every 10 minutes. */
 export const SERVER_RETRY_DELAYS_MS = [60_000, 120_000, 300_000, 600_000];
@@ -8,27 +23,36 @@ export function retryDelay(failures: number, delays: readonly number[] = SERVER_
   return delays[Math.min(failures, delays.length) - 1]!;
 }
 
-const minutes = (ms: number) => (ms < 60_000 ? `${Math.round(ms / 1000)} s` : `${Math.round(ms / 60_000)} min`);
-
 /**
- * What the panel says when the server failed, one wording per kind of failure, and when it
- * tries again. Pure.
+ * What the panel says when the server failed, one wording per kind of failure. Never the raw
+ * error: addresses, HTTP details and validation dumps go to the local log (logUnexpected).
+ * What the server itself says to players (a refused invite code) stays as it is. Pure.
  */
-export function serverProblem(err: unknown, retryInMs: number): string {
-  const again = `Trying again in ${minutes(retryInMs)}.`;
-  if (!(err instanceof ServerError)) return `${(err as Error).message} ${again}`;
+export function serverProblemText(err: unknown): string {
+  if (!(err instanceof ServerError)) return "Something went wrong talking to the coach server.";
   switch (err.code) {
     case "asleep":
-      return `The coach server is still starting up. ${again}`;
+      return "The coach server is still starting up.";
     case "timeout":
-      return `The coach server didn't answer in time. ${again}`;
+      return "The coach server didn't answer in time.";
     case "unreachable":
-      return `Can't reach the coach server: check your internet connection. ${again}`;
+      return "Can't reach the coach server: check your internet connection.";
     case "server_error":
-      return `The coach server had a problem (HTTP ${err.status}). ${again}`;
+      return `The coach server had a problem (HTTP ${err.status}).`;
     case "bad_response":
-      return `The coach server sent something this app doesn't understand: an app update may be needed. ${again}`;
+      return "The coach server sent something this app doesn't understand: an app update may be needed.";
     default:
-      return `${err.message} ${again}`;
+      return err.message;
   }
+}
+
+/** serverProblemText, and that it tries again but not when: the message stays on screen, so a time in it would go stale. Pure. */
+export function serverProblem(err: unknown): string {
+  return `${serverProblemText(err)} Trying again automatically.`;
+}
+
+/** Logs the technical detail of a failure that isn't everyday (not offline, asleep or refused) locally. */
+export function logUnexpected(where: string, err: unknown): void {
+  const everyday = err instanceof ServerError && err.code !== "server_error" && err.code !== "bad_response";
+  if (!everyday) logProblem(`${where}: ${(err as Error).message}`);
 }

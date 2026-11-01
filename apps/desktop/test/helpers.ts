@@ -1,3 +1,5 @@
+import type { Coach } from "../src/main/coach";
+
 /** Fake Data Dragon CDN that knows a few champions from the fixture. */
 export function fakeDdragonFetch(): typeof fetch {
   const champs: Record<string, [string, string]> = {
@@ -29,6 +31,19 @@ export const waitFor = async (cond: () => boolean, timeoutMs = 5_000) => {
     await new Promise((r) => setTimeout(r, 10));
   }
 };
+
+/**
+ * Replays a mock client's frames until `done`, each only after the coach has taken in the one before. Your pick
+ * turn lasts a single frame in the fixtures: stepping on a fixed timer could pass it while a frame was still on its way.
+ * A frame the coach never reacts to doesn't hold things up for longer than `patienceMs`.
+ */
+export async function stepUntil(lcu: { step(): boolean }, coach: Coach, done: () => boolean, patienceMs = 1_000): Promise<void> {
+  while (!done()) {
+    const seen = new Promise<void>((r) => coach.once("state", () => r()));
+    if (!lcu.step()) return;
+    await Promise.race([seen, new Promise((r) => setTimeout(r, patienceMs))]);
+  }
+}
 
 /** The PUUID the Riot API knows (encrypted for our key). */
 export const LOCAL_PUUID = "mock-local-player";

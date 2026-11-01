@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MetricResult, StyleProfile } from "@ldc/engine";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { howView, listText, metricSentence, numberViews, sideView, styleSummary } from "../src/main/style-view";
+import { howView, metricSentence, numberViews, sideView, styleSummary } from "../src/main/style-view";
 
 const { explain } = loadConfig(findConfigDir(__dirname));
 const metric = (o: Partial<MetricResult>): MetricResult => ({ metric: "csPerMinute", lowerIsBetter: false, you: 6.6, reference: 6.9, percentile: 0.45, games: 120, ...o });
@@ -28,14 +28,13 @@ describe("style view", () => {
   });
 
   it("sums up a role's style from its high and low axes, without numbers", () => {
-    expect(styleSummary([{ axis: "farming", level: "high" }, { axis: "earlyPressure", level: "high" }, { axis: "vision", level: "low" }, { axis: "riskControl", level: "low" }, { axis: "roaming", level: "mid" }], explain.templates)).toBe(
-      "You out-farm your rank and win lane early. Vision and early deaths hold you back.",
-    );
-    expect(styleSummary([{ axis: "vision", level: "low" }], explain.templates)).toBe("Vision holds you back.");
-    expect(styleSummary([{ axis: "vision", level: "mid" }], explain.templates)).toBe("You play close to your rank on every axis.");
-    expect(styleSummary([], explain.templates)).toBeNull();
-    expect(listText(["a", "b", "c"], explain.templates)).toBe("a, b and c");
-    // Every axis has both sentence parts.
+    expect(styleSummary([{ axis: "farming", level: "high" }, { axis: "earlyPressure", level: "high" }, { axis: "vision", level: "low" }, { axis: "riskControl", level: "low" }, { axis: "roaming", level: "mid" }], explain.templates)).toEqual([
+      { label: "Strong", items: [{ text: "Out-farm your rank" }, { text: "Win lane early" }] },
+      { label: "Weak spots", items: [{ text: "Vision" }, { text: "Early deaths" }] },
+    ]);
+    expect(styleSummary([{ axis: "vision", level: "low" }], explain.templates)).toEqual([{ label: "Weak spots", items: [{ text: "Vision" }] }]);
+    expect(styleSummary([{ axis: "vision", level: "mid" }], explain.templates)).toEqual([{ label: "Your style", items: [{ text: "Close to your rank on every axis" }] }]);
+    expect(styleSummary([], explain.templates)).toEqual([]);
     for (const axis of Object.keys(explain.axes)) for (const level of ["high", "low"]) expect(explain.templates[`style.summary.${level}.${axis}`], `${level}.${axis}`).toBeTruthy();
   });
 

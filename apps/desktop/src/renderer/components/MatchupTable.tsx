@@ -1,6 +1,7 @@
 import type { MatchupRowView } from "../../shared/view";
-import { cx, positionLabel, rate, signedOrDash, t, tone } from "../format";
+import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
+import { Facts } from "./Facts";
 
 /** Within this (points of win chance either way) a pair plays as expected: "Even". */
 const VERDICT_DEAD_ZONE = 0.01;
@@ -17,11 +18,12 @@ function verdictText(delta: number | null): string {
   return word === "Even" ? word : `${word} ${signedOrDash(delta)}`;
 }
 
+/** The verdict needs no minimum of its own: the delta is smoothed towards "as expected" (rating.priorGames.pair), so a thin pair already reads Even. Its raw win rate does. */
 function Row({ m }: { m: MatchupRowView }) {
   const where = [positionLabel(m.role), m.lane ? t("matchups.yourLane") : null, m.partner ? t("matchups.partner") : null].filter(Boolean).join(" · ");
   const v = tone(m.delta, VERDICT_DEAD_ZONE);
   return (
-    <div className={cx("mrow", m.lane && "you")} title={m.games ? `${signedOrDash(m.delta)} points vs what both champions' usual win rates predict` : undefined}>
+    <div className={cx("mrow", m.lane && "you")} {...tip(m.games ? t("matchups.tip", { signed: signedOrDash(m.delta), wins: winsPer100(m.delta) }) : null)}>
       <ChampIcon champ={m.champion} size={28} framed={m.lane} />
       <span className="who">
         <span className="t-heading">{m.champion!.name}</span>
@@ -31,7 +33,7 @@ function Row({ m }: { m: MatchupRowView }) {
         {m.games ? (
           <>
             <span className={cx("t-heading", v === "flat" ? "text" : v)}>{verdictText(m.delta)}</span>
-            <span className="micro">{`${rate(m.winRate, 1)} WR · ${m.games.toLocaleString("en-US")} ${m.games === 1 ? "game" : "games"}`}</span>
+            <span className="micro">{`${rateOf(m.winRate, m.games)} WR · ${gameCount(m.games)}`}</span>
           </>
         ) : (
           <span className="micro">{t("matchups.none")}</span>
@@ -44,7 +46,7 @@ function Row({ m }: { m: MatchupRowView }) {
 /**
  * Your champion against (or with) each champion in the draft: your lane opponent first as a gold
  * row, then the others with games for the pair; pairs without games and seats not picked yet
- * are one line each.
+ * are labelled rows.
  */
 export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
   const picked = rows.filter((r) => r.champion);
@@ -57,17 +59,15 @@ export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
       {shown.map((m) => (
         <Row key={m.champion!.id} m={m} />
       ))}
-      {noGames.length > 0 && (
-        <div className="no-games">
-          <span className="icons">
-            {noGames.map((m) => (
-              <ChampIcon key={m.champion!.id} champ={m.champion} size={20} />
-            ))}
-          </span>
-          <span className="micro">{t("matchups.noGames", { names: noGames.map((m) => m.champion!.name).join(", ") })}</span>
-        </div>
+      {(noGames.length > 0 || open.length > 0) && (
+        <Facts
+          flow
+          rows={[
+            ...(noGames.length ? [{ label: t("matchups.none"), items: noGames.map((m) => ({ text: m.champion!.name, champion: m.champion })) }] : []),
+            ...(open.length ? [{ label: t("matchups.open"), items: open.map((m) => ({ text: positionLabel(m.role) })) }] : []),
+          ]}
+        />
       )}
-      {open.length > 0 && <span className="micro">{t("matchups.open", { roles: open.map((m) => positionLabel(m.role)).join(", ") })}</span>}
     </div>
   );
 }

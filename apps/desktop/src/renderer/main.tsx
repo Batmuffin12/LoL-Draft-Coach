@@ -2,6 +2,7 @@ import { Profiler, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import type { CoachApi } from "../preload/index";
 import { App } from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { perfOn, perfOnRender } from "./perf";
 // Fonts are bundled (SIL Open Font License): the CSP allows no outside font hosts.
 import "@fontsource/barlow/400.css";
@@ -20,12 +21,14 @@ declare global {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {perfOn ? (
-      <Profiler id="panel" onRender={(id, phase, actualMs) => perfOnRender(id, phase, actualMs)}>
+    <ErrorBoundary>
+      {perfOn ? (
+        <Profiler id="panel" onRender={(id, phase, actualMs) => perfOnRender(id, phase, actualMs)}>
+          <App />
+        </Profiler>
+      ) : (
         <App />
-      </Profiler>
-    ) : (
-      <App />
-    )}
+      )}
+    </ErrorBoundary>
   </StrictMode>,
 );

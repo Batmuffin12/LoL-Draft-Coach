@@ -7,6 +7,8 @@ export interface MonthViewDeps {
   champion: (id: number) => ChampView | null;
   positionLabel: (role: string) => string;
   growth: GrowthFocus | null;
+  /** The shared minimum: fewer games on either side, and no comparison is drawn. */
+  minGames: number;
 }
 
 /** "GOLD" + "IV" → "Gold IV" (League-V4 strings, only re-cased). */
@@ -20,6 +22,7 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
   const winChange = r.winRate !== null && r.winRateBefore !== null ? r.winRate - r.winRateBefore : null;
   const f = deps.growth?.focus;
   const points = winChange === null ? 0 : Math.round(Math.abs(winChange) * 100);
+  const tooFew = r.games < deps.minGames || r.gamesBefore < deps.minGames;
   return {
     period: `${shortDate(r.from)} – ${shortDate(r.to)}`,
     games: r.games,
@@ -30,14 +33,16 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
         : say("month.rank", { now: rankText(r.rank.now) })
       : null,
     winRate: {
-      from: r.winRateBefore,
+      from: tooFew ? null : r.winRateBefore,
       to: r.winRate ?? 0,
       text:
         winChange === null
           ? say("month.win.first", {})
-          : points === 0
-            ? say("month.win.same", { before: r.gamesBefore })
-            : say(winChange > 0 ? "month.win.up" : "month.win.down", { points, before: r.gamesBefore }),
+          : tooFew
+            ? say("month.win.few", {})
+            : points === 0
+              ? say("month.win.same", {})
+              : say(winChange > 0 ? "month.win.up" : "month.win.down", { points }),
     },
     gamesBefore: r.gamesBefore,
     gamesBeforeText: say("month.gamesBefore", { games: r.gamesBefore }),

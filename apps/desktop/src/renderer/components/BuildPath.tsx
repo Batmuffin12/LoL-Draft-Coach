@@ -1,5 +1,5 @@
 import type { IconView, ItemOptionView, LoadoutView } from "../../shared/view";
-import { cx, rate, signedPctOrDash, t } from "../format";
+import { cx, rate, signedOrDash, t, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** Core item rows after Start and Boots. */
@@ -27,8 +27,8 @@ interface Step {
 const tip = (o: Option) =>
   [
     o.name,
-    o.share === undefined ? null : `Bought by ${rate(o.share)} of players`,
-    o.winAdded == null ? null : `Players who bought it won ${signedPctOrDash(o.winAdded)} points vs what their game state predicted`,
+    o.share === undefined ? null : t("build.bought", { rate: rate(o.share) }),
+    o.winAdded == null ? null : t("build.winAddedTip", { signed: signedOrDash(o.winAdded), wins: winsPer100(o.winAdded) }),
     ...(o.reasons ?? []),
   ]
     .filter(Boolean)
@@ -83,11 +83,11 @@ function Star() {
  * The build, one row per step (Start, Boots, Items 1–4): when, the main item with its name and
  * pick rate, then up to two other picks with theirs. ★ marks what adds the most in a step.
  */
-export function BuildPath({ loadout }: { loadout: LoadoutView }) {
+export function BuildPath({ loadout, tight = false }: { loadout: LoadoutView; tight?: boolean }) {
   const rows = steps(loadout);
   if (!rows.length) return <span className="caption">Not enough purchases to rank items yet.</span>;
   return (
-    <div className="path" role="table" aria-label="Build path">
+    <div className={tight ? "path tight" : "path"} role="table" aria-label="Build path">
       {rows.map((c) => {
         const star = starOf(c);
         return (

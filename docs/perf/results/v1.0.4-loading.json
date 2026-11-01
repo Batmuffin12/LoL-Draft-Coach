@@ -1,0 +1,161 @@
+{
+ "label": "v1.0.4-loading",
+ "version": "1.0.4",
+ "note": "Interleaved with the other version on one machine: 12 batches of cold starts (1,000 per version, one warm-up launch before each batch) and the server benchmark with 200 startup flows. Same harness as pnpm perf.",
+ "at": "2026-11-01T22:31:43.791Z",
+ "machine": {
+  "cpu": "AMD Ryzen 7 7800X3D 8-Core Processor           ",
+  "cores": 16,
+  "memGb": 33,
+  "platform": "win32",
+  "node": "v24.14.0",
+  "electron": "44.5.1"
+ },
+ "metrics": {
+  "desktop.coldStart.ready": {
+   "median": 193.4716796875,
+   "p95": 203.064453125,
+   "p99": 208.990234375,
+   "min": 178.43798828125,
+   "max": 250.283203125,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.windowCreated": {
+   "median": 236.295166015625,
+   "p95": 247.27880859375,
+   "p99": 258.714599609375,
+   "min": 220.574951171875,
+   "max": 306.779296875,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstPaint": {
+   "median": 356.300048828125,
+   "p95": 375.10009765625,
+   "p99": 398.199951171875,
+   "min": 318.10009765625,
+   "max": 507.89990234375,
+   "samples": 999,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstContentfulPaint": {
+   "median": 356.300048828125,
+   "p95": 375.10009765625,
+   "p99": 398.199951171875,
+   "min": 318.10009765625,
+   "max": 507.89990234375,
+   "samples": 999,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstState": {
+   "median": 298.5,
+   "p95": 310.60009765625,
+   "p99": 325.5,
+   "min": 287.699951171875,
+   "max": 371.300048828125,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstScreen": {
+   "median": 329.2998046875,
+   "p95": 343.599853515625,
+   "p99": 363.800048828125,
+   "min": 316.300048828125,
+   "max": 402.2001953125,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.fullScreen": {
+   "median": 488.699951171875,
+   "p95": 517.2998046875,
+   "p99": 567.5,
+   "min": 469.5,
+   "max": 1633.60009765625,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.ddragonEvent": {
+   "median": 318.976318359375,
+   "p95": 341.217041015625,
+   "p99": 386.197265625,
+   "min": 301.946533203125,
+   "max": 1471.848876953125,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "server.flow.first.total": {
+   "median": 222.64280000000144,
+   "p95": 227.16690000001108,
+   "p99": 232.92010000001756,
+   "min": 213.7966000000015,
+   "max": 249.32760000001872,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.first.profile": {
+   "median": 188.41169999999693,
+   "p95": 192.32089999999152,
+   "p99": 194.5960999999952,
+   "min": 180.76819999999134,
+   "max": 211.28810000000522,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.first.profileFetch": {
+   "median": 141.7780999999959,
+   "p95": 145.18940000000293,
+   "p99": 147.50259999997797,
+   "min": 137.93739999999525,
+   "max": 165.53750000000582,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.first.metaFetch": {
+   "median": 5.917500000010477,
+   "p95": 6.670000000012806,
+   "p99": 6.946799999976065,
+   "min": 5.568300000013551,
+   "max": 7.657700000010664,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.next.total": {
+   "median": 63.0791999999783,
+   "p95": 64.79880000001867,
+   "p99": 66.8914999999979,
+   "min": 61.55899999997928,
+   "max": 67.36030000000028,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.next.profile": {
+   "median": 40.44120000000112,
+   "p95": 41.649700000009034,
+   "p99": 42.817700000014156,
+   "min": 39.58780000000843,
+   "max": 44.749299999995856,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.next.profileFetch": {
+   "median": 21.98389999999199,
+   "p95": 22.823200000013458,
+   "p99": 24.238000000012107,
+   "min": 21.074800000002142,
+   "max": 26.09419999999227,
+   "samples": 200,
+   "unit": "ms"
+  },
+  "server.flow.next.metaFetch": {
+   "median": 20.171699999977136,
+   "p95": 21.056700000015553,
+   "p99": 22.705600000015693,
+   "min": 19.137300000002142,
+   "max": 23.64920000001439,
+   "samples": 200,
+   "unit": "ms"
+  }
+ },
+ "raw": {}
+}

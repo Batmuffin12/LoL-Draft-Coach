@@ -1,7 +1,8 @@
 /**
- * pnpm perf [--label <name>] [--only desktop,clicks,server,bench,fallow,bundle] [--quick]
+ * pnpm perf [--label <name>] [--only desktop,clicks,server,bench,fallow,bundle] [--quick] [--cold-starts N] [--flows N]
  * Measures the panel and the server locally (docs/perf/README.md) and writes
- * docs/perf/results/<label>.json: every metric with its median, p95 and spread.
+ * docs/perf/results/<label>.json: every metric with its median, p95, p99 and spread.
+ * --cold-starts / --flows: how many panel starts to measure (default 10 and 5). A p99 needs at least 100: below that it is just the slowest.
  * Nothing here touches production or the Riot API.
  */
 import { execFileSync, spawnSync } from "node:child_process";
@@ -22,6 +23,8 @@ const label = opt("label", new Date().toISOString().slice(0, 16).replace(/[:T]/g
 const only = new Set((opt("only", "bundle,desktop,clicks,bench,server,fallow") ?? "").split(","));
 const quick = args.includes("--quick");
 const shell = process.platform === "win32";
+const coldStarts = Number(opt("cold-starts", quick ? 3 : 10));
+const flows = opt("flows", null);
 
 const run = (cmd, cmdArgs, opts = {}) => {
   console.log(`> ${cmd} ${cmdArgs.join(" ")}`);
@@ -36,10 +39,10 @@ const readJson = (f) => JSON.parse(readFileSync(f, "utf8"));
 // ---- statistics -------------------------------------------------------------------------------
 const sorted = (xs) => [...xs].filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
 const quantile = (s, q) => (s.length ? s[Math.min(s.length - 1, Math.max(0, Math.ceil(q * s.length) - 1))] : null);
-/** A timing metric from samples: median, p95, min, max, samples. */
+/** A timing metric from samples: median, p95, p99, min, max, samples. */
 function dist(samples, unit = "ms") {
   const s = sorted(samples);
-  return { median: quantile(s, 0.5), p95: quantile(s, 0.95), min: s[0] ?? null, max: s.at(-1) ?? null, samples: s.length, unit };
+  return { median: quantile(s, 0.5), p95: quantile(s, 0.95), p99: quantile(s, 0.99), min: s[0] ?? null, max: s.at(-1) ?? null, samples: s.length, unit };
 }
 const value = (v, unit) => ({ value: v, unit });
 
@@ -64,14 +67,14 @@ function bundle() {
 // ---- desktop ---------------------------------------------------------------------------------
 function startup() {
   const out = join(local, "startup.json");
-  tsx("scripts/perf/desktop.ts", ["startup", String(quick ? 3 : 10), out]);
+  tsx("scripts/perf/desktop.ts", ["startup", String(coldStarts), out]);
   const runs = readJson(out);
   raw.startup = runs.map((r) => ({ marks: r.marks, renderer: r.renderer?.marks, emits: r.emits }));
   const since = (r, mark) => {
     const t = r.marks[mark] ?? r.renderer?.marks?.[mark];
     return t === undefined ? NaN : t - r.marks.spawn;
   };
-  for (const m of ["ready", "windowCreated", "firstContentfulPaint", "firstState", "firstScreen", "fullScreen"]) metrics[`desktop.coldStart.${m}`] = dist(runs.map((r) => since(r, m)));
+  for (const m of ["ready", "windowCreated", "firstPaint", "firstContentfulPaint", "firstState", "firstScreen", "fullScreen"]) metrics[`desktop.coldStart.${m}`] = dist(runs.map((r) => since(r, m)));
   metrics["desktop.coldStart.pushes"] = dist(runs.map((r) => r.pushes.length), "count");
   metrics["desktop.coldStart.profileLoad"] = dist(runs.map((r) => r.emits.filter((e) => e.source === "profiles:profile").reduce((n, e) => n + e.ms, 0)));
   metrics["desktop.coldStart.mainBusy"] = dist(runs.map((r) => r.emits.reduce((n, e) => n + e.ms, 0)));
@@ -128,7 +131,7 @@ function summariseReplay(name, r, clickKey) {
 const REPLAYS = [
   { name: "mid-counter", seconds: 60, clicks: ["css:.alt"], rounds: 30, key: "ifNot" },
   { name: "locked-solid", seconds: 60, clicks: ["Runes", "Build", "Matchups"], rounds: 10, key: "lockedTab" },
-  { name: "full-game", seconds: 60, clicks: ["Style", "Pool", "New", "This month", "Last game"], rounds: 7, key: "lobbyTab" },
+  { name: "full-game", seconds: 60, clicks: ["Me", "This month", "Champions", "Try new", "Last game"], rounds: 7, key: "lobbyTab" },
   { name: "lobby", seconds: 10, clicks: ["Top", "Mid"], rounds: 15, key: "pill" },
 ];
 
@@ -151,7 +154,7 @@ function benches() {
 function server() {
   run("pnpm", ["--filter", "@ldc/server", "build"]);
   const out = join(local, "server.json");
-  tsx("scripts/perf/server.ts", [out, ...(quick ? ["--quick"] : [])]);
+  tsx("scripts/perf/server.ts", [out, ...(quick ? ["--quick"] : []), ...(flows ? ["--flows", flows] : [])]);
   const s = readJson(out);
   metrics["server.coldStart"] = dist(s.coldStartMs);
   metrics["server.job.snapshot"] = value(s.db.snapshotMs, "ms");
@@ -167,6 +170,10 @@ function server() {
     if (!runs.length) continue;
     metrics[`server.flow.${which}.total`] = dist(runs.map((r) => r.totalMs));
     metrics[`server.flow.${which}.profile`] = dist(runs.map((r) => r.profileMs));
+    // The round trips themselves: the panel's fetch, whole body read.
+    const fetchMs = (r, re) => r.requests.filter((q) => re.test(q.path)).reduce((n, q) => n + q.ms, 0);
+    metrics[`server.flow.${which}.profileFetch`] = dist(runs.map((r) => fetchMs(r, /^\/me\/profile/)));
+    metrics[`server.flow.${which}.metaFetch`] = dist(runs.map((r) => fetchMs(r, /^\/meta\//)));
     metrics[`server.flow.${which}.requests`] = value(runs.at(-1).requests.length, "count");
     metrics[`server.flow.${which}.bytes`] = value(runs.at(-1).requests.reduce((n, r) => n + r.bytes, 0), "bytes");
   }

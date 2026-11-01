@@ -1,14 +1,16 @@
 import type { PickView, PoolChampView, ReasonView } from "../../shared/view";
-import { cx, pct, pickColumns, pickReasons, rate, signedOrDash, t, tone } from "../format";
+import { cx, pct, pickColumns, pickReasons, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { OffMetaChip } from "./Chip";
 
 /** The three parts of the chance shown as tiles; the team part reaches you through the reasons. */
-const TILES = [
-  { key: "you", label: "You", title: "Your experience on it in this role, and your record on it" },
-  { key: "meta", label: "Meta", title: "Its strength in your rank" },
-  { key: "lane", label: "Lane", title: "Into their laner (for information: matchups barely change who wins)" },
-] as const;
+const TILES = ["you", "meta", "lane"] as const;
+
+/** A tile's hover text: what it is and, with a number, that number in wins per 100 games. */
+export function tileTip(key: (typeof TILES)[number], value: number | null): string {
+  const tip = t(`pick.tile.${key}.tip`);
+  return value === null ? tip : t("pick.tile.value", { tip, signed: signedOrDash(value), wins: winsPer100(value) });
+}
 
 /** The short part of a reason, before its numbers: "Strong in mid in your rank: 51.7% …" → "Strong in mid in your rank". */
 function reasonHeadline(r: ReasonView): string {
@@ -25,21 +27,23 @@ export interface SuggestedPickProps {
   record: PoolChampView | null;
   /** Reason lines under the tiles (fewer when the draft notes take a line). */
   maxReasons: number;
+  /** Its `data-tour` name, for a highlight. */
+  tour?: string;
 }
 
 /** The suggested pick: a gold card with its chance, the You · Meta · Lane tiles, and its reasons. */
-export function SuggestedPick({ pick, first, whyNot, record, maxReasons }: SuggestedPickProps) {
+export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }: SuggestedPickProps) {
   const cols = pickColumns(pick.terms);
   return (
     <>
-      <div className="you pick-card">
+      <div className="you pick-card" data-tour={tour}>
         <ChampIcon champ={pick.champion} size={64} framed />
         <div className="who">
           <span className="t-title nm">
             {pick.champion.name} {pick.offMeta && <OffMetaChip />}
           </span>
           {record && (
-            <span className="micro">{t("pick.record", { tier: record.tierLabel, games: record.games, wr: rate(record.winRate, 1) })}</span>
+            <span className="micro">{t("pick.record", { tier: record.tierLabel, games: record.games, wr: rateOf(record.winRate, record.games) })}</span>
           )}
         </div>
         {/* No good/bad colour: the chance compares your options in this draft, and #1 is the best one even below 50%. */}
@@ -49,10 +53,10 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons }: Sugge
         </div>
       </div>
       <div className="tiles">
-        {TILES.map((c) => (
-          <div key={c.key} className="tile" title={c.title}>
-            <span className="label">{c.label}</span>
-            <span className={cx("t-heading", cols[c.key] === null ? "muted" : tone(cols[c.key]))}>{signedOrDash(cols[c.key])}</span>
+        {TILES.map((key) => (
+          <div key={key} className="tile" {...tip(tileTip(key, cols[key]))}>
+            <span className="label">{t(`pick.tile.${key}`)}</span>
+            <span className={cx("t-heading", cols[key] === null ? "muted" : tone(cols[key]))}>{signedOrDash(cols[key])}</span>
           </div>
         ))}
       </div>
@@ -76,7 +80,7 @@ export function OtherPicks({ picks, onSelect }: { picks: { pick: PickView; index
         const plus = pick.reasons.find((r) => !r.negative);
         const line = [pick.expectedWin === null ? null : pct(pick.expectedWin), plus ? reasonHeadline(plus).replace(/^./, (c) => c.toLowerCase()) : null].filter(Boolean).join(" · ");
         return (
-          <button key={pick.champion.id} type="button" className="alt" onClick={() => onSelect(index)} title={[pick.champion.name, ...pick.reasons.map((r) => r.text)].join("\n")}>
+          <button key={pick.champion.id} type="button" className="alt" onClick={() => onSelect(index)} {...tip([pick.champion.name, ...pick.reasons.map((r) => r.text)].join("\n"))}>
             <ChampIcon champ={pick.champion} size={34} title="" />
             <span className="t-heading">{pick.champion.name}</span>
             {line && <span className="micro">{line}</span>}

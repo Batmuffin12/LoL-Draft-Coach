@@ -52,6 +52,17 @@ describe("waiting for a new game", () => {
     expect(refreshes).toBeGreaterThanOrEqual(2);
   });
 
+  it("says when every retry is used and the game still isn't there; a new wait clears it", async () => {
+    const gaveUp: boolean[] = [];
+    let have = false;
+    const waiter = new NewGameWaiter({ profiles: () => ({ refresh: async () => {} }), retrySeconds: () => [0], hasGame: () => have, pending: () => {}, gaveUp: (g) => gaveUp.push(g) });
+    await waiter.wait(1);
+    expect(gaveUp).toEqual([false, true]);
+    have = true;
+    await waiter.wait(1);
+    expect(gaveUp).toEqual([false, true, false]);
+  });
+
   it("does nothing without a profile source", async () => {
     const pending: boolean[] = [];
     await new NewGameWaiter({ profiles: () => null, retrySeconds: () => [1], hasGame: () => false, pending: (w) => pending.push(w) }).wait(1);

@@ -11,7 +11,8 @@ function mergeOptions<T extends OptionStat>(lists: T[][], key: (o: T) => string)
   return [...map.values()].sort((a, b) => b.n - a.n || b.games - a.games);
 }
 
-const pageKey = (p: RunePageStat) => `${p.primaryStyle}|${p.subStyle}|${p.runes.join(",")}|${p.statPerks.join(",")}`;
+/** What makes a rune page that page: its paths, runes and shards. Stable when options reorder between draft updates. */
+export const runePageKey = (p: Pick<RunePageStat, "primaryStyle" | "subStyle" | "runes" | "statPerks">) => `${p.primaryStyle}|${p.subStyle}|${p.runes.join(",")}|${p.statPerks.join(",")}`;
 
 /**
  * A champion's builds in every role added together (partial pooling's parent group): used
@@ -45,7 +46,7 @@ export function mergeBuilds(builds: ChampionBuild[]): ChampionBuild | null {
     timelineN: builds.reduce((s, b) => s + b.timelineN, 0),
     games: builds.reduce((s, b) => s + b.games, 0),
     wins: builds.reduce((s, b) => s + b.wins, 0),
-    pages: mergeOptions(builds.map((b) => b.pages), pageKey),
+    pages: mergeOptions(builds.map((b) => b.pages), runePageKey),
     spells: mergeOptions(builds.map((b) => b.spells), (o) => o.spells.join(",")),
     skills: mergeOptions(builds.map((b) => b.skills), (o) => `${o.first.join("")}|${o.order.join("")}`),
     starting: mergeOptions(builds.map((b) => b.starting), (o) => o.items.join(",")),
@@ -92,7 +93,7 @@ export function personalBuild(matches: UserMatch[], championId: ChampionId, role
     const w = p.win ? 1 : 0;
     if (p.perks?.runes.length) {
       const page: RunePageStat = { primaryStyle: p.perks.primaryStyle, subStyle: p.perks.subStyle, runes: p.perks.runes, statPerks: p.perks.statPerks, games: 0, wins: 0, n: 0 };
-      const k = pageKey(page);
+      const k = runePageKey(page);
       const cur = pages.get(k) ?? page;
       pages.set(k, { ...cur, games: cur.games + 1, wins: cur.wins + w, n: cur.n + 1 });
     }

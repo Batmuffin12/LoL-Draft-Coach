@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { RiotApiError, RiotKeyError, MatchSchema, TimelineSchema, type Match } from "@ldc/riot-api";
+import { RiotApiError, RiotKeyError, RiotSchemaError, MatchSchema, TimelineSchema, type Match } from "@ldc/riot-api";
 import { createInvite, deleteUser, registerUser, type User } from "../src/accounts";
 import { openDb, schema, type Db } from "../src/db";
 import { pruneUserHistory, sortMatchIdsNewestFirst, syncUser, usersDueForSync, type SyncRiot, type SyncSettings } from "../src/sync";
-import { SyncScheduler } from "../src/sync-scheduler";
+import { SYNC_FAILURE_COOLDOWN_MS, SyncScheduler } from "../src/sync-scheduler";
 import { findConfigDir, loadServerConfig } from "../src/config";
 
 const NOW = 1_800_000_000_000;
@@ -380,5 +380,142 @@ describe("SyncScheduler", () => {
     expect(s.state(a.id)).toMatchObject({ state: "error", message: "key rejected" });
     expect(s.state(b.id)).toEqual({ state: "idle" });
     expect(logs).toHaveLength(1);
+  });
+
+  it("the background loop leaves a sync that just failed alone until the cooldown is over", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    let masteryCalls = 0;
+    riot.masteriesByPuuid = async () => {
+      masteryCalls++;
+      throw new RiotApiError(500, "mastery");
+    };
+    await newUser(db, "A#EUW", "PA");
+    db.update(schema.users).set({ lastSeenAt: NOW }).run();
+    let now = NOW;
+    const s = new SyncScheduler(db, riot, settings(), { tickMs: 1e9, staleAfterMs: 1, activeWithinMs: 1e9, now: () => now, log: () => {} });
+    await s.tick();
+    await s.tick();
+    expect(masteryCalls).toBe(1);
+    now = NOW + SYNC_FAILURE_COOLDOWN_MS - 1;
+    await s.tick();
+    expect(masteryCalls).toBe(1);
+    now = NOW + SYNC_FAILURE_COOLDOWN_MS;
+    await s.tick();
+    expect(masteryCalls).toBe(2);
+  });
+
+  it("tells the player what failed in plain words, and logs it with no PUUID or name", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-OFEK");
+    const logs: string[] = [];
+    const s = new SyncScheduler(db, riot, settings(), { tickMs: 1e9, staleAfterMs: 1, activeWithinMs: 1e9, now: () => NOW, log: (m) => logs.push(m) });
+    const failWith = async (err: Error) => {
+      riot.masteriesByPuuid = async () => {
+        throw err;
+      };
+      await s.request(user.id).catch(() => {});
+      return s.state(user.id);
+    };
+    expect(await failWith(new RiotApiError(503, "champion-mastery-v4.by-puuid"))).toMatchObject({ state: "error", message: "Riot isn't answering right now (HTTP 503)." });
+    expect(await failWith(new RiotApiError(0, "m", "Riot API m didn't answer within 20 s"))).toMatchObject({ message: "Riot isn't answering right now." });
+    expect(await failWith(new RiotSchemaError("Riot m response changed shape:\n✖ Invalid\n  → at a.b"))).toMatchObject({ message: "Riot sent data this server can't read yet." });
+    expect(await failWith(new TypeError("fetch failed"))).toMatchObject({ message: "Riot can't be reached right now." });
+    expect(await failWith(new Error("disk full"))).toMatchObject({ message: "The coach server couldn't finish updating your games." });
+    expect(logs.at(-3)).toBe("sync: user 1 failed: Riot m response changed shape: ✖ Invalid → at a.b");
+    await failWith(new Error(`boom for ${"A".repeat(60)}`));
+    expect(logs.at(-1)).toBe("sync: user 1 failed: Error: boom for [id]");
+    expect(logs.join("\n")).not.toMatch(/Ofek|PUUID-OFEK/);
+  });
+
+  it("a different Riot account fails with what to do, without the Riot ID in the log", async () => {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-OFEK");
+    seed(riot, "PUUID-OFEK", 3);
+    await syncUser(db, riot, user, settings(), NOW);
+    riot.foreign.add("PUUID-OFEK");
+    riot.accounts["Ofek#EUW"] = "PUUID-STRANGER";
+    seed(riot, "PUUID-STRANGER", 2, 500);
+    const logs: string[] = [];
+    const s = new SyncScheduler(db, riot, settings(), { tickMs: 1e9, staleAfterMs: 1, activeWithinMs: 1e9, now: () => NOW, log: (m) => logs.push(m) });
+    await s.request(user.id).catch(() => {});
+    expect(s.state(user.id)).toMatchObject({ state: "error", message: expect.stringMatching(/different Riot account: register again/) });
+    expect(logs.join("\n")).not.toMatch(/Ofek/);
+  });
+});
+
+describe("one match can't block a sync", () => {
+  /** A user with `n` games (newest first: EUW1_1000, EUW1_999...), and which fail, and how. */
+  async function failing(n: number, failure: (id: string) => Error | null, history = settings(10)) {
+    const db = openDb(":memory:");
+    const riot = fakeRiot();
+    const user = await newUser(db, "Ofek#EUW", "PUUID-OFEK");
+    seed(riot, "PUUID-OFEK", n);
+    const healthy = riot.match.bind(riot);
+    const fail = { failure };
+    riot.match = async (id) => {
+      const err = fail.failure(id);
+      if (err) throw err;
+      return healthy(id);
+    };
+    const logs: string[] = [];
+    const run = () => syncUser(db, riot, db.select().from(schema.users).where(eq(schema.users.id, user.id)).get()!, { ...history, log: (m) => logs.push(m) }, NOW);
+    const stored = () => db.select().from(schema.userMatches).all().map((m) => m.matchId).sort();
+    return { db, riot, user, fail, logs, run, stored };
+  }
+
+  it("skips a permanently unreadable match, finishes the sync, and logs it", async () => {
+    const f = await failing(3, (id) => (id === "EUW1_999" ? new RiotSchemaError("Riot match-v5.match response changed shape:\nbad") : null));
+    await expect(f.run()).resolves.toMatchObject({ newMatches: 2, remaining: 0 });
+    expect(f.stored()).toEqual(["EUW1_1000", "EUW1_998"]);
+    // The sync counted: fresh games, masteries saved, no retry storm.
+    expect(f.db.select().from(schema.users).get()).toMatchObject({ lastSyncAt: NOW, historyBacklog: 0 });
+    expect(f.logs).toEqual(["sync: user 1 skipped unreadable match EUW1_999: Riot match-v5.match response changed shape: bad"]);
+  });
+
+  it("reads an unreadable match again on a later sync (after a schema fix it is stored)", async () => {
+    const f = await failing(3, (id) => (id === "EUW1_999" ? new RiotSchemaError("bad") : null));
+    await f.run();
+    f.fail.failure = () => null;
+    await expect(f.run()).resolves.toMatchObject({ newMatches: 1 });
+    expect(f.stored()).toEqual(["EUW1_1000", "EUW1_998", "EUW1_999"]);
+  });
+
+  it("treats a match we can't summarize as unreadable", async () => {
+    const f = await failing(2, () => null);
+    Object.defineProperty(f.riot.store.get("EUW1_999")!.info, "gameVersion", {
+      get() {
+        throw new Error("no version");
+      },
+    });
+    await expect(f.run()).resolves.toMatchObject({ newMatches: 1, remaining: 0 });
+    expect(f.logs[0]).toMatch(/skipped unreadable match EUW1_999: Riot match can't be summarized/);
+  });
+
+  it("never skips for good on a passing error: the match stays in the backlog and the next sync gets it", async () => {
+    const f = await failing(3, (id) => (id === "EUW1_999" ? new RiotApiError(500, "match-v5.match") : null));
+    await expect(f.run()).resolves.toMatchObject({ newMatches: 2, remaining: 1 });
+    expect(f.db.select().from(schema.users).get()).toMatchObject({ lastSyncAt: NOW, historyBacklog: 1 });
+    expect(f.logs).toEqual(["sync: user 1 will retry match EUW1_999: Riot API match-v5.match failed with HTTP 500"]);
+    f.fail.failure = () => null;
+    await expect(f.run()).resolves.toMatchObject({ newMatches: 1, remaining: 0 });
+    expect(f.stored()).toEqual(["EUW1_1000", "EUW1_998", "EUW1_999"]);
+    expect(f.db.select().from(schema.users).get()).toMatchObject({ historyBacklog: 0 });
+  });
+
+  it("stops when matches keep failing in a row (Riot is down), keeping what it stored", async () => {
+    const f = await failing(6, (id) => (Number(id.split("_")[1]) <= 998 ? new RiotApiError(500, "match-v5.match") : null));
+    await expect(f.run()).rejects.toMatchObject({ status: 500 });
+    expect(f.stored()).toEqual(["EUW1_1000", "EUW1_999"]);
+    // Not marked as synced: the next sync starts over.
+    expect(f.db.select().from(schema.users).get()).toMatchObject({ lastSyncAt: null });
+  });
+
+  it("a rejected key still stops the sync at once", async () => {
+    const f = await failing(3, () => new RiotKeyError(403, "match-v5.match", "key rejected"));
+    await expect(f.run()).rejects.toBeInstanceOf(RiotKeyError);
+    expect(f.riot.calls.filter((c) => c.startsWith("match:"))).toEqual([]);
   });
 });

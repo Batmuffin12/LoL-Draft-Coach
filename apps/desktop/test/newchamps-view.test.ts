@@ -81,14 +81,20 @@ describe("new champions view", () => {
         stage: "Getting comfortable",
         focus: { text: "On it: deaths before 14 min 2.5, vs 1.2 on your other mid picks", recent: [false, true, false] },
         lines: [
-          "Skills: start E, Q, W; max Q, then E, then W (55% of players)",
-          "It wins with fewer deaths before 14 min: 1.1 in wins, 2.0 in losses (you: 2.5); and more CS at 10 min: 68 in wins, 61 in losses",
-          "Its spike: Infinity Edge (item 1, ~11 min). Fight once it's done; farm safely before",
-          "Your first item on it: 13.4 min (3 games), typical 11.1 min: farm and back on time to reach it sooner",
-          "Stronger in long games: wins 53%, vs 47% in short ones",
-          "Good first matchups: Orianna (+3.1%)",
-          "Tough matchups for now: Zed (−4.2%), LeBlanc (−2.0%)",
-          "You on it: 2–1",
+          { label: "Skills", items: [{ text: "Start E, Q, W" }, { text: "Max Q, then E, then W (55% of players)" }] },
+          { label: "Wins with", items: [{ text: "Fewer deaths before 14 min: 1.1 in wins, 2.0 in losses (you: 2.5)" }, { text: "More CS at 10 min: 68 in wins, 61 in losses" }] },
+          { label: "Its spike", minor: true, items: [{ text: "Infinity Edge (item 1, ~11 min)" }, { text: "Fight once it's done; farm safely before" }] },
+          { label: "First item", minor: true, items: [{ text: "You: 13.4 min (3 games)" }, { text: "Typical: 11.1 min" }, { text: "Farm and back on time to reach it sooner" }] },
+          { label: "Short vs long games", minor: true, items: [{ text: "Stronger in long games" }, { text: "Wins 47% in short games, 53% in long" }] },
+          { label: "Good matchups", items: [{ text: "Orianna +3.1% WR", champion: { id: 61, name: "Orianna", iconUrl: null }, title: "Into Orianna: about 3 more wins per 100 games than their usual win rates predict (400 games)" }] },
+          {
+            label: "Tough matchups",
+            items: [
+              { text: "Zed \u22124.2% WR", champion: { id: 238, name: "Zed", iconUrl: null }, title: "Into Zed: about 4 fewer wins per 100 games than their usual win rates predict (500 games)" },
+              { text: "LeBlanc \u22122.0% WR", champion: { id: 7, name: "LeBlanc", iconUrl: null }, title: "Into LeBlanc: about 2 fewer wins per 100 games than their usual win rates predict (300 games)" },
+            ],
+          },
+          { label: "You on it", minor: true, items: [{ text: "2–1" }] },
         ],
       },
       after: "After Lux",
@@ -117,10 +123,10 @@ describe("new champions view", () => {
     };
     const v = newChampsView({ role: "jungle", picks: [], learning: { championId: 99, progress: null } }, { ...deps, plan: () => flat, learn: { profile: { high: 0.66, low: 0.33 }, laneGoldEven: 300 } });
     expect(v.learning?.learn?.lines).toEqual([
-      "Plays as: mostly physical damage, tankier than most, little crowd control",
-      "As strong in short games as in long ones: 53% and 55%",
-      "No jungle matchup swings it much in your rank (23 measured): a safe blind pick",
-      "Usually even in gold with its jungle opponent at 15 min",
+      { label: "Plays as", minor: true, items: [{ text: "Mostly physical damage" }, { text: "Tankier than most" }, { text: "Little crowd control" }] },
+      { label: "Short vs long games", minor: true, items: [{ text: "As strong in short games as in long ones" }, { text: "Wins 53% in short games, 55% in long" }] },
+      { label: "Matchups", items: [{ text: "No jungle matchup swings it much (23 measured)" }, { text: "A safe blind pick" }] },
+      { label: "Gold at 15 min", minor: true, items: [{ text: "Usually even with its jungle opponent" }] },
     ]);
   });
 

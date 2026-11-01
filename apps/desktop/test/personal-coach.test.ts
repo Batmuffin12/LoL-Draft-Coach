@@ -12,7 +12,7 @@ import { PersonalCoach } from "../src/main/personal-coach";
 import { DirectProfileSource } from "../src/main/profile-source";
 import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
 import type { ViewState } from "../src/shared/view";
-import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, waitFor } from "./helpers";
+import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -119,7 +119,7 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     await waitFor(() => coach!.state.status.profile.state === "ready" && server!.clientCount === 1);
     expect(coach!.state.status.band).toBe(3); // EMERALD from the client's ranked stats, via config
 
-    while (coach!.state.draft?.localAction !== "pick" && server!.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(server!, coach!, () => coach!.state.draft?.localAction === "pick");
     await waitFor(() => coach!.state.picks.length > 0);
 
     const picks = coach!.state.picks;
@@ -189,7 +189,7 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
 describe("compliance", () => {
   it("the panel code never calls LCU endpoints that act on champ select", () => {
     const dir = join(__dirname, "..", "src");
-    const files = ["main/index.ts", "main/coach.ts", "main/personal-coach.ts", "main/profile-source.ts", "preload/index.ts"];
+    const files = ["main/index.ts", "main/coach.ts", "main/personal-coach.ts", "main/import-flow.ts", "main/draft-session.ts", "main/draft-panel.ts", "main/lobby-views.ts", "main/profile-source.ts", "preload/index.ts"];
     for (const f of files) {
       const text = readFileSync(join(dir, f), "utf8");
       expect(text, f).not.toMatch(/method:\s*"(POST|PATCH|PUT|DELETE)"|\/actions\/\d|lol-champ-select\/v1\/session\/actions/);

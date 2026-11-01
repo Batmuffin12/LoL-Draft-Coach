@@ -15,11 +15,35 @@ import { MetaSource, type MetaStatus } from "../src/main/meta-source";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { ServerProfileSource } from "../src/main/profile-source";
 import { ServerClient, ServerError } from "../src/main/server-client";
-import { fakeDdragonFetch, fakeRiotFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, fakeRiotFetch, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
 const NOW = Date.now();
+
+describe("MetaSource after a failure", () => {
+  it("asks the server again on the next refresh: a failure doesn't count as checked", async () => {
+    let calls = 0;
+    const client = {
+      meta: async () => {
+        calls++;
+        if (calls === 1) throw new ServerError(0, "unreachable", "down");
+        return { notModified: false as const, snapshot: snapshot(), etag: "e" };
+      },
+    } as unknown as ServerClient;
+    const m = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-") });
+    const statuses: MetaStatus[] = [];
+    m.on("status", (s) => statuses.push(s));
+    await m.refresh(2);
+    expect(statuses.at(-1)).toMatchObject({ state: "error", message: "Can't reach the coach server: check your internet connection." });
+    await m.refresh(2);
+    expect(calls).toBe(2);
+    expect(statuses.at(-1)).toMatchObject({ state: "ready", band: 2 });
+    // Once it worked, the minimum interval applies again (no needless wake-up).
+    await m.refresh(2);
+    expect(calls).toBe(2);
+  });
+});
 
 /** A small band-2 snapshot: in middle, 245 is strong and 103 is average. */
 function snapshot(createdAt = NOW): MetaSnapshot {
@@ -47,7 +71,7 @@ function snapshot(createdAt = NOW): MetaSnapshot {
         timelineN: 300,
         games: 400,
         wins: 200,
-        pages: [{ primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8135, 8226, 8210], statPerks: [5001, 5008, 5005], games: 300, wins: 160, n: 300 }],
+        pages: [{ primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8138, 8135, 8226, 8210], statPerks: [5001, 5008, 5005], games: 300, wins: 160, n: 300 }, { primaryStyle: 8200, subStyle: 8100, runes: [8229, 8226, 8210, 8237, 8139, 8106], statPerks: [5001, 5008, 5005], games: 60, wins: 33, n: 60 }],
         spells: [{ spells: [4, 14], games: 350, wins: 180, n: 350 }],
         skills: [{ first: [1, 3, 2], order: [1, 2, 3], games: 250, wins: 125, n: 250 }],
         starting: [{ items: [1056, 2003], games: 280, wins: 140, n: 280 }],
@@ -78,6 +102,17 @@ function fakeClient(responses: (() => Awaited<ReturnType<ServerClient["meta"]>>)
 }
 
 describe("MetaSource", () => {
+  it("tells 'nothing for this rank yet' apart from a failure, without showing the server's wording", async () => {
+    const noSnapshot = () => {
+      throw new ServerError(404, "no_snapshot", "No meta snapshot for band 2 yet.");
+    };
+    const src = new MetaSource({ client: () => fakeClient([noSnapshot]).client, cacheDir: tmp("ldc-meta-") });
+    const seen: MetaStatus[] = [];
+    src.on("status", (s) => seen.push(s));
+    await src.refresh(2);
+    expect(seen.at(-1)).toMatchObject({ state: "error", noSnapshot: true });
+  });
+
   it("uses a fixed snapshot (LDC_META_FILE) for any band without asking a server", async () => {
     const { client, calls } = fakeClient([]);
     const source = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-fixed-"), fixed: snapshot() });
@@ -142,7 +177,7 @@ describe("MetaSource", () => {
     const seen: MetaStatus[] = [];
     src.on("status", (s) => seen.push(s));
     await src.refresh(2);
-    expect(seen.at(-1)).toMatchObject({ state: "error" });
+    expect(seen.at(-1)).toEqual({ state: "error", message: "Can't reach the coach server: check your internet connection." });
     const none = new MetaSource({ client: () => null, cacheDir: tmp("ldc-meta-") });
     const st: MetaStatus[] = [];
     none.on("status", (s) => st.push(s));
@@ -219,7 +254,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     // Stat shards with the client's names, shown in the client's order (offense, flex, defense).
     expect(coach.state.hoverPick!.loadout!.page!.shards.map((s) => s.name)).toEqual(["Attack Speed", "Adaptive Force", "Health"]);
 
-    while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(lcu, coach, () => coach!.state.draft?.localAction === "pick");
     await waitFor(() => coach!.state.picks.length > 0);
     const picks = coach.state.picks;
     // The phase band's lane opponent: your role, with their champion once it's revealed.
@@ -234,12 +269,19 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(coach.state.pickAdvice.minGames).toEqual(config.engine.rating.minGames);
 
     // A new scoring config from the server applies immediately; wording an older server lacks falls back to the bundled copy.
-    const { ["loadout.page"]: _dropped, ...olderTemplates } = config.explain.templates;
+    const { ["loadout.page"]: _dropped, ["loadout.page.second"]: _reason, ["ui.runes.option.second"]: _label, ["import.runes.stale"]: _stale, ...olderTemplates } = config.explain.templates;
     coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: olderTemplates } });
     expect(coach.state.picks).toHaveLength(2);
+    // The same for the panel's wording and the shared minimum, when a server has neither yet.
+    const panelCopy = coach.state.copy;
+    const withoutPanelWording = Object.fromEntries(Object.entries(olderTemplates).filter(([k]) => !k.startsWith("ui.")));
+    coach.setConfig({ ...config, app: { ...config.app, display: undefined }, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: withoutPanelWording } });
+    expect(coach.state.copy).toEqual(panelCopy);
+    expect(coach.state.copy["pick.empty.error"]).toBeTruthy();
+    expect(coach.state.limits.minGames).toBe(config.app.display!.minGames);
 
     // Once the player locks in, suggestions stop and the panel shows their own pick.
-    while (coach.state.myPick === null && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(lcu, coach, () => coach!.state.myPick !== null);
     await waitFor(() => coach!.state.myPick !== null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, role: "middle" });
     expect(coach.state.myPick!.expectedWin).toBeGreaterThan(0);
@@ -247,6 +289,9 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const loadout = coach.state.myPick!.loadout!;
     expect(loadout.page?.runes.map((r) => r.id)).toEqual([8112, 8139, 8138, 8135, 8226, 8210]);
     expect(loadout.page?.reason).toBe("Most taken: 300 of 400 games");
+    // The second option, its wording from the bundled copy after the older server's config above.
+    expect(loadout.pageAlt).toMatchObject({ optionLabel: "Second", reason: "Second most taken: 60 of 400 games", share: 60 / 400, games: 60, winRate: 33 / 60 });
+    expect(loadout.page).toMatchObject({ optionLabel: "Most taken", share: 300 / 400 });
     expect(loadout.skills).toMatchObject({ first: ["Q", "E", "W"], order: ["Q", "W", "E"] });
     expect(loadout.items.map((s) => s.top.id)).toEqual([6655, 3020]);
     expect(loadout.items[0]!.top.reasons[0]).toBe("66% buy it as item 1; it helps +1.2 points (200 games)");
@@ -258,7 +303,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(lcu.writes).toEqual([]);
     // One button for the rune page and the spells, one for the item set.
     await coach.importLoadout("runes");
-    expect(coach.state.myPick!.importMessage).toBe("Rune page created in your client · Summoner spells set");
+    expect(coach.state.myPick!.importLines.map((l) => l.text)).toEqual(["Rune page created in your client", "Summoner spells set"]);
     await coach.importLoadout("items");
     expect(lcu.writes.map((w) => `${w.method} ${w.path}`)).toEqual([
       "POST /lol-perks/v1/pages",
@@ -272,13 +317,24 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const set = (lcu.writes[1]!.body as { itemSets: { associatedChampions: number[]; blocks: { items: { id: string }[] }[] }[] }).itemSets[0]!;
     expect(set.associatedChampions).toEqual([103]);
     expect(set.blocks.map((b) => b.items.map((i) => i.id))).toEqual([["1056", "2003"], ["6655", "3020"]]);
-    expect(coach.state.myPick!.importMessage).toBe("Item set saved: open the shop in game to see it");
+    expect(coach.state.myPick!.importLines.map((l) => l.text)).toEqual(["Item set saved: open the shop in game to see it"]);
+
+    // The second rune option: its own page goes to the client, and a page no longer offered writes nothing.
+    lcu.writes.length = 0;
+    await coach.importLoadout("runes", loadout.pageAlt!.key);
+    expect((lcu.writes[0]!.body as { selectedPerkIds: number[] }).selectedPerkIds.slice(0, 6)).toEqual([8229, 8226, 8210, 8237, 8139, 8106]);
+    lcu.writes.length = 0;
+    await coach.importLoadout("all", "no longer offered");
+    expect(lcu.writes).toEqual([]);
+    expect(coach.state.myPick!.importLines).toEqual([{ text: "The rune options just changed: check them and import again", failed: true }]);
 
     // Champ select often ends seconds after you lock in: the card and its loadout stay until the game is over.
     lcu.push("/lol-champ-select/v1/session", null, "Delete");
     lcu.push("/lol-gameflow/v1/gameflow-phase", "InProgress");
     await waitFor(() => coach!.state.draft === null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, loadout: { canImport: false } });
+    // The button is gone, and the card says why.
+    expect(coach.state.myPick).toMatchObject({ importLines: [{ text: "Import works during champ select", failed: false }] });
     lcu.push("/lol-gameflow/v1/gameflow-phase", "EndOfGame");
     await waitFor(() => coach!.state.myPick === null);
     expect(coach.state.picks).toEqual([]);

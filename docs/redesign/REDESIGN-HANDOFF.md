@@ -169,7 +169,7 @@ All three tabs share the band and the footer.
 
 ### 4.3 Lobby › Last game (`mockups/LastGame.html`)
 
-**Tabs:** Last game · Style · Pool · New · This month (unchanged).
+**Tabs (since v1.0.4):** Last game · Me · Champions, plus Next game while queued. Me has the sub-tabs Style · This month; Champions has Pool · Try new (`Pills` under the main tabs, role pills compact inside them).
 
 **Result band** (full width, `--warn-tint` background on a loss, `--gold-tint` on a win, flat while the result is pending):
 - Icon 44 framed.
@@ -213,7 +213,7 @@ All three tabs share the band and the footer.
 - Clicking a label, or a list fallback for screen readers, shows the axis `metrics`, like `PlaystyleAxis` does today. Keep that detail reachable: a tooltip per label is the minimum.
 
 **Summary sentence** under the radar (caption, `text`):
-- New wording in `explain.v1.json`, built from the high and low axes, for example "You out-farm your rank and win lane early. Vision and early deaths hold you back."
+- Since v1.0.4 two short lists built from the high and low axes, as labelled rows: "Strong": Out-farm your rank, Win lane early; "Weak spots": Vision, Early deaths (`PlaystyleView.summary` is `FactRow[]`, phrases in `explain.v1.json`).
 - Use a sentence part per axis and level. It is not free text, and it contains no numbers.
 
 **Section "Your numbers vs your rank":**
@@ -274,7 +274,7 @@ All three tabs share the band and the footer.
 - **Columns:** the role's pool, main and comfortable first, then learning and rusty, at most 3 to 4 columns at 72px.
   - Each column head: icon 34 (the main is framed gold), name in `heading`, and a micro line with "{games} · {WR}%" for listed champions or the tier label ("rusty", "learning").
   - Rusty and learning columns are at 0.7 opacity.
-  - More champions than fit: list the extra rusty ones in one micro line under the matrix ("Also rusty: Riven, Irelia"). Wrap it, never cut it.
+  - More champions than fit: a labelled row per tier under the matrix ("Also rusty", then an icon and name per champion; `RoleView.also` is `FactRow[]`). Wrap it, never cut it; when the screen runs short the names move to the icons' hover.
 - **Rows:** the pool needs from the engine (`PoolNeed`: magic, physical, frontline, engage). Labels come from `explain.v1.json`: add `pool.need.{need}` labels "Magic damage", "Physical damage", "Frontline", "Crowd control".
   - A need nothing in the main or comfortable tiers covers gets its label in `negative`.
 - **Cells:** a 14px dot, filled `--positive` when the champion covers the need and dashed `--line-strong` when it doesn't.
@@ -290,9 +290,9 @@ All three tabs share the band and the footer.
 - A champion with no measured attributes: its cells show "—" in `muted`, never a guess.
 
 **Section "Your next step"** (from `holes`, biggest first):
-- When `holes[0].coveredBy` has a champion: a `.you` card with icon 34, "Play {champion} again" in `heading`/`gold-bright`, then a caption explaining which gaps it fills, using the needs it covers (new wording), plus the evidence (`holes[0].evidence`) as its tooltip.
-  - **New data:** `coveredBy` is a display string today; add `coveredByChampion: ChampView | null` and the list of needs it fills.
-- **Still missing:** for holes nothing you know covers, a caption "Still missing: crowd control. None of your top champions bring it." plus a secondary button "See new champions" that switches to the New tab.
+- When `holes[0].coveredBy` has a champion: a `.you` card with icon 34, "Play {champion} again" in `heading`/`gold-bright`, then a labelled row "It adds" with the needs it covers, plus the evidence (`holes[0].evidence`) as its tooltip.
+  - **New data:** `coveredByChampion: ChampView | null` and the list of needs it fills.
+- **Still missing:** for holes nothing you know covers, a labelled row "Still missing" with the needs, a micro note "None of your top champions bring it", plus a secondary button "See new champions" that opens Champions › Try new.
 - **No holes:** one caption, "Your pool covers what your team usually needs in {role}." (new wording).
 
 ### 4.7 Connect (`mockups/Connect.html`)
@@ -350,7 +350,7 @@ Keep the old fields while anything still reads them, then remove them in the sam
    - Champ select: `pnpm --filter @ldc/sim mock mid-counter`, then `LDC_SCREENSHOT=cs.png`.
    - Ban screen: `mid-ban`.
    - Locked in, solid and thin data: `locked-solid` and `locked-thin`, each with `LDC_SCREENSHOT_CLICK=Build` and `LDC_SCREENSHOT_CLICK=Matchups & plan` as well as the default Runes tab.
-   - Lobby tabs: `LDC_SCREENSHOT_CLICK=Style`, `Pool`, `This month`, `Last game`.
+   - Lobby tabs: `LDC_SCREENSHOT_CLICK=Me>Style`, `Champions>Pool`, `Me>This month`, `Last game`.
    - Connect: a fresh `LDC_USER_DATA_DIR` in server mode.
 3. **States:**
    - Thin data, with the "rough guide" line.

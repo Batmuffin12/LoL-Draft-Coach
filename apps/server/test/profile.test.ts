@@ -1,12 +1,12 @@
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { MatchSchema } from "@ldc/riot-api";
+import { MatchSchema, RiotApiError } from "@ldc/riot-api";
 import { createApp } from "../src/app";
 import { createInvite, userByToken } from "../src/accounts";
 import { loadProfile, PROFILE_IDS_MAX, profileJson } from "../src/profile";
 import { openDb } from "../src/db";
 import { findConfigDir, loadServerConfig } from "../src/config";
-import { SyncScheduler } from "../src/sync-scheduler";
+import { SYNC_FAILURE_COOLDOWN_MS, SyncScheduler } from "../src/sync-scheduler";
 import type { SyncRiot } from "../src/sync";
 
 const NOW = 1_800_000_000_000;
@@ -204,6 +204,82 @@ describe("sync on demand (no background timer)", () => {
     now = NOW + 31 * 60_000;
     await get(); // stale
     expect(requests).toEqual([1, 1]);
+  });
+
+  /** A real scheduler whose Riot API keeps failing, behind the real route (the games are never fresh). */
+  async function failingApp() {
+    const db = openDb(":memory:");
+    const clock = { now: NOW };
+    let syncs = 0;
+    const logs: string[] = [];
+    const account = { accountByRiotId: async (gameName: string, tagLine: string) => ({ puuid: "PO", gameName, tagLine }) };
+    const riot = {
+      ...account,
+      masteriesByPuuid: async () => {
+        syncs++;
+        throw new RiotApiError(503, "champion-mastery-v4.by-puuid");
+      },
+      leagueEntriesByPuuid: async () => [],
+      matchIdsByPuuid: async () => [],
+      match: async () => null,
+    };
+    const config = loadServerConfig(findConfigDir(process.cwd()));
+    const sync = new SyncScheduler(db, riot, { history: config.app.history, bands: config.bands }, { tickMs: 1e9, staleAfterMs: 1e9, activeWithinMs: 1e9, now: () => clock.now, log: (m) => logs.push(m) });
+    const app = createApp({ db, version: "test", riot: account, sync, syncWhenStaleMs: 30 * 60_000, now: () => clock.now, registerPerMinute: 100 });
+    const code = createInvite(db, { ttlDays: 1, now: NOW }).code;
+    const { token } = (await (await app.request("/users", { method: "POST", body: JSON.stringify({ inviteCode: code, riotId: "Ofek#EUW" }), headers: { "content-type": "application/json" } })).json()) as { token: string };
+    const headers = { authorization: `Bearer ${token}` };
+    const settled = async () => {
+      while (sync.state(1).state === "running") await new Promise((r) => setTimeout(r, 1));
+    };
+    const profile = async () => (await (await app.request("/me/profile", { headers })).json()) as { sync: { state: string; message?: string; done?: number; total?: number } };
+    return { clock, syncs: () => syncs, logs, settled, profile, app, headers };
+  }
+
+  it("doesn't restart a sync that just failed: the error stays readable", async () => {
+    const a = await failingApp();
+    await a.settled();
+    expect(a.syncs()).toBe(1);
+    for (let i = 0; i < 3; i++) expect((await a.profile()).sync).toMatchObject({ state: "error", message: "Riot isn't answering right now (HTTP 503)." });
+    expect(a.syncs()).toBe(1);
+    expect(a.logs).toEqual(["sync: user 1 failed: Riot API champion-mastery-v4.by-puuid failed with HTTP 503"]);
+  });
+
+  it("tries again after the cooldown, and fails once more without a pile-up", async () => {
+    const a = await failingApp();
+    await a.settled();
+    a.clock.now = NOW + SYNC_FAILURE_COOLDOWN_MS;
+    expect((await a.profile()).sync.state).toBe("running");
+    await a.settled();
+    expect(a.syncs()).toBe(2);
+    expect((await a.profile()).sync.state).toBe("error");
+    expect(a.syncs()).toBe(2);
+  });
+
+  it("an explicit POST /me/sync still goes through during the cooldown", async () => {
+    const a = await failingApp();
+    await a.settled();
+    expect((await a.app.request("/me/sync", { method: "POST", headers: a.headers })).status).toBe(202);
+    await a.settled();
+    expect(a.syncs()).toBe(2);
+  });
+
+  it("works from the sync state alone (a fake that reports a failure)", async () => {
+    const db = openDb(":memory:");
+    const requests: number[] = [];
+    const sync = {
+      request: async (id: number) => (requests.push(id), { newMatches: 0, totalMatches: 0, band: 2, remaining: 0 }),
+      state: () => ({ state: "error" as const, message: "Riot isn't answering right now.", finishedAt: NOW }),
+      forget: () => {},
+    };
+    const account = { accountByRiotId: async (gameName: string, tagLine: string) => ({ puuid: "PO", gameName, tagLine }) };
+    const app = createApp({ db, version: "test", riot: account, sync, syncWhenStaleMs: 30 * 60_000, now: () => NOW, registerPerMinute: 100 });
+    const code = createInvite(db, { ttlDays: 1, now: NOW }).code;
+    const { token } = (await (await app.request("/users", { method: "POST", body: JSON.stringify({ inviteCode: code, riotId: "Ofek#EUW" }), headers: { "content-type": "application/json" } })).json()) as { token: string };
+    requests.length = 0;
+    const body = (await (await app.request("/me/profile", { headers: { authorization: `Bearer ${token}` } })).json()) as { sync: unknown };
+    expect(requests).toEqual([]);
+    expect(body.sync).toMatchObject({ state: "error", message: "Riot isn't answering right now." });
   });
 });
 

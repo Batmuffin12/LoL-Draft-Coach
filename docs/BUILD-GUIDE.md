@@ -35,7 +35,6 @@ Before writing any code, ask me for everything you need in one message, then wai
 - Whether I have Overwolf developer access and an app ID yet
 - Jev (TypeSafe AI) API key and a link to its docs. Jev is a new model; do not guess its API from memory, use the docs I give you
 - Railway project details (whether a project and volume already exist)
-- Optional: Sentry DSN
 - The URL of the private GitHub repo for this project
 - Confirmation that git push works from this machine (gh CLI or SSH). If it doesn't, help me set it up before writing code
 Add anything else you find you need. If I don't have something yet, design around it and mark it as a TODO.
@@ -126,7 +125,6 @@ Follow the git rules in CLAUDE.md: work on a new branch for each milestone, comm
 - In-game build adjustments using Jev, with item categories derived from Data Dragon item stats.
 - Learning loop: record advice given, whether it was followed, and the result through POST /games/result.
 - Windows installer and auto-updates that I can share privately with friends.
-- Optional crash reporting if I gave you a Sentry DSN.
 - GitHub Actions running tests and type checks on every push.
 
 Then write docs/TEST_PLAN.md covering:

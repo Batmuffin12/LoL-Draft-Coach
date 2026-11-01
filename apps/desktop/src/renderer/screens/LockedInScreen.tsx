@@ -2,23 +2,26 @@ import { useState, type ReactNode } from "react";
 import type { LoadoutView, MyPickView, ViewState } from "../../shared/view";
 import { Button } from "../components/Button";
 import { ChampIcon } from "../components/ChampIcon";
+import { LiveHighlight } from "../components/Tour";
+import { draftHighlights } from "../first-use";
 import { BuildTab, MatchupsPlanTab, RunesTab, type LoadoutTab } from "../components/Loadout";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { WinChance } from "../components/WinChance";
 import { Window } from "../components/Window";
-import { count, positionLabel, t } from "../format";
+import { count, cx, positionLabel, t, tip } from "../format";
+import { shownPage, type RuneChoice } from "../rune-choice";
 import { Header, Notices } from "./common";
 
 type ImportKind = "runes" | "items" | "all";
 
 /** Import busy state: one click at a time, only ever from a button. */
-function useImport(): { busy: ImportKind | null; run: (kind: ImportKind) => void } {
+function useImport(): { busy: ImportKind | null; run: (kind: ImportKind, pageKey?: string) => void } {
   const [busy, setBusy] = useState<ImportKind | null>(null);
-  const run = (kind: ImportKind) => {
+  const run = (kind: ImportKind, pageKey?: string) => {
     if (busy) return;
     setBusy(kind);
-    void window.coach.importLoadout(kind).finally(() => setBusy(null));
+    void window.coach.importLoadout(kind, pageKey).finally(() => setBusy(null));
   };
   return { busy, run };
 }
@@ -32,59 +35,68 @@ function importKind(l: LoadoutView): ImportKind | null {
 }
 
 const IMPORT_LABEL: Record<ImportKind, string> = { all: "import.all", runes: "import.runes", items: "import.items" };
-const IMPORT_TITLE =
-  "Creates (or updates) an 'LDC:' rune page, sets your two summoner spells in champ select (Flash keeps its key) and saves an item set for this champion. Only when you click.";
 
 /** "From 2,140 games in Gold to Platinum · rough guide": wraps, never cut. */
 function LoadoutSource({ pick }: { pick: MyPickView }) {
   const l = pick.loadout;
   if (!l) return <span className="micro">{t("loadout.none", { champion: pick.champion.name })}</span>;
   return (
-    <span className="micro" title={l.thinNote ?? undefined}>
-      {t("loadout.source", { games: count(l.games), source: l.source })}
+    <span className="micro" {...tip(l.thinNote)}>
+      {t("loadout.source", { games: count(l.games), n: l.games, source: l.source })}
       {l.thinNote ? ` · ${t("loadout.rough")}` : "."}
     </span>
   );
 }
 
 /** The Runes and Build footer: one import button (on your click only), what it did, and where the build comes from. */
-export function LoadoutFooter({ pick }: { pick: MyPickView }) {
+export function LoadoutFooter({ pick, runes }: { pick: MyPickView; runes: RuneChoice }) {
   const { busy, run } = useImport();
   const kind = pick.loadout ? importKind(pick.loadout) : null;
+  const pageKey = pick.loadout ? shownPage(pick.loadout, runes.key)?.key : undefined;
   return (
     <>
       {kind && (
-        <Button variant="primary" wide disabled={busy !== null} onClick={() => run(kind)} title={IMPORT_TITLE}>
-          {busy ? t("import.busy") : t(IMPORT_LABEL[kind])}
-        </Button>
+        <div data-tour="import">
+          <Button variant="primary" wide disabled={busy !== null} onClick={() => run(kind, pageKey)} title={t("import.title")}>
+            {busy ? t("import.busy") : t(IMPORT_LABEL[kind])}
+          </Button>
+        </div>
       )}
-      {pick.importMessage && <span className="caption text">{pick.importMessage}</span>}
-      <LoadoutSource pick={pick} />
+      {/* Always in the page, so screen readers announce a new message. */}
+      <div className="import-status" role="status">
+        {pick.importLines.map((l) => (
+          <span key={l.text} className={cx("caption", l.failed ? "neg" : "text")}>
+            {l.text}
+          </span>
+        ))}
+      </div>
+      {/* What a click did takes the place of where the build comes from, to keep the screen's height. */}
+      {(!kind || pick.importLines.length === 0) && <LoadoutSource pick={pick} />}
     </>
   );
 }
 
 /** The body of one loadout tab (or why there is none). */
-export function LoadoutBody({ pick, tab }: { pick: MyPickView; tab: LoadoutTab }) {
+export function LoadoutBody({ pick, tab, runes }: { pick: MyPickView; tab: LoadoutTab; runes: RuneChoice }) {
   if (tab === "matchups") return <MatchupsPlanTab pick={pick} />;
   if (!pick.loadout) {
     return (
-      <Section title={tab === "runes" ? "Runes" : t("build.head")}>
+      <Section title={tab === "runes" ? t("runes.tab") : t("build.head")}>
         <p className="caption">{t("loadout.none", { champion: pick.champion.name })}</p>
       </Section>
     );
   }
-  return tab === "runes" ? <RunesTab loadout={pick.loadout} /> : <BuildTab loadout={pick.loadout} />;
+  return tab === "runes" ? <RunesTab loadout={pick.loadout} runes={runes} /> : <BuildTab loadout={pick.loadout} />;
 }
 
 /** Your champion, "Locked in · Mid vs Zed", and its win chance, over the tabs. */
 function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: string | null }) {
-  const where = [pick.role && positionLabel(pick.role), laneOpponent && `vs ${laneOpponent}`].filter(Boolean).join(" ");
+  const where = [pick.role && positionLabel(pick.role), laneOpponent && t("locked.vs", { champion: laneOpponent })].filter(Boolean).join(" ");
   return (
-    <div className="you-strip" title={pick.reasons.map((r) => r.text).join("\n") || undefined}>
+    <div className="you-strip" {...tip(pick.reasons.map((r) => r.text).join("\n"))}>
       <ChampIcon champ={pick.champion} size={44} framed />
       <div className="who">
-        <span className="label gold">{`${pick.hovering ? "Hovering" : "Locked in"}${where ? ` · ${where}` : ""}`}</span>
+        <span className="label gold">{`${t(pick.hovering ? "locked.hovering" : "locked.lockedIn")}${where ? ` · ${where}` : ""}`}</span>
         <span className="nm">{pick.champion.name}</span>
       </div>
       <WinChance value={pick.expectedWin} size="row" />
@@ -94,14 +106,14 @@ function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: stri
 
 function loadoutTabs(): { value: LoadoutTab; label: string }[] {
   return [
-    { value: "runes", label: "Runes" },
-    { value: "build", label: "Build" },
+    { value: "runes", label: t("runes.tab") },
+    { value: "build", label: t("build.tab") },
     { value: "matchups", label: t("matchups.tab") },
   ];
 }
 
 /** Locked in (and after champ select until the game ends): Runes · Build · Matchups & plan, Runes first. */
-export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: MyPickView; note?: ReactNode }) {
+export function LockedInScreen({ state, pick, note, runes }: { state: ViewState; pick: MyPickView; note?: ReactNode; runes: RuneChoice }) {
   const [tab, setTab] = useState<LoadoutTab>("runes");
   const meta = state.meta?.state === "ready" ? state.meta : null;
   return (
@@ -115,14 +127,15 @@ export function LockedInScreen({ state, pick, note }: { state: ViewState; pick: 
       }
       footer={
         tab === "matchups" ? (
-          <span className="micro">{meta ? t("matchups.source", { games: count(meta.matches) }) : t("matchups.empty")}</span>
+          <span className="micro">{meta ? t("matchups.source", { games: count(meta.matches), n: meta.matches }) : t("matchups.empty")}</span>
         ) : (
-          <LoadoutFooter pick={pick} />
+          <LoadoutFooter pick={pick} runes={runes} />
         )
       }
     >
       <Notices state={state} extra={typeof note === "string" ? note : null} />
-      <LoadoutBody pick={pick} tab={tab} />
+      <LiveHighlight ids={tab === "matchups" ? [] : draftHighlights({ banning: false, loadout: true })} seen={state.ui.highlightsSeen} />
+      <LoadoutBody pick={pick} tab={tab} runes={runes} />
     </Window>
   );
 }

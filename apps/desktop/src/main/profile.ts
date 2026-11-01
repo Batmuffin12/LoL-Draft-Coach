@@ -1,5 +1,5 @@
-import { attributeSamples, playerGame, type AttributeSample, type MasteryEntry, type PlayerGame, type RankPoint } from "@ldc/engine";
-import type { UserMatch } from "@ldc/shared";
+import { attributeSamples, computeComfort, playerGame, type AttributeSample, type ComfortStats, type EngineConfig, type MasteryEntry, type PlayerGame, type RankPoint } from "@ldc/engine";
+import type { ChampionId, Position, UserMatch } from "@ldc/shared";
 import type { RiotApi } from "@ldc/riot-api";
 import type { AppConfig } from "./config";
 import { toUserMatch, type MatchStore } from "./match-store";
@@ -83,6 +83,25 @@ export async function loadProfile(opts: LoadProfileOptions): Promise<PersonalPro
 }
 
 /** Builds a profile from the player's own matches (any order) and mastery. */
+/** Comfort per role ("" = no role), worked out when first asked for and kept until your games or the config change. */
+export class ComfortCache {
+  private byRole = new Map<string, Map<ChampionId, ComfortStats>>();
+
+  clear(): void {
+    this.byRole.clear();
+  }
+
+  get(role: Position | null, profile: PersonalProfile, config: EngineConfig["comfort"]): Map<ChampionId, ComfortStats> {
+    const key = role ?? "";
+    let comfort = this.byRole.get(key);
+    if (!comfort) {
+      comfort = computeComfort(profile.games, profile.masteries, Date.now(), config, role);
+      this.byRole.set(key, comfort);
+    }
+    return comfort;
+  }
+}
+
 export function profileFromMatches(matches: UserMatch[], masteries: MasteryEntry[]): PersonalProfile {
   const sorted = [...matches].sort((a, b) => b.match.endedAt - a.match.endedAt);
   return {

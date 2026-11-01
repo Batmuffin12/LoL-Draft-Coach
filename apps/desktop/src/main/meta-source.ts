@@ -3,13 +3,15 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import type { MetaSnapshot, RankBandId } from "@ldc/shared";
-import { MetaSnapshotSchema, type ServerClient } from "./server-client";
+import { logUnexpected, serverProblemText } from "./server-problem";
+import { MetaSnapshotSchema, ServerError, type ServerClient } from "./server-client";
 
 /** What the panel shows about the live meta. */
 export type MetaStatus =
   | { state: "none" }
   | { state: "ready"; band: RankBandId; patch: string | null; matches: number; createdAt: number; offline: boolean }
-  | { state: "error"; message: string };
+  /** `noSnapshot`: the server is fine, it just has nothing for this rank yet. */
+  | { state: "error"; message: string; noSnapshot?: boolean };
 
 const CacheSchema = z.object({ etag: z.string().nullable(), snapshot: MetaSnapshotSchema });
 
@@ -112,7 +114,9 @@ export class MetaSource extends EventEmitter<{ snapshot: [MetaSnapshot]; status:
     } catch (err) {
       // Keep coaching from the last snapshot; say so.
       if (this.current) this.use(band, this.current.etag, this.current.snapshot, true);
-      else this.emit("status", { state: "error", message: (err as Error).message });
+      else if (err instanceof ServerError && err.code === "no_snapshot") this.emit("status", { state: "error", message: err.message, noSnapshot: true });
+      else this.emit("status", { state: "error", message: serverProblemText(err) });
+      logUnexpected("Live meta", err);
     }
   }
 }

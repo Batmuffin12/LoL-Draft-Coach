@@ -2,13 +2,25 @@ import { eq, gt, isNull, or } from "drizzle-orm";
 import { RiotKeyError } from "@ldc/riot-api";
 import type { Db } from "./db";
 import { users } from "./db/schema";
-import { syncUser, usersDueForSync, type SyncResult, type SyncRiot, type SyncSettings } from "./sync";
+import { syncErrorMessage, syncLogText, syncUser, usersDueForSync, type SyncResult, type SyncRiot, type SyncSettings } from "./sync";
 
 export type SyncState =
   | { state: "idle" }
   | { state: "running"; done: number; total: number; startedAt: number }
   | { state: "done"; result: SyncResult; finishedAt: number }
   | { state: "error"; message: string; finishedAt: number };
+
+/**
+ * After a failed sync, nothing automatic starts another for this long (reading the profile, the
+ * background loop): the error stays readable for the panel, and Riot isn't asked again at once.
+ * An explicit POST /me/sync (a game just ended, Retry now) still goes through.
+ */
+export const SYNC_FAILURE_COOLDOWN_MS = 10 * 60_000;
+
+/** This sync state is a failure inside the cooldown. */
+export function recentlyFailed(state: SyncState, now: number): boolean {
+  return state.state === "error" && now - state.finishedAt < SYNC_FAILURE_COOLDOWN_MS;
+}
 
 export interface SchedulerOptions {
   /** How often the background loop looks for users to sync. */
@@ -57,7 +69,7 @@ export class SyncScheduler {
     if (!user) return Promise.reject(new Error(`No user ${userId}`));
 
     this.states.set(userId, { state: "running", done: 0, total: 0, startedAt: this.now() });
-    const settings = callsPerSync ? { ...this.settings, history: { ...this.settings.history, callsPerSync } } : this.settings;
+    const settings: SyncSettings = { ...this.settings, log: this.log, ...(callsPerSync ? { history: { ...this.settings.history, callsPerSync } } : {}) };
     const p = syncUser(this.db, this.riot, user, settings, this.now(), (done, total) =>
       this.states.set(userId, { state: "running", done, total, startedAt: this.now() }),
     )
@@ -68,7 +80,10 @@ export class SyncScheduler {
       .catch((err: unknown) => {
         // A deleted user mid-sync is not an error worth reporting.
         if (!this.db.select({ id: users.id }).from(users).where(eq(users.id, userId)).get()) this.states.delete(userId);
-        else this.states.set(userId, { state: "error", message: (err as Error).message, finishedAt: this.now() });
+        else {
+          this.log(`sync: user ${userId} failed: ${syncLogText(err)}`);
+          this.states.set(userId, { state: "error", message: syncErrorMessage(err), finishedAt: this.now() });
+        }
         throw err;
       })
       .finally(() => this.running.delete(userId));
@@ -93,8 +108,7 @@ export class SyncScheduler {
         const r = await this.request(id, calls);
         this.log(`backfill: user ${id} +${r.newMatches} matches, ${r.remaining} to go`);
       } catch (err) {
-        this.log(`backfill: user ${id} failed: ${(err as Error).message}`);
-        if (err instanceof RiotKeyError) return;
+        if (err instanceof RiotKeyError) return; // request() logged it; every call will fail until the key is fixed.
       }
     }
   }
@@ -110,12 +124,12 @@ export class SyncScheduler {
     this.ticking = true;
     try {
       for (const user of usersDueForSync(this.db, this.now(), this.opts.staleAfterMs, this.opts.activeWithinMs)) {
+        if (recentlyFailed(this.state(user.id), this.now())) continue;
         try {
           const r = await this.request(user.id);
           if (r.newMatches) this.log(`sync: user ${user.id} +${r.newMatches} matches (${r.totalMatches} stored)`);
         } catch (err) {
-          this.log(`sync: user ${user.id} failed: ${(err as Error).message}`);
-          if (err instanceof RiotKeyError) return; // Every call will fail until the key is fixed.
+          if (err instanceof RiotKeyError) return; // request() logged it; every call will fail until the key is fixed.
         }
       }
     } finally {

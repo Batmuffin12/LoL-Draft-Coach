@@ -2,6 +2,34 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [1.0.4] — 2026-11-02
+
+### Added
+- **A live tour**: after connecting, the app dims except for a spotlight on the real part being explained. The first time in champ select and locked in, a ring and a short note highlight the picks, rune options and import, without blocking the draft. "How it works" reopens the tour.
+- **A minimize button.** The panel comes back without taking focus when champ select starts, and never during a game.
+- **Two rune options**: the two most taken pages, switchable, each importable on click. Thin options stay hidden.
+- "Restart to update", shown outside champ select and games, and a periodic update check.
+- "Retry now" when the server or live data fails.
+- p50, p95 and p99 load times in the perf harness (`--cold-starts`, `--flows`), with budgets from v1.0.3's measurements.
+
+### Changed
+- **Three main tabs**: Last game · Me (Style, This month) · Champions (Pool, Try new), plus Next game when queued.
+- **Lists instead of joined text** in the first games plan, pool, Style, build, champ select notes and import results.
+- Win rates from fewer than 10 games go neutral (`display.minGames` in `config/app.v1.json`). Points say what they mean ("about N wins per 100 games"), plurals are right, jargon is gone, and each concept has one label.
+- Sign-out asks first, because it costs an invite.
+- `PersonalCoach` and the lobby screen are split into smaller modules (fallow health 90.8; `personal-coach.ts` hotspot 46.9).
+
+### Fixed
+- **"Loading your match history: 0 of 0" no longer sticks.** A sync that failed before its first game was restarted by every profile request, which hid the failure and looped. Failed syncs now wait 10 minutes, are logged, and show a clear message with your saved games. Riot requests have a 20 s timeout, and one unreadable match no longer blocks a sync.
+- Saved games show before the network call, also with the League client closed. A sleeping server says it's waking up.
+- "Different account" clears when the right account returns, and a failed poll after registering no longer looks like a failed registration.
+- Notices clear when their cause ends and can be dismissed. Errors are in plain words, and every import click ends in a message.
+- A render error shows Reload and Close instead of a blank window. Empty screens say the actual cause. "Result soon" gives way to "No result from Riot yet".
+- Keyboard focus reaches rows and hover text, and buttons have accessible names.
+
+### Removed
+- **Sentry** (owner's decision): the app sends no crash reports. Technical detail goes to the local log, scrubbed of player identifiers. Installs older than this keep reporting until they update.
+
 ## [1.0.3] — 2026-10-19
 
 ### Changed

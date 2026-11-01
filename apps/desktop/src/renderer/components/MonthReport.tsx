@@ -1,6 +1,6 @@
 import type { MonthView } from "../../shared/view";
-import { cx, pct, t, winTone } from "../format";
-import { useFits } from "../hooks";
+import { cx, gameCount, isThin, pct, t, tip, winToneOf } from "../format";
+import { useFitLevel } from "../hooks";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
 import { SlopeChart } from "./SlopeChart";
@@ -15,13 +15,13 @@ const ROLE_FILLS = ["var(--gold)", "var(--frame)", "var(--line-strong)", "var(--
 /** A met goal by its name: "Deaths before 14 min: 3.5 → 2.7, goal met" → "Deaths before 14 min" (the numbers are on hover). */
 const goalName = (s: string) => (s.includes(":") ? s.slice(0, s.indexOf(":")) : s);
 
-/** The month at a glance: games, your win rate before → now, and your roles as one bar with its legend. */
-function Header({ m }: { m: MonthView }) {
-  const now = winTone(m.winRate.to);
+/** The month at a glance: games, your win rate before → now, and your roles as one bar with its legend (on hover only when `brief`). */
+function Header({ m, brief }: { m: MonthView; brief: boolean }) {
+  const now = winToneOf(m.winRate.to, m.games);
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label gold" title={m.rank ?? undefined}>{`${m.period} · ${m.games} ${m.games === 1 ? "game" : "games"}`}</span>
+        <span className="label gold" {...tip(m.rank)}>{`${m.period} · ${gameCount(m.games)}`}</span>
         <span className="rule" aria-hidden="true" />
         <span className="micro">{m.gamesBeforeText}</span>
       </div>
@@ -34,24 +34,26 @@ function Header({ m }: { m: MonthView }) {
             </span>
           </>
         )}
-        <span className={cx("t-hero", now === "flat" ? "text" : now)}>{pct(m.winRate.to)}</span>
+        <span className={cx(isThin(m.games) ? "t-number" : "t-hero", now === "flat" ? "text" : now)}>{pct(m.winRate.to)}</span>
         <span className="caption">{m.winRate.text}</span>
       </div>
       {m.roles.length > 0 && (
         <div className="roles">
-          <span className="rolebar" role="img" aria-label={m.roles.map((r) => r.text).join(", ")}>
+          <span className="rolebar" role="img" aria-label={m.roles.map((r) => r.text).join(", ")} {...tip(brief ? m.roles.map((r) => r.text).join(" · ") : null)}>
             {m.roles.map((r, i) => (
               <span key={r.role} style={{ width: `${r.share * 100}%`, background: ROLE_FILLS[Math.min(i, ROLE_FILLS.length - 1)] }} />
             ))}
           </span>
-          <span className="micro">
-            {m.roles.map((r, i) => (
-              <span key={r.role} className={i === 0 ? "text" : undefined}>
-                {i > 0 && " · "}
-                {r.text}
-              </span>
-            ))}
-          </span>
+          {!brief && (
+            <span className="micro">
+              {m.roles.map((r, i) => (
+                <span key={r.role} className={i === 0 ? "text" : undefined}>
+                  {i > 0 && " · "}
+                  {r.text}
+                </span>
+              ))}
+            </span>
+          )}
         </div>
       )}
     </section>
@@ -64,27 +66,28 @@ export function MonthReport({ month: m }: { month: MonthView }) {
   const shown = moved.slice(0, TRENDS);
   const rest = moved.slice(TRENDS);
   const met = m.focus.met;
-  // Long months (many axes, long names): the trend and goal lines move to hover so nothing scrolls.
-  const fits = useFits(m);
+  // Long months (many axes, long names): first the trend line, then the goal lines, then the roles' legend move to hover, so nothing scrolls.
+  const level = useFitLevel(m, 3);
+  const showTrends = level < 1;
+  const showGoals = level < 2;
   // What the compact form shows on hover instead: the trends, the goals met and the current goal.
-  const hidden = [...moved.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`), ...met, ...(m.focus.current ? [m.focus.current] : [])];
+  const hidden = [...(showTrends ? [] : moved.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`)), ...(showGoals ? [] : [...met, ...(m.focus.current ? [m.focus.current] : [])])];
   return (
     <>
-      <Header m={m} />
+      <Header m={m} brief={level > 2} />
       {m.role && m.axes.length > 0 && (
         <Section title={t("month.style", { role: m.role.toLowerCase() })}>
           <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />
-          <span className="micro" title={fits ? undefined : hidden.join("\n") || undefined}>{`${t("month.average")} · ${m.steadyNote}`}</span>
-          {fits && shown.length > 0 && (
+          <span className="micro" {...tip(hidden.join("\n"))}>{`${t("month.average")} · ${m.steadyNote}`}</span>
+          {showTrends && shown.length > 0 && (
             <span className="caption trends">
-              {shown.map((s, i) => (
+              {shown.map((s) => (
                 <span key={s.label} title={s.title}>
-                  {i > 0 && " · "}
                   {`${s.label} `}
                   <span className={s.tone ?? undefined}>{`${s.from ?? "—"} → ${s.to}`}</span>
                 </span>
               ))}
-              {rest.length > 0 && <span title={rest.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`).join("\n")}>{` · ${t("month.more", { n: rest.length })}`}</span>}
+              {rest.length > 0 && <span {...tip(rest.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`).join("\n"))}>{t("month.more", { n: rest.length })}</span>}
             </span>
           )}
         </Section>
@@ -93,30 +96,29 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <Section title={t("month.champions")} gold={false} aside={m.focusLine ? <span className="micro">{m.focusLine}</span> : undefined}>
           <div className="champcards">
             {m.champions.slice(0, CHAMPIONS).map((c) => {
-              const wr = winTone(c.winRate);
+              const wr = winToneOf(c.winRate, c.games);
               return (
                 <div key={c.champion.id} className="champcard">
-                  <ChampIcon champ={c.champion} size={28} />
+                  <ChampIcon champ={c.champion} size={24} />
                   <span className="who">
                     <span className="t-heading">{c.champion.name}</span>
                     <span className="micro">
                       <span className={wr === "flat" ? undefined : wr}>{pct(c.winRate)}</span>
-                      {` · ${c.games} ${c.games === 1 ? "game" : "games"}`}
+                      {` · ${gameCount(c.games)}`}
                     </span>
                   </span>
                 </div>
               );
             })}
           </div>
-          {fits && (met.length > 0 || m.focus.current) && (
+          {showGoals && (met.length > 0 || m.focus.current) && (
             <span className="caption goals">
               {met.length > 0 && (
-                <span title={met.join("\n")}>
+                <span {...tip(met.join("\n"))}>
                   {t("month.goalsMet", { first: goalName(met[0]!) })}
                   {met.length > 1 ? ` ${t("month.goalsMore", { n: met.length - 1 })}` : ""}
                 </span>
               )}
-              {met.length > 0 && m.focus.current && " · "}
               {m.focus.current && <span className="gold">{m.focus.current}</span>}
             </span>
           )}

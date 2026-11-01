@@ -1,15 +1,32 @@
 import type { CoachStatus, FactorScores, Term } from "@ldc/shared";
+import { emptyUiState, type UiState } from "./ui-state";
 
 /** IPC channel names between main and renderer. */
 export const IPC = {
   state: "coach:state",
+  tourDone: "coach:tour-done",
+  highlightSeen: "coach:highlight-seen",
   ready: "coach:ready",
   setDocked: "coach:set-docked",
+  minimize: "coach:minimize",
+  dismissNotice: "coach:dismiss-notice",
+  restartToUpdate: "coach:restart-to-update",
+  logError: "coach:log-error",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
   importLoadout: "coach:import-loadout",
+  retry: "coach:retry",
 } as const;
+
+/** A game's result is still missing this long after it was played: Riot may never send it, so the card stops promising it. */
+export const RESULT_WAIT_MS = 3 * 60 * 60_000;
+
+/** The post-game card has no result and shouldn't promise one: the panel stopped asking, or the game is hours old. */
+export function resultOverdue(game: { result: unknown; endedAt: number | null; lockedAt: number }, wait: { pending: boolean; gaveUp: boolean }, now: number): boolean {
+  if (game.result || wait.pending) return false;
+  return wait.gaveUp || now - (game.endedAt ?? game.lockedAt) > RESULT_WAIT_MS;
+}
 
 export interface ChampView {
   id: number;
@@ -91,6 +108,30 @@ export interface ChoiceNumbers {
   games: number;
 }
 
+/** One rune page as the loadout shows it. */
+export interface RunePageView extends ChoiceNumbers {
+  /** Identifies the page, also when options reorder: what the import button sends back. */
+  key: string;
+  primary: IconView;
+  secondary: IconView;
+  /** Keystone first, then the other primary runes, then the secondary runes. */
+  runes: IconView[];
+  /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
+  shards: IconView[];
+  reason: string | null;
+  /** Both paths whole, so the page can be drawn on its trees (null without Data Dragon). */
+  primaryTree: RuneTreeView | null;
+  secondaryTree: RuneTreeView | null;
+  /** All stat shard rows (offense, flex, defense) and the chosen index in each (-1: unknown); null when the client doesn't list them. */
+  shardRows: { rows: IconView[][]; chosen: number[] } | null;
+  /** Runes worth a swap on this page against this team. */
+  situationalRunes: LoadoutItemView[];
+  /** How the option switch names it ("Most taken"); null with no second option, when there's no switch. */
+  optionLabel: string | null;
+  /** Share of the games behind it that took it; null when unknown (a matchup page) or with no switch. */
+  share: number | null;
+}
+
 /** Runes, spells, skill order and items for the locked-in champion (live meta only). */
 export interface LoadoutView {
   /** Games behind the build (your band plus the one above). */
@@ -99,21 +140,9 @@ export interface LoadoutView {
   source: string;
   /** Shown when the build rests on few games, e.g. "Not much data yet: treat it as a rough guide". */
   thinNote: string | null;
-  page: {
-    primary: IconView;
-    secondary: IconView;
-    /** Keystone first, then the other primary runes, then the secondary runes. */
-    runes: IconView[];
-    /** Stat shards as the client lists them (offense, flex, defense); names from the client. Empty without them. */
-    shards: IconView[];
-    reason: string | null;
-    /** Both paths whole, so the page can be drawn on its trees (null without Data Dragon). */
-    primaryTree: RuneTreeView | null;
-    secondaryTree: RuneTreeView | null;
-    /** All stat shard rows (offense, flex, defense) and the chosen index in each (-1: unknown); null when the client doesn't list them. */
-    shardRows: { rows: IconView[][]; chosen: number[] } | null;
-  } & ChoiceNumbers | null;
-  situationalRunes: LoadoutItemView[];
+  page: RunePageView | null;
+  /** The second rune option; null when no other page has enough games. */
+  pageAlt: RunePageView | null;
   spells: ({ spells: IconView[]; reason: string | null } & ChoiceNumbers) | null;
   /** Skill keys, e.g. first ["Q", "E", "W"], max order ["Q", "E", "W"]. */
   /** `basic`: the three basic ability keys (grid rows), `ult`: the ultimate's key (levels 6, 11, 16). */
@@ -155,6 +184,12 @@ export interface MatchupRowView {
   partner?: boolean;
 }
 
+/** One outcome of an import click; `failed`: this part didn't work. */
+export interface ImportLine {
+  text: string;
+  failed: boolean;
+}
+
 /** The champion the local player has locked in, and how it looks in this draft. */
 export interface MyPickView {
   champion: ChampView;
@@ -163,8 +198,8 @@ export interface MyPickView {
   expectedWin: number | null;
   reasons: ReasonView[];
   loadout: LoadoutView | null;
-  /** The result of the last import click (e.g. "Rune page created"), or null. */
-  importMessage: string | null;
+  /** What the last import click did, one line per outcome ("Rune page created"); empty before any. */
+  importLines: ImportLine[];
   /** True when the champion is only hovered (not locked in yet). */
   hovering?: boolean;
   /** Against each enemy (your lane first) and with each ally in the draft (live meta only). */
@@ -189,7 +224,13 @@ export interface BanView {
 /** The live meta the picks are based on. */
 export type MetaView =
   | { state: "ready"; band: number; patch: string | null; matches: number; createdAt: number; offline: boolean }
-  | { state: "error"; message: string };
+  | { state: "error"; message: string; noSnapshot?: boolean };
+
+/** A problem shown at the top of the panel: one per cause (the key), until the cause ends or you dismiss it. */
+export interface NoticeView {
+  key: string;
+  text: string;
+}
 
 export interface SessionView {
   /** "2 losses in a row. A short break before the next game usually helps." */
@@ -198,6 +239,22 @@ export interface SessionView {
   record: string | null;
   /** When the session counts as over (epoch ms): the panel hides the suggestion then. */
   until: number;
+}
+
+/** One entry of a labelled row: short text, with the champion's icon when it is about one. */
+export interface FactItem {
+  text: string;
+  champion?: ChampView | null;
+  /** What the number is, on hover. */
+  title?: string;
+}
+
+/** A short label with its values as separate entries, instead of a sentence ("Good matchups": Orianna +3.1% WR, Ahri +1.2% WR). */
+export interface FactRow {
+  label: string;
+  items: FactItem[];
+  /** The screen can move this row to hover when it runs short of room. */
+  minor?: boolean;
 }
 
 /** A champion in the player's pool for a role. */
@@ -213,8 +270,6 @@ export interface PoolChampView {
 export interface PoolHoleView {
   text: string;
   evidence: string | null;
-  /** e.g. "try Lillia (rusty)". */
-  coveredBy: string | null;
   /** The learning or rusty champion in your pool that covers it (the first), or null. */
   coveredByChampion: ChampView | null;
   /** Every hole that champion covers, biggest first (it fills more than this one when it's a good next step). */
@@ -245,13 +300,13 @@ export interface RoleView {
   holes: PoolHoleView[];
   coverage: PoolCoverageView | null;
   /** "Your next step": a champion you know that fills the biggest hole, with why. Null when none does. */
-  nextStep: { champion: ChampView; title: string; text: string; evidence: string | null } | null;
-  /** The holes nothing you know covers: "Still missing: crowd control. …", or null. */
-  missing: string | null;
+  nextStep: { champion: ChampView; title: string; adds: FactRow; evidence: string | null } | null;
+  /** The holes nothing you know covers ("Still missing": Crowd control), and what that means; or null. */
+  missing: { row: FactRow; note: string } | null;
   /** Said when there are no holes. */
   noGaps: string;
-  /** Champions that didn't fit in the matrix: "Also rusty: Riven, Irelia", or null. */
-  also: string | null;
+  /** Champions that didn't fit in the matrix, a row per tier ("Also rusty": Riven, Irelia); empty when all fit. */
+  also: FactRow[];
 }
 
 /**
@@ -308,8 +363,8 @@ export interface PlaystyleView {
   axes: AxisView[];
   /** Headline numbers against your rank (empty without the style config). */
   numbers: NumberView[];
-  /** One sentence from your high and low axes ("You out-farm your rank. Vision holds you back."), no numbers; null without axes. */
-  summary: string | null;
+  /** Your high and low axes as two short lists ("Strong": Out-farm your rank; "Weak spots": Vision), no numbers; empty without axes. */
+  summary: FactRow[];
   /** How you play the role in your last games; null without the style config. */
   how: {
     games: number;
@@ -405,8 +460,8 @@ export interface LearnView {
   stage: string;
   /** The one thing to watch next game, and whether your last games on it reached it (oldest first). */
   focus: { text: string; recent: boolean[] } | null;
-  /** What to do at this stage, its job, the role's cue, when it's strong, matchups, how long to give it, your record. */
-  lines: string[];
+  /** What the data says about it, as labelled rows: how it plays, skills, how it wins, its spike, your first item, short vs long games, matchups, your record. */
+  lines: FactRow[];
 }
 
 /** One measurable focus on your main champion and role, with a target and your last games against it. */
@@ -475,6 +530,21 @@ export interface PostGameView {
   focus: { label: string; value: string; target: string; met: boolean } | null;
 }
 
+/** When neither the server's config nor the bundled one says (config app.display.minGames). */
+export const FALLBACK_MIN_GAMES = 10;
+
+/** Numbers from the config that the panel's rules and wording need. */
+export interface ViewLimits {
+  /** Below this many games a win rate goes neutral and whole. */
+  minGames: number;
+  /** Games in a role before it has a pool (engine roleAdvice.minGames). */
+  poolGames: number;
+  /** Games in a role before it has a style (engine playstyle.minGamesPerRole). */
+  styleGames: number;
+  /** Days the monthly report covers (engine report.days). */
+  monthDays: number;
+}
+
 export interface ViewState {
   account: AccountView | null;
   status: CoachStatus;
@@ -485,6 +555,8 @@ export interface ViewState {
   bans: BanView[];
   /** Extra bans for the champion the player hovers before or during bans (null when not hovering). */
   hoverBans: { champion: ChampView; bans: BanView[] } | null;
+  /** This champ select's queue isn't one the coach covers: no suggestions, and the screen says why. */
+  unsupportedQueue: boolean;
   /** Set once the local player has locked in a champion (suggestions stop then). */
   myPick: MyPickView | null;
   /** The loadout for the champion the player hovers before locking in (shown under the suggestions). */
@@ -494,7 +566,7 @@ export interface ViewState {
   /** Role the picks are for, if known. */
   pickRole: string | null;
   /** Said when you're filled into a role you rarely play (picks then lean on champions you know). */
-  filledNote?: string | null;
+  filledNote?: FactRow | null;
   /** Their team in short during champ select ("80% physical damage", "Nautilus is their engage"); empty until two are picked. */
   enemyNotes: string[];
   /** Your lane opponent in champ select (champion null: not picked yet), or null without a role. */
@@ -511,6 +583,8 @@ export interface ViewState {
   queuePreview: { roles: { role: string; picks: PickView[]; whyNot: string | null; confidence: PickAdviceView["confidence"] }[] } | null;
   /** A game you just played isn't in your history yet (Riot publishes it a little later): the panel is asking for it. */
   lastGamePending: boolean;
+  /** The panel asked for that game for as long as it does, and Riot hasn't published it. */
+  lastGameGaveUp: boolean;
   /** Your growth focus, or null without enough games. */
   focus: FocusView | null;
   /** New champions per role (needs the band's live meta), roles in the lobby's order. */
@@ -519,7 +593,7 @@ export interface ViewState {
   month: MonthView | null;
   /** A break suggestion after a losing streak or a long session (your games only), until the session is over. */
   session: SessionView | null;
-  notices: string[];
+  notices: NoticeView[];
   /** This app's version, and a newer one already downloaded that installs when the app closes. */
   app: { version: string; updateReady: string | null };
   docked: boolean;
@@ -527,6 +601,17 @@ export interface ViewState {
   roleLabels: Record<string, string>;
   /** The panel's fixed wording (explain templates "ui.*", without the prefix). */
   copy: Record<string, string>;
+  /** The tour and highlights already shown on this PC. */
+  ui: UiState;
+  limits: ViewLimits;
+}
+
+/** Champ select or a game: not the moment to restart the panel. */
+const NO_RESTART_PHASES = new Set(["ChampSelect", "GameStart", "InProgress", "Reconnect"]);
+
+/** A downloaded update can be installed now: one is ready, and you're not in champ select or a game. */
+export function canRestartToUpdate(s: Pick<ViewState, "app" | "draft" | "status">): boolean {
+  return s.app.updateReady !== null && s.draft === null && !NO_RESTART_PHASES.has(s.status.gameflowPhase ?? "");
 }
 
 export function emptyViewState(): ViewState {
@@ -537,6 +622,7 @@ export function emptyViewState(): ViewState {
     picks: [],
     pickAdvice: { whyNot: null, confidence: null },
     bans: [],
+    unsupportedQueue: false,
     hoverBans: null,
     myPick: null,
     hoverPick: null,
@@ -549,6 +635,7 @@ export function emptyViewState(): ViewState {
     side: null,
     lastGame: null,
     lastGamePending: false,
+    lastGameGaveUp: false,
     queuePreview: null,
     focus: null,
     newChamps: [],
@@ -559,5 +646,7 @@ export function emptyViewState(): ViewState {
     docked: true,
     roleLabels: {},
     copy: {},
+    ui: emptyUiState(),
+    limits: { minGames: FALLBACK_MIN_GAMES, poolGames: 0, styleGames: 0, monthDays: 0 },
   };
 }
