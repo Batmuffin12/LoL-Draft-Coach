@@ -258,7 +258,7 @@ async function screens(outDir: string): Promise<void> {
  */
 async function exploreShots(outDir: string, meta: string, old: string, hist: string, empty: string): Promise<void> {
   mkdirSync(outDir, { recursive: true });
-  const shots: { name: string; click: string; meta?: string | null; history?: string; closed?: boolean }[] = [
+  const shots: { name: string; click: string; meta?: string | null; history?: string; closed?: boolean; hint?: boolean; height?: number }[] = [
     { name: "list", click: "Champions>Browse" },
     { name: "list-support-pick", click: "Champions>Browse>Support>Pick" },
     { name: "list-ban", click: "Champions>Browse>Ban" },
@@ -266,11 +266,16 @@ async function exploreShots(outDir: string, meta: string, old: string, hist: str
     { name: "search-none", click: "Champions>Browse>type:zzz" },
     { name: "long-name-runes", click: "Champions>Browse>type:nunu>Nunu & Willump" },
     { name: "long-name-build", click: "Champions>Browse>type:nunu>Nunu & Willump>Build" },
-    { name: "thin-runes", click: "Champions>Browse>type:kaisa>Kai'Sa" },
-    { name: "thin-build", click: "Champions>Browse>type:kaisa>Kai'Sa>Build" },
-    { name: "ahri-runes", click: "Champions>Browse>type:ahri>Ahri" },
-    { name: "ahri-build", click: "Champions>Browse>type:ahri>Ahri>Build" },
-    { name: "ahri-matchups", click: "Champions>Browse>type:ahri>Ahri>Matchups" },
+    { name: "thin-runes", click: "Champions>Browse>type:kaisa>Bot>Kai'Sa" },
+    { name: "thin-build", click: "Champions>Browse>type:kaisa>Bot>Kai'Sa>Build" },
+    { name: "no-build", click: "Champions>Browse>type:kaisa>Top>Kai'Sa" },
+    { name: "hint", click: "Champions>Browse", hint: true },
+    { name: "ahri-build-short", click: "Champions>Browse>type:ahri>Mid>Ahri>Build", height: 660 },
+    { name: "ahri-matchups-short", click: "Champions>Browse>type:ahri>Mid>Ahri>Matchups", height: 660 },
+    { name: "games-short", click: "Me>My games", height: 660 },
+    { name: "ahri-runes", click: "Champions>Browse>type:ahri>Mid>Ahri" },
+    { name: "ahri-build", click: "Champions>Browse>type:ahri>Mid>Ahri>Build" },
+    { name: "ahri-matchups", click: "Champions>Browse>type:ahri>Mid>Ahri>Matchups" },
     { name: "back-keeps-search", click: "Champions>Browse>Pick>type:ahri>Ahri>‹ Back" },
     { name: "old-list", click: "Champions>Browse", meta: old },
     { name: "old-detail", click: "Champions>Browse>Ahri", meta: old },
@@ -285,8 +290,11 @@ async function exploreShots(outDir: string, meta: string, old: string, hist: str
   for (const s of shots) {
     const setup: Setup = { fixture: idleFixture("None"), meta: s.meta === null ? null : (s.meta ?? meta), timeScale: 0 };
     const shoot = async (lcu: string) => {
+      const env = baseEnv(setup, lcu);
+      if (s.hint) writeFileSync(join(profileDir, "ui-state.json"), JSON.stringify({ tourDone: true, hintsSeen: HINT_IDS.filter((id) => id !== "champions") }));
       const r = await launch({
-        ...baseEnv(setup, lcu),
+        ...env,
+        ...(s.height ? { LDC_SCREENSHOT_HEIGHT: String(s.height) } : {}),
         LDC_PROFILE_FILE: s.history ?? hist,
         LDC_SCREENSHOT: join(outDir, `g-${s.name}.png`),
         LDC_EXPLORE_DUMP: join(outDir, `g-${s.name}.json`),
