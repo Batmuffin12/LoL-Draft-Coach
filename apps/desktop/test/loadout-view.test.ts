@@ -30,6 +30,7 @@ const loadout = (thin: boolean): Loadout => ({
   games: 2000,
   source: { games: 2000, roleGames: 2000, pooled: false, personalGames: 0, thin },
   page: { value: { primaryStyle: 8100, subStyle: 8200, runes: [8112, 8139, 8226, 8210], statPerks: [5011, 5008, 5005], games: 900, wins: 480, n: 900 }, winRate: 0.532, n: 900, reasons: [] },
+  pageAlt: null,
   situationalRunes: [],
   spells: { value: [4, 14], winRate: 0.528, n: 1870, reasons: [] },
   skills: { value: { first: [1, 3, 2], order: [1, 2, 3] }, winRate: 0.531, n: 1980, reasons: [] },
