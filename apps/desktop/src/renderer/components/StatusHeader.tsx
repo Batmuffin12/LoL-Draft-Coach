@@ -31,8 +31,8 @@ export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onMinim
       <span className="app">Draft Coach</span>
       {metaText && <Chip title={metaTitle}>{metaText}</Chip>}
       <span className="spacer" />
-      <span className="window-buttons" data-tour="window-buttons">
-      <button className="icon-btn" onClick={onDock} title={t(docked ? "window.undock" : "window.dock")} aria-label={t(docked ? "window.undock" : "window.dock")} aria-pressed={docked}>
+      <span className="window-buttons">
+      <button className="icon-btn" data-tour="dock" onClick={onDock} title={t(docked ? "window.undock" : "window.dock")} aria-label={t(docked ? "window.undock" : "window.dock")} aria-pressed={docked}>
         {docked ? "◧" : "□"}
       </button>
       <button className="icon-btn" onClick={onMinimize} title={t("window.minimize")} aria-label={t("window.minimize")}>

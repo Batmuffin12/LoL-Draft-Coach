@@ -104,7 +104,7 @@ function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: 
         <LastGame state={state} />
       )}
     </Window>
-    {tour && <LobbyTour steps={tourSteps(LOBBY_TOUR, tour.run.skipped)} run={tour.run} onRun={tour.onRun} onClose={tour.onClose} />}
+    {tour && <LobbyTour steps={tourSteps(LOBBY_TOUR, tour.run.skipped)} run={tour.run} onRun={tour.onRun} onClose={tour.onClose} docked={state.docked} />}
     </>
   );
 }

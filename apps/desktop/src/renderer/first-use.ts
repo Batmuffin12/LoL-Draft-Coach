@@ -30,15 +30,22 @@ export interface TourStep {
   target?: string;
   /** Ends on a second strong line ("ui.tour.<id>.end"). */
   end?: boolean;
+  /** About the dock button, whose action depends on the state: while docked its wording is "ui.tour.<id>.docked". */
+  dock?: boolean;
 }
 
 /** Short on purpose: what it is, where it lives, the rest of the app, how to see this again. Everything else is a note on first use, where it applies. */
 export const LOBBY_TOUR: TourStep[] = [
   { id: "intro", end: true },
-  { id: "window", target: "window-buttons" },
+  { id: "window", target: "dock", dock: true },
   { id: "tabs", target: "tab-row" },
   { id: "footer", target: "how-it-works" },
 ];
+
+/** The wording key of a step: the dock button undocks while docked, so it can't say "dock it" then. */
+export function stepKey(step: TourStep, docked: boolean): string {
+  return step.dock && docked ? `${step.id}.docked` : step.id;
+}
 
 /** The steps this tour has: without those already found to have no target. */
 export function tourSteps(steps: readonly TourStep[], skipped: readonly string[]): TourStep[] {

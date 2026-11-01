@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { isHighlightId, type HighlightId } from "../../shared/ui-state";
-import { closeHighlight, highlightVisit, moveTour, placeCallout, placeNote, skipStep, spotlight, type Box, type HighlightVisit, type TourRun, type TourStep } from "../first-use";
+import { closeHighlight, highlightVisit, moveTour, placeCallout, placeNote, skipStep, spotlight, stepKey, type Box, type HighlightVisit, type TourRun, type TourStep } from "../first-use";
 import { t } from "../format";
 import { Button } from "./Button";
 
@@ -86,7 +86,7 @@ const holeStyle = (h: Box) => ({ top: h.top, left: h.left, width: h.width, heigh
  * small callout beside it. The panel under it takes no clicks or focus until the tour ends. A step whose
  * target isn't on screen is passed. A draft ends it by leaving the lobby; `run` stays above, so it picks up afterwards.
  */
-export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; run: TourRun; onRun: (run: TourRun) => void; onClose: () => void }) {
+export function LobbyTour({ steps, run, onRun, onClose, docked }: { steps: TourStep[]; run: TourRun; onRun: (run: TourRun) => void; onClose: () => void; docked: boolean }) {
   const index = Math.min(run.index, steps.length - 1);
   const step = steps[index]!;
   const last = index === steps.length - 1;
@@ -137,7 +137,7 @@ export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; r
       {spot?.hole ? <div className="tour-hole" aria-hidden="true" style={holeStyle(spot.hole)} /> : <div className="tour-dim" aria-hidden="true" />}
       <div ref={box} className="tour-callout" role="dialog" aria-modal="true" aria-label={t("tour.reopen")} style={place(spot)}>
         <p className="tour-text" aria-live="polite">
-          <span className="text">{t(`tour.${step.id}.lead`)}</span> {t(`tour.${step.id}`)}
+          <span className="text">{t(`tour.${stepKey(step, docked)}.lead`)}</span> {t(`tour.${stepKey(step, docked)}`)}
           {step.end && <span className="text"> {t(`tour.${step.id}.end`)}</span>}
         </p>
         <div className="tour-nav">
