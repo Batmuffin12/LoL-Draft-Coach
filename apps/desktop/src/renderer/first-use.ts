@@ -109,7 +109,7 @@ const overlaps = (a: Box, b: Box) => a.left < b.left + b.width && b.left < a.lef
 
 /**
  * Where a live note goes, so it covers neither its target nor the block it explains: first the window's bottom edge
- * (over the footer's line, or just above a footer with a button in it), then under the block, then over it.
+ * (over the footer's line, or just above a footer with a button or Riot's notice in it), then under the block, then over it.
  * With no such place (a block as tall as the window): the bottom edge anyway.
  */
 export function placeNote(o: { target: Box; about: Box; footer: Box | null; size: { width: number; height: number }; view: { width: number; height: number } }, gap = 6, margin = 8): { top: number; left: number } {

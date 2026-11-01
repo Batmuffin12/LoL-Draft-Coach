@@ -29,14 +29,18 @@ export interface SuggestedPickProps {
   maxReasons: number;
   /** Its `data-tour` name, for a highlight. */
   tour?: string;
+  /** A very short window: the line under the tiles goes (their hover text says it too). */
+  brief?: boolean;
+  /** What a short window moved to hover, on the card. */
+  more?: string | null;
 }
 
 /** The suggested pick: a gold card with its chance, the You · Meta · Lane tiles, and its reasons. */
-export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }: SuggestedPickProps) {
+export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour, brief = false, more }: SuggestedPickProps) {
   const cols = pickColumns(pick.terms);
   return (
     <>
-      <div className="you pick-card" data-tour={tour}>
+      <div className="you pick-card" data-tour={tour} {...tip(more)}>
         <ChampIcon champ={pick.champion} size={64} framed />
         <div className="who">
           <span className="t-title nm">
@@ -60,7 +64,7 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }:
           </div>
         ))}
       </div>
-      <span className="micro tiles-note">{t("pick.tile.unit")}</span>
+      {!brief && <span className="micro tiles-note">{t("pick.tile.unit")}</span>}
       <ul className="reasons">
         {pickReasons(pick.reasons, maxReasons, record !== null).map((r) => (
           <li key={r.text} className={r.negative ? "but" : undefined}>

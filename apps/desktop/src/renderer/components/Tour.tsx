@@ -62,13 +62,13 @@ function measureSpot(target: Element | null, box: RefObject<HTMLElement | null>)
   return { hole, top, left };
 }
 
-/** Where a live note and its ring go: off the target and off the block it explains, and off a footer with a button in it. */
+/** Where a live note and its ring go: off the target and off the block it explains, and off a footer with a button or Riot's notice in it. */
 function measureNote(target: Element, box: RefObject<HTMLElement | null>): Spot | null {
   const note = box.current;
   if (!note) return null;
   const view = { width: window.innerWidth, height: window.innerHeight };
   const r = target.getBoundingClientRect();
-  const footer = document.querySelector(".window .foot:has(.btn)")?.getBoundingClientRect() ?? null;
+  const footer = document.querySelector(".window .foot:has(.btn, .legal)")?.getBoundingClientRect() ?? null;
   const about = (target.closest(".section") ?? target).getBoundingClientRect();
   const corner = getComputedStyle(target).borderTopLeftRadius;
   return { hole: spotlight(r, view), ...placeNote({ target: r, about, footer, size: { width: note.offsetWidth, height: note.offsetHeight }, view }), radius: corner === "0px" ? null : corner };

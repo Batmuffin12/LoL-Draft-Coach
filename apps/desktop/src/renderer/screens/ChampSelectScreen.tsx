@@ -64,8 +64,9 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const firstId = state.picks[0]?.champion.id;
   useEffect(() => setSel(0), [firstId]);
   const banning = state.bans.length > 0 || draft.localAction === "ban";
-  // Drops reason lines one by one until the picks fit 720px, wherever the room went (undocked, the board may scroll).
-  const fitLevel = useFitLevel(`${firstId}-${sel}-${banning}`, REASONS - 1);
+  // Drops reason lines one by one until the picks fit, wherever the room went (undocked, the board may scroll); last, the two lines around them move to hover.
+  const fitLevel = useFitLevel(`${firstId}-${sel}-${banning}`, REASONS);
+  const brief = state.docked && fitLevel >= REASONS;
   const hover = !banning && state.hoverPick?.loadout ? state.hoverPick : null;
   // Back to the picks when the hovered champion goes away.
   useEffect(() => {
@@ -130,8 +131,8 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
         <>
           <Section title={t("pick.head")} aside={<ConfidenceChip confidence={state.pickAdvice.confidence} />}>
             {state.filledNote && <Facts rows={[state.filledNote]} flow />}
-            <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
-            {theirTeam && <Facts rows={[theirTeam]} flow />}
+            <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} brief={brief} more={brief ? theirTeam?.items.map((i) => i.text).join("\n") : null} />
+            {theirTeam && !brief && <Facts rows={[theirTeam]} flow />}
           </Section>
           {picks.length > 1 && (
             <Section title={t("pick.ifNot", { champion: cur.champion.name })}>

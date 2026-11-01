@@ -76,7 +76,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
     <>
       <Header m={m} brief={level > 2} />
       {m.role && m.axes.length > 0 && (
-        <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={<span className="micro" {...tip(hidden.join("\n"))}>{m.steadyNote}</span>}>
+        <Section title={t("month.style", { role: m.role.toLowerCase() })} aside={m.axes.some((a) => a.changed === "up" || a.changed === "down") || hidden.length > 0 ? <span className="micro" {...tip(hidden.join("\n"))}>{m.steadyNote}</span> : undefined}>
           <StyleShifts axes={m.axes} />
           {showTrends && shown.length > 0 && (
             <span className="caption trends">
