@@ -81,6 +81,11 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
     this.update({ docked });
   }
 
+  /** What first use has shown so far changed (the tour, a hint). */
+  setUi(ui: ViewState["ui"]): void {
+    this.update({ ui });
+  }
+
   /** Re-renders the draft; subclasses add recommendations. */
   protected onDraft(): void {
     const lookup = (id: number) => {

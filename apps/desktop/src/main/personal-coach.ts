@@ -24,7 +24,7 @@ import {
   type Loadout,
 } from "@ldc/engine";
 import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
-import type { ImportLine, MyPickView, NewChampRoleView } from "../shared/view";
+import type { ImportLine, MyPickView, NewChampRoleView, ViewState } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption } from "./advice-log";
 import { importShownLoadout } from "./loadout-import";
@@ -56,6 +56,8 @@ export interface PersonalCoachDeps extends CoachDeps {
   riotId: string | null;
   /** Live meta snapshots (server mode); null: score from the player's own data only (engine v1). */
   meta?: MetaSource | null;
+  /** The tour and hints already shown, in the very first state: no flash of a tour you've done. */
+  ui?: ViewState["ui"];
 }
 
 /** The panel's fixed wording: explain templates "ui.*", without the prefix. */
@@ -168,7 +170,7 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
-    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates) };
+    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates), ...(p.ui ? { ui: p.ui } : {}) };
   }
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */

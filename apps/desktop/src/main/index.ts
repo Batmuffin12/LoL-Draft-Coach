@@ -28,6 +28,8 @@ import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH,
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
+import { isHintId } from "../shared/ui-state";
+import { UiStateStore } from "./ui-state";
 
 const DOCK_POLL_MS = 500;
 
@@ -325,6 +327,7 @@ async function main(): Promise<void> {
     if (profiles) perf.wrap("profiles", profiles);
     if (meta) perf.wrap("meta", meta);
   }
+  const uiState = new UiStateStore(join(app.getPath("userData"), "ui-state.json"));
   const coach = new PersonalCoach({
     connector,
     ddragon,
@@ -332,6 +335,7 @@ async function main(): Promise<void> {
     profiles,
     riotId: env.riotId,
     meta,
+    ui: await uiState.load(),
   });
   // Scoring config from the server (tuning without a release); the bundled copy until then.
   // Dev aid: LDC_BUNDLED_CONFIG=1 keeps this branch's config and wording against any server
@@ -376,6 +380,10 @@ async function main(): Promise<void> {
   });
   ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
     if (typeof key === "string") coach.dismissNotice(key);
+  });
+  ipcMain.on(IPC.tourDone, () => coach.setUi(uiState.finishTour()));
+  ipcMain.on(IPC.hintSeen, (_e, id: unknown) => {
+    if (isHintId(id)) coach.setUi(uiState.sawHint(id));
   });
 
   await coach.start();

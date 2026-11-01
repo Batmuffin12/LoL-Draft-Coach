@@ -1,8 +1,11 @@
 import type { CoachStatus, FactorScores, Term } from "@ldc/shared";
+import { emptyUiState, type UiState } from "./ui-state";
 
 /** IPC channel names between main and renderer. */
 export const IPC = {
   state: "coach:state",
+  tourDone: "coach:tour-done",
+  hintSeen: "coach:hint-seen",
   ready: "coach:ready",
   setDocked: "coach:set-docked",
   minimize: "coach:minimize",
@@ -579,6 +582,8 @@ export interface ViewState {
   roleLabels: Record<string, string>;
   /** The panel's fixed wording (explain templates "ui.*", without the prefix). */
   copy: Record<string, string>;
+  /** The tour and hints already shown on this PC. */
+  ui: UiState;
 }
 
 /** Champ select or a game: not the moment to restart the panel. */
@@ -620,5 +625,6 @@ export function emptyViewState(): ViewState {
     docked: true,
     roleLabels: {},
     copy: {},
+    ui: emptyUiState(),
   };
 }
