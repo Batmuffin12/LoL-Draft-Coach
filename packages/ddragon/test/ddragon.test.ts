@@ -1,7 +1,9 @@
-import { mkdtempSync, readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createServer, type RequestListener, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { communityDragonAsset, DataDragon, DataDragonError } from "../src/index";
 
 /** A fake Data Dragon CDN whose newest version can be changed by the test. */
@@ -123,6 +125,183 @@ describe("DataDragon", () => {
       return cdn.fetchFn(input);
     }) as typeof fetch;
     await expect(new DataDragon({ cacheDir, fetch: broken }).load()).rejects.toThrow(/champion\.json changed shape/);
+  });
+});
+
+describe("cache first, then the network", () => {
+  const seed = async (cdn = fakeCdn()) => {
+    await new DataDragon({ cacheDir, fetch: cdn.fetchFn }).load();
+    cdn.state.requests.length = 0;
+    return cdn;
+  };
+
+  it("loads the cached patch with no network and says so", async () => {
+    const cdn = await seed();
+    const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+    const patches: string[] = [];
+    dd.on("patch", (d) => patches.push(d.version));
+    expect(dd.loaded).toBe(false);
+    expect(await dd.loadCached()).toBe(true);
+    expect(dd.loaded).toBe(true);
+    expect(patches).toEqual(["1.2.1"]);
+    expect(cdn.state.requests).toEqual([]);
+  });
+
+  it("finds nothing to load with no cache", async () => {
+    const cdn = fakeCdn();
+    const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+    expect(await dd.loadCached()).toBe(false);
+    expect(dd.loaded).toBe(false);
+    expect(dd.champion(1)).toBeUndefined();
+    expect(cdn.state.requests).toEqual([]);
+  });
+
+  it("an update on the same patch reads nothing again and doesn't announce a patch", async () => {
+    const cdn = await seed();
+    const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+    await dd.loadCached();
+    const before = dd.data;
+    const patches: string[] = [];
+    dd.on("patch", (d) => patches.push(d.version));
+    expect(await dd.update()).toBe(false);
+    expect(dd.data).toBe(before);
+    expect(patches).toEqual([]);
+    expect(cdn.state.requests).toHaveLength(1); // versions.json only
+  });
+
+  it("a new patch replaces the cached data once fetched, and stays for the next start", async () => {
+    const cdn = await seed();
+    const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+    await dd.loadCached();
+    const patches: string[] = [];
+    dd.on("patch", (d) => patches.push(d.version));
+    cdn.state.versions = ["1.3.1", ...cdn.state.versions];
+    expect(await dd.update()).toBe(true);
+    expect(patches).toEqual(["1.3.1"]);
+    expect(dd.champion(1)?.name).toBe("Alpha 1.3.1");
+    expect(readdirSync(cacheDir).sort()).toEqual(["1.3.1_en_US", "current.json"]);
+    const next = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+    await next.loadCached();
+    expect(next.data.version).toBe("1.3.1");
+  });
+
+  it("keeps the data it had when a new patch can't be fetched, and fetches it on the next try", async () => {
+    const cdn = await seed();
+    cdn.state.versions = ["1.3.1", ...cdn.state.versions];
+    let failing = true;
+    const flaky = (async (input: string | URL | Request) => (failing && String(input).includes("item.json") ? new Response("down", { status: 503 }) : cdn.fetchFn(input))) as typeof fetch;
+    const dd = new DataDragon({ cacheDir, fetch: flaky });
+    await dd.loadCached();
+    await expect(dd.update()).rejects.toThrow(/HTTP 503/);
+    expect(dd.data.version).toBe("1.2.1");
+    // Half a download isn't the current patch: the cache still gives the old one.
+    const next = new DataDragon({ cacheDir, fetch: flaky });
+    await next.loadCached();
+    expect(next.data.version).toBe("1.2.1");
+    failing = false;
+    expect(await dd.update()).toBe(true);
+    expect(dd.data.version).toBe("1.3.1");
+  });
+
+  it("shares one check between calls made while it runs, and checks afresh after", async () => {
+    const cdn = await seed();
+    const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+    await Promise.all([dd.update(), dd.update()]);
+    expect(cdn.state.requests).toHaveLength(1);
+    await dd.update();
+    expect(cdn.state.requests).toHaveLength(2);
+  });
+
+  it("load still falls back on the cache when a new patch can't be fetched", async () => {
+    const cdn = await seed();
+    cdn.state.versions = ["1.3.1", ...cdn.state.versions];
+    const flaky = (async (input: string | URL | Request) => (String(input).includes("/cdn/1.3.1/") ? new Response("down", { status: 503 }) : cdn.fetchFn(input))) as typeof fetch;
+    const dd = new DataDragon({ cacheDir, fetch: flaky });
+    expect(await dd.load()).toBe(false);
+    expect(dd.data.version).toBe("1.2.1");
+  });
+});
+
+describe("a corrupt cache", () => {
+  const seeded = async () => {
+    const cdn = fakeCdn();
+    await new DataDragon({ cacheDir, fetch: cdn.fetchFn }).load();
+    return cdn;
+  };
+  const files = {
+    "truncated file": () => writeFileSync(join(cacheDir, "1.2.1_en_US", "champion.json"), '{"version":'),
+    "a file of the wrong shape": () => writeFileSync(join(cacheDir, "1.2.1_en_US", "item.json"), '{"data":{"1":{}}}'),
+    "a missing file": () => rmSync(join(cacheDir, "1.2.1_en_US", "summoner.json")),
+    "unreadable current.json": () => writeFileSync(join(cacheDir, "current.json"), "not json"),
+    "current.json of the wrong shape": () => writeFileSync(join(cacheDir, "current.json"), '{"version":12}'),
+  };
+  for (const [what, corrupt] of Object.entries(files)) {
+    it(`${what}: nothing loads from it, and an update downloads the patch again`, async () => {
+      const cdn = await seeded();
+      corrupt();
+      const dd = new DataDragon({ cacheDir, fetch: cdn.fetchFn });
+      expect(await dd.loadCached()).toBe(false);
+      expect(await dd.update()).toBe(true);
+      expect(dd.data.version).toBe("1.2.1");
+      expect(await new DataDragon({ cacheDir, fetch: cdn.fetchFn }).loadCached()).toBe(true);
+    });
+  }
+
+  it("fails clearly when it's also offline", async () => {
+    const cdn = await seeded();
+    writeFileSync(join(cacheDir, "1.2.1_en_US", "champion.json"), '{"version":');
+    cdn.state.online = false;
+    await expect(new DataDragon({ cacheDir, fetch: cdn.fetchFn }).load()).rejects.toBeInstanceOf(DataDragonError);
+  });
+});
+
+describe("request timeout", () => {
+  let server: Server | null = null;
+  afterEach(() => {
+    server?.closeAllConnections();
+    server?.close();
+    server = null;
+  });
+  /** A real HTTP server, so the timeout is seen ending a real request. */
+  const listen = async (handler: RequestListener) => {
+    server = createServer(handler);
+    await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+    return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  };
+
+  it("gives up on a server that never answers", async () => {
+    const baseUrl = await listen(() => undefined);
+    const dd = new DataDragon({ cacheDir, baseUrl, requestTimeoutMs: 30 });
+    const err = await dd.update().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(DataDragonError);
+    expect((err as Error).message).toMatch(/versions\.json didn't answer within 0\.03 s/);
+  });
+
+  it("gives up on a body that stops arriving", async () => {
+    const baseUrl = await listen((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.write('["1.2.1"');
+    });
+    const dd = new DataDragon({ cacheDir, baseUrl, requestTimeoutMs: 30 });
+    await expect(dd.update()).rejects.toThrow(/didn't answer/);
+  });
+
+  it("load falls back on the cache after a timeout, and fails clearly without one", async () => {
+    const baseUrl = await listen(() => undefined);
+    await expect(new DataDragon({ cacheDir, baseUrl, requestTimeoutMs: 30 }).load()).rejects.toThrow(/didn't answer/);
+    await new DataDragon({ cacheDir, fetch: fakeCdn().fetchFn }).load();
+    const dd = new DataDragon({ cacheDir, baseUrl, requestTimeoutMs: 30 });
+    expect(await dd.load()).toBe(false);
+    expect(dd.data.version).toBe("1.2.1");
+  });
+
+  it("stat shards are null, not stuck, when CommunityDragon never answers", async () => {
+    const url = await listen(() => undefined);
+    const dd = new DataDragon({ cacheDir, fetch: fakeCdn().fetchFn });
+    await dd.load();
+    const shards = new DataDragon({ cacheDir, communityDragonUrl: `${url}/`, requestTimeoutMs: 30 });
+    await shards.loadCached();
+    expect(await shards.statShards()).toBeNull();
   });
 });
 
