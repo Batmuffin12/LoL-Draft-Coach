@@ -6,9 +6,9 @@ import { Chip } from "./Chip";
 export interface StatusHeaderProps {
   lcu: CoachStatus["lcu"];
   docked: boolean;
-  /** Patch and age of the live meta, e.g. "16.19 · 12 min". */
+  /** The live meta's patch, e.g. "Patch 16.19". */
   metaText?: string | null;
-  /** Band, game count and offline state. */
+  /** Games, age and offline state. */
   metaTitle?: string;
   onDock: () => void;
   onMinimize: () => void;

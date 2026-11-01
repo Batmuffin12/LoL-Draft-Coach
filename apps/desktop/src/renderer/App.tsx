@@ -4,7 +4,7 @@ import { ChampSelectScreen } from "./screens/ChampSelectScreen";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
-import { setCopy, setMinGames, setRoleLabels } from "./format";
+import { setCopy, setMinGames, setRoleLabels, t } from "./format";
 import { perfCommitted, perfReceived } from "./perf";
 import { useRuneChoice } from "./rune-choice";
 
@@ -32,6 +32,6 @@ export function App() {
   if (account && account.state !== "registered") return <ConnectScreen state={state} account={account} />;
   if (draft && myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} />;
   if (draft) return <ChampSelectScreen state={state} draft={draft} runes={runes} />;
-  if (myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} note="Champ select is over: your loadout stays here until the game ends." />;
+  if (myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} note={t("locked.after")} />;
   return <LobbyScreen state={state} />;
 }

@@ -86,7 +86,7 @@ function Lobby({ state }: { state: ViewState }) {
       }
       footer={<AccountFooter state={state} />}
     >
-      <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? "No champ select yet: open a lobby and the draft appears here." : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
+      <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? t("lobby.noDraft") : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
@@ -152,8 +152,8 @@ function LastGame({ state }: { state: ViewState }) {
           )}
         </>
       ) : (
-        <Section title="Last game">
-          <p className="caption">After your next game, how it went against the advice you were shown appears here: your pick, the suggestions, the result and what mattered most in the draft.</p>
+        <Section title={t("tabs.last")}>
+          <p className="caption">{t("last.empty")}</p>
         </Section>
       )}
       {state.focus && (
@@ -173,7 +173,7 @@ function NewChamps({ state }: { state: ViewState }) {
   const level = useFitLevel(sub, 3);
   if (!list.length) {
     return (
-      <Section title="New champions">
+      <Section title={t("tabs.new")}>
         <p className="caption">{state.meta?.state === "ready" ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")}</p>
       </Section>
     );
@@ -182,13 +182,13 @@ function NewChamps({ state }: { state: ViewState }) {
   return (
     <>
       <section className="section pills-row">
-        <Pills compact label="Role" options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+        <Pills compact label={t("label.role")} options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
       </section>
       {list.filter((r) => r.role === sub).map((r) => {
-        const title = `New for ${positionLabel(r.role).toLowerCase()}`;
+        const title = t("new.head", { role: roleName(r.role) });
         const l = r.learning;
         return (
-          <Section key={r.role} title={title} aside={<span className="micro">strong in your rank</span>}>
+          <Section key={r.role} title={title} aside={<span className="micro">{t("new.aside")}</span>}>
             {l && (
               <div className="plan learning" title={level > 2 ? minorText(l.learn) : undefined}>
                 <div className="learning-head">
@@ -211,7 +211,7 @@ function NewChamps({ state }: { state: ViewState }) {
             )}
             {r.plan && (
               <div className="plan" title={level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : undefined}>
-                <span className="label gold">First games plan</span>
+                <span className="label gold">{t("new.plan")}</span>
                 <span>{r.plan}</span>
                 {r.planLearn && <Learn learn={r.planLearn} level={level} />}
               </div>
@@ -237,8 +237,8 @@ function Learn({ learn, level }: { learn: LearnView; level: number }) {
   return (
     <>
       {f ? (
-        <div className="learn-focus" title="Filled: you reached it in that game on this champion">
-          <span className="label gold">{learn.stage ? `This game · ${learn.stage}` : "This game"}</span>
+        <div className="learn-focus" title={t("new.squaresTip")}>
+          <span className="label gold">{learn.stage ? t("new.thisGameStage", { stage: learn.stage }) : t("new.thisGame")}</span>
           <span>{f.text}</span>
           {f.recent.length > 0 && (
             <span className="games">
@@ -261,11 +261,11 @@ function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
   // Many strengths and weak spots: the note under your numbers moves to hover.
   const fits = useFits(sub);
-  if (!state.playstyle.length) return <Section title="Your style"><p className="caption">{lobbyEmpty(state.status, "style", { n: state.limits.styleGames })}</p></Section>;
+  if (!state.playstyle.length) return <Section title={t("style.head")}><p className="caption">{lobbyEmpty(state.status, "style", { n: state.limits.styleGames })}</p></Section>;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
-    return [gameCount(p.games), high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
+    return [gameCount(p.games), high.length ? t("style.pillStrong", { list: high.join(", ") }) : null, low.length ? t("style.pillGrow", { list: low.join(", ") }) : null].filter(Boolean).join(" · ");
   };
   const p = state.playstyle.find((x) => x.role === sub) ?? state.playstyle[0]!;
   // How you play (pool, classes, damage) and the side split are on hover over the numbers' head.
@@ -275,7 +275,7 @@ function Style({ state }: { state: ViewState }) {
       <section className="section style-top">
         <Pills
           compact
-          label="Role"
+          label={t("label.role")}
           options={state.playstyle.map((x) => ({ value: x.role, label: positionLabel(x.role), title: summary(x) }))}
           value={p.role}
           onChange={setSub}
@@ -308,7 +308,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
   const [sub, setSub] = useRolePill(list.map((r) => r.role));
   // A big pool: first the extra champions' names move to hover, then the legend and the note under what's missing.
   const level = useFitLevel(sub, 2);
-  if (!list.length) return <Section title="Your pool"><p className="caption">{lobbyEmpty(state.status, "pool", { n: state.limits.poolGames })}</p></Section>;
+  if (!list.length) return <Section title={t("pool.head")}><p className="caption">{lobbyEmpty(state.status, "pool", { n: state.limits.poolGames })}</p></Section>;
   const stats = (r: ViewState["roles"][number]) => `${gameCount(r.games)} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
   const columns = r.pool.slice(0, POOL_COLUMNS);
@@ -318,7 +318,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
       <section className="section">
         <Pills
           compact
-          label="Role"
+          label={t("label.role")}
           options={list.map((x) => ({ value: x.role, label: positionLabel(x.role), title: [stats(x), x.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
           value={r.role}
           onChange={setSub}
@@ -331,7 +331,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
             {level < 2 && <PoolLegend />}
           </>
         ) : (
-          <p className="caption">No champions in your {roleName(r.role)} pool yet.</p>
+          <p className="caption">{t("pool.none", { role: roleName(r.role) })}</p>
         )}
       </section>
       <Section title={t("pool.next")}>

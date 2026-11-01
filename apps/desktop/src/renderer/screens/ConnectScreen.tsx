@@ -66,7 +66,7 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
     >
       <Notices state={state} />
       <section className="connect-intro">
-        <span className="t-title">{mismatch ? "Different account" : t("connect.title")}</span>
+        <span className="t-title">{t(mismatch ? "connect.mismatch" : "connect.title")}</span>
         <span className="caption text">{mismatch ? account.message : t("connect.intro")}</span>
       </section>
       <form className="connect-form" onSubmit={submit}>
@@ -79,13 +79,19 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
             <span className="pos" aria-hidden="true">
               ●
             </span>{" "}
-            {t("connect.found")} {account.clientRiotId && <span className="text who">{account.clientRiotId}</span>}
+            {account.clientRiotId ? (
+              <>
+                {t("connect.found")} <span className="text who">{account.clientRiotId}</span>
+              </>
+            ) : (
+              t("connect.foundNoId")
+            )}
           </span>
         ) : (
           <span className="caption center">{t("connect.noClient")}</span>
         )}
         <Button variant="primary" type="submit" wide disabled={busy || !ready}>
-          {busy ? "Connecting…" : "Connect"}
+          {t(busy ? "connect.busy" : "connect.submit")}
         </Button>
         {waking && <span className="caption center">{t("profile.waking")}</span>}
         {error && <span className="caption neg center">{account.message}</span>}

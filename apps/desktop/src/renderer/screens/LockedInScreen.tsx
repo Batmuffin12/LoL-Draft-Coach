@@ -77,7 +77,7 @@ export function LoadoutBody({ pick, tab, runes }: { pick: MyPickView; tab: Loado
   if (tab === "matchups") return <MatchupsPlanTab pick={pick} />;
   if (!pick.loadout) {
     return (
-      <Section title={tab === "runes" ? "Runes" : t("build.head")}>
+      <Section title={tab === "runes" ? t("runes.tab") : t("build.head")}>
         <p className="caption">{t("loadout.none", { champion: pick.champion.name })}</p>
       </Section>
     );
@@ -87,12 +87,12 @@ export function LoadoutBody({ pick, tab, runes }: { pick: MyPickView; tab: Loado
 
 /** Your champion, "Locked in · Mid vs Zed", and its win chance, over the tabs. */
 function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: string | null }) {
-  const where = [pick.role && positionLabel(pick.role), laneOpponent && `vs ${laneOpponent}`].filter(Boolean).join(" ");
+  const where = [pick.role && positionLabel(pick.role), laneOpponent && t("locked.vs", { champion: laneOpponent })].filter(Boolean).join(" ");
   return (
     <div className="you-strip" title={pick.reasons.map((r) => r.text).join("\n") || undefined}>
       <ChampIcon champ={pick.champion} size={44} framed />
       <div className="who">
-        <span className="label gold">{`${pick.hovering ? "Hovering" : "Locked in"}${where ? ` · ${where}` : ""}`}</span>
+        <span className="label gold">{`${t(pick.hovering ? "locked.hovering" : "locked.lockedIn")}${where ? ` · ${where}` : ""}`}</span>
         <span className="nm">{pick.champion.name}</span>
       </div>
       <WinChance value={pick.expectedWin} size="row" />
@@ -102,8 +102,8 @@ function YouStrip({ pick, laneOpponent }: { pick: MyPickView; laneOpponent: stri
 
 function loadoutTabs(): { value: LoadoutTab; label: string }[] {
   return [
-    { value: "runes", label: "Runes" },
-    { value: "build", label: "Build" },
+    { value: "runes", label: t("runes.tab") },
+    { value: "build", label: t("build.tab") },
     { value: "matchups", label: t("matchups.tab") },
   ];
 }

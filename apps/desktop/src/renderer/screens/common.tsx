@@ -2,32 +2,34 @@ import { useState } from "react";
 import { canRestartToUpdate, type AccountView, type ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count, cx, profileProgress, t, versionText } from "../format";
+import { ago, count, cx, profileProgress, t, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
 export const RIOT_NOTICE =
   "LoL Draft Coach isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.";
 
-/** The title bar with the live meta's patch and age ("16.19 · 12 min"). */
+/** What the header's chip says: always "Patch 16.19", and the same number however it's known. */
+export function metaChip(meta: ViewState["meta"], patch: string | null, now: number): { text: string | null; title?: string } {
+  const shown = meta?.state === "ready" ? (meta.patch ?? patch) : patch;
+  const name = shown ? t("chip.patch", { patch: shown }) : null;
+  if (meta?.state !== "ready") return { text: name };
+  const tip = t("chip.metaTip", { games: count(meta.matches), n: meta.matches, age: ago(meta.createdAt, now) });
+  // The age is in the tooltip: no player acts on it, and the chip stays short.
+  return { text: `${name ?? t("chip.live")}${meta.offline ? ` · ${t("chip.offline")}` : ""}`, title: meta.offline ? `${tip}. ${t("chip.offlineTip")}` : tip };
+}
+
+/** The title bar with the live meta's patch ("Patch 16.19"); its age and games on hover. */
 export function Header({ state }: { state: ViewState }) {
   const now = useNow(60_000);
   const { meta, status } = state;
-  let metaText: string | null = status.patch ? `Patch ${status.patch}` : null;
-  let metaTitle: string | undefined;
-  if (meta?.state === "ready") {
-    const minutes = Math.max(0, Math.round((now - meta.createdAt) / 60_000));
-    const age = minutes < 60 ? `${minutes} min` : `${Math.round(minutes / 60)} h`;
-    // The age is in the tooltip: no player acts on it, and the chip stays short.
-    metaText = `${meta.patch ?? status.patch ?? "Live"}${meta.offline ? " · offline" : ""}`;
-    metaTitle = `Live meta for rank band ${meta.band}: ${count(meta.matches)} recent ranked games, updated ${age} ago${meta.offline ? ". The server is unreachable: using the last copy" : ""}`;
-  }
+  const chip = metaChip(meta, status.patch, now);
   return (
     <StatusHeader
       lcu={status.lcu}
       docked={state.docked}
-      metaText={metaText}
-      metaTitle={metaTitle}
+      metaText={chip.text}
+      {...(chip.title ? { metaTitle: chip.title } : {})}
       onDock={() => window.coach.setDocked(!state.docked)}
       onMinimize={() => window.coach.minimize()}
       onClose={() => window.coach.close()}

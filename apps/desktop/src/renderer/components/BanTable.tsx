@@ -14,16 +14,16 @@ export function BanTable({ bans }: { bans: BanRow[] }) {
   return (
     <div className="table bans" role="table">
       <div className="thead" role="row">
-        <span className="c-champ">Champion</span>
-        <span className="c-num" title="How much win chance it costs you, weighted by how often it's picked">
-          Threat
+        <span className="c-champ">{t("label.champion")}</span>
+        <span className="c-num" title={t("ban.threatTip")}>
+          {t("ban.threat")}
         </span>
-        <span className="c-num" title="Its win rate in your rank (pick and ban rates on hover)">
-          Win %
+        <span className="c-num" title={t("ban.winRateTip")}>
+          {t("label.winRate")}
         </span>
       </div>
       {bans.map((b, i) => (
-        <div key={b.champion.id} className="trow" role="row" title={[...b.reasons, `Picked in ${rate(b.pickRate)} of games, banned in ${rate(b.banRate)}`].join("\n")}>
+        <div key={b.champion.id} className="trow" role="row" title={[...b.reasons, t("ban.rates", { pick: rate(b.pickRate), ban: rate(b.banRate) })].join("\n")}>
           <span className="c-champ">
             <ChampIcon champ={b.champion} size={34} framed={i === 0} title="" />
             <span className="nm">{b.champion.name}</span>
@@ -34,7 +34,7 @@ export function BanTable({ bans }: { bans: BanRow[] }) {
           <span className="c-num">{rate(b.winRate, 1)}</span>
           {(b.reasons[0] || b.forHover) && (
             <span className="sub">
-              {b.forHover && <b>Vs your hover. </b>}
+              {b.forHover && <b>{t("ban.forHover")} </b>}
               {b.reasons[0]}
             </span>
           )}

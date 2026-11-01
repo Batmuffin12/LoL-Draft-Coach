@@ -83,6 +83,17 @@ export function winsPer100(x: number | null | undefined): string {
   return n === 0 ? t("units.under", { per }) : t(x > 0 ? "units.more" : "units.fewer", { n, per });
 }
 
+/** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago". */
+export function ago(at: number, now: number): string {
+  const min = Math.max(0, Math.round((now - at) / 60_000));
+  if (min < 1) return t("time.justNow");
+  if (min < 60) return t("time.minutes", { n: min });
+  const h = Math.round(min / 60);
+  if (h < 24) return t("time.hours", { n: h });
+  const d = Math.round(h / 24);
+  return d === 1 ? t("time.yesterday") : t("time.days", { n: d });
+}
+
 /** Thousands separators: 1240 → "1,240". */
 export function count(n: number): string {
   return n.toLocaleString("en-US");

@@ -1,5 +1,5 @@
 import type { NewChampView } from "../../shared/view";
-import { cx, gameCount, rateOf, winToneOf } from "../format";
+import { cx, gameCount, rateOf, t, winToneOf } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
@@ -9,15 +9,15 @@ export function NewChampTable({ rows, brief = false }: { rows: NewChampView[]; b
   return (
     <div className="table newchamps" role="table">
       <div className="thead" role="row">
-        <span className="c-champ">Champion</span>
-        <span className="c-num" title="The champion you play that it's most like">
-          Plays like
+        <span className="c-champ">{t("label.champion")}</span>
+        <span className="c-num" title={t("new.likeTip")}>
+          {t("new.likeHead")}
         </span>
-        <span className="c-num" title="Its win rate in your rank and role">
-          Win %
+        <span className="c-num" title={t("new.winRateTip")}>
+          {t("label.winRate")}
         </span>
-        <span className="c-num" title="Riot's difficulty rating">
-          Difficulty
+        <span className="c-num" title={t("new.difficultyTip")}>
+          {t("new.difficulty")}
         </span>
       </div>
       {rows.map((c, i) => (
@@ -26,15 +26,15 @@ export function NewChampTable({ rows, brief = false }: { rows: NewChampView[]; b
             <ChampIcon champ={c.champion} size={34} framed={i === 0} title="" />
             <span className="nm">{c.champion.name}</span>
             {c.owned === false && (
-              <span className="tag" title="You don't own it yet">
-                Not owned
+              <span className="tag" title={t("new.notOwnedTip")}>
+                {t("new.notOwned")}
               </span>
             )}
           </span>
           <span className="like">
             {c.like ? (
               <>
-                <ChampIcon champ={c.like} size={24} title={`Plays like your ${c.like.name}`} />
+                <ChampIcon champ={c.like} size={24} title={t("new.likeYour", { champion: c.like.name })} />
                 <span className="wrap">{c.like.name}</span>
               </>
             ) : (

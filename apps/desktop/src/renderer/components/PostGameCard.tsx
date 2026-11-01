@@ -1,16 +1,6 @@
 import type { PostGameView } from "../../shared/view";
-import { cx, pct, positionLabel, signedOrDash, t, tone, winsPer100 } from "../format";
+import { ago, cx, pct, positionLabel, signedOrDash, t, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
-
-/** "12 min ago", "3 h ago", "yesterday", "4 days ago". */
-function ago(at: number, now: number): string {
-  const min = Math.max(0, Math.round((now - at) / 60_000));
-  if (min < 60) return `${min} min ago`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `${h} h ago`;
-  const d = Math.round(h / 24);
-  return d === 1 ? "yesterday" : `${d} days ago`;
-}
 
 /**
  * The result band: your champion, the result, the game in a line, and whether you took the

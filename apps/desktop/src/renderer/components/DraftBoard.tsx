@@ -1,5 +1,6 @@
 import type { ChampView, DraftView, SlotView } from "../../shared/view";
 import { cx, positionLabel } from "../format";
+import { t } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** A seat: champion and position only, never a player. */
@@ -41,8 +42,8 @@ function Team({ side, title, slots, bans }: { side: "ally" | "enemy"; title: str
 export function DraftBoard({ draft }: { draft: DraftView }) {
   return (
     <div className="board">
-      <Team side="ally" title="Your team" slots={draft.myTeam} bans={draft.myBans} />
-      <Team side="enemy" title="Enemy team" slots={draft.theirTeam} bans={draft.theirBans} />
+      <Team side="ally" title={t("draft.yourTeam")} slots={draft.myTeam} bans={draft.myBans} />
+      <Team side="enemy" title={t("pick.theirTeam")} slots={draft.theirTeam} bans={draft.theirBans} />
     </div>
   );
 }
