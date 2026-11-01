@@ -15,6 +15,7 @@ import type { Fixture } from "@ldc/lcu";
 import { MockLcuServer } from "@ldc/lcu/testing";
 import { history, loadScenario } from "@ldc/sim";
 import { world } from "../../packages/sim/scenarios/_world";
+import { HINT_IDS } from "../../apps/desktop/src/shared/ui-state";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const desktop = join(root, "apps", "desktop");
@@ -144,7 +145,14 @@ async function withMock<T>(setup: Setup, until: number, run: (lcuOverride: strin
   }
 }
 
+/** The measured screens stay comparable across versions: a profile past the tour and every one-time hint. */
+function skipFirstUse(): void {
+  mkdirSync(profileDir, { recursive: true });
+  writeFileSync(join(profileDir, "ui-state.json"), JSON.stringify({ tourDone: true, hintsSeen: HINT_IDS }));
+}
+
 function baseEnv(setup: Setup, lcu: string, opts: { profile?: boolean; serverUrl?: string } = {}): Record<string, string> {
+  skipFirstUse();
   return {
     LDC_ENV_FILE: envFile(opts.serverUrl),
     LDC_USER_DATA_DIR: profileDir,

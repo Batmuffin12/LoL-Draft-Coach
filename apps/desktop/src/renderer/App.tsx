@@ -4,11 +4,13 @@ import { ChampSelectScreen } from "./screens/ChampSelectScreen";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
+import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { screenFor } from "./first-use";
 import { setCopy, setRoleLabels } from "./format";
 import { perfCommitted, perfReceived } from "./perf";
 import { useRuneChoice } from "./rune-choice";
 
-/** Picks the screen for the moment: connect, champ select (ban or pick), locked in, or the lobby. */
+/** Picks the screen for the moment: connect, champ select (ban or pick), locked in, the tour, or the lobby. */
 export function App() {
   const [state, setState] = useState<ViewState | null>(null);
   useEffect(
@@ -23,14 +25,31 @@ export function App() {
   useLayoutEffect(() => perfCommitted(state), [state]);
   // Above the screens: locking in a hovered champion switches screen, and the chosen rune option stays.
   const runes = useRuneChoice((state?.myPick ?? state?.hoverPick)?.champion.id ?? null);
+  // Opened again from the footer; a draft ends that, and it doesn't come back after the game. A first tour does.
+  const [tourOpen, setTourOpen] = useState(false);
+  const drafting = state?.draft != null || state?.myPick != null;
+  useEffect(() => {
+    if (drafting) setTourOpen(false);
+  }, [drafting]);
 
   if (!state) return <div className="window loading">Starting…</div>;
   setRoleLabels(state.roleLabels);
   setCopy(state.copy);
   const { account, draft, myPick } = state;
-  if (account && account.state !== "registered") return <ConnectScreen state={state} account={account} />;
-  if (draft && myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} />;
-  if (draft) return <ChampSelectScreen state={state} draft={draft} runes={runes} />;
-  if (myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} note="Champ select is over: your loadout stays here until the game ends." />;
-  return <LobbyScreen state={state} />;
+  const screen = screenFor(state, tourOpen);
+  if (screen === "connect" && account) return <ConnectScreen state={state} account={account} />;
+  if (screen === "lockedIn" && myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} note={draft ? undefined : "Champ select is over: your loadout stays here until the game ends."} />;
+  if (screen === "champSelect" && draft) return <ChampSelectScreen state={state} draft={draft} runes={runes} />;
+  if (screen === "tour") {
+    return (
+      <OnboardingScreen
+        state={state}
+        onClose={() => {
+          setTourOpen(false);
+          window.coach.tourDone();
+        }}
+      />
+    );
+  }
+  return <LobbyScreen state={state} onHowItWorks={() => setTourOpen(true)} />;
 }
