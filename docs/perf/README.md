@@ -5,6 +5,7 @@ Everything runs locally and offline: no production server, no Riot API, no real 
 ```powershell
 pnpm perf --label before          # everything (~15 min); writes docs/perf/results/before.json
 pnpm perf --label x --only server # parts: bundle, desktop (cold start), clicks (replays + clicks), bench, server, fallow; --quick for a short run
+pnpm perf --label x --only desktop --cold-starts 200   # app loading at p50/p95/p99: a p99 needs at least 100 runs (--flows 200 with --only server for the /me/profile and meta fetches)
 pnpm perf:compare before after    # markdown before → after table with budgets (scripts/perf/budgets.json)
 pnpm perf:screens before          # screenshots + view dumps of every screen into docs/perf/results/before/
 pnpm perf:guard before after      # regression guard: dumps equal, pixels equal (timer ring masked), overflow 0
