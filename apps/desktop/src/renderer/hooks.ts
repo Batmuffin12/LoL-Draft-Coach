@@ -46,3 +46,12 @@ export function useFitLevel(key: unknown, max: number): number {
 export function useFits(key: unknown): boolean {
   return useFitLevel(key, 1) === 0;
 }
+
+/**
+ * Which role is shown: the one you chose while it still exists, else the first.
+ * Each role is its own small pill, so one role shows at a time and nothing scrolls.
+ */
+export function useRolePill(keys: string[]): [string, (key: string) => void] {
+  const [chosen, setChosen] = useState(keys[0] ?? "");
+  return [keys.includes(chosen) ? chosen : (keys[0] ?? ""), setChosen];
+}
