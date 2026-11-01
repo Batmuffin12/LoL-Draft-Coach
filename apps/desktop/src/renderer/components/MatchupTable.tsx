@@ -1,5 +1,5 @@
 import type { MatchupRowView } from "../../shared/view";
-import { cx, positionLabel, rate, signedOrDash, t, tone } from "../format";
+import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Facts } from "./Facts";
 
@@ -18,11 +18,12 @@ function verdictText(delta: number | null): string {
   return word === "Even" ? word : `${word} ${signedOrDash(delta)}`;
 }
 
+/** The verdict needs no minimum of its own: the delta is smoothed towards "as expected" (rating.priorGames.pair), so a thin pair already reads Even. Its raw win rate does. */
 function Row({ m }: { m: MatchupRowView }) {
   const where = [positionLabel(m.role), m.lane ? t("matchups.yourLane") : null, m.partner ? t("matchups.partner") : null].filter(Boolean).join(" · ");
   const v = tone(m.delta, VERDICT_DEAD_ZONE);
   return (
-    <div className={cx("mrow", m.lane && "you")} title={m.games ? `${signedOrDash(m.delta)} points vs what both champions' usual win rates predict` : undefined}>
+    <div className={cx("mrow", m.lane && "you")} {...tip(m.games ? t("matchups.tip", { signed: signedOrDash(m.delta), wins: winsPer100(m.delta) }) : null)}>
       <ChampIcon champ={m.champion} size={28} framed={m.lane} />
       <span className="who">
         <span className="t-heading">{m.champion!.name}</span>
@@ -32,7 +33,7 @@ function Row({ m }: { m: MatchupRowView }) {
         {m.games ? (
           <>
             <span className={cx("t-heading", v === "flat" ? "text" : v)}>{verdictText(m.delta)}</span>
-            <span className="micro">{`${rate(m.winRate, 1)} WR · ${m.games.toLocaleString("en-US")} ${m.games === 1 ? "game" : "games"}`}</span>
+            <span className="micro">{`${rateOf(m.winRate, m.games)} WR · ${gameCount(m.games)}`}</span>
           </>
         ) : (
           <span className="micro">{t("matchups.none")}</span>

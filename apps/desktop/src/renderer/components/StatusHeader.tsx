@@ -6,9 +6,9 @@ import { Chip } from "./Chip";
 export interface StatusHeaderProps {
   lcu: CoachStatus["lcu"];
   docked: boolean;
-  /** Patch and age of the live meta, e.g. "16.19 · 12 min". */
+  /** The live meta's patch, e.g. "Patch 16.19". */
   metaText?: string | null;
-  /** Band, game count and offline state. */
+  /** Games, age and offline state. */
   metaTitle?: string;
   onDock: () => void;
   onMinimize: () => void;
@@ -31,18 +31,13 @@ export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onMinim
       <span className="app">Draft Coach</span>
       {metaText && <Chip title={metaTitle}>{metaText}</Chip>}
       <span className="spacer" />
-      <button
-        className="icon-btn"
-        onClick={onDock}
-        title={docked ? "Docked to the client. Click to undock" : "Undocked. Click to dock beside the client"}
-        aria-pressed={docked}
-      >
+      <button className="icon-btn" onClick={onDock} title={t(docked ? "window.undock" : "window.dock")} aria-label={t(docked ? "window.undock" : "window.dock")} aria-pressed={docked}>
         {docked ? "◧" : "□"}
       </button>
       <button className="icon-btn" onClick={onMinimize} title={t("window.minimize")} aria-label={t("window.minimize")}>
         –
       </button>
-      <button className="icon-btn" onClick={onClose} title="Close">
+      <button className="icon-btn" onClick={onClose} title={t("window.close")} aria-label={t("window.close")}>
         ×
       </button>
     </header>

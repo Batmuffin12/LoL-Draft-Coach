@@ -1,5 +1,5 @@
 import type { FactItem, FactRow } from "../../shared/view";
-import { cx } from "../format";
+import { cx, tip } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** Icons in a row beside their labels. */
@@ -7,7 +7,7 @@ const ICON_SIZE = 18;
 
 function Entry({ item, iconOnly }: { item: FactItem; iconOnly: boolean }) {
   return (
-    <span className="fact-item">
+    <span className="fact-item" {...tip(item.title)}>
       {item.champion && <ChampIcon champ={item.champion} size={ICON_SIZE} />}
       {!(iconOnly && item.champion) && <span className="wrap">{item.text}</span>}
     </span>

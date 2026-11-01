@@ -24,6 +24,7 @@ const deps = {
   champion: (id: number) => ({ id, name: id === 103 ? "Ahri" : `#${id}`, iconUrl: null }),
   positionLabel: (r: string) => (r === "middle" ? "Mid" : r),
   growth: null,
+  minGames: 10,
 };
 
 describe("month view", () => {

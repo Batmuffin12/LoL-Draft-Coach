@@ -14,6 +14,13 @@ const WAKE_NOTE_MS = 4_000;
 /** "https://coach.example.app/" → "coach.example.app". */
 const host = (url: string) => url.replace(/^\w+:\/\//, "").replace(/\/+$/, "");
 
+/** Why Connect can't be pressed yet, as a copy key; null when it can. */
+export function connectBlocker(code: string, serverUrl: string, lcuConnected: boolean): string | null {
+  if (!lcuConnected) return "connect.noClient";
+  if (codeLength(code) !== CODE_LENGTH) return "connect.needCode";
+  return serverUrl.trim() === "" ? "connect.needServer" : null;
+}
+
 /** First run (or after sign-out): connect this PC to the coach server with an invite code. */
 export function ConnectScreen({ state, account }: { state: ViewState; account: AccountView }) {
   const [serverUrl, setServerUrl] = useState(account.serverUrl ?? account.defaultServerUrl ?? "");
@@ -33,7 +40,8 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
     return () => clearTimeout(timer);
   }, [busy]);
   const lcuConnected = state.status.lcu === "connected";
-  const ready = codeLength(code) === CODE_LENGTH && serverUrl.trim() !== "" && lcuConnected;
+  const blocker = connectBlocker(code, serverUrl, lcuConnected);
+  const ready = blocker === null;
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!busy && ready) void window.coach.register(serverUrl, code);
@@ -66,7 +74,7 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
     >
       <Notices state={state} />
       <section className="connect-intro">
-        <span className="t-title">{mismatch ? "Different account" : t("connect.title")}</span>
+        <span className="t-title">{t(mismatch ? "connect.mismatch" : "connect.title")}</span>
         <span className="caption text">{mismatch ? account.message : t("connect.intro")}</span>
       </section>
       <form className="connect-form" onSubmit={submit}>
@@ -79,13 +87,19 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
             <span className="pos" aria-hidden="true">
               ●
             </span>{" "}
-            {t("connect.found")} {account.clientRiotId && <span className="text who">{account.clientRiotId}</span>}
+            {account.clientRiotId ? (
+              <>
+                {t("connect.found")} <span className="text who">{account.clientRiotId}</span>
+              </>
+            ) : (
+              t("connect.foundNoId")
+            )}
           </span>
         ) : (
           <span className="caption center">{t("connect.noClient")}</span>
         )}
-        <Button variant="primary" type="submit" wide disabled={busy || !ready}>
-          {busy ? "Connecting…" : "Connect"}
+        <Button variant="primary" type="submit" wide disabled={busy || !ready} {...(blocker ? { title: t(blocker) } : {})}>
+          {t(busy ? "connect.busy" : "connect.submit")}
         </Button>
         {waking && <span className="caption center">{t("profile.waking")}</span>}
         {error && <span className="caption neg center">{account.message}</span>}

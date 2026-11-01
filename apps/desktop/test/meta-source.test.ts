@@ -272,6 +272,13 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const { ["loadout.page"]: _dropped, ["loadout.page.second"]: _reason, ["ui.runes.option.second"]: _label, ["import.runes.stale"]: _stale, ...olderTemplates } = config.explain.templates;
     coach.setConfig({ ...config, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: olderTemplates } });
     expect(coach.state.picks).toHaveLength(2);
+    // The same for the panel's wording and the shared minimum, when a server has neither yet.
+    const panelCopy = coach.state.copy;
+    const withoutPanelWording = Object.fromEntries(Object.entries(olderTemplates).filter(([k]) => !k.startsWith("ui.")));
+    coach.setConfig({ ...config, app: { ...config.app, display: undefined }, engine: { ...config.engine, topN: 2 }, explain: { ...config.explain, templates: withoutPanelWording } });
+    expect(coach.state.copy).toEqual(panelCopy);
+    expect(coach.state.copy["pick.empty.error"]).toBeTruthy();
+    expect(coach.state.limits.minGames).toBe(config.app.display!.minGames);
 
     // Once the player locks in, suggestions stop and the panel shows their own pick.
     while (coach.state.myPick === null && lcu.step()) await new Promise((r) => setTimeout(r, 15));

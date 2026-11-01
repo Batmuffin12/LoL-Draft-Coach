@@ -1,3 +1,5 @@
+import { tip } from "../format";
+
 export interface PillsProps<T extends string> {
   options: { value: T; label: string; title?: string }[];
   value: T;
@@ -15,7 +17,7 @@ export function Pills<T extends string>({ options, value, onChange, end, label, 
   return (
     <div className={compact ? "pills compact" : "pills"} role="group" aria-label={label}>
       {options.map((o) => (
-        <button key={o.value} type="button" className={o.value === value ? "pill on" : "pill"} aria-pressed={o.value === value} title={o.title} onClick={() => onChange(o.value)}>
+        <button key={o.value} type="button" className={o.value === value ? "pill on" : "pill"} aria-pressed={o.value === value} {...tip(o.title)} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}

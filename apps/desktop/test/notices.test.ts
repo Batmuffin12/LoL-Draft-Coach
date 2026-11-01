@@ -124,16 +124,20 @@ describe("PersonalCoach notices (mock League client)", () => {
     await start({ [GAMEFLOW]: queue(1700), "/lol-summoner/v1/current-summoner": null, "/lol-ranked/v1/current-ranked-stats": null });
     await waitFor(() => keys(coach!).includes("queue"));
     expect(coach!.state.notices[0]!.text).toMatch(/isn't supported yet/);
+    // The empty card has to say why too: the notice can be dismissed.
+    expect(coach!.state.unsupportedQueue).toBe(true);
 
     server!.push(SESSION, null, "Delete");
     await waitFor(() => coach!.state.draft === null);
     expect(keys(coach!)).toEqual([]);
+    expect(coach!.state.unsupportedQueue).toBe(false);
 
     server!.push(GAMEFLOW, queue(420));
     server!.push(SESSION, session);
     await waitFor(() => coach!.state.draft !== null);
     await new Promise((r) => setTimeout(r, 100));
     expect(keys(coach!)).toEqual([]);
+    expect(coach!.state.unsupportedQueue).toBe(false);
   });
 
   it("shows it again for the next unsupported draft even if you dismissed it", async () => {

@@ -26,7 +26,7 @@ export function Suggestion({ state, preview }: { state: ViewState; preview: Prev
     <>
       <section className="section pills-row">
         <Pills
-          label="Role"
+          label={t("label.role")}
           options={preview.roles.map((r, i) => ({ value: r.role, label: positionLabel(r.role), title: i === 0 ? t("queue.primary") : t("queue.secondary") }))}
           value={cur.role}
           onChange={setRole}

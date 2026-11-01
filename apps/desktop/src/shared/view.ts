@@ -245,9 +245,11 @@ export interface SessionView {
 export interface FactItem {
   text: string;
   champion?: ChampView | null;
+  /** What the number is, on hover. */
+  title?: string;
 }
 
-/** A short label with its values as separate entries, instead of a sentence ("Good matchups": Orianna +3.1%, Ahri +1.2%). */
+/** A short label with its values as separate entries, instead of a sentence ("Good matchups": Orianna +3.1% WR, Ahri +1.2% WR). */
 export interface FactRow {
   label: string;
   items: FactItem[];
@@ -528,6 +530,21 @@ export interface PostGameView {
   focus: { label: string; value: string; target: string; met: boolean } | null;
 }
 
+/** When neither the server's config nor the bundled one says (config app.display.minGames). */
+export const FALLBACK_MIN_GAMES = 10;
+
+/** Numbers from the config that the panel's rules and wording need. */
+export interface ViewLimits {
+  /** Below this many games a win rate goes neutral and whole. */
+  minGames: number;
+  /** Games in a role before it has a pool (engine roleAdvice.minGames). */
+  poolGames: number;
+  /** Games in a role before it has a style (engine playstyle.minGamesPerRole). */
+  styleGames: number;
+  /** Days the monthly report covers (engine report.days). */
+  monthDays: number;
+}
+
 export interface ViewState {
   account: AccountView | null;
   status: CoachStatus;
@@ -538,6 +555,8 @@ export interface ViewState {
   bans: BanView[];
   /** Extra bans for the champion the player hovers before or during bans (null when not hovering). */
   hoverBans: { champion: ChampView; bans: BanView[] } | null;
+  /** This champ select's queue isn't one the coach covers: no suggestions, and the screen says why. */
+  unsupportedQueue: boolean;
   /** Set once the local player has locked in a champion (suggestions stop then). */
   myPick: MyPickView | null;
   /** The loadout for the champion the player hovers before locking in (shown under the suggestions). */
@@ -584,6 +603,7 @@ export interface ViewState {
   copy: Record<string, string>;
   /** The tour and hints already shown on this PC. */
   ui: UiState;
+  limits: ViewLimits;
 }
 
 /** Champ select or a game: not the moment to restart the panel. */
@@ -602,6 +622,7 @@ export function emptyViewState(): ViewState {
     picks: [],
     pickAdvice: { whyNot: null, confidence: null },
     bans: [],
+    unsupportedQueue: false,
     hoverBans: null,
     myPick: null,
     hoverPick: null,
@@ -626,5 +647,6 @@ export function emptyViewState(): ViewState {
     roleLabels: {},
     copy: {},
     ui: emptyUiState(),
+    limits: { minGames: FALLBACK_MIN_GAMES, poolGames: 0, styleGames: 0, monthDays: 0 },
   };
 }
