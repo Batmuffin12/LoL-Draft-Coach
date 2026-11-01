@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { IPC, type ViewState } from "../shared/view";
 
-/** The only API the renderer gets: view state, docking, account actions, close. No secrets, no Node. */
+/** The only API the renderer gets: view state, docking, account actions, minimize, close. No secrets, no Node. */
 const api = {
   onState(cb: (state: ViewState) => void): () => void {
     const listener = (_e: unknown, s: ViewState) => cb(s);
@@ -25,6 +25,10 @@ const api = {
   /** Writes the shown rune page and spells ("runes") or item set ("items") into the League client. Only ever called from an import button. */
   importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     return ipcRenderer.invoke(IPC.importLoadout, kind);
+  },
+  /** The main process minimizes: a sandboxed renderer has no way to. */
+  minimize(): void {
+    ipcRenderer.send(IPC.minimize);
   },
   close(): void {
     window.close();

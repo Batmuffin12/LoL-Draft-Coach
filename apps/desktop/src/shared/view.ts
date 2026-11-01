@@ -5,6 +5,7 @@ export const IPC = {
   state: "coach:state",
   ready: "coach:ready",
   setDocked: "coach:set-docked",
+  minimize: "coach:minimize",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",

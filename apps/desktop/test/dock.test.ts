@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeDockBounds, dockWidth, dockZoom, PANEL_WIDTH, sameRect } from "../src/main/dock";
+import { computeDockBounds, dockWidth, dockZoom, PANEL_WIDTH, sameRect, shouldRestoreForDraft } from "../src/main/dock";
 
 const screen = { x: 0, y: 0, width: 1920, height: 1040 };
 
@@ -56,5 +56,52 @@ describe("dock zoom", () => {
 
   it("gives the docked width for a zoom (440 at 720p)", () => {
     expect([720, 900, 1080, 576].map((h) => dockWidth(dockZoom(h)))).toEqual([440, 550, 660, 440]);
+  });
+});
+
+describe("shouldRestoreForDraft", () => {
+  const base = { hadDraft: false, hasDraft: true, minimized: true, phase: "ChampSelect" };
+
+  it("restores a minimized panel when a draft begins", () => {
+    expect(shouldRestoreForDraft(base)).toBe(true);
+    // The draft can arrive before the client's phase does.
+    expect(shouldRestoreForDraft({ ...base, phase: "ReadyCheck" })).toBe(true);
+    expect(shouldRestoreForDraft({ ...base, phase: null })).toBe(true);
+  });
+
+  it("leaves a panel that isn't minimized alone", () => {
+    expect(shouldRestoreForDraft({ ...base, minimized: false })).toBe(false);
+  });
+
+  it("doesn't bring it back if you minimize again during the same draft", () => {
+    expect(shouldRestoreForDraft({ ...base, hadDraft: true })).toBe(false);
+  });
+
+  it("does nothing when no draft is on, or when a draft ends", () => {
+    expect(shouldRestoreForDraft({ ...base, hasDraft: false })).toBe(false);
+    expect(shouldRestoreForDraft({ ...base, hadDraft: true, hasDraft: false })).toBe(false);
+  });
+
+  it("never comes up during a game", () => {
+    for (const phase of ["GameStart", "InProgress", "Reconnect"]) expect(shouldRestoreForDraft({ ...base, phase })).toBe(false);
+  });
+
+  it("works through a whole session: one restore per draft", () => {
+    const events = [
+      { hasDraft: false, minimized: true, phase: "Lobby" },
+      { hasDraft: true, minimized: true, phase: "ChampSelect" }, // draft begins: restore
+      { hasDraft: true, minimized: false, phase: "ChampSelect" },
+      { hasDraft: true, minimized: true, phase: "ChampSelect" }, // minimized again: stays down
+      { hasDraft: false, minimized: true, phase: "InProgress" },
+      { hasDraft: false, minimized: true, phase: "EndOfGame" },
+      { hasDraft: true, minimized: true, phase: "ChampSelect" }, // the next draft: restore
+    ];
+    let hadDraft = false;
+    const restored = events.map((e) => {
+      const r = shouldRestoreForDraft({ hadDraft, ...e });
+      hadDraft = e.hasDraft;
+      return r;
+    });
+    expect(restored).toEqual([false, true, false, false, false, false, true]);
   });
 });

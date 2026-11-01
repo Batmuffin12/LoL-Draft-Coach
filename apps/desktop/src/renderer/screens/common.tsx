@@ -29,6 +29,7 @@ export function Header({ state }: { state: ViewState }) {
       metaText={metaText}
       metaTitle={metaTitle}
       onDock={() => window.coach.setDocked(!state.docked)}
+      onMinimize={() => window.coach.minimize()}
       onClose={() => window.coach.close()}
     />
   );

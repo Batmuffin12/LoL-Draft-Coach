@@ -321,6 +321,7 @@
     "ui.import.runes": "Import runes & spells",
     "ui.import.items": "Import item set",
     "ui.import.busy": "Importing…",
+    "ui.window.minimize": "Minimize",
     "ui.matchups.tab": "Matchups & plan",
     "ui.matchups.note": "vs what both champions predict",
     "ui.matchups.yourLane": "your lane",
