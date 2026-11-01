@@ -149,7 +149,10 @@ describe("placing a live note", () => {
 
   it("goes under the block when the bottom edge is on it", () => {
     expect(placeNote({ target: box(100, 60), about: box(90, 610), footer: null, size: { width: 424, height: 10 }, view }).top).toBeGreaterThan(90 + 610 - 1);
-    expect(placeNote({ target: box(100, 60), about: box(90, 200), footer: box(200, 500), size, view }).top).toBe(296);
+  });
+
+  it("never goes on a footer it must stay off, even when its block fills the screen above", () => {
+    expect(placeNote({ target: box(100, 30), about: box(90, 535), footer: box(625, 95), size, view }).top).toBe(579);
   });
 
   it("goes over the block when there's no room under it", () => {

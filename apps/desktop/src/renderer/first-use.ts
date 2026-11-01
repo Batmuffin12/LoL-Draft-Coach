@@ -109,8 +109,8 @@ const overlaps = (a: Box, b: Box) => a.left < b.left + b.width && b.left < a.lef
 
 /**
  * Where a live note goes, so it covers neither its target nor the block it explains: first the window's bottom edge
- * (over the footer's line, or just above a footer with a button or Riot's notice in it), then under the block, then over it.
- * With no such place (a block as tall as the window): the bottom edge anyway.
+ * (over the footer's line, or just above a footer with a button or Riot's notice in it), then under the block, then over
+ * it if it's low on the screen (never on the tabs). With no such place (a block as tall as the window): the bottom edge anyway.
  */
 export function placeNote(o: { target: Box; about: Box; footer: Box | null; size: { width: number; height: number }; view: { width: number; height: number } }, gap = 6, margin = 8): { top: number; left: number } {
   const { target, about, footer, size, view } = o;
@@ -118,9 +118,10 @@ export function placeNote(o: { target: Box; about: Box; footer: Box | null; size
   const bottom = (footer ? footer.top - gap : view.height - margin) - size.height;
   const fits = (top: number) => {
     const box = { top, left, width: size.width, height: size.height };
-    return top >= margin && top + size.height <= view.height - margin && !overlaps(box, target) && !overlaps(box, about);
+    return top >= margin && top + size.height <= view.height - margin && !overlaps(box, target) && !overlaps(box, about) && !(footer && overlaps(box, footer));
   };
-  const top = [bottom, about.top + about.height + gap, about.top - gap - size.height].find(fits) ?? Math.max(margin, bottom);
+  const over = about.top > view.height / 2 ? [about.top - gap - size.height] : [];
+  const top = [bottom, about.top + about.height + gap, ...over].find(fits) ?? Math.max(margin, bottom);
   return { top, left };
 }
 
