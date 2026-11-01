@@ -1,5 +1,5 @@
 import type { CoachStatus, Term } from "@ldc/shared";
-import type { ReasonView } from "../shared/view";
+import { FALLBACK_MIN_GAMES, type ReasonView } from "../shared/view";
 
 /** Joins class names, skipping empty ones. */
 export function cx(...names: (string | false | null | undefined)[]): string {
@@ -51,6 +51,28 @@ export function signed(x: number): string {
   const v = Math.round(x * 1000) / 10;
   if (v === 0) return "0.0";
   return `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
+}
+
+let minGames = FALLBACK_MIN_GAMES;
+
+/** Sets the shared minimum from the view state (config app.display.minGames). */
+export function setMinGames(n: number): void {
+  minGames = n;
+}
+
+/** Too few games to read much into their win rate. */
+export function isThin(games: number): boolean {
+  return games < minGames;
+}
+
+/** A win rate with the games behind it: whole below the shared minimum, else with `digits`. */
+export function rateOf(x: number | null | undefined, games: number, digits = 1): string {
+  return rate(x, isThin(games) ? 0 : digits);
+}
+
+/** winTone with the games behind it: neutral below the shared minimum. */
+export function winToneOf(x: number | null | undefined, games: number): "pos" | "neg" | "flat" {
+  return isThin(games) ? "flat" : winTone(x);
 }
 
 /** Thousands separators: 1240 → "1,240". */

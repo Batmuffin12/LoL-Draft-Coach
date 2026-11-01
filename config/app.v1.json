@@ -16,6 +16,9 @@
   "import": {
     "enabled": true
   },
+  "display": {
+    "minGames": 10
+  },
   "accounts": {
     "maxUsers": 10
   },

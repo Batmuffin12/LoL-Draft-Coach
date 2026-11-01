@@ -1,5 +1,5 @@
 import type { PickView, PoolChampView, ReasonView } from "../../shared/view";
-import { cx, pct, pickColumns, pickReasons, rate, signedOrDash, t, tone } from "../format";
+import { cx, pct, pickColumns, pickReasons, rateOf, signedOrDash, t, tone } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { OffMetaChip } from "./Chip";
 
@@ -39,7 +39,7 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons }: Sugge
             {pick.champion.name} {pick.offMeta && <OffMetaChip />}
           </span>
           {record && (
-            <span className="micro">{t("pick.record", { tier: record.tierLabel, games: record.games, wr: rate(record.winRate, 1) })}</span>
+            <span className="micro">{t("pick.record", { tier: record.tierLabel, games: record.games, wr: rateOf(record.winRate, record.games) })}</span>
           )}
         </div>
         {/* No good/bad colour: the chance compares your options in this draft, and #1 is the best one even below 50%. */}

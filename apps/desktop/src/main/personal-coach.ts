@@ -24,7 +24,7 @@ import {
   type Loadout,
 } from "@ldc/engine";
 import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
-import type { ImportLine, MyPickView, NewChampRoleView } from "../shared/view";
+import { FALLBACK_MIN_GAMES, type ImportLine, type MyPickView, type NewChampRoleView, type ViewLimits } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption } from "./advice-log";
 import { importShownLoadout } from "./loadout-import";
@@ -66,6 +66,16 @@ export function uiCopy(templates: Record<string, string>): Record<string, string
 /** Position names from the explain templates ("role.utility": "support"). */
 export function roleLabels(templates: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(templates).flatMap(([k, v]) => (k.startsWith("role.") ? [[k.slice(5), v]] : [])));
+}
+
+/** The numbers the panel's rules and wording need; an older server without the shared minimum falls back to the bundled one. */
+export function viewLimits(config: LoadedConfig, bundled: LoadedConfig = config): ViewLimits {
+  return {
+    minGames: config.app.display?.minGames ?? bundled.app.display?.minGames ?? FALLBACK_MIN_GAMES,
+    poolGames: config.engine.roleAdvice.minGames,
+    styleGames: config.engine.playstyle.minGamesPerRole,
+    monthDays: config.engine.report.days,
+  };
 }
 
 /** Client phases where a game is starting or running: the locked-in loadout stays only then. */
@@ -168,7 +178,7 @@ export class PersonalCoach extends Coach {
     super(p);
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
-    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates) };
+    this.view = { ...this.view, roleLabels: roleLabels(p.config.explain.templates), copy: uiCopy(p.config.explain.templates), limits: viewLimits(p.config) };
   }
 
   /** Applies a new scoring config (from the server) and recomputes everything shown. */
@@ -177,7 +187,7 @@ export class PersonalCoach extends Coach {
     const local = this.p.config.explain;
     this.config = { ...config, explain: { ...config.explain, templates: { ...local.templates, ...config.explain.templates }, tips: { ...local.tips, ...config.explain.tips } } };
     this.comfortByRole.clear();
-    this.update({ roleLabels: roleLabels(this.config.explain.templates), copy: uiCopy(this.config.explain.templates) });
+    this.update({ roleLabels: roleLabels(this.config.explain.templates), copy: uiCopy(this.config.explain.templates), limits: viewLimits(config, this.p.config) });
     if (this.profile) this.attributes = deriveChampionAttributes(this.profile.samples, config.engine.teamNeeds.minAttributeSamples);
     if (this.metaIndex) this.metaIndex = new MetaIndex(this.metaIndex.snapshot, config.engine.rating);
     this.updateRoleAdvice();
@@ -368,6 +378,7 @@ export class PersonalCoach extends Coach {
         champion: (id) => champView(id, lookup),
         positionLabel: this.positionLabel,
         growth: this.growth,
+        minGames: this.view.limits.minGames,
       }),
     });
   }

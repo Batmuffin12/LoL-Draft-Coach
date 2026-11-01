@@ -4,7 +4,7 @@ import { ChampSelectScreen } from "./screens/ChampSelectScreen";
 import { ConnectScreen } from "./screens/ConnectScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { LockedInScreen } from "./screens/LockedInScreen";
-import { setCopy, setRoleLabels } from "./format";
+import { setCopy, setMinGames, setRoleLabels } from "./format";
 import { perfCommitted, perfReceived } from "./perf";
 import { useRuneChoice } from "./rune-choice";
 
@@ -27,6 +27,7 @@ export function App() {
   if (!state) return <div className="window loading">Starting…</div>;
   setRoleLabels(state.roleLabels);
   setCopy(state.copy);
+  setMinGames(state.limits.minGames);
   const { account, draft, myPick } = state;
   if (account && account.state !== "registered") return <ConnectScreen state={state} account={account} />;
   if (draft && myPick) return <LockedInScreen state={state} pick={myPick} runes={runes} />;

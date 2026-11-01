@@ -19,7 +19,7 @@ export function PoolCoverage({ pool, coverage }: { pool: PoolChampView[]; covera
           <span className="t-heading">{c.champion.name}</span>
           {!known(c) && <span className="micro">{c.tierLabel.toLowerCase()}</span>}
           {/* Learning (or getting back into) a champion: its record so far, too. */}
-          {(known(c) || c.games > 0) && <span className="micro">{`${c.games} · ${rate(c.winRate)}`}</span>}
+          {(known(c) || c.games > 0) && <span className="micro" title={t("pool.recordTip", { games: c.games, wr: rate(c.winRate) })}>{`${c.games} · ${rate(c.winRate)}`}</span>}
         </span>
       ))}
       {coverage.needs.map((n) => [

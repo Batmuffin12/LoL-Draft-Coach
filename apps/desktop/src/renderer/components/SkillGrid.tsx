@@ -1,12 +1,12 @@
 import { Fragment } from "react";
 import type { LoadoutView } from "../../shared/view";
-import { cx, games, rate, skillPath } from "../format";
+import { cx, games, rateOf, skillPath, winToneOf } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 type Spells = NonNullable<LoadoutView["spells"]>;
 type Skills = NonNullable<LoadoutView["skills"]>;
 
-/** "53.2% WR · 1,980 games" with the win rate in green; with thin data (no win rate) just "1,980 games". */
+/** "53.2% WR · 1,980 games" with the win rate coloured from 50%, neutral and whole below the shared minimum; with thin data (no win rate) just "1,980 games". */
 export function Stat({ winRate, n, title, short }: { winRate: number | null; n: number; title?: string; short?: boolean }) {
   if (winRate === null) {
     return (
@@ -15,9 +15,10 @@ export function Stat({ winRate, n, title, short }: { winRate: number | null; n: 
       </span>
     );
   }
+  const wr = winToneOf(winRate, n);
   return (
     <span className="stat" title={title}>
-      <b className="pos">{rate(winRate, 1)}</b>
+      <b className={wr === "flat" ? undefined : wr}>{rateOf(winRate, n)}</b>
       {short ? " WR" : ` WR · ${games(n)} games`}
     </span>
   );
@@ -26,7 +27,7 @@ export function Stat({ winRate, n, title, short }: { winRate: number | null; n: 
 /** The two spells, the max order as keycaps with its numbers, then a Q/W/E/R × level 1–18 grid (the ultimate at 6, 11 and 16 on its own row). */
 export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: Skills | null }) {
   const path = skills ? skillPath(skills.first, skills.order, skills.ult) : [];
-  const spellTip = spells && [`${spells.spells.map((s) => s.name).join(" + ")}: ${rate(spells.winRate, 1)} win, ${games(spells.games)} games`, spells.reason].filter(Boolean).join("\n");
+  const spellTip = spells && [`${spells.spells.map((s) => s.name).join(" + ")}: ${rateOf(spells.winRate, spells.games)} win, ${games(spells.games)} games`, spells.reason].filter(Boolean).join("\n");
   return (
     <div className="skillgrid">
       <div className="maxrow">

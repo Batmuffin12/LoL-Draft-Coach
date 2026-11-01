@@ -1,5 +1,5 @@
 import type { LoadoutItemView, LoadoutView, MyPickView, RunePageView } from "../../shared/view";
-import { games, rate, t } from "../format";
+import { games, isThin, rate, t } from "../format";
 import { useFitLevel } from "../hooks";
 import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
@@ -35,10 +35,11 @@ function ItemRows({ items, brief }: { items: LoadoutItemView[]; brief: boolean }
   );
 }
 
-/** A rune option in the switch: what it is, how many take it and how it does ("Second · 15% · 55% WR"); games for a matchup page, which has no share. Short enough to stay on one row. */
-function optionText(o: RunePageView): string {
-  const taken = o.share !== null ? rate(o.share) : t("runes.optionGames", { games: games(o.games), n: o.games });
-  return [o.optionLabel, taken, o.winRate !== null ? t("runes.optionWinRate", { rate: rate(o.winRate) }) : null].filter(Boolean).join(" · ");
+/** A rune option in the switch: what it is, how many take it and how it does ("Second · 15% · 55% WR"); games for a matchup page, which has no share, and in place of a win rate from too few games. Short enough to stay on one row. */
+export function optionText(o: RunePageView): string {
+  const count = t("runes.optionGames", { games: games(o.games), n: o.games });
+  const thin = o.winRate === null || isThin(o.games);
+  return [o.optionLabel, o.share !== null ? rate(o.share) : thin ? null : count, thin ? count : t("runes.optionWinRate", { rate: rate(o.winRate) })].filter(Boolean).join(" · ");
 }
 
 /** Runes on their full trees with the page's numbers, or a switch in place of that head when there's a second option; then spells and the skill grid (both as they were). */

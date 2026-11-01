@@ -1,5 +1,5 @@
 import type { MonthView } from "../../shared/view";
-import { cx, pct, t, winTone } from "../format";
+import { cx, isThin, pct, t, winToneOf } from "../format";
 import { useFitLevel } from "../hooks";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
@@ -17,7 +17,7 @@ const goalName = (s: string) => (s.includes(":") ? s.slice(0, s.indexOf(":")) : 
 
 /** The month at a glance: games, your win rate before → now, and your roles as one bar with its legend (on hover only when `brief`). */
 function Header({ m, brief }: { m: MonthView; brief: boolean }) {
-  const now = winTone(m.winRate.to);
+  const now = winToneOf(m.winRate.to, m.games);
   return (
     <section className="section">
       <div className="section-head">
@@ -34,7 +34,7 @@ function Header({ m, brief }: { m: MonthView; brief: boolean }) {
             </span>
           </>
         )}
-        <span className={cx("t-hero", now === "flat" ? "text" : now)}>{pct(m.winRate.to)}</span>
+        <span className={cx(isThin(m.games) ? "t-number" : "t-hero", now === "flat" ? "text" : now)}>{pct(m.winRate.to)}</span>
         <span className="caption">{m.winRate.text}</span>
       </div>
       {m.roles.length > 0 && (
@@ -96,7 +96,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         <Section title={t("month.champions")} gold={false} aside={m.focusLine ? <span className="micro">{m.focusLine}</span> : undefined}>
           <div className="champcards">
             {m.champions.slice(0, CHAMPIONS).map((c) => {
-              const wr = winTone(c.winRate);
+              const wr = winToneOf(c.winRate, c.games);
               return (
                 <div key={c.champion.id} className="champcard">
                   <ChampIcon champ={c.champion} size={24} />
