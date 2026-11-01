@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { LearnView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
-import { useHint } from "../components/Hint";
-import { lobbyHint } from "../first-use";
+import { LobbyTour } from "../components/Tour";
+import { LOBBY_TOUR, openAt, tourSteps, type TourRun } from "../first-use";
 import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
@@ -36,11 +36,20 @@ const SUB_TABS: Record<"me" | "champions", SubTab[]> = {
 const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
-export function LobbyScreen({ state, onHowItWorks }: { state: ViewState; onHowItWorks?: () => void }) {
-  return <Lobby state={state} onHowItWorks={onHowItWorks} />;
+export function LobbyScreen({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks?: () => void; tour?: LobbyTourControl | null }) {
+  return <Lobby state={state} onHowItWorks={onHowItWorks} tour={tour ?? null} />;
 }
 
-function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() => void) | undefined }) {
+/** The lobby tour while it runs: where it is, and what to do when it moves or ends. */
+export interface LobbyTourControl {
+  run: TourRun;
+  onRun: (run: TourRun) => void;
+  onClose: () => void;
+}
+
+const hasSub = (tab: string, sub: string) => (SUB_TABS[tab as keyof typeof SUB_TABS] as string[] | undefined)?.includes(sub) ?? false;
+
+function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: (() => void) | undefined; tour: LobbyTourControl | null }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const home: MainTab = recent ? "last" : "me";
   const [tab, setTab] = useState<MainTab>(home);
@@ -56,15 +65,19 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
   useEffect(() => {
     if (queued) setTab("suggestion");
   }, [queued]);
-  const shown: MainTab = tab === "suggestion" && !preview ? home : tab;
+  // The tour opens tabs itself while it runs; afterwards you are back where you were.
+  const steps = tour ? tourSteps(LOBBY_TOUR, hasSub, tour.run.skipped) : [];
+  const opened = tour ? openAt(steps, tour.run.index) : null;
+  const wanted: MainTab = opened?.tab ?? tab;
+  const shown: MainTab = wanted === "suggestion" && !preview ? home : wanted;
   const group = shown === "me" || shown === "champions" ? shown : null;
-  const sub = group ? subs[group] : null;
+  const sub = group ? ((opened?.sub as SubTab | undefined) ?? subs[group]) : null;
   const openSub = (g: keyof typeof SUB_TABS, value: SubTab) => {
     setSubs((now) => ({ ...now, [g]: value }));
     setTab(g);
   };
-  const hint = useHint(lobbyHint(shown), state.ui.hintsSeen);
   return (
+    <>
     <Window
       variant="lobby"
       header={<Header state={state} />}
@@ -75,14 +88,14 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
             onChange={setTab}
             options={[
               ...(preview ? [{ value: "suggestion" as const, label: t("queue.tab") }] : []),
-              { value: "last", label: t("tabs.last") },
-              { value: "me", label: t("tabs.me") },
-              { value: "champions", label: t("tabs.champions") },
+              { value: "last", label: t("tabs.last"), tour: "tab-last" },
+              { value: "me", label: t("tabs.me"), tour: "tab-me" },
+              { value: "champions", label: t("tabs.champions"), tour: "tab-champions" },
             ]}
           />
           {group && sub && (
             <div className="subtabs">
-              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`) }))} value={sub} onChange={(value) => openSub(group, value)} />
+              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), tour: `subtab-${value}` }))} value={sub} onChange={(value) => openSub(group, value)} />
             </div>
           )}
         </>
@@ -91,7 +104,6 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
     >
       <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? t("lobby.noDraft") : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
-      {hint}
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
       ) : sub ? (
@@ -100,6 +112,8 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
         <LastGame state={state} />
       )}
     </Window>
+    {tour && <LobbyTour steps={steps} run={tour.run} onRun={tour.onRun} onClose={tour.onClose} />}
+    </>
   );
 }
 
@@ -290,7 +304,9 @@ function Style({ state }: { state: ViewState }) {
       </section>
       {p.numbers.length > 0 && (
         <Section title={t("style.numbers")} aside={<span className="micro" {...tip(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n"))}>{t("style.legend")}</span>}>
-          <NumberRows items={p.numbers} />
+          <div data-tour="numbers">
+            <NumberRows items={p.numbers} />
+          </div>
           {fits && <span className="micro">{t("style.numbersNote")}</span>}
         </Section>
       )}

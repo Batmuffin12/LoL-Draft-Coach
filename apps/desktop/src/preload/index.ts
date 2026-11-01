@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { HintId } from "../shared/ui-state";
+import type { HighlightId } from "../shared/ui-state";
 import { IPC, type ViewState } from "../shared/view";
 
 /** The only API the renderer gets: view state, docking, account actions, minimize, close. No secrets, no Node. */
@@ -46,9 +46,9 @@ const api = {
   tourDone(): void {
     ipcRenderer.send(IPC.tourDone);
   },
-  /** This one-time hint was on screen: it won't show again on this PC. */
-  hintSeen(id: HintId): void {
-    ipcRenderer.send(IPC.hintSeen, id);
+  /** This first-time highlight was on screen: it won't show again on this PC. */
+  highlightSeen(id: HighlightId): void {
+    ipcRenderer.send(IPC.highlightSeen, id);
   },
   /** The main process minimizes: a sandboxed renderer has no way to. */
   minimize(): void {

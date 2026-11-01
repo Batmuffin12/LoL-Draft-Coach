@@ -2,8 +2,8 @@ import { useState, type ReactNode } from "react";
 import type { LoadoutView, MyPickView, ViewState } from "../../shared/view";
 import { Button } from "../components/Button";
 import { ChampIcon } from "../components/ChampIcon";
-import { useHint } from "../components/Hint";
-import { draftHint } from "../first-use";
+import { LiveHighlight } from "../components/Tour";
+import { draftHighlights } from "../first-use";
 import { BuildTab, MatchupsPlanTab, RunesTab, type LoadoutTab } from "../components/Loadout";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
@@ -56,9 +56,11 @@ export function LoadoutFooter({ pick, runes }: { pick: MyPickView; runes: RuneCh
   return (
     <>
       {kind && (
-        <Button variant="primary" wide disabled={busy !== null} onClick={() => run(kind, pageKey)} title={t("import.title")}>
-          {busy ? t("import.busy") : t(IMPORT_LABEL[kind])}
-        </Button>
+        <div data-tour="import">
+          <Button variant="primary" wide disabled={busy !== null} onClick={() => run(kind, pageKey)} title={t("import.title")}>
+            {busy ? t("import.busy") : t(IMPORT_LABEL[kind])}
+          </Button>
+        </div>
       )}
       {/* Always in the page, so screen readers announce a new message. */}
       <div className="import-status" role="status">
@@ -114,7 +116,6 @@ function loadoutTabs(): { value: LoadoutTab; label: string }[] {
 export function LockedInScreen({ state, pick, note, runes }: { state: ViewState; pick: MyPickView; note?: ReactNode; runes: RuneChoice }) {
   const [tab, setTab] = useState<LoadoutTab>("runes");
   const meta = state.meta?.state === "ready" ? state.meta : null;
-  const hint = useHint(tab === "matchups" ? null : draftHint({ banning: false, loadout: true, canImport: pick.loadout?.canImport === true }), state.ui.hintsSeen);
   return (
     <Window
       header={<Header state={state} />}
@@ -133,7 +134,7 @@ export function LockedInScreen({ state, pick, note, runes }: { state: ViewState;
       }
     >
       <Notices state={state} extra={typeof note === "string" ? note : null} />
-      {hint}
+      <LiveHighlight ids={tab === "matchups" ? [] : draftHighlights({ banning: false, loadout: true })} seen={state.ui.highlightsSeen} />
       <LoadoutBody pick={pick} tab={tab} runes={runes} />
     </Window>
   );

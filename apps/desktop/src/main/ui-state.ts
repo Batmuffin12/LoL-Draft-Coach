@@ -6,11 +6,11 @@ import { emptyUiState, type UiState } from "../shared/ui-state";
 /** Each field falls back alone: a broken one doesn't lose the other. */
 const UiStateSchema = z.object({
   tourDone: z.boolean().catch(false),
-  hintsSeen: z.array(z.string()).catch([]),
+  highlightsSeen: z.array(z.string()).catch([]),
 });
 
 /**
- * The tour and hints already shown, in one small file in the app's user data folder. A missing or
+ * The tour and highlights already shown, in one small file in the app's user data folder. A missing or
  * corrupt file means nothing was shown yet, and a failed write costs at most a repeat: neither
  * is ever worth an error on screen.
  */
@@ -34,9 +34,9 @@ export class UiStateStore {
     return this.state.tourDone ? this.state : this.set({ ...this.state, tourDone: true });
   }
 
-  /** The hint was shown. Returns the new state; the file follows. */
-  sawHint(id: string): UiState {
-    return this.state.hintsSeen.includes(id) ? this.state : this.set({ ...this.state, hintsSeen: [...this.state.hintsSeen, id] });
+  /** The highlight was shown. Returns the new state; the file follows. */
+  sawHighlight(id: string): UiState {
+    return this.state.highlightsSeen.includes(id) ? this.state : this.set({ ...this.state, highlightsSeen: [...this.state.highlightsSeen, id] });
   }
 
   /** Resolves once everything asked for so far is on disk (or has failed). */

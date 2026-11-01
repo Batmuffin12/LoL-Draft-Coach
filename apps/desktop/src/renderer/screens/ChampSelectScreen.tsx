@@ -3,8 +3,8 @@ import type { DraftView, ViewState } from "../../shared/view";
 import { BanTable, type BanRow } from "../components/BanTable";
 import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
-import { useHint } from "../components/Hint";
-import { draftHint } from "../first-use";
+import { LiveHighlight } from "../components/Tour";
+import { draftHighlights } from "../first-use";
 import { Facts } from "../components/Facts";
 import { PhaseBar } from "../components/PhaseBar";
 import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
@@ -99,7 +99,6 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
     phase
   );
   const showLoadout = hover && tab !== "picks";
-  const hint = useHint(draftHint({ banning, loadout: !!showLoadout, canImport: hover?.loadout?.canImport === true }), state.ui.hintsSeen);
   const footer = showLoadout ? (
     <LoadoutFooter pick={hover} runes={runes} />
   ) : (
@@ -114,19 +113,19 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
       <Notices state={state} />
-      {hint}
+      <LiveHighlight ids={draftHighlights({ banning, loadout: !!showLoadout })} seen={state.ui.highlightsSeen} />
       {showLoadout ? (
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
         <Section title={t("ban.head")}>
-          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{t(noBansKey(state))}</p>}
+          {state.bans.length > 0 || state.hoverBans?.bans.length ? <div data-tour="bans"><BanTable bans={banRows(state)} /></div> : <p className="caption">{t(noBansKey(state))}</p>}
         </Section>
       ) : (
         <>
           <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
             {notes.length > 0 && <Facts rows={notes} flow />}
             {cur ? (
-              <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
+              <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
             ) : (
               <p className="caption">{t(noPicksKey(state))}</p>
             )}

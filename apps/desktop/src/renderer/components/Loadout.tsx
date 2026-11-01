@@ -53,7 +53,7 @@ export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: R
     <>
       {p && (
         <Section {...head}>
-          {options.length > 0 && <Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={runes.choose} />}
+          {options.length > 0 && <div data-tour="rune-options"><Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={runes.choose} /></div>}
           {p.primaryTree && p.secondaryTree ? (
             <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} maxSwaps={level > 2 ? 0 : level > 0 ? 1 : undefined} />
           ) : (

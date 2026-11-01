@@ -28,7 +28,7 @@ import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH,
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
-import { isHintId } from "../shared/ui-state";
+import { isHighlightId } from "../shared/ui-state";
 import { UiStateStore } from "./ui-state";
 
 const DOCK_POLL_MS = 500;
@@ -383,8 +383,8 @@ async function main(): Promise<void> {
     if (typeof key === "string") coach.dismissNotice(key);
   });
   ipcMain.on(IPC.tourDone, () => coach.setUi(uiState.finishTour()));
-  ipcMain.on(IPC.hintSeen, (_e, id: unknown) => {
-    if (isHintId(id)) coach.setUi(uiState.sawHint(id));
+  ipcMain.on(IPC.highlightSeen, (_e, id: unknown) => {
+    if (isHighlightId(id)) coach.setUi(uiState.sawHighlight(id));
   });
 
   await coach.start();

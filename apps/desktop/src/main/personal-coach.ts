@@ -56,7 +56,7 @@ export interface PersonalCoachDeps extends CoachDeps {
   riotId: string | null;
   /** Live meta snapshots (server mode); null: score from the player's own data only (engine v1). */
   meta?: MetaSource | null;
-  /** The tour and hints already shown, in the very first state: no flash of a tour you've done. */
+  /** The tour and highlights already shown, in the very first state: no flash of a tour you've done. */
   ui?: ViewState["ui"];
 }
 

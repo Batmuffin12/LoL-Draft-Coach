@@ -149,7 +149,11 @@ export function AccountFooter({ state, onHowItWorks }: { state: ViewState; onHow
       setConfirming(null);
     });
   };
-  const howItWorks = onHowItWorks && <FootLink onClick={onHowItWorks}>{t("tour.reopen")}</FootLink>;
+  const howItWorks = onHowItWorks && (
+    <span data-tour="how-it-works">
+      <FootLink onClick={onHowItWorks}>{t("tour.reopen")}</FootLink>
+    </span>
+  );
   return (
     <>
       {account === null ? (

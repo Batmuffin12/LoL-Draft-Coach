@@ -27,14 +27,16 @@ export interface SuggestedPickProps {
   record: PoolChampView | null;
   /** Reason lines under the tiles (fewer when the draft notes take a line). */
   maxReasons: number;
+  /** Its `data-tour` name, for a highlight. */
+  tour?: string;
 }
 
 /** The suggested pick: a gold card with its chance, the You · Meta · Lane tiles, and its reasons. */
-export function SuggestedPick({ pick, first, whyNot, record, maxReasons }: SuggestedPickProps) {
+export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }: SuggestedPickProps) {
   const cols = pickColumns(pick.terms);
   return (
     <>
-      <div className="you pick-card">
+      <div className="you pick-card" data-tour={tour}>
         <ChampIcon champ={pick.champion} size={64} framed />
         <div className="who">
           <span className="t-title nm">

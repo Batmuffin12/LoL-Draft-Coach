@@ -81,7 +81,7 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
     this.update({ docked });
   }
 
-  /** What first use has shown so far changed (the tour, a hint). */
+  /** What first use has shown so far changed (the tour, a highlight). */
   setUi(ui: ViewState["ui"]): void {
     this.update({ ui });
   }
