@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { championRecords, filterMyGames, kda, type ChampionRecord, type MyGameRow, type MyGames as MyGamesData, type MyGamesFilter } from "../../shared/explore";
 import type { ChampView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
-import { Pills } from "../components/Pills";
+import { ChoiceGroup, RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
 import { cx, gameCount, lobbyEmpty, positionLabel, rateOf, record, shortDate, t, tip, winToneOf } from "../format";
 import { useFetched } from "../hooks";
@@ -81,17 +81,18 @@ export function MyGamesList({ data, now }: { data: MyGamesData; now: number }) {
   const left = games.length - shown;
   return (
     <Section className="explore">
-      <Pills<View>
-        compact
-        label={t("games.views")}
-        options={[
-          { value: "recent", label: t("games.recent") },
-          { value: "champions", label: t("games.byChampion") },
-        ]}
-        value={view}
-        onChange={setView}
-        end={games.length ? t("games.summary", { games: gameCount(games.length), rate: rateOf(wins / games.length, games.length) }) : ""}
-      />
+      <div className="games-filters">
+        <RoleChoice all roles={data.roles} value={filter.role} onChange={(role) => change({ role })} />
+        <ChoiceGroup<View>
+          label={t("games.views")}
+          options={[
+            { value: "recent", label: t("games.recent") },
+            { value: "champions", label: t("games.byChampion") },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      </div>
       <div className="games-filters">
         <select className="select" aria-label={t("label.champion")} value={filter.championId} onChange={(e) => change({ championId: Number(e.target.value) })}>
           <option value={0}>{t("games.allChampions")}</option>
@@ -99,7 +100,7 @@ export function MyGamesList({ data, now }: { data: MyGamesData; now: number }) {
             <option key={r.championId} value={r.championId}>{`${champion(r.championId).name} (${r.games})`}</option>
           ))}
         </select>
-        <Pills compact label={t("label.role")} options={[{ value: "", label: t("explore.all") }, ...data.roles.map((r) => ({ value: r, label: positionLabel(r) }))]} value={filter.role} onChange={(role) => change({ role })} />
+        {games.length > 0 && <span className="micro games-summary">{t("games.summary", { games: gameCount(games.length), rate: rateOf(wins / games.length, games.length) })}</span>}
       </div>
       {games.length === 0 ? (
         <p className="caption none">

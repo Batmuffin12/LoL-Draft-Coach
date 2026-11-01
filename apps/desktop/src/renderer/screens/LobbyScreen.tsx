@@ -3,7 +3,6 @@ import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { LobbyTour } from "../components/Tour";
 import { LOBBY_TOUR, openAt, tourSteps, type TourRun } from "../first-use";
-import { Pills } from "../components/Pills";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { needsClient, t } from "../format";
@@ -95,11 +94,7 @@ function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: 
               { value: "champions", label: t("tabs.champions"), tour: "tab-champions" },
             ]}
           />
-          {group && sub && !champion && (
-            <div className="subtabs">
-              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), tour: `subtab-${value}` }))} value={sub} onChange={(value) => openSub(group, value)} />
-            </div>
-          )}
+          {group && sub && !champion && <Segmented<SubTab> sub options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), tour: `subtab-${value}` }))} value={sub} onChange={(value) => openSub(group, value)} />}
         </>
       }
       footer={<AccountFooter state={state} onHowItWorks={onHowItWorks} />}

@@ -41,7 +41,7 @@ function LoadoutSource({ pick }: { pick: MyPickView }) {
   const l = pick.loadout;
   if (!l) return <span className="micro">{t("loadout.none", { champion: pick.champion.name })}</span>;
   return (
-    <span className="micro" {...tip(l.thinNote)}>
+    <span className="micro" {...tip([l.thinNote, l.sourceAbove ? t("loadout.sourceTip") : null].filter(Boolean).join("\n"))}>
       {t("loadout.source", { games: count(l.games), n: l.games, source: l.source })}
       {l.thinNote ? ` · ${t("loadout.rough")}` : "."}
     </span>

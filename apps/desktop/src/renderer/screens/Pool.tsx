@@ -2,10 +2,10 @@ import { POOL_COLUMNS, type ViewState } from "../../shared/view";
 import { Button } from "../components/Button";
 import { ChampIcon } from "../components/ChampIcon";
 import { Facts } from "../components/Facts";
-import { Pills } from "../components/Pills";
+import { RoleChoice } from "../components/ChoiceGroup";
 import { PoolCoverage, PoolLegend } from "../components/PoolCoverage";
 import { Section } from "../components/Section";
-import { gameCount, lobbyEmpty, pct, positionLabel, roleName, t, tip } from "../format";
+import { gameCount, lobbyEmpty, pct, roleName, t, tip } from "../format";
 import { useFitLevel, useRolePill } from "../hooks";
 
 /** Your pool per role: what each champion covers against what a team needs, then your next step. */
@@ -23,10 +23,12 @@ export function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: ()
   return (
     <>
       <section className="section">
-        <Pills
-          compact
-          label={t("label.role")}
-          options={list.map((x) => ({ value: x.role, label: positionLabel(x.role), title: [stats(x), x.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
+        <RoleChoice
+          roles={list.map((x) => x.role)}
+          about={(role) => {
+            const x = list.find((y) => y.role === role)!;
+            return [stats(x), x.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ");
+          }}
           value={r.role}
           onChange={setSub}
           end={stats(r)}

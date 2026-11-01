@@ -278,7 +278,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .swap b { color: var(--warn); font-weight: 600; }
 .swap.one-line { padding: 2px 8px; }
 .swap.one-line .wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rune-options .pills { margin-bottom: 0; }
 .icons { display: flex; align-items: center; gap: 6px; }
 
 /* Skill grid */
@@ -327,7 +326,12 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .seat.me .seat-pos { color: var(--gold); font-weight: 600; }
 
 /* Segmented tabs (Runes / Build, Style / Pool) */
-.seg { display: flex; border-bottom: 1px solid var(--line); padding: 0 16px; gap: 20px; flex-shrink: 0; }
+.seg { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding: 0 16px; flex-shrink: 0; }
+.seg-tabs { display: flex; gap: 20px; align-self: flex-end; }
+.seg-end { text-align: right; min-width: 0; }
+.seg.sub .seg-tabs { gap: 16px; }
+.seg.sub button { padding: 5px 0 4px; font-size: var(--fs-label); line-height: var(--lh-label); }
+.seg.sub button.on { color: var(--text); }
 .seg button { all: unset; cursor: pointer; padding: 8px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-button); color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
 .seg button.on { color: var(--gold-bright); border-bottom-color: var(--gold); }
@@ -370,19 +374,23 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .fact-items.flow { flex-direction: row; flex-wrap: wrap; gap: 2px 10px; }
 .fact-item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
 
-/* Pills: sub-tabs and role switches in the lobby */
-.pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
-.pills.compact { margin-bottom: 2px; }
-.pills.compact .pill { padding: 2px 8px; }
-.subtabs { flex-shrink: 0; padding: 6px 16px; border-bottom: 1px solid var(--line); }
-.subtabs .pills { margin-bottom: 0; }
-.pills .end { margin-left: auto; text-align: right; }
-.pill { all: unset; box-sizing: border-box; font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer; }
-.pill:hover { color: var(--text); }
-.pill.on { border-color: var(--gold); color: var(--gold-bright); background: var(--gold-tint); }
-.pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.window.lobby .pills-row { padding-bottom: 0; }
-.window.lobby .pills-row + .section { border-top: 0; padding-top: 0; }
+/* Choices: an attached row for what a screen shows (roles, rune pages, views). Tabs are for where you are. */
+.choice-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.choice-row .end { margin-left: auto; text-align: right; }
+.choices { display: inline-flex; flex-shrink: 0; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.choices.fill { display: flex; flex: 1; min-width: 0; }
+.choice { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 32px; min-height: 26px; padding: 0 8px; border-left: 1px solid var(--line-strong); font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.choice:first-child { border-left: 0; }
+.choice:has(> img) { padding: 0 6px; }
+.choice img { display: block; filter: grayscale(1) brightness(1.15); }
+.choice.on img { filter: none; }
+.choice:hover { color: var(--text); background: var(--card); }
+.choice.on { color: var(--gold-bright); background: var(--gold-tint); }
+.choice:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.choices.fill .choice { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 0; padding: 3px 6px; white-space: normal; text-align: center; }
+.choice-sub { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
+.window.lobby .filter-row { padding-bottom: 0; }
+.window.lobby .filter-row + .section { border-top: 0; }
 
 /* Connect screen */
 .connect-intro { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 24px 24px; text-align: center; }
@@ -546,13 +554,13 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 
 /* Explore: long lists scroll inside their own area, the one exception to fitting; the page itself stays fixed */
 .section.explore { flex: 1; min-height: 0; gap: 6px; }
-.explore .pills { margin-bottom: 0; }
 .search, .select { min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-size: var(--fs-caption); }
 .search { width: 100%; flex-shrink: 0; }
 .search::placeholder { color: var(--muted); }
-.select { flex: 1 1 130px; min-width: 0; }
+.select { flex: 0 1 180px; min-width: 0; }
 .select option { background: var(--card); }
-.games-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.games-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.games-summary { text-align: right; }
 .explore .table { flex: 1; min-height: 0; }
 .explore-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
 .explore-list .trow { flex-shrink: 0; min-height: 40px; padding: 2px 6px; cursor: default; content-visibility: auto; contain-intrinsic-size: auto 40px; }
@@ -573,7 +581,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .sort.on::after { content: " \25BE"; }
 .sort:disabled { cursor: default; opacity: 0.5; }
 .window.lobby .section.explore-head { gap: 4px; padding-top: 6px; padding-bottom: 6px; }
-.explore-head .pills { margin: 2px 0 0; }
 .explore-who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .btn.back { padding: 0 4px; min-height: 26px; margin-left: -4px; }
 .end-note { margin-left: auto; text-align: right; }

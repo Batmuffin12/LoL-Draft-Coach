@@ -2,9 +2,9 @@ import type { LearnView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
 import { Facts } from "../components/Facts";
 import { NewChampTable } from "../components/NewChampTable";
-import { Pills } from "../components/Pills";
+import { RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
-import { cx, lobbyEmpty, positionLabel, roleName, t, tip } from "../format";
+import { cx, lobbyEmpty, roleName, t, tip } from "../format";
 import { useFitLevel, useRolePill } from "../hooks";
 
 /** New champions per role (a sub-tab each): meta in your rank, like what you play well; first-games plan under the table. */
@@ -23,8 +23,8 @@ export function NewChamps({ state }: { state: ViewState }) {
   const summary = (r: (typeof list)[number]) => (r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", "));
   return (
     <>
-      <section className="section pills-row">
-        <Pills compact label={t("label.role")} options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+      <section className="section filter-row">
+        <RoleChoice roles={list.map((r) => r.role)} about={(role) => summary(list.find((r) => r.role === role)!)} value={sub} onChange={setSub} />
       </section>
       {list.filter((r) => r.role === sub).map((r) => {
         const title = t("new.head", { role: roleName(r.role) });

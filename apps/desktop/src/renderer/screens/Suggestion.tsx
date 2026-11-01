@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { ConfidenceChip } from "../components/Chip";
-import { Pills } from "../components/Pills";
+import { RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
 import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
-import { positionLabel, t } from "../format";
+import { t } from "../format";
 
 type Preview = NonNullable<ViewState["queuePreview"]>;
 
@@ -24,10 +24,10 @@ export function Suggestion({ state, preview }: { state: ViewState; preview: Prev
   const record = state.roles.find((r) => r.role === cur.role)?.pool.find((c) => c.champion.id === pick.champion.id) ?? null;
   return (
     <>
-      <section className="section pills-row">
-        <Pills
-          label={t("label.role")}
-          options={preview.roles.map((r, i) => ({ value: r.role, label: positionLabel(r.role), title: i === 0 ? t("queue.primary") : t("queue.secondary") }))}
+      <section className="section filter-row">
+        <RoleChoice
+          roles={preview.roles.map((r) => r.role)}
+          about={(r) => t(r === preview.roles[0]!.role ? "queue.primary" : "queue.secondary")}
           value={cur.role}
           onChange={setRole}
           end={t("queue.context")}

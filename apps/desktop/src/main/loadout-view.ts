@@ -199,6 +199,7 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   return {
     games: l.games,
     source,
+    sourceAbove: sourceBands.length > 1,
     thinNote: l.source.thin
       ? [
           renderReason({ id: l.source.pooled ? "loadout.thin.pooled" : "loadout.thin", slots: { roleGames: l.source.roleGames, games: l.source.games, role: l.role, champion: l.championId } }, deps.templates, deps.championName),

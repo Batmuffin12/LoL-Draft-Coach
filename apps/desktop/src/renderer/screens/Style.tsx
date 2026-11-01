@@ -1,10 +1,10 @@
 import type { ViewState } from "../../shared/view";
 import { Facts } from "../components/Facts";
-import { Pills } from "../components/Pills";
+import { RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
 import { howLines, NumberRows } from "../components/StyleNumbers";
 import { StyleRadar } from "../components/StyleRadar";
-import { gameCount, lobbyEmpty, positionLabel, roleName, t, tip } from "../format";
+import { gameCount, lobbyEmpty, roleName, t, tip } from "../format";
 import { useFits, useRolePill } from "../hooks";
 
 /** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
@@ -24,10 +24,9 @@ export function Style({ state }: { state: ViewState }) {
   return (
     <>
       <section className="section style-top">
-        <Pills
-          compact
-          label={t("label.role")}
-          options={state.playstyle.map((x) => ({ value: x.role, label: positionLabel(x.role), title: summary(x) }))}
+        <RoleChoice
+          roles={state.playstyle.map((x) => x.role)}
+          about={(role) => summary(state.playstyle.find((x) => x.role === role)!)}
           value={p.role}
           onChange={setSub}
           end={`${gameCount(p.games)} · ${t("style.dashed")}`}

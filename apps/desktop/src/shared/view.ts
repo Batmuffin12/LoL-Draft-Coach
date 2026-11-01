@@ -139,8 +139,10 @@ export interface RunePageView extends ChoiceNumbers {
 export interface LoadoutView {
   /** Games behind the build (your band plus the one above). */
   games: number;
-  /** Band names the build comes from, e.g. "Gold to Platinum + Emerald to Diamond". */
+  /** Band names the build comes from, e.g. "Gold to Diamond". */
   source: string;
+  /** The source takes in the band above yours, for more games (there's none above the top band). */
+  sourceAbove: boolean;
   /** Shown when the build rests on few games, e.g. "Not much data yet: treat it as a rough guide". */
   thinNote: string | null;
   page: RunePageView | null;

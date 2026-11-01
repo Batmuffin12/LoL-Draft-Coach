@@ -4,8 +4,9 @@ import type { MatchupRowView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
 import { BuildTab, RuneOptions } from "../components/Loadout";
 import { MatchupTable } from "../components/MatchupTable";
-import { Pills } from "../components/Pills";
+import { RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
+import { Segmented } from "../components/Segmented";
 import { SkillGrid } from "../components/SkillGrid";
 import { browseEmptyKey, cx, gameCount, games, positionLabel, rate, rateOf, record, roleName, t, tip, winToneOf } from "../format";
 import { useFetched, useFitLevel } from "../hooks";
@@ -137,7 +138,7 @@ export function BrowseList({
   return (
     <Section className="explore">
       <input type="search" className="search" placeholder={t("explore.search")} aria-label={t("explore.search")} value={filter.search} onChange={(e) => change({ search: e.target.value })} />
-      <Pills compact label={t("label.role")} options={[{ value: "", label: t("explore.all") }, ...list.roles.map((r) => ({ value: r, label: positionLabel(r) }))]} value={filter.role} onChange={(role) => change({ role })} />
+      <RoleChoice all roles={list.roles} value={filter.role} onChange={(role) => change({ role })} />
       <span className="micro" {...tip(t("explore.sourceTip", { patch: list.patch ?? "—" }))}>
         {t("explore.source", { rank: list.rank, games: games(list.matches), n: list.matches })}
       </span>
@@ -206,7 +207,9 @@ function BackButton({ onBack }: { onBack: () => void }) {
 /** A champion in a role: its numbers and your record, then runes, build and matchups. Everything fits without scrolling. */
 export function ChampionPage({ view: v, tab, onTab, onBack }: { view: ExploreChampionView; tab: DetailTab; onTab: (tab: DetailTab) => void; onBack: () => void }) {
   const wr = winToneOf(v.winRate, v.games);
-  const source = tab === "matchups" ? v.rank : (v.loadout?.source ?? v.rank);
+  // Builds take in the rank above for more games; everything else here is your rank alone. Each tab says which it shows.
+  const builds = tab !== "matchups" && v.loadout !== null;
+  const note = builds ? t("explore.buildsFrom", { source: v.loadout!.source }) : t("explore.playersIn", { rank: v.rank });
   return (
     <>
       <section className="section explore-head">
@@ -231,19 +234,18 @@ export function ChampionPage({ view: v, tab, onTab, onBack }: { view: ExploreCha
             <b>{games(v.games)}</b> {t("explore.stat.games", { n: v.games })}
           </span>
         </div>
-        <Pills<DetailTab>
-          compact
-          label={t("explore.detailTabs")}
-          options={[
-            { value: "runes", label: t("runes.tab") },
-            { value: "build", label: t("build.tab") },
-            { value: "matchups", label: t("explore.matchupsTab") },
-          ]}
-          value={tab}
-          onChange={onTab}
-          end={t("explore.buildsFrom", { source })}
-        />
       </section>
+      <Segmented<DetailTab>
+        options={[
+          { value: "runes", label: t("runes.tab") },
+          { value: "build", label: t("build.tab") },
+          { value: "matchups", label: t("matchups.tab") },
+        ]}
+        value={tab}
+        onChange={onTab}
+        end={note}
+        endTitle={builds && v.loadout!.sourceAbove ? t("explore.buildsTip", { rank: v.rank }) : undefined}
+      />
       {tab === "matchups" ? <Matchups view={v} /> : v.loadout ? tab === "runes" ? <Runes view={v} /> : <Build view={v} /> : <Section><p className="caption">{t("explore.noBuild", { champion: v.champion.name, role: roleName(v.role) })}</p></Section>}
     </>
   );

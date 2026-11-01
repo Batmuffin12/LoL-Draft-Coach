@@ -5,7 +5,7 @@ import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
 import { ChampIcon } from "./ChampIcon";
 import { MatchupTable } from "./MatchupTable";
-import { Pills } from "./Pills";
+import { ChoiceGroup } from "./ChoiceGroup";
 import { RunePage } from "./RunePage";
 import { Section } from "./Section";
 import { SkillGrid, Stat } from "./SkillGrid";
@@ -35,11 +35,16 @@ function ItemRows({ items, brief }: { items: LoadoutItemView[]; brief: boolean }
   );
 }
 
-/** A rune option in the switch: what it is, how many take it and how it does ("Second · 15% · 55% WR"); games for a matchup page, which has no share, and in place of a win rate from too few games. Short enough to stay on one row. */
-export function optionText(o: RunePageView): string {
+/** A rune option's numbers: how many take it and how it does ("15% · 55% WR"); games for a matchup page, which has no share, and in place of a win rate from too few games. */
+function optionNumbers(o: RunePageView): string {
   const count = gameCount(o.games);
   const thin = o.winRate === null || isThin(o.games);
-  return [o.optionLabel, o.share !== null ? rate(o.share) : thin ? null : count, thin ? count : t("runes.optionWinRate", { rate: rate(o.winRate) })].filter(Boolean).join(" · ");
+  return [o.share !== null ? rate(o.share) : thin ? null : count, thin ? count : t("runes.optionWinRate", { rate: rate(o.winRate) })].filter(Boolean).join(" · ");
+}
+
+/** What a rune option is and its numbers, on one line ("Second · 15% · 55% WR"). */
+export function optionText(o: RunePageView): string {
+  return [o.optionLabel, optionNumbers(o)].filter(Boolean).join(" · ");
 }
 
 /** One rune page on its trees, under a switch when there are `options` to choose from, else under a head with its numbers. */
@@ -47,7 +52,7 @@ export function RuneOptions({ page: p, options, choose, maxSwaps }: { page: Rune
   const head = options.length ? { className: "rune-options" } : { title: t("runes.tab"), aside: <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
   return (
     <Section {...head}>
-      {options.length > 0 && <div data-tour="rune-options"><Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={choose} /></div>}
+      {options.length > 0 && <div data-tour="rune-options"><ChoiceGroup fill label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: o.optionLabel ?? "", sub: optionNumbers(o), title: o.reason ?? undefined }))} value={p.key} onChange={choose} /></div>}
       {p.primaryTree && p.secondaryTree ? (
         <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} {...(maxSwaps === undefined ? {} : { maxSwaps })} />
       ) : (
