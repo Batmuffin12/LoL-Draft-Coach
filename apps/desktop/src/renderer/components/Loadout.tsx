@@ -42,31 +42,36 @@ export function optionText(o: RunePageView): string {
   return [o.optionLabel, o.share !== null ? rate(o.share) : thin ? null : count, thin ? count : t("runes.optionWinRate", { rate: rate(o.winRate) })].filter(Boolean).join(" · ");
 }
 
+/** One rune page on its trees, under a switch when there are `options` to choose from, else under a head with its numbers. */
+export function RuneOptions({ page: p, options, choose, maxSwaps }: { page: RunePageView; options: RunePageView[]; choose: (key: string) => void; maxSwaps?: number | undefined }) {
+  const head = options.length ? { className: "rune-options" } : { title: t("runes.tab"), aside: <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
+  return (
+    <Section {...head}>
+      {options.length > 0 && <Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={choose} />}
+      {p.primaryTree && p.secondaryTree ? (
+        <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} {...(maxSwaps === undefined ? {} : { maxSwaps })} />
+      ) : (
+        <div className="icons">
+          {[...p.runes, ...p.shards].map((r, i) => (
+            <ChampIcon key={`${r.id}-${i}`} champ={r} kind="game" round size={i === 0 ? 30 : 22} />
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
+
 /** Runes on their full trees with the page's numbers, or a switch in place of that head when there's a second option; then spells and the skill grid (both as they were). */
 export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: RuneChoice }) {
   const p = shownPage(l, runes.key);
   const options = l.page && l.pageAlt ? [l.page, l.pageAlt] : [];
-  const head = options.length ? { className: "rune-options" } : { title: "Runes", aside: p && <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
   // With swaps and a notice or import result the screen runs short: first the second swap moves to hover, then the spells' head goes, then the first swap moves to hover too.
   const level = useFitLevel(p?.key, 3);
   return (
     <>
-      {p && (
-        <Section {...head}>
-          {options.length > 0 && <Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={runes.choose} />}
-          {p.primaryTree && p.secondaryTree ? (
-            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} maxSwaps={level > 2 ? 0 : level > 0 ? 1 : undefined} />
-          ) : (
-            <div className="icons">
-              {[...p.runes, ...p.shards].map((r, i) => (
-                <ChampIcon key={`${r.id}-${i}`} champ={r} kind="game" round size={i === 0 ? 30 : 22} />
-              ))}
-            </div>
-          )}
-        </Section>
-      )}
+      {p && <RuneOptions page={p} options={options} choose={runes.choose} maxSwaps={level > 2 ? 0 : level > 0 ? 1 : undefined} />}
       {(l.spells || l.skills) && (
-        <Section title={level > 1 ? undefined : "Summoner spells & skill order"}>
+        <Section title={level > 1 ? undefined : t("build.spellsSkills")}>
           <SkillGrid spells={l.spells} skills={l.skills} />
         </Section>
       )}
@@ -74,8 +79,11 @@ export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: R
   );
 }
 
-/** The build path with the other picks, what to buy against this team, the later pool and the role quest. */
-export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
+/**
+ * The build path with the other picks, what to buy against this team, the later pool and the role quest.
+ * `winAdded`: the path shows each item's win added, for looking things up with no draft to answer.
+ */
+export function BuildTab({ loadout: l, winAdded = false }: { loadout: LoadoutView; winAdded?: boolean }) {
   // Each item once: what the path or the Later pool already show isn't repeated under "Vs this team".
   const shown = new Set([
     ...(l.starting?.items.map((i) => i.id) ?? []),
@@ -87,7 +95,7 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
   const vsTeam = l.situational.filter((i) => !shown.has(i.id));
   // The note says only what the path shows: ★ needs win added, pick rates need ranked items.
   const stars = [...l.items.flatMap((s) => [s.top, ...s.alternatives]), ...(l.boots ? [l.boots.top, ...l.boots.alternatives] : [])].some((o) => o.winAdded !== null);
-  const base = stars ? t("build.note") : l.items.length > 0 || l.boots !== null ? t("build.noteRate") : t("build.noteThin");
+  const base = stars ? t(winAdded ? "build.noteWinAdded" : "build.note") : l.items.length > 0 || l.boots !== null ? t("build.noteRate") : t("build.noteThin");
   const note = l.spikeSlots.length ? `${base} · ${t("build.spikeNote")}` : base;
   // A full build with a notice or import result: first the items' reasons move to hover, then the path's rows get tighter, then the role quest moves to hover.
   const level = useFitLevel(l.games, 3);
@@ -95,7 +103,7 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
   return (
     <>
       <Section title={t("build.head")} aside={<span className="micro" {...focusTip(questTip)}>{note}</span>}>
-        <BuildPath loadout={l} tight={level > 1} />
+        <BuildPath loadout={l} tight={level > 1} winAdded={winAdded} />
       </Section>
       {vsTeam.length > 0 && (
         <Section title={t("build.vsTeam")}>

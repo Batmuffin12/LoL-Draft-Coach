@@ -174,6 +174,24 @@ export function lobbyEmpty(status: CoachStatus, tab: string, slots: Record<strin
   return t(p === "ready" ? `${tab}.empty` : `${tab}.loading`, slots);
 }
 
+/** Why Browse has no numbers, as a copy key: the live data for your rank failed, doesn't exist yet, or waits on your games. */
+export function browseEmptyKey(state: Pick<ViewState, "status" | "meta">): string {
+  const { meta } = state;
+  if (meta?.state === "error") return meta.noSnapshot ? "explore.empty.noSnapshot" : "explore.empty.failed";
+  return needsClient(state.status) ? "explore.empty.client" : "explore.empty.loading";
+}
+
+/** A game's date: "Oct 12", with the year when it isn't this year's. */
+export function shortDate(at: number, now: number): string {
+  const d = new Date(at);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.getFullYear() === new Date(now).getFullYear() ? {} : { year: "numeric" as const }) });
+}
+
+/** Wins and losses: "7–5". */
+export function record(games: number, wins: number): string {
+  return `${wins}–${games - wins}`;
+}
+
 let roleNames: Record<string, string> = {};
 
 /** Sets the position names from the view state (the explain config's "role.<id>" templates). */

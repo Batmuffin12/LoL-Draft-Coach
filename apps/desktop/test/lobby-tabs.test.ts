@@ -19,8 +19,12 @@ describe("lobby tabs", () => {
     const html = render();
     expect(tabs(html)).toEqual(["Last game", "Me", "Champions"]);
     expect(selected(html)).toBe("Me");
-    expect(pills(html)).toEqual(["Style", "This month"]);
+    expect(pills(html)).toEqual(["Style", "This month", "My games"]);
     expect(html).toMatch(/class="pill on"[^>]*>Style</);
+  });
+
+  it("marks My games for the tour", () => {
+    expect(render()).toMatch(/data-tour="my-games"[^>]*>My games</);
   });
 
   it("opens Last game after a recent game, without sub-tabs", () => {

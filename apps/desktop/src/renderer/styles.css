@@ -536,6 +536,48 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .champcard { display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
 .champcard .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
 
+/* Explore: long lists scroll inside their own area, the one exception to fitting; the page itself stays fixed */
+.section.explore { flex: 1; min-height: 0; gap: 6px; }
+.explore .pills { margin-bottom: 0; }
+.search, .select { min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-xs); font-size: var(--fs-caption); }
+.search { width: 100%; flex-shrink: 0; }
+.search::placeholder { color: var(--muted); }
+.select { flex: 1 1 130px; min-width: 0; }
+.select option { background: var(--card); }
+.games-filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.explore .table { flex: 1; min-height: 0; }
+.explore-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.explore-list .trow { flex-shrink: 0; min-height: 40px; padding: 2px 6px; cursor: default; content-visibility: auto; contain-intrinsic-size: auto 40px; }
+.explore-list button.trow { cursor: pointer; }
+.explore-list .trow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.explore-list .none { padding: 12px 6px; }
+.explore-list .more { align-self: center; padding: 8px; }
+.table .c-num.plain { font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-caption); }
+.table .trow > .c-num { font-size: var(--fs-caption); }
+/* Room for the scrollbar: heads line up with the rows under them */
+.table.explore-table .thead, .table.explore-table .trow { grid-template-columns: minmax(0, 1fr) 46px 46px 46px 30px; }
+.table.games-table .thead, .table.games-table .trow { grid-template-columns: minmax(0, 1fr) 42px 66px 38px; }
+.table.records-table .thead, .table.records-table .trow { grid-template-columns: minmax(0, 1fr) 46px 52px 46px 36px; }
+.explore .table .thead { padding-right: 14px; flex-shrink: 0; }
+.sort { all: unset; cursor: pointer; text-align: right; font-size: var(--fs-label); }
+.sort:hover { color: var(--text); }
+.sort.on { color: var(--gold-bright); }
+.sort.on::after { content: " \25BE"; }
+.sort:disabled { cursor: default; opacity: 0.5; }
+.section.explore-head { gap: 4px; padding-bottom: 6px; }
+.explore-head .pills { margin: 2px 0 0; }
+.explore-who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn.back { padding: 0 4px; min-height: 26px; margin-left: -4px; }
+.end-note { margin-left: auto; text-align: right; }
+.explore-stats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
+.explore-stats b { font-family: var(--font-display); font-size: var(--fs-heading); font-weight: 600; color: var(--text); }
+.explore-stats b.pos { color: var(--positive); }
+.explore-stats b.neg { color: var(--negative); }
+.section.core-row { flex-direction: row; align-items: center; gap: 10px; padding-top: 6px; padding-bottom: 6px; }
+.core-row .icons { gap: 4px; }
+.win-added { display: block; font-family: var(--font-sans); font-weight: 400; font-size: var(--fs-micro); line-height: 15px; }
+.opt .win-added { font-size: var(--fs-legal); line-height: 13px; }
+
 /* Pool: coverage matrix, then your next step */
 /* Cells stretch to their row's height (a label may wrap to two lines) so every row's line sits at one height; no column gap, so lines run unbroken. */
 .mx { display: grid; align-items: stretch; }

@@ -1,5 +1,5 @@
 import type { IconView, ItemOptionView, LoadoutView } from "../../shared/view";
-import { cx, rate, signedOrDash, t, winsPer100 } from "../format";
+import { cx, rate, signedOrDash, t, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** Core item rows after Start and Boots. */
@@ -79,11 +79,18 @@ function Star() {
   );
 }
 
+/** Win added under an item's pick rate, in points, when asked for and known (thin data has none). Never a raw win rate. */
+function WinAdded({ show, value }: { show: boolean; value: number | null | undefined }) {
+  if (!show || value == null) return null;
+  return <span className={cx("win-added", tone(value))}>{signedOrDash(value)}</span>;
+}
+
 /**
  * The build, one row per step (Start, Boots, Items 1–4): when, the main item with its name and
  * pick rate, then up to two other picks with theirs. ★ marks what adds the most in a step.
+ * `winAdded`: the win added shows under each pick rate, not only on hover.
  */
-export function BuildPath({ loadout, tight = false }: { loadout: LoadoutView; tight?: boolean }) {
+export function BuildPath({ loadout, tight = false, winAdded = false }: { loadout: LoadoutView; tight?: boolean; winAdded?: boolean }) {
   const rows = steps(loadout);
   if (!rows.length) return <span className="caption">Not enough purchases to rank items yet.</span>;
   return (
@@ -113,6 +120,7 @@ export function BuildPath({ loadout, tight = false }: { loadout: LoadoutView; ti
                 <>
                   {rate(c.main.share)}
                   {star === 0 && <Star />}
+                  <WinAdded show={winAdded} value={c.main.winAdded} />
                 </>
               )}
             </span>
@@ -130,6 +138,7 @@ export function BuildPath({ loadout, tight = false }: { loadout: LoadoutView; ti
                       <span className="micro">
                         {rate(a.share)}
                         {star === i + 1 && <Star />}
+                        <WinAdded show={winAdded} value={a.winAdded} />
                       </span>
                     </span>
                   ))

@@ -20,17 +20,25 @@ import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { cx, gameCount, lobbyEmpty, needsClient, pct, positionLabel, roleName, t, tip } from "../format";
 import { useFitLevel, useFits, useNow } from "../hooks";
+import { Browse, initialBrowse, type BrowseState } from "./Browse";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
+import { MyGames } from "./MyGames";
 import { Suggestion } from "./Suggestion";
 
 type MainTab = "suggestion" | "last" | "me" | "champions";
-type SubTab = "style" | "month" | "pool" | "new";
+type SubTab = "style" | "month" | "games" | "browse" | "pool" | "new";
 
 /** The main tabs with sub-tabs, the first one opening first. A new sub-tab is one entry here, one line in `SubScreen` and its `tabs.*` label. */
 const SUB_TABS: Record<"me" | "champions", SubTab[]> = {
-  me: ["style", "month"],
-  champions: ["pool", "new"],
+  me: ["style", "month", "games"],
+  champions: ["browse", "pool", "new"],
 };
+
+/** Sub-tabs the tour points at. */
+const TOUR_TARGETS: Partial<Record<SubTab, string>> = { browse: "browse", games: "my-games" };
+
+/** These two don't depend on being in a lobby or on your roles: no line about a draft or the client above them. */
+const LOOK_UP_TABS: readonly (SubTab | null)[] = ["browse", "games"];
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
@@ -64,6 +72,9 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
     setTab(g);
   };
   const hint = useHint(lobbyHint(shown), state.ui.hintsSeen);
+  // Kept here: search and sort survive opening a champion and leaving the tab.
+  const [browse, setBrowse] = useState(initialBrowse);
+  const champion = sub === "browse" && browse.open !== null;
   return (
     <Window
       variant="lobby"
@@ -80,22 +91,22 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
               { value: "champions", label: t("tabs.champions") },
             ]}
           />
-          {group && sub && (
+          {group && sub && !champion && (
             <div className="subtabs">
-              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`) }))} value={sub} onChange={(value) => openSub(group, value)} />
+              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), ...(TOUR_TARGETS[value] ? { tour: TOUR_TARGETS[value] } : {}) }))} value={sub} onChange={(value) => openSub(group, value)} />
             </div>
           )}
         </>
       }
       footer={<AccountFooter state={state} onHowItWorks={onHowItWorks} />}
     >
-      <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? t("lobby.noDraft") : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
+      <Notices state={state} extra={state.roles.length || LOOK_UP_TABS.includes(sub) ? null : !needsClient(state.status) ? t("lobby.noDraft") : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
       {hint}
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
       ) : sub ? (
-        <SubScreen sub={sub} state={state} onNewChamps={() => openSub("champions", "new")} />
+        <SubScreen sub={sub} state={state} browse={browse} onBrowse={setBrowse} onNewChamps={() => openSub("champions", "new")} />
       ) : (
         <LastGame state={state} />
       )}
@@ -104,9 +115,11 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
 }
 
 /** What a sub-tab shows. */
-function SubScreen({ sub, state, onNewChamps }: { sub: SubTab; state: ViewState; onNewChamps: () => void }) {
+function SubScreen({ sub, state, browse, onBrowse, onNewChamps }: { sub: SubTab; state: ViewState; browse: BrowseState; onBrowse: (next: BrowseState) => void; onNewChamps: () => void }) {
   if (sub === "style") return <Style state={state} />;
   if (sub === "month") return <Month state={state} />;
+  if (sub === "games") return <MyGames state={state} />;
+  if (sub === "browse") return <Browse state={state} browse={browse} onBrowse={onBrowse} />;
   if (sub === "pool") return <Pool state={state} onNewChamps={onNewChamps} />;
   return <NewChamps state={state} />;
 }
