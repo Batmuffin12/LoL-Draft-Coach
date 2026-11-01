@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { LearnView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
+import { useHint } from "../components/Hint";
+import { lobbyHint } from "../first-use";
 import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
@@ -34,11 +36,11 @@ const SUB_TABS: Record<"me" | "champions", SubTab[]> = {
 const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
-export function LobbyScreen({ state }: { state: ViewState }) {
-  return <Lobby state={state} />;
+export function LobbyScreen({ state, onHowItWorks }: { state: ViewState; onHowItWorks?: () => void }) {
+  return <Lobby state={state} onHowItWorks={onHowItWorks} />;
 }
 
-function Lobby({ state }: { state: ViewState }) {
+function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() => void) | undefined }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const home: MainTab = recent ? "last" : "me";
   const [tab, setTab] = useState<MainTab>(home);
@@ -61,6 +63,7 @@ function Lobby({ state }: { state: ViewState }) {
     setSubs((now) => ({ ...now, [g]: value }));
     setTab(g);
   };
+  const hint = useHint(lobbyHint(shown), state.ui.hintsSeen);
   return (
     <Window
       variant="lobby"
@@ -84,10 +87,11 @@ function Lobby({ state }: { state: ViewState }) {
           )}
         </>
       }
-      footer={<AccountFooter state={state} />}
+      footer={<AccountFooter state={state} onHowItWorks={onHowItWorks} />}
     >
       <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? "No champ select yet: open a lobby and the draft appears here." : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
+      {hint}
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
       ) : sub ? (
@@ -153,7 +157,7 @@ function LastGame({ state }: { state: ViewState }) {
         </>
       ) : (
         <Section title="Last game">
-          <p className="caption">After your next game, how it went against the advice you were shown appears here: your pick, the suggestions, the result and what mattered most in the draft.</p>
+          <p className="caption">{t("last.empty")}</p>
         </Section>
       )}
       {state.focus && (

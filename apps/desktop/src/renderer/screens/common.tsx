@@ -135,8 +135,8 @@ export function ConfirmRow({ ask, yes, busyText, no, busy, danger, onYes, onNo }
   );
 }
 
-/** Who the app is connected as, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
-export function AccountFooter({ state }: { state: ViewState }) {
+/** Who the app is connected as, the tour again, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
+export function AccountFooter({ state, onHowItWorks }: { state: ViewState; onHowItWorks?: (() => void) | undefined }) {
   const { account, app } = state;
   const [confirming, setConfirming] = useState<"signOut" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
@@ -147,10 +147,14 @@ export function AccountFooter({ state }: { state: ViewState }) {
       setConfirming(null);
     });
   };
+  const howItWorks = onHowItWorks && <FootLink onClick={onHowItWorks}>{t("tour.reopen")}</FootLink>;
   return (
     <>
       {account === null ? (
-        <span className="micro">Developer mode: games from the Riot API key in .env.</span>
+        <div className="foot-row">
+          <span className="micro who">Developer mode: games from the Riot API key in .env.</span>
+          {howItWorks}
+        </div>
       ) : account.state === "registered" ? (
         confirming === "delete" ? (
           <ConfirmRow ask={t("account.delete.ask")} yes={t("account.delete")} busyText={t("account.delete.busy")} no={t("account.delete.no")} busy={busy} danger onYes={() => run(() => window.coach.deleteData())} onNo={() => setConfirming(null)} />
@@ -161,6 +165,7 @@ export function AccountFooter({ state }: { state: ViewState }) {
             <span className="micro who" title={`Connected as ${account.riotId}`}>
               {account.riotId}
             </span>
+            {howItWorks}
             <FootLink onClick={() => setConfirming("signOut")}>{t("account.signOut")}</FootLink>
             <FootLink onClick={() => setConfirming("delete")}>{t("account.deleteLink")}</FootLink>
           </div>

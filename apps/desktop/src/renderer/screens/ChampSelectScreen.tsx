@@ -3,6 +3,8 @@ import type { DraftView, ViewState } from "../../shared/view";
 import { BanTable, type BanRow } from "../components/BanTable";
 import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
+import { useHint } from "../components/Hint";
+import { draftHint } from "../first-use";
 import { Facts } from "../components/Facts";
 import { PhaseBar } from "../components/PhaseBar";
 import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
@@ -98,6 +100,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
     phase
   );
   const showLoadout = hover && tab !== "picks";
+  const hint = useHint(draftHint({ banning, loadout: !!showLoadout, canImport: hover?.loadout?.canImport === true }), state.ui.hintsSeen);
   const footer = showLoadout ? (
     <LoadoutFooter pick={hover} runes={runes} />
   ) : (
@@ -113,6 +116,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
       <Notices state={state} />
+      {hint}
       {showLoadout ? (
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
