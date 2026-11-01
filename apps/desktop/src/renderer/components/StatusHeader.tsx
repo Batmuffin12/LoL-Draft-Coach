@@ -31,18 +31,13 @@ export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onMinim
       <span className="app">Draft Coach</span>
       {metaText && <Chip title={metaTitle}>{metaText}</Chip>}
       <span className="spacer" />
-      <button
-        className="icon-btn"
-        onClick={onDock}
-        title={docked ? "Docked to the client. Click to undock" : "Undocked. Click to dock beside the client"}
-        aria-pressed={docked}
-      >
+      <button className="icon-btn" onClick={onDock} title={t(docked ? "window.undock" : "window.dock")} aria-label={t(docked ? "window.undock" : "window.dock")} aria-pressed={docked}>
         {docked ? "◧" : "□"}
       </button>
       <button className="icon-btn" onClick={onMinimize} title={t("window.minimize")} aria-label={t("window.minimize")}>
         –
       </button>
-      <button className="icon-btn" onClick={onClose} title="Close">
+      <button className="icon-btn" onClick={onClose} title={t("window.close")} aria-label={t("window.close")}>
         ×
       </button>
     </header>

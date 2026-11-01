@@ -1,5 +1,5 @@
 import type { LoadoutItemView, LoadoutView, MyPickView, RunePageView } from "../../shared/view";
-import { gameCount, isThin, rate, t } from "../format";
+import { gameCount, isThin, rate, t, tip as focusTip } from "../format";
 import { useFitLevel } from "../hooks";
 import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
@@ -23,7 +23,7 @@ function ItemRows({ items, brief }: { items: LoadoutItemView[]; brief: boolean }
   return (
     <div className="item-rows">
       {items.map((i) => (
-        <div key={i.id} className="later-row" title={tip(i)}>
+        <div key={i.id} className="later-row" {...focusTip(tip(i))}>
           <ChampIcon champ={i} kind="game" size={22} title="" />
           <span className="caption wrap">
             <b className="text">{i.name}</b>
@@ -94,7 +94,7 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
   const questTip = level > 2 ? l.quest.map(tip).join("\n") : "";
   return (
     <>
-      <Section title={t("build.head")} aside={<span className="micro" title={questTip || undefined}>{note}</span>}>
+      <Section title={t("build.head")} aside={<span className="micro" {...focusTip(questTip)}>{note}</span>}>
         <BuildPath loadout={l} tight={level > 1} />
       </Section>
       {vsTeam.length > 0 && (

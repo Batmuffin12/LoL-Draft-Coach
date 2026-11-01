@@ -131,6 +131,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .status-dot.connected { background: var(--ok); }
 .status-dot.disconnected { background: var(--red); }
 .icon-btn { all: unset; width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); font-size: var(--fs-heading); border-radius: var(--radius-sm); cursor: pointer; }
+/* Hover text for the keyboard: a bar along the window's bottom while an element with hover text has keyboard focus (format.ts tip). */
+[data-tip]:focus-visible::after { content: attr(data-tip); position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 50; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--card-raised); color: var(--text); font-family: var(--font-sans); font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: 400; letter-spacing: normal; text-transform: none; text-align: left; white-space: pre-line; pointer-events: none; }
 .icon-btn:hover { color: var(--text); background: var(--card); }
 .icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 

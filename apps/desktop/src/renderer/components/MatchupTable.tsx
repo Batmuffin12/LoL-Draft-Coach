@@ -1,5 +1,5 @@
 import type { MatchupRowView } from "../../shared/view";
-import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tone, winsPer100 } from "../format";
+import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Facts } from "./Facts";
 
@@ -23,7 +23,7 @@ function Row({ m }: { m: MatchupRowView }) {
   const where = [positionLabel(m.role), m.lane ? t("matchups.yourLane") : null, m.partner ? t("matchups.partner") : null].filter(Boolean).join(" · ");
   const v = tone(m.delta, VERDICT_DEAD_ZONE);
   return (
-    <div className={cx("mrow", m.lane && "you")} title={m.games ? t("matchups.tip", { signed: signedOrDash(m.delta), wins: winsPer100(m.delta) }) : undefined}>
+    <div className={cx("mrow", m.lane && "you")} {...tip(m.games ? t("matchups.tip", { signed: signedOrDash(m.delta), wins: winsPer100(m.delta) }) : null)}>
       <ChampIcon champ={m.champion} size={28} framed={m.lane} />
       <span className="who">
         <span className="t-heading">{m.champion!.name}</span>

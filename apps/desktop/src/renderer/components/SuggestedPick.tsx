@@ -1,5 +1,5 @@
 import type { PickView, PoolChampView, ReasonView } from "../../shared/view";
-import { cx, pct, pickColumns, pickReasons, rateOf, signedOrDash, t, tone, winsPer100 } from "../format";
+import { cx, pct, pickColumns, pickReasons, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { OffMetaChip } from "./Chip";
 
@@ -52,7 +52,7 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons }: Sugge
       </div>
       <div className="tiles">
         {TILES.map((key) => (
-          <div key={key} className="tile" title={tileTip(key, cols[key])}>
+          <div key={key} className="tile" {...tip(tileTip(key, cols[key]))}>
             <span className="label">{t(`pick.tile.${key}`)}</span>
             <span className={cx("t-heading", cols[key] === null ? "muted" : tone(cols[key]))}>{signedOrDash(cols[key])}</span>
           </div>
@@ -78,7 +78,7 @@ export function OtherPicks({ picks, onSelect }: { picks: { pick: PickView; index
         const plus = pick.reasons.find((r) => !r.negative);
         const line = [pick.expectedWin === null ? null : pct(pick.expectedWin), plus ? reasonHeadline(plus).replace(/^./, (c) => c.toLowerCase()) : null].filter(Boolean).join(" · ");
         return (
-          <button key={pick.champion.id} type="button" className="alt" onClick={() => onSelect(index)} title={[pick.champion.name, ...pick.reasons.map((r) => r.text)].join("\n")}>
+          <button key={pick.champion.id} type="button" className="alt" onClick={() => onSelect(index)} {...tip([pick.champion.name, ...pick.reasons.map((r) => r.text)].join("\n"))}>
             <ChampIcon champ={pick.champion} size={34} title="" />
             <span className="t-heading">{pick.champion.name}</span>
             {line && <span className="micro">{line}</span>}

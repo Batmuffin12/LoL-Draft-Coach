@@ -94,6 +94,14 @@ export function ago(at: number, now: number): string {
   return d === 1 ? t("time.yesterday") : t("time.days", { n: d });
 }
 
+/**
+ * Hover text that the keyboard can reach too: the element takes focus, and the stylesheet shows
+ * data-tip in a bar while it has keyboard focus (hover text never shows on focus by itself).
+ */
+export function tip(text: string | null | undefined): { title?: string; tabIndex?: number; "data-tip"?: string } {
+  return text ? { title: text, tabIndex: 0, "data-tip": text } : {};
+}
+
 /** Thousands separators: 1240 → "1,240". */
 export function count(n: number): string {
   return n.toLocaleString("en-US");

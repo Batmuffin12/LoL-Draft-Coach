@@ -1,5 +1,5 @@
 import type { PostGameView } from "../../shared/view";
-import { ago, cx, pct, positionLabel, signedOrDash, t, tone, winsPer100 } from "../format";
+import { ago, cx, pct, positionLabel, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /**
@@ -22,7 +22,7 @@ export function ResultBand({ game: g, now, overdue = false }: { game: PostGameVi
         </span>
         <span className="caption text">{where}</span>
         {line && (
-          <span className="micro" title={hover || undefined}>
+          <span className="micro" {...tip(hover)}>
             {line}
           </span>
         )}
@@ -53,11 +53,11 @@ export function DraftTerms({ game: g }: { game: PostGameView }) {
       {g.terms.map((x) => {
         const w = max > 0 ? (Math.abs(x.deltaWin) / max) * 50 : 0;
         const v = tone(x.deltaWin);
-        const tip = t("last.termTip", { label: x.label, signed: signedOrDash(x.deltaWin), wins: winsPer100(x.deltaWin) });
+        const text = t("last.termTip", { label: x.label, signed: signedOrDash(x.deltaWin), wins: winsPer100(x.deltaWin) });
         return (
-          <div key={x.label} className="fx" title={tip}>
+          <div key={x.label} className="fx" {...tip(text)}>
             <span>{x.label}</span>
-            <span className="bar" role="img" aria-label={tip}>
+            <span className="bar" role="img" aria-label={text}>
               <span className="zero" />
               <span className={cx("fill", v)} style={x.deltaWin >= 0 ? { left: "50%", width: `${w}%` } : { left: `${50 - w}%`, width: `${w}%` }} />
             </span>

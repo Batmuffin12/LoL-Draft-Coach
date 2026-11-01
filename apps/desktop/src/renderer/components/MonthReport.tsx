@@ -1,5 +1,5 @@
 import type { MonthView } from "../../shared/view";
-import { cx, gameCount, isThin, pct, t, winToneOf } from "../format";
+import { cx, gameCount, isThin, pct, t, tip, winToneOf } from "../format";
 import { useFitLevel } from "../hooks";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
@@ -21,7 +21,7 @@ function Header({ m, brief }: { m: MonthView; brief: boolean }) {
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label gold" title={m.rank ?? undefined}>{`${m.period} · ${gameCount(m.games)}`}</span>
+        <span className="label gold" {...tip(m.rank)}>{`${m.period} · ${gameCount(m.games)}`}</span>
         <span className="rule" aria-hidden="true" />
         <span className="micro">{m.gamesBeforeText}</span>
       </div>
@@ -39,7 +39,7 @@ function Header({ m, brief }: { m: MonthView; brief: boolean }) {
       </div>
       {m.roles.length > 0 && (
         <div className="roles">
-          <span className="rolebar" role="img" aria-label={m.roles.map((r) => r.text).join(", ")} title={brief ? m.roles.map((r) => r.text).join(" · ") : undefined}>
+          <span className="rolebar" role="img" aria-label={m.roles.map((r) => r.text).join(", ")} {...tip(brief ? m.roles.map((r) => r.text).join(" · ") : null)}>
             {m.roles.map((r, i) => (
               <span key={r.role} style={{ width: `${r.share * 100}%`, background: ROLE_FILLS[Math.min(i, ROLE_FILLS.length - 1)] }} />
             ))}
@@ -78,7 +78,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
       {m.role && m.axes.length > 0 && (
         <Section title={t("month.style", { role: m.role.toLowerCase() })}>
           <SlopeChart axes={m.axes} role={m.role.toLowerCase()} />
-          <span className="micro" title={hidden.join("\n") || undefined}>{`${t("month.average")} · ${m.steadyNote}`}</span>
+          <span className="micro" {...tip(hidden.join("\n"))}>{`${t("month.average")} · ${m.steadyNote}`}</span>
           {showTrends && shown.length > 0 && (
             <span className="caption trends">
               {shown.map((s) => (
@@ -87,7 +87,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
                   <span className={s.tone ?? undefined}>{`${s.from ?? "—"} → ${s.to}`}</span>
                 </span>
               ))}
-              {rest.length > 0 && <span title={rest.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`).join("\n")}>{t("month.more", { n: rest.length })}</span>}
+              {rest.length > 0 && <span {...tip(rest.map((s) => `${s.title}: ${s.from ?? "—"} → ${s.to}`).join("\n"))}>{t("month.more", { n: rest.length })}</span>}
             </span>
           )}
         </Section>
@@ -114,7 +114,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
           {showGoals && (met.length > 0 || m.focus.current) && (
             <span className="caption goals">
               {met.length > 0 && (
-                <span title={met.join("\n")}>
+                <span {...tip(met.join("\n"))}>
                   {t("month.goalsMet", { first: goalName(met[0]!) })}
                   {met.length > 1 ? ` ${t("month.goalsMore", { n: met.length - 1 })}` : ""}
                 </span>

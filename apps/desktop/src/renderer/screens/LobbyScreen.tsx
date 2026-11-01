@@ -16,7 +16,7 @@ import { POOL_COLUMNS, resultOverdue } from "../../shared/view";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { cx, gameCount, lobbyEmpty, needsClient, pct, positionLabel, roleName, t } from "../format";
+import { cx, gameCount, lobbyEmpty, needsClient, pct, positionLabel, roleName, t, tip } from "../format";
 import { useFitLevel, useFits, useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 import { Suggestion } from "./Suggestion";
@@ -190,7 +190,7 @@ function NewChamps({ state }: { state: ViewState }) {
         return (
           <Section key={r.role} title={title} aside={<span className="micro">{t("new.aside")}</span>}>
             {l && (
-              <div className="plan learning" title={level > 2 ? minorText(l.learn) : undefined}>
+              <div className="plan learning" {...tip(level > 2 ? minorText(l.learn) : null)}>
                 <div className="learning-head">
                   {l.champion && <ChampIcon champ={l.champion} size={28} />}
                   <span className="label gold">{l.title}</span>
@@ -200,7 +200,7 @@ function NewChamps({ state }: { state: ViewState }) {
               </div>
             )}
             {l && r.picks.length > 0 && (
-              <span className="label" title={level > 1 ? [l.why, ...r.picks.map((p) => p.champion.name)].join("\n") : l.why}>
+              <span className="label" {...tip(level > 1 ? [l.why, ...r.picks.map((p) => p.champion.name)].join("\n") : l.why)}>
                 {l.after} <span className="micro">· {l.why}</span>
               </span>
             )}
@@ -210,7 +210,7 @@ function NewChamps({ state }: { state: ViewState }) {
               </div>
             )}
             {r.plan && (
-              <div className="plan" title={level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : undefined}>
+              <div className="plan" {...tip(level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : null)}>
                 <span className="label gold">{t("new.plan")}</span>
                 <span>{r.plan}</span>
                 {r.planLearn && <Learn learn={r.planLearn} level={level} />}
@@ -285,7 +285,7 @@ function Style({ state }: { state: ViewState }) {
         {p.summary.length > 0 && <Facts rows={p.summary} flow />}
       </section>
       {p.numbers.length > 0 && (
-        <Section title={t("style.numbers")} aside={<span className="micro" title={(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n")) || undefined}>{t("style.legend")}</span>}>
+        <Section title={t("style.numbers")} aside={<span className="micro" {...tip(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n"))}>{t("style.legend")}</span>}>
           <NumberRows items={p.numbers} />
           {fits && <span className="micro">{t("style.numbersNote")}</span>}
         </Section>
@@ -336,7 +336,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
       </section>
       <Section title={t("pool.next")}>
         {next && (
-          <div className="you next-step" title={next.evidence ?? undefined}>
+          <div className="you next-step" {...tip(next.evidence)}>
             <ChampIcon champ={next.champion} size={34} />
             <span className="who">
               <span className="t-heading gold-bright">{next.title}</span>
@@ -346,7 +346,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
         )}
         {r.missing ? (
           <div className="missing">
-            <span className="who" title={r.missing.note}>
+            <span className="who" {...tip(level < 2 ? null : r.missing.note)}>
               <Facts rows={[r.missing.row]} flow />
               {level < 2 && <span className="micro">{r.missing.note}</span>}
             </span>

@@ -36,7 +36,7 @@ export function PhaseBar({ timerPhase, localAction, secondsLeft, totalSeconds, w
   const call = mine ? t(localAction === "ban" ? "phase.yourBan" : "phase.yourPick") : waitingText;
   const share = totalSeconds > 0 ? Math.max(0, Math.min(1, left / totalSeconds)) : null;
   return (
-    <section className={cx("phase", mine && "mine")} aria-live="polite">
+    <section className={cx("phase", mine && "mine")}>
       <div className={cx("ring", urgent && "urgent")}>
         {share !== null && (
           <svg width={RING} height={RING} viewBox={`0 0 ${RING} ${RING}`} aria-hidden="true">
@@ -55,13 +55,15 @@ export function PhaseBar({ timerPhase, localAction, secondsLeft, totalSeconds, w
             />
           </svg>
         )}
-        <span className="t-hero n" aria-label={`${Math.ceil(left)} seconds left`}>
+        <span className="t-hero n" role="timer" aria-live="off" aria-label={t("phase.secondsLeft", { n: Math.ceil(left) })}>
           {Math.ceil(left)}
         </span>
       </div>
       <div className="what">
         <span className="label">{t(PHASE_KEY[timerPhase] ?? "phase.banPick")}</span>
-        <span className="t-title t-call call">{call}</span>
+        <span className="t-title t-call call" aria-live="polite">
+          {call}
+        </span>
         {context && <span className="caption ctx">{context}</span>}
       </div>
     </section>
