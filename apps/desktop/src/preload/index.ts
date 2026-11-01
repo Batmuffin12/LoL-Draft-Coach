@@ -22,9 +22,9 @@ const api = {
   deleteData(): Promise<void> {
     return ipcRenderer.invoke(IPC.deleteData);
   },
-  /** Writes the shown rune page and spells ("runes") or item set ("items") into the League client. Only ever called from an import button. */
-  importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
-    return ipcRenderer.invoke(IPC.importLoadout, kind);
+  /** Writes the rune option `pageKey` and spells ("runes") or item set ("items") into the League client. Only ever called from an import button. */
+  importLoadout(kind: "runes" | "items" | "all", pageKey?: string): Promise<void> {
+    return ipcRenderer.invoke(IPC.importLoadout, kind, pageKey);
   },
   close(): void {
     window.close();

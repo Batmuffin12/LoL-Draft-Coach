@@ -132,14 +132,14 @@ export class PersonalCoach extends Coach {
   /**
    * Writes the shown loadout into the League client: "runes" = the rune page and your two
    * summoner spells, "items" = the item set, "all" = both, one after the other (the panel's one
-   * import button). Called only from the player's click on an import button (CLAUDE.md: the single
-   * approved LCU write exception).
+   * import button). `pageKey`: the rune option on screen. Called only from the player's click on an
+   * import button (CLAUDE.md: the single approved LCU write exception).
    */
-  async importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
+  async importLoadout(kind: "runes" | "items" | "all", pageKey?: string): Promise<void> {
     const shown = this.shownLoadout;
     const creds = this.p.connector.credentials;
     if (!shown || !creds || !this.config.app.import.enabled) return;
-    this.importMessage = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config);
+    this.importMessage = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config, pageKey);
     this.onDraft();
   }
   /** Scoring config: the bundled copy at first, replaced by the server's when it arrives. */

@@ -352,7 +352,9 @@ async function main(): Promise<void> {
     if (latest) pusher.resend(latest);
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
-  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
+  ipcMain.handle(IPC.importLoadout, (_e, kind: unknown, pageKey: unknown) =>
+    (kind === "runes" || kind === "items" || kind === "all") && (pageKey === undefined || typeof pageKey === "string") ? coach.importLoadout(kind, pageKey) : undefined,
+  );
 
   await coach.start();
   coach.setAppVersion(app.getVersion());

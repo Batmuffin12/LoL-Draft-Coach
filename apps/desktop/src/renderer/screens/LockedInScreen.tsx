@@ -13,12 +13,12 @@ import { Header, Notices } from "./common";
 type ImportKind = "runes" | "items" | "all";
 
 /** Import busy state: one click at a time, only ever from a button. */
-function useImport(): { busy: ImportKind | null; run: (kind: ImportKind) => void } {
+function useImport(): { busy: ImportKind | null; run: (kind: ImportKind, pageKey?: string) => void } {
   const [busy, setBusy] = useState<ImportKind | null>(null);
-  const run = (kind: ImportKind) => {
+  const run = (kind: ImportKind, pageKey?: string) => {
     if (busy) return;
     setBusy(kind);
-    void window.coach.importLoadout(kind).finally(() => setBusy(null));
+    void window.coach.importLoadout(kind, pageKey).finally(() => setBusy(null));
   };
   return { busy, run };
 }
