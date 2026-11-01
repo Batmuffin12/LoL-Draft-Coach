@@ -94,29 +94,53 @@ function FootLink({ onClick, danger, children }: { onClick: () => void; danger?:
   );
 }
 
+/** A question in place of the footer's links: what it costs, do it, or don't. While it runs, only what's happening. */
+export function ConfirmRow({ ask, yes, busyText, no, busy, danger, onYes, onNo }: { ask: string; yes: string; busyText: string; no: string; busy: boolean; danger?: boolean; onYes: () => void; onNo: () => void }) {
+  if (busy) {
+    return (
+      <div className="foot-row" role="status">
+        <span className="micro who">{busyText}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="foot-row">
+      <span className="micro who">{ask}</span>
+      <FootLink danger={danger} onClick={onYes}>
+        {yes}
+      </FootLink>
+      <FootLink onClick={onNo}>{no}</FootLink>
+    </div>
+  );
+}
+
 /** Who the app is connected as, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
 export function AccountFooter({ account, app }: { account: AccountView | null; app: ViewState["app"] }) {
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<"signOut" | "delete" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = (action: () => Promise<void>) => {
+    setBusy(true);
+    void action().finally(() => {
+      setBusy(false);
+      setConfirming(null);
+    });
+  };
   return (
     <>
       {account === null ? (
         <span className="micro">Developer mode: games from the Riot API key in .env.</span>
       ) : account.state === "registered" ? (
-        confirming ? (
-          <div className="foot-row">
-            <span className="micro who">Delete everything the coach stores about you?</span>
-            <FootLink danger onClick={() => void window.coach.deleteData().then(() => setConfirming(false))}>
-              Delete
-            </FootLink>
-            <FootLink onClick={() => setConfirming(false)}>Keep</FootLink>
-          </div>
+        confirming === "delete" ? (
+          <ConfirmRow ask={t("account.delete.ask")} yes={t("account.delete")} busyText={t("account.delete.busy")} no={t("account.delete.no")} busy={busy} danger onYes={() => run(() => window.coach.deleteData())} onNo={() => setConfirming(null)} />
+        ) : confirming === "signOut" ? (
+          <ConfirmRow ask={t("account.signOut.ask")} yes={t("account.signOut")} busyText={t("account.signOut.busy")} no={t("account.signOut.no")} busy={busy} onYes={() => run(() => window.coach.signOut())} onNo={() => setConfirming(null)} />
         ) : (
           <div className="foot-row">
             <span className="micro who" title={`Connected as ${account.riotId}`}>
               {account.riotId}
             </span>
-            <FootLink onClick={() => void window.coach.signOut()}>Sign out</FootLink>
-            <FootLink onClick={() => setConfirming(true)}>Delete my data</FootLink>
+            <FootLink onClick={() => setConfirming("signOut")}>{t("account.signOut")}</FootLink>
+            <FootLink onClick={() => setConfirming("delete")}>{t("account.deleteLink")}</FootLink>
           </div>
         )
       ) : null}

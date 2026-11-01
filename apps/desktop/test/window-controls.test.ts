@@ -2,11 +2,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it } from "vitest";
 import { StatusHeader } from "../src/renderer/components/StatusHeader";
-import { setCopy } from "../src/renderer/format";
+import { setCopy, t } from "../src/renderer/format";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
-import { Notices } from "../src/renderer/screens/common";
-import { emptyViewState, type ViewState } from "../src/shared/view";
+import { AccountFooter, ConfirmRow, Notices } from "../src/renderer/screens/common";
+import { emptyViewState, type AccountView, type ViewState } from "../src/shared/view";
 
 beforeAll(() => setCopy(uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates)));
 
@@ -36,6 +36,40 @@ describe("Notices wording for the live meta", () => {
     const html = render({ state: "error", message: "Can't reach the coach server: check your internet connection." });
     expect(html).toContain("check your internet connection. Suggestions use your own games for now.");
     expect(html).not.toContain("notice info");
+  });
+});
+
+describe("AccountFooter", () => {
+  const account = { state: "registered", riotId: "Me#EUW", serverUrl: "https://x", message: null, inviteCode: null, clientRiotId: "Me#EUW" } as AccountView;
+
+  it("starts with the links only: nothing is asked, and nothing happens without a confirmation", () => {
+    const html = renderToStaticMarkup(createElement(AccountFooter, { account, app: { version: "1.0.0", updateReady: null } }));
+    expect(html).toContain("Sign out");
+    expect(html).toContain("Delete my data");
+    expect(html).not.toContain("invite code");
+  });
+
+  it("has wording that says signing out or deleting costs the invite", () => {
+    expect(t("account.signOut.ask")).toContain("You'll need a new invite code");
+    expect(t("account.delete.ask")).toContain("You'll need a new invite code");
+  });
+});
+
+describe("ConfirmRow", () => {
+  const props = { ask: "Sure?", yes: "Delete", busyText: "Deleting…", no: "Keep", onYes: () => {}, onNo: () => {} };
+
+  it("asks, with both answers", () => {
+    const html = renderToStaticMarkup(createElement(ConfirmRow, { ...props, busy: false, danger: true }));
+    expect(html).toContain("Sure?");
+    expect(html).toContain('class="foot-link danger"');
+    expect(html).toContain(">Keep<");
+  });
+
+  it("while it runs, shows only what's happening: nothing can be clicked twice", () => {
+    const html = renderToStaticMarkup(createElement(ConfirmRow, { ...props, busy: true }));
+    expect(html).toContain("Deleting…");
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain("<button");
   });
 });
 
