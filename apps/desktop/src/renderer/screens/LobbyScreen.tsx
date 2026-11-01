@@ -169,8 +169,8 @@ function LastGame({ state }: { state: ViewState }) {
 function NewChamps({ state }: { state: ViewState }) {
   const list = state.newChamps.filter((r) => r.picks.length || r.learning);
   const [sub, setSub] = useRolePill(list.map((r) => r.role));
-  // Long plans: first each row's entries go side by side, then the picks' reasons or the picks after your current champion move to hover.
-  const level = useFitLevel(sub, 2);
+  // Long plans: first each row's entries go side by side, then the picks' reasons or the picks after your current champion move to hover, then the minor rows and the other picks.
+  const level = useFitLevel(sub, 3);
   if (!list.length) {
     return (
       <Section title="New champions">
@@ -190,13 +190,13 @@ function NewChamps({ state }: { state: ViewState }) {
         return (
           <Section key={r.role} title={title} aside={<span className="micro">strong in your rank</span>}>
             {l && (
-              <div className="plan learning">
+              <div className="plan learning" title={level > 2 ? minorText(l.learn) : undefined}>
                 <div className="learning-head">
                   {l.champion && <ChampIcon champ={l.champion} size={28} />}
                   <span className="label gold">{l.title}</span>
                   {l.progress && <span className="micro">{l.progress}</span>}
                 </div>
-                <Learn learn={l.learn} flow={level > 0} />
+                <Learn learn={l.learn} level={level} />
               </div>
             )}
             {l && r.picks.length > 0 && (
@@ -206,14 +206,14 @@ function NewChamps({ state }: { state: ViewState }) {
             )}
             {r.picks.length > 0 && !(l && level > 1) && (
               <div className={l ? "after-learning" : undefined}>
-                <NewChampTable rows={r.picks} brief={level > 1} />
+                <NewChampTable rows={level > 2 ? r.picks.slice(0, 1) : r.picks} brief={level > 1} />
               </div>
             )}
             {r.plan && (
-              <div className="plan">
+              <div className="plan" title={level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : undefined}>
                 <span className="label gold">First games plan</span>
                 <span>{r.plan}</span>
-                {r.planLearn && <Learn learn={r.planLearn} flow={level > 0} />}
+                {r.planLearn && <Learn learn={r.planLearn} level={level} />}
               </div>
             )}
           </Section>
@@ -223,8 +223,16 @@ function NewChamps({ state }: { state: ViewState }) {
   );
 }
 
+/** The rows a short screen moved to hover. */
+function minorText(learn: LearnView): string {
+  return learn.lines
+    .filter((r) => r.minor)
+    .map((r) => `${r.label}: ${r.items.map((i) => i.text).join(", ")}`)
+    .join("\n");
+}
+
 /** How to learn a champion: the one thing to watch next game (with your last games on it) under its stage, then short facts. */
-function Learn({ learn, flow }: { learn: LearnView; flow: boolean }) {
+function Learn({ learn, level }: { learn: LearnView; level: number }) {
   const f = learn.focus;
   return (
     <>
@@ -243,7 +251,7 @@ function Learn({ learn, flow }: { learn: LearnView; flow: boolean }) {
       ) : (
         learn.stage && <span className="label">{learn.stage}</span>
       )}
-      {learn.lines.length > 0 && <Facts rows={learn.lines} flow={flow} />}
+      {learn.lines.length > 0 && <Facts rows={level > 2 ? learn.lines.filter((r) => !r.minor) : learn.lines} flow={level > 0} />}
     </>
   );
 }
@@ -298,8 +306,8 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
   // Roles with too few games to judge have no pool to show: left out, so the others fit.
   const list = state.roles.filter((r) => r.enoughData);
   const [sub, setSub] = useRolePill(list.map((r) => r.role));
-  // Many extra champions in a tight pool: their names move to hover.
-  const fits = useFits(sub);
+  // A big pool: first the extra champions' names move to hover, then the legend and the note under what's missing.
+  const level = useFitLevel(sub, 2);
   if (!list.length) return <Section title="Your pool">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your roles and pool show here once your recent games are loaded."}</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
@@ -319,8 +327,8 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
         {columns.length > 0 && r.coverage ? (
           <>
             <PoolCoverage pool={columns} coverage={r.coverage} />
-            {r.also.length > 0 && <Facts rows={r.also} iconOnly={!fits} />}
-            <PoolLegend />
+            {r.also.length > 0 && <Facts rows={r.also} iconOnly={level > 0} wide />}
+            {level < 2 && <PoolLegend />}
           </>
         ) : (
           <p className="caption">No champions in your {roleName(r.role)} pool yet.</p>
@@ -340,7 +348,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
           <div className="missing">
             <span className="who" title={r.missing.note}>
               <Facts rows={[r.missing.row]} flow />
-              <span className="micro">{r.missing.note}</span>
+              {level < 2 && <span className="micro">{r.missing.note}</span>}
             </span>
             <Button onClick={onNewChamps}>{t("pool.seeNew")}</Button>
           </div>

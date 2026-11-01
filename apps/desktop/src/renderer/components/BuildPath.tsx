@@ -83,11 +83,11 @@ function Star() {
  * The build, one row per step (Start, Boots, Items 1–4): when, the main item with its name and
  * pick rate, then up to two other picks with theirs. ★ marks what adds the most in a step.
  */
-export function BuildPath({ loadout }: { loadout: LoadoutView }) {
+export function BuildPath({ loadout, tight = false }: { loadout: LoadoutView; tight?: boolean }) {
   const rows = steps(loadout);
   if (!rows.length) return <span className="caption">Not enough purchases to rank items yet.</span>;
   return (
-    <div className="path" role="table" aria-label="Build path">
+    <div className={tight ? "path tight" : "path"} role="table" aria-label="Build path">
       {rows.map((c) => {
         const star = starOf(c);
         return (

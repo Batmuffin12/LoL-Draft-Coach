@@ -30,18 +30,21 @@ export interface RunePageProps {
   shards: { rows: IconView[][]; chosen: number[] } | null;
   /** Runes worth a swap against this team, one line each. */
   swaps: LoadoutItemView[];
+  /** How many swaps to show; the first row's tooltip (or the trees', with none) then has the rest. Default: as many as fit 720px. */
+  maxSwaps?: number;
 }
 
 /** Swap rows that fit 720px under the trees; with more than one, each stays on one line and the row's tooltip has the rest. */
 const SWAP_ROWS = 2;
 
 /** The page on its full trees, like the build sites: taken runes lit, the rest grey. Then one line per situational swap. */
-export function RunePage({ primary, secondary, runes, shards, swaps }: RunePageProps) {
+export function RunePage({ primary, secondary, runes, shards, swaps, maxSwaps = SWAP_ROWS }: RunePageProps) {
   const chosen = new Set(runes.map((r) => r.id));
-  const rows = swaps.slice(0, SWAP_ROWS);
+  const rows = swaps.slice(0, maxSwaps);
+  const hidden = swaps.slice(maxSwaps).map((s) => [s.name, ...s.reasons].join(": "));
   return (
     <div className="runes">
-      <div className="trees">
+      <div className="trees" title={rows.length === 0 ? hidden.join("\n") || undefined : undefined}>
         <Tree tree={primary} chosen={chosen} keystones />
         <div className="right">
           <Tree tree={secondary} chosen={chosen} keystones={false} />
@@ -59,8 +62,8 @@ export function RunePage({ primary, secondary, runes, shards, swaps }: RunePageP
           )}
         </div>
       </div>
-      {rows.map((s) => (
-        <div key={s.id} className={rows.length > 1 ? "swap one-line" : "swap"} title={[s.name, ...s.reasons].join("\n")}>
+      {rows.map((s, i) => (
+        <div key={s.id} className={swaps.length > 1 ? "swap one-line" : "swap"} title={[s.name, ...s.reasons, ...(i === 0 ? hidden : [])].join("\n")}>
           <ChampIcon champ={s} kind="game" round size={20} />
           <span className="wrap">
             <b>Swap in {s.name}</b>

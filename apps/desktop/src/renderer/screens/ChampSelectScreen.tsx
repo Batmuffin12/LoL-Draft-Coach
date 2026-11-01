@@ -10,7 +10,7 @@ import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { positionLabel, roleName, t } from "../format";
-import { useNow } from "../hooks";
+import { useFitLevel, useNow } from "../hooks";
 import type { RuneChoice } from "../rune-choice";
 import { Header, Notices } from "./common";
 import { LoadoutBody, LoadoutFooter } from "./LockedInScreen";
@@ -45,7 +45,7 @@ type PickTab = "picks" | "runes" | "build";
 const BAN_ROWS = 5;
 /** The suggested pick and the three under it. */
 const PICKS = 4;
-/** Reason lines on the card; fewer for each line the draft notes (filled, their team) take, and when the hover tabs show. */
+/** Reason lines on the card at most; fewer when the hover tabs show, or when the draft notes and alternatives leave no room. */
 const REASONS = 5;
 
 function banRows(state: ViewState): BanRow[] {
@@ -62,6 +62,8 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const firstId = state.picks[0]?.champion.id;
   useEffect(() => setSel(0), [firstId]);
   const banning = state.bans.length > 0 || draft.localAction === "ban";
+  // Drops reason lines one by one until the picks fit 720px, wherever the room went (undocked, the board may scroll).
+  const fitLevel = useFitLevel(`${firstId}-${sel}-${banning}`, REASONS - 1);
   const hover = !banning && state.hoverPick?.loadout ? state.hoverPick : null;
   // Back to the picks when the hovered champion goes away.
   useEffect(() => {
@@ -107,7 +109,6 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const at = cur ? picks.indexOf(cur) : -1;
   const theirTeam = state.enemyNotes.length ? { label: t("pick.theirTeam"), items: state.enemyNotes.map((text) => ({ text })) } : null;
   const notes = [state.filledNote, theirTeam].filter((row) => row != null);
-  const noteLines = (state.filledNote?.items.length ?? 0) + (theirTeam ? 1 : 0);
   const record = cur ? (state.roles.find((r) => r.role === state.pickRole)?.pool.find((c) => c.champion.id === cur.champion.id) ?? null) : null;
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
@@ -123,7 +124,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
           <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
             {notes.length > 0 && <Facts rows={notes} flow />}
             {cur ? (
-              <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - noteLines - (hover ? 1 : 0))} />
+              <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
             ) : (
               <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
             )}

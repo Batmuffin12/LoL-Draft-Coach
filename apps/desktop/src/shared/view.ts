@@ -248,6 +248,8 @@ export interface FactItem {
 export interface FactRow {
   label: string;
   items: FactItem[];
+  /** The screen can move this row to hover when it runs short of room. */
+  minor?: boolean;
 }
 
 /** A champion in the player's pool for a role. */

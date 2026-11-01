@@ -83,9 +83,9 @@ describe("new champions view", () => {
         lines: [
           { label: "Skills", items: [{ text: "Start E, Q, W" }, { text: "Max Q, then E, then W (55% of players)" }] },
           { label: "Wins with", items: [{ text: "Fewer deaths before 14 min: 1.1 in wins, 2.0 in losses (you: 2.5)" }, { text: "More CS at 10 min: 68 in wins, 61 in losses" }] },
-          { label: "Its spike", items: [{ text: "Infinity Edge (item 1, ~11 min)" }, { text: "Fight once it's done; farm safely before" }] },
-          { label: "First item", items: [{ text: "You: 13.4 min (3 games)" }, { text: "Typical: 11.1 min" }, { text: "Farm and back on time to reach it sooner" }] },
-          { label: "Short vs long games", items: [{ text: "Stronger in long games" }, { text: "Wins 47% in short games, 53% in long" }] },
+          { label: "Its spike", minor: true, items: [{ text: "Infinity Edge (item 1, ~11 min)" }, { text: "Fight once it's done; farm safely before" }] },
+          { label: "First item", minor: true, items: [{ text: "You: 13.4 min (3 games)" }, { text: "Typical: 11.1 min" }, { text: "Farm and back on time to reach it sooner" }] },
+          { label: "Short vs long games", minor: true, items: [{ text: "Stronger in long games" }, { text: "Wins 47% in short games, 53% in long" }] },
           { label: "Good matchups", items: [{ text: "Orianna +3.1%", champion: { id: 61, name: "Orianna", iconUrl: null } }] },
           {
             label: "Tough matchups",
@@ -94,7 +94,7 @@ describe("new champions view", () => {
               { text: "LeBlanc \u22122.0%", champion: { id: 7, name: "LeBlanc", iconUrl: null } },
             ],
           },
-          { label: "You on it", items: [{ text: "2–1" }] },
+          { label: "You on it", minor: true, items: [{ text: "2–1" }] },
         ],
       },
       after: "After Lux",
@@ -123,10 +123,10 @@ describe("new champions view", () => {
     };
     const v = newChampsView({ role: "jungle", picks: [], learning: { championId: 99, progress: null } }, { ...deps, plan: () => flat, learn: { profile: { high: 0.66, low: 0.33 }, laneGoldEven: 300 } });
     expect(v.learning?.learn?.lines).toEqual([
-      { label: "Plays as", items: [{ text: "Mostly physical damage" }, { text: "Tankier than most" }, { text: "Little crowd control" }] },
-      { label: "Short vs long games", items: [{ text: "As strong in short games as in long ones" }, { text: "Wins 53% in short games, 55% in long" }] },
+      { label: "Plays as", minor: true, items: [{ text: "Mostly physical damage" }, { text: "Tankier than most" }, { text: "Little crowd control" }] },
+      { label: "Short vs long games", minor: true, items: [{ text: "As strong in short games as in long ones" }, { text: "Wins 53% in short games, 55% in long" }] },
       { label: "Matchups", items: [{ text: "No jungle matchup swings it much (23 measured)" }, { text: "A safe blind pick" }] },
-      { label: "Gold at 15 min", items: [{ text: "Usually even with its jungle opponent" }] },
+      { label: "Gold at 15 min", minor: true, items: [{ text: "Usually even with its jungle opponent" }] },
     ]);
   });
 

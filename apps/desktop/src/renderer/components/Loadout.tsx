@@ -1,5 +1,6 @@
 import type { LoadoutItemView, LoadoutView, MyPickView, RunePageView } from "../../shared/view";
 import { games, rate, t } from "../format";
+import { useFitLevel } from "../hooks";
 import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
 import { ChampIcon } from "./ChampIcon";
@@ -17,8 +18,8 @@ const LATER_ROWS = 3;
 const tip = (i: LoadoutItemView) => [i.name, ...i.reasons].join("\n");
 const lower = (s: string) => s.replace(/^./, (c) => c.toLowerCase());
 
-/** One row per item: its icon and name, then why ("Vs this team", the role quest, "Later: pick by situation"). */
-function ItemRows({ items }: { items: LoadoutItemView[] }) {
+/** One row per item: its icon and name, then why, on hover only when `brief` ("Vs this team", the role quest, "Later: pick by situation"). */
+function ItemRows({ items, brief }: { items: LoadoutItemView[]; brief: boolean }) {
   return (
     <div className="item-rows">
       {items.map((i) => (
@@ -26,7 +27,7 @@ function ItemRows({ items }: { items: LoadoutItemView[] }) {
           <ChampIcon champ={i} kind="game" size={22} title="" />
           <span className="caption wrap">
             <b className="text">{i.name}</b>
-            {i.reasons[0] ? `: ${lower(i.reasons[0])}` : ""}
+            {!brief && i.reasons[0] ? ` — ${lower(i.reasons[0])}` : ""}
           </span>
         </div>
       ))}
@@ -45,13 +46,15 @@ export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: R
   const p = shownPage(l, runes.key);
   const options = l.page && l.pageAlt ? [l.page, l.pageAlt] : [];
   const head = options.length ? { className: "rune-options" } : { title: "Runes", aside: p && <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
+  // With swaps and a notice or import result the screen runs short: first the second swap moves to hover, then the spells' head goes, then the first swap moves to hover too.
+  const level = useFitLevel(p?.key, 3);
   return (
     <>
       {p && (
         <Section {...head}>
           {options.length > 0 && <Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={runes.choose} />}
           {p.primaryTree && p.secondaryTree ? (
-            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} />
+            <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} maxSwaps={level > 2 ? 0 : level > 0 ? 1 : undefined} />
           ) : (
             <div className="icons">
               {[...p.runes, ...p.shards].map((r, i) => (
@@ -62,7 +65,7 @@ export function RunesTab({ loadout: l, runes }: { loadout: LoadoutView; runes: R
         </Section>
       )}
       {(l.spells || l.skills) && (
-        <Section title="Summoner spells & skill order">
+        <Section title={level > 1 ? undefined : "Summoner spells & skill order"}>
           <SkillGrid spells={l.spells} skills={l.skills} />
         </Section>
       )}
@@ -85,24 +88,27 @@ export function BuildTab({ loadout: l }: { loadout: LoadoutView }) {
   const stars = [...l.items.flatMap((s) => [s.top, ...s.alternatives]), ...(l.boots ? [l.boots.top, ...l.boots.alternatives] : [])].some((o) => o.winAdded !== null);
   const base = stars ? t("build.note") : l.items.length > 0 || l.boots !== null ? t("build.noteRate") : t("build.noteThin");
   const note = l.spikeSlots.length ? `${base} · ${t("build.spikeNote")}` : base;
+  // A full build with a notice or import result: first the items' reasons move to hover, then the path's rows get tighter, then the role quest moves to hover.
+  const level = useFitLevel(l.games, 3);
+  const questTip = level > 2 ? l.quest.map(tip).join("\n") : "";
   return (
     <>
-      <Section title={t("build.head")} aside={<span className="micro">{note}</span>}>
-        <BuildPath loadout={l} />
+      <Section title={t("build.head")} aside={<span className="micro" title={questTip || undefined}>{note}</span>}>
+        <BuildPath loadout={l} tight={level > 1} />
       </Section>
       {vsTeam.length > 0 && (
         <Section title={t("build.vsTeam")}>
-          <ItemRows items={vsTeam} />
+          <ItemRows items={vsTeam} brief={level > 0} />
         </Section>
       )}
-      {l.quest.length > 0 && (
+      {l.quest.length > 0 && level < 3 && (
         <Section title={t("build.quest")}>
-          <ItemRows items={l.quest} />
+          <ItemRows items={l.quest} brief={level > 0} />
         </Section>
       )}
       {l.laterPool.length > 0 && (
         <Section title={t("build.later")} gold={false}>
-          <ItemRows items={l.laterPool.slice(0, LATER_ROWS)} />
+          <ItemRows items={l.laterPool.slice(0, LATER_ROWS)} brief={level > 0} />
         </Section>
       )}
     </>

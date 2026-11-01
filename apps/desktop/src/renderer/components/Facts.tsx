@@ -20,12 +20,14 @@ export interface FactsProps {
   flow?: boolean;
   /** Champion entries as icons only, their names on hover: for many champions in little room. */
   iconOnly?: boolean;
+  /** Room for longer labels ("Also comfortable"). */
+  wide?: boolean;
 }
 
 /** Labelled rows: a short label on the left, its values as separate entries on the right. */
-export function Facts({ rows, flow = false, iconOnly = false }: FactsProps) {
+export function Facts({ rows, flow = false, iconOnly = false, wide = false }: FactsProps) {
   return (
-    <div className="facts">
+    <div className={cx("facts", wide && "wide")}>
       {rows.map((r) => (
         <div key={r.label} className="fact">
           <span className="fact-label">{r.label}</span>

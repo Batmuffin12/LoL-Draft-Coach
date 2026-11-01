@@ -21,6 +21,8 @@ export interface NewChampsViewDeps {
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
 /** Reasons the table's columns already show. */
 const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
+/** What a first look at a champion can do without when room is short: how to skill it, how it wins and its matchups stay. */
+const MINOR_ROWS = new Set(["profile", "spike", "timing", "curve", "gold", "record"]);
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
@@ -56,7 +58,10 @@ export function learnView(p: LearningPlan, role: string, championId: number, dep
 
   const lines: FactRow[] = [];
   /** A row of plain text entries, each starting with a capital. */
-  const row = (label: string, ...items: (string | null)[]) => lines.push({ label: sayId(`newchamp.label.${label}`), items: items.filter((x): x is string => x !== null).map((x) => ({ text: capitalize(x) })) });
+  const row = (label: string, ...items: (string | null)[]) => {
+    const minor = MINOR_ROWS.has(label) ? { minor: true } : {};
+    lines.push({ label: sayId(`newchamp.label.${label}`), items: items.filter((x): x is string => x !== null).map((x) => ({ text: capitalize(x) })), ...minor });
+  };
   const cfgLearn = deps.learn;
   // How it plays: only what stands out (a damage type that dominates, high or low frontline and crowd control).
   if (p.profile && cfgLearn) {

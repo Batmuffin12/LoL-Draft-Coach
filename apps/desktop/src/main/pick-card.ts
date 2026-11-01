@@ -121,6 +121,14 @@ export function banViews(live: LiveInput, ctx: Pick<PickCardContext, "draft" | "
   };
 }
 
+/** Filled into a role you rarely play, as a labelled row. */
+export function filledRow(filled: NonNullable<ReturnType<typeof filledRole>>, say: Say): FactRow {
+  return {
+    label: say({ id: "picks.filled.label", slots: {} }),
+    items: [{ text: say({ id: "picks.filled.share", slots: { role: filled.role, share: filled.share, games: filled.games } }) }, { text: say({ id: "picks.filled.lean", slots: {} }) }],
+  };
+}
+
 /**
  * The draft's notes around the picks: their team in short (damage type, main engage, once two are
  * picked), who you face in lane (the client doesn't say enemy roles) and, filled into a role you
@@ -137,12 +145,6 @@ export function draftNotes(
   return {
     enemyNotes: live ? enemyTeamNotes(live).map(say) : [],
     lane: role ? { role, champion: champView(laneOpponent(draft, role, ctx.index) ?? 0, ctx.lookup) } : null,
-    filledNote:
-      filled && live
-        ? {
-            label: say({ id: "picks.filled.label", slots: {} }),
-            items: [{ text: say({ id: "picks.filled.share", slots: { role: filled.role, share: filled.share, games: filled.games } }) }, { text: say({ id: "picks.filled.lean", slots: {} }) }],
-          }
-        : null,
+    filledNote: filled && live ? filledRow(filled, say) : null,
   };
 }

@@ -36,8 +36,8 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
         winChange === null
           ? say("month.win.first", {})
           : points === 0
-            ? say("month.win.same", { before: r.gamesBefore })
-            : say(winChange > 0 ? "month.win.up" : "month.win.down", { points, before: r.gamesBefore }),
+            ? say("month.win.same", {})
+            : say(winChange > 0 ? "month.win.up" : "month.win.down", { points }),
     },
     gamesBefore: r.gamesBefore,
     gamesBeforeText: say("month.gamesBefore", { games: r.gamesBefore }),
