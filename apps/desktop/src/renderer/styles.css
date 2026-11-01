@@ -328,8 +328,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .seg { display: flex; border-bottom: 1px solid var(--line); padding: 0 16px; gap: 20px; flex-shrink: 0; }
 .seg button { all: unset; cursor: pointer; padding: 8px 0 6px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-button); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
-.seg.dense { gap: 10px; }
-.seg.dense button { letter-spacing: 0.03em; }
 .seg button.on { color: var(--gold-bright); border-bottom-color: var(--gold); }
 
 /* Keycaps */
@@ -362,6 +360,10 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 
 /* Pills: role switches in the lobby */
 .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.pills.compact { margin-bottom: 2px; }
+.pills.compact .pill { padding: 2px 8px; }
+.subtabs { flex-shrink: 0; padding: 6px 16px; border-bottom: 1px solid var(--line); }
+.subtabs .pills { margin-bottom: 0; }
 .pills .end { margin-left: auto; text-align: right; }
 .pill { all: unset; box-sizing: border-box; font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); color: var(--muted); cursor: pointer; }
 .pill:hover { color: var(--text); }
@@ -477,8 +479,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .radar .pos { fill: var(--positive); }
 .radar .neg { fill: var(--negative); }
 .radar .text { fill: var(--text); }
-.bullets { display: flex; flex-direction: column; gap: 4px; }
-.bl { display: grid; grid-template-columns: 118px minmax(0, 1fr) 92px; align-items: center; gap: 10px; min-height: 26px; }
+.bullets { display: flex; flex-direction: column; gap: 3px; }
+.bl { display: grid; grid-template-columns: 118px minmax(0, 1fr) 92px; align-items: center; gap: 10px; min-height: 22px; }
 .bt { position: relative; height: 6px; border-radius: 3px; background: var(--track); }
 .bt .avg { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--line-strong); }
 .bt .me { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; border: 2px solid var(--bg); background: var(--text); }
@@ -492,7 +494,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .roles { display: flex; flex-direction: column; gap: 4px; }
 .rolebar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; gap: 2px; }
 .shifts { display: flex; flex-direction: column; }
-.shift { display: grid; grid-template-columns: 112px minmax(0, 1fr) 66px 30px; align-items: center; gap: 8px; min-height: 20px; }
+.shift { display: grid; grid-template-columns: 112px minmax(0, 1fr) 66px 30px; align-items: center; gap: 8px; min-height: 18px; }
 .shift .nm { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
 .shift.real .nm { font-weight: 600; }
 .shift .track { position: relative; height: 6px; border-radius: 3px; background: var(--track); }

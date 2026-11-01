@@ -128,7 +128,7 @@ function summariseReplay(name, r, clickKey) {
 const REPLAYS = [
   { name: "mid-counter", seconds: 60, clicks: ["css:.alt"], rounds: 30, key: "ifNot" },
   { name: "locked-solid", seconds: 60, clicks: ["Runes", "Build", "Matchups"], rounds: 10, key: "lockedTab" },
-  { name: "full-game", seconds: 60, clicks: ["Style", "Pool", "New", "This month", "Last game"], rounds: 7, key: "lobbyTab" },
+  { name: "full-game", seconds: 60, clicks: ["Me", "This month", "Champions", "Try new", "Last game"], rounds: 7, key: "lobbyTab" },
   { name: "lobby", seconds: 10, clicks: ["Top", "Mid"], rounds: 15, key: "pill" },
 ];
 

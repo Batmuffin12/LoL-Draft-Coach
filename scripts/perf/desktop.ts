@@ -198,10 +198,10 @@ export const SCREENS: { name: string; scenario: string; click?: string; connect?
   { name: "LockedIn-Build", scenario: "locked-solid", click: "Build" },
   { name: "LockedIn-Matchups", scenario: "locked-solid", click: "Matchups" },
   { name: "LastGame", scenario: "idle", click: "Last game" },
-  { name: "Style", scenario: "idle", click: "Style" },
-  { name: "Pool", scenario: "idle", click: "Pool" },
-  { name: "New", scenario: "idle", click: "New" },
-  { name: "Month", scenario: "idle", click: "This month" },
+  { name: "Style", scenario: "idle", click: "Me>Style" },
+  { name: "Pool", scenario: "idle", click: "Champions>Pool" },
+  { name: "New", scenario: "idle", click: "Champions>Try new" },
+  { name: "Month", scenario: "idle", click: "Me>This month" },
   { name: "NextGame", scenario: "lobby" },
 ];
 
@@ -221,7 +221,7 @@ async function screens(outDir: string): Promise<void> {
       });
       const m = /scroll overflow (-?\d+|null)px/.exec(r.stdout);
       overflow[s.name] = m && m[1] !== "null" ? Number(m[1]) : null;
-      if (s.click && !r.stdout.includes(`clicked "${s.click}": true`)) console.warn(`${s.name}: "${s.click}" was not found`);
+      for (const c of s.click?.split(">") ?? []) if (!r.stdout.includes(`clicked "${c}": true`)) console.warn(`${s.name}: "${c}" was not found`);
     });
     process.stdout.write(`screen ${s.name}: overflow ${overflow[s.name]}px\n`);
   }

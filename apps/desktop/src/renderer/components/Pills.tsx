@@ -6,12 +6,14 @@ export interface PillsProps<T extends string> {
   end?: string;
   /** What the pills switch, for screen readers ("Role"). */
   label: string;
+  /** Smaller pills, for roles under a sub-tab row. */
+  compact?: boolean;
 }
 
-/** Role switches as pills, with an optional micro note on the right. One pill alone still shows (it names the role). */
-export function Pills<T extends string>({ options, value, onChange, end, label }: PillsProps<T>) {
+/** Sub-tabs and role switches as pills, with an optional micro note on the right. One pill alone still shows (it names the role). */
+export function Pills<T extends string>({ options, value, onChange, end, label, compact }: PillsProps<T>) {
   return (
-    <div className="pills" role="group" aria-label={label}>
+    <div className={compact ? "pills compact" : "pills"} role="group" aria-label={label}>
       {options.map((o) => (
         <button key={o.value} type="button" className={o.value === value ? "pill on" : "pill"} aria-pressed={o.value === value} title={o.title} onClick={() => onChange(o.value)}>
           {o.label}

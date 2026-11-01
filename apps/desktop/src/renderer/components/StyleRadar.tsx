@@ -1,7 +1,7 @@
 import type { AxisView } from "../../shared/view";
 
 /** Radius of the 100 ring, and room around it for the labels (the viewBox is centred on 0,0). */
-const R = 76;
+const R = 62;
 const HALF_WIDTH = 203;
 const TOP = R + 22;
 const BOTTOM = R + 20;

@@ -20,7 +20,14 @@ import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 import { Suggestion } from "./Suggestion";
 
-type LobbyTab = "suggestion" | "last" | "style" | "pool" | "new" | "month";
+type MainTab = "suggestion" | "last" | "me" | "champions";
+type SubTab = "style" | "month" | "pool" | "new";
+
+/** The main tabs with sub-tabs, the first one opening first. A new sub-tab is one entry here, one line in `SubScreen` and its `tabs.*` label. */
+const SUB_TABS: Record<"me" | "champions", SubTab[]> = {
+  me: ["style", "month"],
+  champions: ["pool", "new"],
+};
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
@@ -32,7 +39,9 @@ export function LobbyScreen({ state }: { state: ViewState }) {
 
 function Lobby({ state }: { state: ViewState }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
-  const [tab, setTab] = useState<LobbyTab>(recent ? "last" : "style");
+  const home: MainTab = recent ? "last" : "me";
+  const [tab, setTab] = useState<MainTab>(home);
+  const [subs, setSubs] = useState<Record<keyof typeof SUB_TABS, SubTab>>({ me: SUB_TABS.me[0]!, champions: SUB_TABS.champions[0]! });
   // A newly logged game (it arrives after the panel opens): show it first.
   const latest = state.lastGame?.lockedAt ?? 0;
   // In a lobby with roles chosen: the Next game tab appears and opens; it goes when the lobby does.
@@ -44,45 +53,57 @@ function Lobby({ state }: { state: ViewState }) {
   useEffect(() => {
     if (queued) setTab("suggestion");
   }, [queued]);
-  const shown: LobbyTab = tab === "suggestion" && !preview ? (recent ? "last" : "style") : tab;
+  const shown: MainTab = tab === "suggestion" && !preview ? home : tab;
+  const group = shown === "me" || shown === "champions" ? shown : null;
+  const sub = group ? subs[group] : null;
+  const openSub = (g: keyof typeof SUB_TABS, value: SubTab) => {
+    setSubs((now) => ({ ...now, [g]: value }));
+    setTab(g);
+  };
   return (
     <Window
       variant="lobby"
       header={<Header state={state} />}
       band={
-        <Segmented<LobbyTab>
-          dense={preview !== null}
-          value={shown}
-          onChange={setTab}
-          options={[
-            ...(preview ? [{ value: "suggestion" as const, label: t("queue.tab") }] : []),
-            { value: "last", label: "Last game" },
-            { value: "style", label: "Style" },
-            { value: "pool", label: "Pool" },
-            { value: "new", label: "New" },
-            { value: "month", label: "This month" },
-          ]}
-        />
+        <>
+          <Segmented<MainTab>
+            value={shown}
+            onChange={setTab}
+            options={[
+              ...(preview ? [{ value: "suggestion" as const, label: t("queue.tab") }] : []),
+              { value: "last", label: t("tabs.last") },
+              { value: "me", label: t("tabs.me") },
+              { value: "champions", label: t("tabs.champions") },
+            ]}
+          />
+          {group && sub && (
+            <div className="subtabs">
+              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`) }))} value={sub} onChange={(value) => openSub(group, value)} />
+            </div>
+          )}
+        </>
       }
       footer={<AccountFooter state={state} />}
     >
-      <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? "No champ select yet: open a lobby and the draft appears here." : shown === "last" || shown === "new" ? t("profile.openClient") : null} />
+      <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? "No champ select yet: open a lobby and the draft appears here." : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
-      ) : shown === "last" ? (
-        <LastGame state={state} />
-      ) : shown === "style" ? (
-        <Style state={state} />
-      ) : shown === "pool" ? (
-        <Pool state={state} onNewChamps={() => setTab("new")} />
-      ) : shown === "new" ? (
-        <NewChamps state={state} />
+      ) : sub ? (
+        <SubScreen sub={sub} state={state} onNewChamps={() => openSub("champions", "new")} />
       ) : (
-        <Month state={state} />
+        <LastGame state={state} />
       )}
     </Window>
   );
+}
+
+/** What a sub-tab shows. */
+function SubScreen({ sub, state, onNewChamps }: { sub: SubTab; state: ViewState; onNewChamps: () => void }) {
+  if (sub === "style") return <Style state={state} />;
+  if (sub === "month") return <Month state={state} />;
+  if (sub === "pool") return <Pool state={state} onNewChamps={onNewChamps} />;
+  return <NewChamps state={state} />;
 }
 
 /** A break suggestion after a losing streak or a long session, until the session is over. */
@@ -101,10 +122,10 @@ function SessionNotice({ state }: { state: ViewState }) {
 }
 
 /**
- * Which sub-tab (a role, or This month) is shown: the one you chose while it still exists, else the first.
- * Each role is its own small tab under the main one, so one role shows at a time and nothing scrolls.
+ * Which role is shown: the one you chose while it still exists, else the first.
+ * Each role is its own small pill, so one role shows at a time and nothing scrolls.
  */
-function useSubTab(keys: string[]): [string, (key: string) => void] {
+function useRolePill(keys: string[]): [string, (key: string) => void] {
   const [chosen, setChosen] = useState(keys[0] ?? "");
   return [keys.includes(chosen) ? chosen : (keys[0] ?? ""), setChosen];
 }
@@ -146,7 +167,7 @@ function LastGame({ state }: { state: ViewState }) {
 /** New champions per role (a sub-tab each): meta in your rank, like what you play well; first-games plan under the table. */
 function NewChamps({ state }: { state: ViewState }) {
   const list = state.newChamps.filter((r) => r.picks.length || r.learning);
-  const [sub, setSub] = useSubTab(list.map((r) => r.role));
+  const [sub, setSub] = useRolePill(list.map((r) => r.role));
   if (!list.length) {
     return (
       <Section title="New champions">
@@ -158,7 +179,7 @@ function NewChamps({ state }: { state: ViewState }) {
   return (
     <>
       <section className="section pills-row">
-        <Pills label="Role" options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+        <Pills compact label="Role" options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
       </section>
       {list.filter((r) => r.role === sub).map((r) => {
         const title = `New for ${positionLabel(r.role).toLowerCase()}`;
@@ -237,7 +258,7 @@ function Lines({ lines }: { lines: string[] }) {
 
 /** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
 function Style({ state }: { state: ViewState }) {
-  const [sub, setSub] = useSubTab(state.playstyle.map((p) => p.role));
+  const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
   if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your style per role shows here once your recent games are loaded."}</p>}</Section>;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
@@ -251,6 +272,7 @@ function Style({ state }: { state: ViewState }) {
     <>
       <section className="section style-top">
         <Pills
+          compact
           label="Role"
           options={state.playstyle.map((x) => ({ value: x.role, label: positionLabel(x.role), title: summary(x) }))}
           value={p.role}
@@ -281,7 +303,7 @@ function Month({ state }: { state: ViewState }) {
 function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => void }) {
   // Roles with too few games to judge have no pool to show: left out, so the others fit.
   const list = state.roles.filter((r) => r.enoughData);
-  const [sub, setSub] = useSubTab(list.map((r) => r.role));
+  const [sub, setSub] = useRolePill(list.map((r) => r.role));
   if (!list.length) return <Section title="Your pool">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your roles and pool show here once your recent games are loaded."}</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
@@ -291,6 +313,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
     <>
       <section className="section">
         <Pills
+          compact
           label="Role"
           options={list.map((x) => ({ value: x.role, label: positionLabel(x.role), title: [stats(x), x.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
           value={r.role}
