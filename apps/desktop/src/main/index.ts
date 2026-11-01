@@ -79,7 +79,8 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
     },
   });
-  w.once("ready-to-show", () => w.show());
+  // Dev aid LDC_SCREENSHOT: a test run doesn't take focus from whatever you're doing.
+  w.once("ready-to-show", () => (process.env.LDC_SCREENSHOT ? w.showInactive() : w.show()));
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) void w.loadURL(devUrl);
   else void w.loadFile(join(__dirname, "../renderer/index.html"), perf ? { query: { perf: "1" } } : undefined);
