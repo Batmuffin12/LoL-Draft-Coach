@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { reportProblem } from "../src/main/crash-reports";
+import { logProblem } from "../src/main/problem-log";
 import { ServerError } from "../src/main/server-client";
-import { reportUnexpected, retryDelay, SERVER_RETRY_DELAYS_MS, serverProblem, serverProblemText } from "../src/main/server-problem";
+import { logUnexpected, retryDelay, SERVER_RETRY_DELAYS_MS, serverProblem, serverProblemText } from "../src/main/server-problem";
 
-vi.mock("../src/main/crash-reports", () => ({ reportProblem: vi.fn() }));
+vi.mock("../src/main/problem-log", () => ({ logProblem: vi.fn() }));
 
 describe("serverProblem", () => {
   it("words each kind of failure, and says it tries again without a time that would go stale on screen", () => {
@@ -28,19 +28,19 @@ describe("serverProblem", () => {
   });
 });
 
-describe("reportUnexpected", () => {
-  beforeEach(() => vi.mocked(reportProblem).mockClear());
+describe("logUnexpected", () => {
+  beforeEach(() => vi.mocked(logProblem).mockClear());
 
-  it("sends the technical detail of unusual failures to crash reports", () => {
-    reportUnexpected("Registering", new ServerError(200, "bad_response", "dump"));
-    reportUnexpected("Registering", new ServerError(500, "server_error", "HTTP 500"));
-    reportUnexpected("Registering", new TypeError("boom"));
-    expect(vi.mocked(reportProblem).mock.calls.map((c) => c[0])).toEqual(["Registering: dump", "Registering: HTTP 500", "Registering: boom"]);
+  it("logs the technical detail of unusual failures", () => {
+    logUnexpected("Registering", new ServerError(200, "bad_response", "dump"));
+    logUnexpected("Registering", new ServerError(500, "server_error", "HTTP 500"));
+    logUnexpected("Registering", new TypeError("boom"));
+    expect(vi.mocked(logProblem).mock.calls.map((c) => c[0])).toEqual(["Registering: dump", "Registering: HTTP 500", "Registering: boom"]);
   });
 
   it("keeps everyday failures out of them", () => {
-    for (const code of ["unreachable", "timeout", "asleep", "invite_invalid", "no_snapshot"]) reportUnexpected("x", new ServerError(0, code, "m"));
-    expect(reportProblem).not.toHaveBeenCalled();
+    for (const code of ["unreachable", "timeout", "asleep", "invite_invalid", "no_snapshot"]) logUnexpected("x", new ServerError(0, code, "m"));
+    expect(logProblem).not.toHaveBeenCalled();
   });
 });
 

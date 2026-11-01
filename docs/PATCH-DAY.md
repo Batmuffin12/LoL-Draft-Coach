@@ -13,7 +13,6 @@ League patches about every two weeks. The app takes game data from Data Dragon, 
 ## The day after
 
 6. **Collector and snapshot.** `/health` again: `newestMatchAt` within the last hour, the band 2 snapshot's `matches` not falling, `backup.stale` false.
-7. **Crash reports.** Sentry: no new issue since the patch (a renamed LCU field usually shows as a Zod error with the field's path).
-8. **Meta moves.** Open the panel in a champ select: picks and builds should start reflecting the patch as new games come in (the aggregation window is recency-weighted, so this takes a day or two, not a reset).
+7. **Meta moves.** Open the panel in a champ select: picks and builds should start reflecting the patch as new games come in (the aggregation window is recency-weighted, so this takes a day or two, not a reset).
 
 Write down anything that broke and how it was fixed in `CHANGELOG.md` with the patch release.

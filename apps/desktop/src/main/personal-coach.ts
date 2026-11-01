@@ -38,7 +38,7 @@ import { champView } from "./draft-view";
 import { capital } from "./reason-view";
 import { adviceNotes, pickViews, queuePreviewRoles, roleView } from "./role-view";
 import { readClientState } from "./client-state";
-import { reportProblem } from "./crash-reports";
+import { logProblem } from "./problem-log";
 import { banningNow, draftScoring, laneOpponent, lockedPick, queuePreviewWanted, queueSupported, recordVsLane } from "./draft-facts";
 import { lastGameView, sessionView } from "./last-game-view";
 import { currentGame, hasGame, lastClientGame, NewGameWaiter } from "./game-wait";
@@ -163,7 +163,7 @@ export class PersonalCoach extends Coach {
       try {
         this.importLines = await importShownLoadout(kind, shown, new LcuImporter(creds), this.config, pageKey);
       } catch (err) {
-        reportProblem(`Import: ${(err as Error).message}`);
+        logProblem(`Import: ${(err as Error).message}`);
         this.importLines = [{ text: this.say("import.failed.other"), failed: true }];
       }
     }
@@ -422,7 +422,7 @@ export class PersonalCoach extends Coach {
         if (last && this.profile && !hasGame(this.profile.matches, last.gameId)) void this.gameWaiter.wait(last.gameId);
       } else await this.loadFromRiotId(); // e.g. the mock client, which has no account
     } catch (err) {
-      if (this.notice("clientAccount", this.wording("notice.clientAccount"))) reportProblem(`Reading the client account: ${(err as Error).message}`);
+      if (this.notice("clientAccount", this.wording("notice.clientAccount"))) logProblem(`Reading the client account: ${(err as Error).message}`);
     }
   }
 

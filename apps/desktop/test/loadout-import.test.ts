@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { runePageKey, type Loadout } from "@ldc/engine";
 import { LcuWriteError } from "@ldc/lcu";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { reportProblem } from "../src/main/crash-reports";
+import { logProblem } from "../src/main/problem-log";
 import { importLoadout, importShownLoadout, type LoadoutWriter } from "../src/main/loadout-import";
 
-vi.mock("../src/main/crash-reports", () => ({ reportProblem: vi.fn() }));
+vi.mock("../src/main/problem-log", () => ({ logProblem: vi.fn() }));
 const config = loadConfig(findConfigDir(__dirname));
 
 const say = (id: string, slots: Record<string, string | number> = {}) => (Object.keys(slots).length ? `${id}(${Object.values(slots).join(",")})` : id);
@@ -139,11 +139,11 @@ describe("importShownLoadout: every click ends in a message", () => {
   });
 
   it("marks a failure, without any raw error in the message", async () => {
-    vi.mocked(reportProblem).mockClear();
+    vi.mocked(logProblem).mockClear();
     const w = full({ importItemSet: async () => Promise.reject(new LcuWriteError("LCU GET /lol-summoner/v1/current-summoner failed with HTTP 500", 500, "failed")) });
     const r = await importShownLoadout("items", shown, w, config);
     expect(r).toEqual([{ text: "Couldn't save the item set: try again", failed: true }]);
-    expect(vi.mocked(reportProblem).mock.calls[0]![0]).toMatch(/current-summoner/);
+    expect(vi.mocked(logProblem).mock.calls[0]![0]).toMatch(/current-summoner/);
   });
 
   it("marks full rune pages as a failure, on their own line: the spells worked", async () => {

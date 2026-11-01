@@ -2,7 +2,7 @@ import { renderReason, runePageKey, type Loadout } from "@ldc/engine";
 import { LcuWriteError, type LcuImporter } from "@ldc/lcu";
 import type { ImportLine } from "../shared/view";
 import type { LoadedConfig } from "./config";
-import { reportProblem } from "./crash-reports";
+import { logProblem } from "./problem-log";
 
 /** What importing needs from the LCU writer (the single approved LCU write exception, CLAUDE.md). */
 export type LoadoutWriter = Pick<LcuImporter, "importRunePage" | "importSpells" | "importItemSet">;
@@ -12,7 +12,7 @@ export interface ImportOptions {
   say: (id: string, slots?: Record<string, string | number>) => string;
   /** Data Dragon map id for the item set (Summoner's Rift). */
   mapId: number;
-  /** Where the technical detail of a failure goes (crash reports); the player gets plain wording. */
+  /** Where the technical detail of a failure goes (the local log); the player gets plain wording. */
   report?: (detail: string) => void;
 }
 
@@ -100,7 +100,7 @@ export async function importShownLoadout(
     const page = kind === "items" ? shown.loadout.page : pageToImport(shown.loadout, pageKey);
     if (page === undefined) return [{ text: say("import.runes.stale"), failed: true }];
     const chosen = { ...shown, loadout: { ...shown.loadout, page } };
-    const opts = { say, mapId: Number(config.engine.loadout.items.mapId), report: reportProblem };
+    const opts = { say, mapId: Number(config.engine.loadout.items.mapId), report: logProblem };
     const kinds = kind === "all" ? (["runes", "items"] as const) : [kind];
     const done: string[] = [];
     for (const k of kinds) done.push(...(await importLoadout(k, chosen, writer, opts)));
