@@ -263,8 +263,6 @@ export interface PoolChampView {
 export interface PoolHoleView {
   text: string;
   evidence: string | null;
-  /** e.g. "try Lillia (rusty)". */
-  coveredBy: string | null;
   /** The learning or rusty champion in your pool that covers it (the first), or null. */
   coveredByChampion: ChampView | null;
   /** Every hole that champion covers, biggest first (it fills more than this one when it's a good next step). */
@@ -295,9 +293,9 @@ export interface RoleView {
   holes: PoolHoleView[];
   coverage: PoolCoverageView | null;
   /** "Your next step": a champion you know that fills the biggest hole, with why. Null when none does. */
-  nextStep: { champion: ChampView; title: string; text: string; evidence: string | null } | null;
-  /** The holes nothing you know covers: "Still missing: crowd control. …", or null. */
-  missing: string | null;
+  nextStep: { champion: ChampView; title: string; adds: FactRow; evidence: string | null } | null;
+  /** The holes nothing you know covers ("Still missing": Crowd control), and what that means; or null. */
+  missing: { row: FactRow; note: string } | null;
   /** Said when there are no holes. */
   noGaps: string;
   /** Champions that didn't fit in the matrix, a row per tier ("Also rusty": Riven, Irelia); empty when all fit. */

@@ -330,13 +330,16 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
             <ChampIcon champ={next.champion} size={34} />
             <span className="who">
               <span className="t-heading gold-bright">{next.title}</span>
-              <span className="caption text">{next.text}</span>
+              <Facts rows={[next.adds]} flow />
             </span>
           </div>
         )}
         {r.missing ? (
           <div className="missing">
-            <span className="caption">{r.missing}</span>
+            <span className="who" title={r.missing.note}>
+              <Facts rows={[r.missing.row]} flow />
+              <span className="micro">{r.missing.note}</span>
+            </span>
             <Button onClick={onNewChamps}>{t("pool.seeNew")}</Button>
           </div>
         ) : (

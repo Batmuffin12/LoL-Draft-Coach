@@ -5,7 +5,6 @@ import type { LoadedConfig } from "./config";
 import { blindDraft } from "./draft-facts";
 import { champView, type ChampionLookup } from "./draft-view";
 import { reasonView } from "./reason-view";
-import { listText } from "./style-view";
 
 /**
  * The views the coach builds from its role and pick advice (lobby roles and pools, the pick lists of
@@ -31,7 +30,7 @@ export function poolAdvice(
   const holes = pool.holes;
   const gaps = new Set(holes.map((h) => h.need));
   const covers = poolCoverage(pool.champions.slice(0, POOL_COLUMNS), attributes, coverage);
-  const words = (needs: PoolNeed[]) => listText(needs.map((n) => say(`pool.needWord.${n}`)), templates);
+  const needRow = (label: string, needs: PoolNeed[]) => ({ label, items: needs.map((n) => ({ text: say(`pool.need.${n}`) })) });
   const first = holes.find((h) => h.coveredBy.length);
   const champ = first ? pool.champions.find((c) => c.championId === first.coveredBy[0]) : undefined;
   const view = champ ? champView(champ.championId, lookup) : null;
@@ -50,11 +49,11 @@ export function poolAdvice(
         ? {
             champion: view,
             title: say(champ.tier === "learning" ? "pool.next.learning" : "pool.next.rusty", { champion: view.name }),
-            text: say("pool.next.why", { needs: words(fills), role }),
+            adds: needRow(say("pool.next.adds"), fills),
             evidence: first && first.losses > 0 ? say("pool.hole.evidence", { lacking: first.lossesLacking, losses: first.losses, role }) : null,
           }
         : null,
-    missing: open.length ? say("pool.missing", { needs: words(open), role, n: open.length }) : null,
+    missing: open.length ? { row: needRow(say("pool.missing"), open), note: say("pool.missing.note", { role, n: open.length }) } : null,
     noGaps,
     also: tiers.map((t) => ({
       label: say("pool.also", { tier: say(`pool.tier.${t}`).toLowerCase() }),
@@ -94,16 +93,6 @@ export function roleView(r: ReturnType<typeof adviseRoles>[number], pool: RolePo
         need: h.need,
         text: say(`pool.hole.${h.need}`),
         evidence: h.losses > 0 ? say("pool.hole.evidence", { lacking: h.lossesLacking, losses: h.losses, role: r.role }) : null,
-        coveredBy: h.coveredBy.length
-          ? say("pool.hole.coveredBy", {
-              champions: h.coveredBy
-                .map((id) => {
-                  const c = pool!.champions.find((x) => x.championId === id)!;
-                  return `${champView(id, lookup)!.name} (${say(`pool.tier.${c.tier}`).toLowerCase()})`;
-                })
-                .join(" and "),
-            })
-          : null,
         coveredByChampion: first !== undefined ? champView(first, lookup) : null,
         fills: first !== undefined ? (pool?.holes ?? []).filter((x) => x.coveredBy.includes(first)).map((x) => x.need) : [],
       };
