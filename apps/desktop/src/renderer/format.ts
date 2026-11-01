@@ -1,5 +1,5 @@
 import type { CoachStatus, Term } from "@ldc/shared";
-import { FALLBACK_MIN_GAMES, type ReasonView } from "../shared/view";
+import { FALLBACK_MIN_GAMES, type ReasonView, type ViewState } from "../shared/view";
 
 /** Joins class names, skipping empty ones. */
 export function cx(...names: (string | false | null | undefined)[]): string {
@@ -117,6 +117,34 @@ export function profileProgress(profile: CoachStatus["profile"]): { text: string
 export function needsClient(status: CoachStatus): boolean {
   const { profile } = status;
   return status.lcu !== "connected" && (profile.state === "idle" || (profile.state === "ready" && profile.games === 0));
+}
+
+/** Why champ select has no pick to suggest, as a copy key: the actual cause, never a promise that can't come true. */
+export function noPicksKey(state: Pick<ViewState, "unsupportedQueue" | "status">): string {
+  if (state.unsupportedQueue) return "pick.empty.queue";
+  const p = state.status.profile.state;
+  return p === "error" ? "pick.empty.error" : p === "loading" ? "pick.empty.loading" : p === "idle" ? "pick.empty.idle" : "pick.empty.none";
+}
+
+/** Why champ select has no ban to suggest, as a copy key: bans need the live meta first, then your games. */
+export function noBansKey(state: Pick<ViewState, "unsupportedQueue" | "status" | "meta">): string {
+  if (state.unsupportedQueue) return "ban.empty.queue";
+  const { meta } = state;
+  if (meta?.state === "error") return meta.noSnapshot ? "ban.empty.noSnapshot" : "ban.empty.metaError";
+  if (meta?.state !== "ready") return "ban.empty.noMeta";
+  const p = state.status.profile.state;
+  return p === "error" ? "ban.empty.error" : p === "loading" ? "ban.empty.loading" : p === "idle" ? "ban.empty.idle" : "ban.empty.none";
+}
+
+/**
+ * What a lobby tab says with nothing to show, by cause: open the client, your games failed to load,
+ * they're still coming ("<tab>.loading"), or they're here and there's nothing to show ("<tab>.empty").
+ */
+export function lobbyEmpty(status: CoachStatus, tab: string, slots: Record<string, string | number> = {}): string {
+  if (needsClient(status)) return t("profile.openClient");
+  const p = status.profile.state;
+  if (p === "error") return t("profile.emptyError");
+  return t(p === "ready" ? `${tab}.empty` : `${tab}.loading`, slots);
 }
 
 let roleNames: Record<string, string> = {};

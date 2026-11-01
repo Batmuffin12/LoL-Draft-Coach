@@ -550,6 +550,8 @@ export interface ViewState {
   bans: BanView[];
   /** Extra bans for the champion the player hovers before or during bans (null when not hovering). */
   hoverBans: { champion: ChampView; bans: BanView[] } | null;
+  /** This champ select's queue isn't one the coach covers: no suggestions, and the screen says why. */
+  unsupportedQueue: boolean;
   /** Set once the local player has locked in a champion (suggestions stop then). */
   myPick: MyPickView | null;
   /** The loadout for the champion the player hovers before locking in (shown under the suggestions). */
@@ -613,6 +615,7 @@ export function emptyViewState(): ViewState {
     picks: [],
     pickAdvice: { whyNot: null, confidence: null },
     bans: [],
+    unsupportedQueue: false,
     hoverBans: null,
     myPick: null,
     hoverPick: null,

@@ -16,7 +16,7 @@ import { POOL_COLUMNS, resultOverdue } from "../../shared/view";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { cx, needsClient, pct, positionLabel, roleName, t } from "../format";
+import { cx, lobbyEmpty, needsClient, pct, positionLabel, roleName, t } from "../format";
 import { useFitLevel, useFits, useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 import { Suggestion } from "./Suggestion";
@@ -174,7 +174,7 @@ function NewChamps({ state }: { state: ViewState }) {
   if (!list.length) {
     return (
       <Section title="New champions">
-        <p className="caption">New champions to learn show here once the live meta for your rank is loaded and your pool for a role is known.</p>
+        <p className="caption">{state.meta?.state === "ready" ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")}</p>
       </Section>
     );
   }
@@ -261,7 +261,7 @@ function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
   // Many strengths and weak spots: the note under your numbers moves to hover.
   const fits = useFits(sub);
-  if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your style per role shows here once your recent games are loaded."}</p>}</Section>;
+  if (!state.playstyle.length) return <Section title="Your style"><p className="caption">{lobbyEmpty(state.status, "style", { n: state.limits.styleGames })}</p></Section>;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
@@ -297,7 +297,7 @@ function Style({ state }: { state: ViewState }) {
 /** The monthly report: your last 30 days against the 30 before, from your own games. */
 function Month({ state }: { state: ViewState }) {
   const m = state.month;
-  if (!m) return <Section title="This month">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your month shows here once your recent games are loaded."}</p>}</Section>;
+  if (!m) return <Section title={t("tabs.month")}><p className="caption">{lobbyEmpty(state.status, "month", { n: state.limits.monthDays })}</p></Section>;
   return <MonthReport month={m} />;
 }
 
@@ -308,7 +308,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
   const [sub, setSub] = useRolePill(list.map((r) => r.role));
   // A big pool: first the extra champions' names move to hover, then the legend and the note under what's missing.
   const level = useFitLevel(sub, 2);
-  if (!list.length) return <Section title="Your pool">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your roles and pool show here once your recent games are loaded."}</p>}</Section>;
+  if (!list.length) return <Section title="Your pool"><p className="caption">{lobbyEmpty(state.status, "pool", { n: state.limits.poolGames })}</p></Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
   const columns = r.pool.slice(0, POOL_COLUMNS);

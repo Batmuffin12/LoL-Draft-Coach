@@ -9,7 +9,7 @@ import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { positionLabel, roleName, t } from "../format";
+import { noBansKey, noPicksKey, positionLabel, roleName, t } from "../format";
 import { useFitLevel, useNow } from "../hooks";
 import type { RuneChoice } from "../rune-choice";
 import { Header, Notices } from "./common";
@@ -103,7 +103,6 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   ) : (
     <span className="micro">{banning ? "Suggestions only. You choose your ban." : "Suggestions only. You choose and lock your champion."}</span>
   );
-  const profile = state.status.profile;
   const picks = state.picks.slice(0, PICKS);
   const cur = picks[sel] ?? picks[0];
   const at = cur ? picks.indexOf(cur) : -1;
@@ -117,7 +116,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
         <Section title="Suggested bans">
-          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{state.meta?.state === "ready" ? "Ban suggestions appear once your match history has loaded." : "Ban suggestions need the live meta for your rank."}</p>}
+          {state.bans.length > 0 || state.hoverBans?.bans.length ? <BanTable bans={banRows(state)} /> : <p className="caption">{t(noBansKey(state))}</p>}
         </Section>
       ) : (
         <>
@@ -126,7 +125,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
             {cur ? (
               <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
             ) : (
-              <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
+              <p className="caption">{t(noPicksKey(state))}</p>
             )}
           </Section>
           {cur && picks.length > 1 && (

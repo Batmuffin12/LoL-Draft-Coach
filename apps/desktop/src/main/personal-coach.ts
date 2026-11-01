@@ -616,6 +616,8 @@ export class PersonalCoach extends Coach {
       void this.onChampSelectStart();
     }
     if (!this.draft && this.hadDraft) this.clearNotice("queue");
+    const unsupportedQueue = this.draft !== null && !this.queueSupported;
+    if (unsupportedQueue !== this.view.unsupportedQueue) this.update({ unsupportedQueue });
     this.hadDraft = this.draft !== null;
     // While your history loads, bans still come from the live meta alone (picks wait for your history).
     const loading = !this.profile && this.draft !== null && this.queueSupported && this.metaIndex !== null && banningNow(this.draft);
