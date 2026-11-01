@@ -26,6 +26,11 @@ export function games(n: number): string {
   return n >= 10_000 ? `${Math.round(n / 1000)}k` : count(n);
 }
 
+/** "1 game", "12 games", "12k games": the raw number picks the word. */
+export function gameCount(n: number): string {
+  return t("count.games", { games: games(n), n });
+}
+
 /** Color class for points of win chance: "pos", "neg", or "flat" within ±deadZone (and for no number). */
 export function tone(x: number | null | undefined, deadZone = 0.002): "pos" | "neg" | "flat" {
   return x == null || Math.abs(x) <= deadZone ? "flat" : x > 0 ? "pos" : "neg";

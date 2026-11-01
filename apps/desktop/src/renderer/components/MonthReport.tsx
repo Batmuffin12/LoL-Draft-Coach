@@ -1,5 +1,5 @@
 import type { MonthView } from "../../shared/view";
-import { cx, isThin, pct, t, winToneOf } from "../format";
+import { cx, gameCount, isThin, pct, t, winToneOf } from "../format";
 import { useFitLevel } from "../hooks";
 import { ChampIcon } from "./ChampIcon";
 import { Section } from "./Section";
@@ -21,7 +21,7 @@ function Header({ m, brief }: { m: MonthView; brief: boolean }) {
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label gold" title={m.rank ?? undefined}>{`${m.period} · ${m.games} ${m.games === 1 ? "game" : "games"}`}</span>
+        <span className="label gold" title={m.rank ?? undefined}>{`${m.period} · ${gameCount(m.games)}`}</span>
         <span className="rule" aria-hidden="true" />
         <span className="micro">{m.gamesBeforeText}</span>
       </div>
@@ -104,7 +104,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
                     <span className="t-heading">{c.champion.name}</span>
                     <span className="micro">
                       <span className={wr === "flat" ? undefined : wr}>{pct(c.winRate)}</span>
-                      {` · ${c.games} ${c.games === 1 ? "game" : "games"}`}
+                      {` · ${gameCount(c.games)}`}
                     </span>
                   </span>
                 </div>

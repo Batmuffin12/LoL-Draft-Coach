@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import type { LoadoutView } from "../../shared/view";
-import { cx, games, rateOf, skillPath, winToneOf } from "../format";
+import { cx, gameCount, rateOf, skillPath, winToneOf } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 type Spells = NonNullable<LoadoutView["spells"]>;
@@ -11,7 +11,7 @@ export function Stat({ winRate, n, title, short }: { winRate: number | null; n: 
   if (winRate === null) {
     return (
       <span className="stat" title={title}>
-        {`${games(n)} ${n === 1 ? "game" : "games"}`}
+        {gameCount(n)}
       </span>
     );
   }
@@ -19,7 +19,7 @@ export function Stat({ winRate, n, title, short }: { winRate: number | null; n: 
   return (
     <span className="stat" title={title}>
       <b className={wr === "flat" ? undefined : wr}>{rateOf(winRate, n)}</b>
-      {short ? " WR" : ` WR · ${games(n)} games`}
+      {short ? " WR" : ` WR · ${gameCount(n)}`}
     </span>
   );
 }
@@ -27,7 +27,7 @@ export function Stat({ winRate, n, title, short }: { winRate: number | null; n: 
 /** The two spells, the max order as keycaps with its numbers, then a Q/W/E/R × level 1–18 grid (the ultimate at 6, 11 and 16 on its own row). */
 export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: Skills | null }) {
   const path = skills ? skillPath(skills.first, skills.order, skills.ult) : [];
-  const spellTip = spells && [`${spells.spells.map((s) => s.name).join(" + ")}: ${rateOf(spells.winRate, spells.games)} win, ${games(spells.games)} games`, spells.reason].filter(Boolean).join("\n");
+  const spellTip = spells && [`${spells.spells.map((s) => s.name).join(" + ")}: ${rateOf(spells.winRate, spells.games)} WR, ${gameCount(spells.games)}`, spells.reason].filter(Boolean).join("\n");
   return (
     <div className="skillgrid">
       <div className="maxrow">
@@ -47,7 +47,7 @@ export function SkillGrid({ spells, skills }: { spells: Spells | null; skills: S
                 <span className="key max">{k}</span>
               </Fragment>
             ))}
-            <Stat short winRate={skills.winRate} n={skills.games} title={[`${games(skills.games)} games`, skills.reason].filter(Boolean).join(" · ")} />
+            <Stat short winRate={skills.winRate} n={skills.games} title={[gameCount(skills.games), skills.reason].filter(Boolean).join(" · ")} />
           </>
         )}
       </div>

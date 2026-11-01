@@ -1,5 +1,5 @@
 import type { NewChampView } from "../../shared/view";
-import { cx, rateOf, winToneOf } from "../format";
+import { cx, gameCount, rateOf, winToneOf } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
@@ -41,7 +41,7 @@ export function NewChampTable({ rows, brief = false }: { rows: NewChampView[]; b
               "—"
             )}
           </span>
-          <span className={cx("c-num", winToneOf(c.winRate, c.games))} title={`${c.games.toLocaleString("en-US")} games`}>
+          <span className={cx("c-num", winToneOf(c.winRate, c.games))} title={gameCount(c.games)}>
             {rateOf(c.winRate, c.games)}
           </span>
           <span className={cx("c-num ease", EASE[c.ease])}>{c.easeLabel}</span>

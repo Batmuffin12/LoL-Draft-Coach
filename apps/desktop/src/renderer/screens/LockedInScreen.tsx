@@ -40,7 +40,7 @@ function LoadoutSource({ pick }: { pick: MyPickView }) {
   if (!l) return <span className="micro">{t("loadout.none", { champion: pick.champion.name })}</span>;
   return (
     <span className="micro" title={l.thinNote ?? undefined}>
-      {t("loadout.source", { games: count(l.games), source: l.source })}
+      {t("loadout.source", { games: count(l.games), n: l.games, source: l.source })}
       {l.thinNote ? ` · ${t("loadout.rough")}` : "."}
     </span>
   );
@@ -123,7 +123,7 @@ export function LockedInScreen({ state, pick, note, runes }: { state: ViewState;
       }
       footer={
         tab === "matchups" ? (
-          <span className="micro">{meta ? t("matchups.source", { games: count(meta.matches) }) : t("matchups.empty")}</span>
+          <span className="micro">{meta ? t("matchups.source", { games: count(meta.matches), n: meta.matches }) : t("matchups.empty")}</span>
         ) : (
           <LoadoutFooter pick={pick} runes={runes} />
         )

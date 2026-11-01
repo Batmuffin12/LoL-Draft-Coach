@@ -16,7 +16,7 @@ import { POOL_COLUMNS, resultOverdue } from "../../shared/view";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { cx, lobbyEmpty, needsClient, pct, positionLabel, roleName, t } from "../format";
+import { cx, gameCount, lobbyEmpty, needsClient, pct, positionLabel, roleName, t } from "../format";
 import { useFitLevel, useFits, useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 import { Suggestion } from "./Suggestion";
@@ -265,7 +265,7 @@ function Style({ state }: { state: ViewState }) {
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
-    return [`${p.games} games`, high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
+    return [gameCount(p.games), high.length ? `strong: ${high.join(", ")}` : null, low.length ? `grow: ${low.join(", ")}` : null].filter(Boolean).join(" · ");
   };
   const p = state.playstyle.find((x) => x.role === sub) ?? state.playstyle[0]!;
   // How you play (pool, classes, damage) and the side split are on hover over the numbers' head.
@@ -279,7 +279,7 @@ function Style({ state }: { state: ViewState }) {
           options={state.playstyle.map((x) => ({ value: x.role, label: positionLabel(x.role), title: summary(x) }))}
           value={p.role}
           onChange={setSub}
-          end={`${p.games} ${p.games === 1 ? "game" : "games"} · ${t("style.dashed")}`}
+          end={`${gameCount(p.games)} · ${t("style.dashed")}`}
         />
         <StyleRadar axes={p.axes} role={roleName(p.role)} />
         {p.summary.length > 0 && <Facts rows={p.summary} flow />}
@@ -309,7 +309,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
   // A big pool: first the extra champions' names move to hover, then the legend and the note under what's missing.
   const level = useFitLevel(sub, 2);
   if (!list.length) return <Section title="Your pool"><p className="caption">{lobbyEmpty(state.status, "pool", { n: state.limits.poolGames })}</p></Section>;
-  const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
+  const stats = (r: ViewState["roles"][number]) => `${gameCount(r.games)} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
   const columns = r.pool.slice(0, POOL_COLUMNS);
   const next = r.nextStep;

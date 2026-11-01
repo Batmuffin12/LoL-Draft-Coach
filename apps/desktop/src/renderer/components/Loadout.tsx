@@ -1,5 +1,5 @@
 import type { LoadoutItemView, LoadoutView, MyPickView, RunePageView } from "../../shared/view";
-import { games, isThin, rate, t } from "../format";
+import { gameCount, isThin, rate, t } from "../format";
 import { useFitLevel } from "../hooks";
 import { shownPage, type RuneChoice } from "../rune-choice";
 import { BuildPath } from "./BuildPath";
@@ -37,7 +37,7 @@ function ItemRows({ items, brief }: { items: LoadoutItemView[]; brief: boolean }
 
 /** A rune option in the switch: what it is, how many take it and how it does ("Second · 15% · 55% WR"); games for a matchup page, which has no share, and in place of a win rate from too few games. Short enough to stay on one row. */
 export function optionText(o: RunePageView): string {
-  const count = t("runes.optionGames", { games: games(o.games), n: o.games });
+  const count = gameCount(o.games);
   const thin = o.winRate === null || isThin(o.games);
   return [o.optionLabel, o.share !== null ? rate(o.share) : thin ? null : count, thin ? count : t("runes.optionWinRate", { rate: rate(o.winRate) })].filter(Boolean).join(" · ");
 }

@@ -1,5 +1,5 @@
 import type { MatchupRowView } from "../../shared/view";
-import { cx, positionLabel, rateOf, signedOrDash, t, tone, winsPer100 } from "../format";
+import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Facts } from "./Facts";
 
@@ -33,7 +33,7 @@ function Row({ m }: { m: MatchupRowView }) {
         {m.games ? (
           <>
             <span className={cx("t-heading", v === "flat" ? "text" : v)}>{verdictText(m.delta)}</span>
-            <span className="micro">{`${rateOf(m.winRate, m.games)} WR · ${m.games.toLocaleString("en-US")} ${m.games === 1 ? "game" : "games"}`}</span>
+            <span className="micro">{`${rateOf(m.winRate, m.games)} WR · ${gameCount(m.games)}`}</span>
           </>
         ) : (
           <span className="micro">{t("matchups.none")}</span>
