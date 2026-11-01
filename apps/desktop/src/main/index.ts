@@ -180,7 +180,11 @@ function scheduleScreenshot(coach: Coach): void {
     console.log(`LDC_SCREENSHOT: layout ${layout}`);
     // A window without focus may not have painted the last clicks yet: ask for a fresh frame, so the picture matches the layout above.
     win?.webContents.invalidate();
-    await new Promise((r) => setTimeout(r, 300));
+    await win?.webContents
+      .executeJavaScript(`new Promise((r) => { setTimeout(r, 1500); requestAnimationFrame(() => requestAnimationFrame(r)); })`)
+      .catch(() => null);
+    const step = await win?.webContents.executeJavaScript(`document.querySelector(".tour-text")?.textContent ?? ""`).catch(() => "");
+    if (step) console.log(`LDC_SCREENSHOT: tour step: ${step}`);
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     const dump = process.env.LDC_VIEW_DUMP;
