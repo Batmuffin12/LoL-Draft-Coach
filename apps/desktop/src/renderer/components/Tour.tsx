@@ -99,7 +99,7 @@ export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; r
     return () => panel?.removeAttribute("inert");
   }, []);
 
-  // Focus stays on the way forward. On the window too, so the keys below work whatever was clicked last.
+  // Focus stays in the callout, on the way forward.
   useEffect(() => {
     box.current?.querySelector<HTMLButtonElement>(".btn.primary")?.focus();
   }, [step.id]);
@@ -118,7 +118,8 @@ export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; r
   };
 
   return (
-    <div className="tour" onKeyDown={onKeyDown}>
+    // A click beside the buttons doesn't take focus out of the callout, so the keys keep working.
+    <div className="tour" onKeyDown={onKeyDown} onMouseDown={(e) => !(e.target as Element).closest("button") && e.preventDefault()}>
       <div className="tour-shield" aria-hidden="true" />
       {spot?.hole ? <div className="tour-hole" aria-hidden="true" style={holeStyle(spot.hole)} /> : <div className="tour-dim" aria-hidden="true" />}
       <div ref={box} className="tour-callout" role="dialog" aria-modal="true" aria-label={t("tour.reopen")} style={place(spot)}>
