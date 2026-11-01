@@ -1,3 +1,4 @@
+import type { StaticData } from "@ldc/ddragon";
 import { LcuImporter, type LobbyRoles } from "@ldc/lcu";
 import {
   adviseRoles,
@@ -25,6 +26,8 @@ import {
 } from "@ldc/engine";
 import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
 import { FALLBACK_MIN_GAMES, type ImportLine, type MyPickView, type NewChampRoleView, type ViewLimits, type ViewState } from "../shared/view";
+import type { ExploreChampionView, ExploreList, MyGames } from "../shared/explore";
+import { exploreChampionView, exploreListView, memoByInputs, myGamesView } from "./explore-view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption } from "./advice-log";
 import { importShownLoadout } from "./loadout-import";
@@ -108,6 +111,7 @@ export class PersonalCoach extends Coach {
   private clientPhase = "";
   /** Your role choices in the lobby before a queue (from the client), or null. */
   private lobby: LobbyRoles | null = null;
+  private readonly exploreMemo = memoByInputs<ExploreList>();
   /** Waits for a game that just ended to reach your history. */
   private readonly gameWaiter = new NewGameWaiter({
     profiles: () => this.p.profiles,
@@ -300,7 +304,52 @@ export class PersonalCoach extends Coach {
     else await this.p.profiles?.refresh();
   }
 
-  /** A champion from Data Dragon (undefined when it isn't loaded or unknown). */
+  /** Champions > Browse: the band's numbers per champion and role, or null without a snapshot. Worked out once per snapshot and history. */
+  exploreList(): ExploreList | null {
+    const index = this.metaIndex;
+    if (!index) return null;
+    const inputs = [index.snapshot, this.profile, this.staticData(), this.config];
+    return this.exploreMemo(inputs, () => exploreListView(index, { games: this.profile?.games ?? [], lookup: this.championLookup, bands: this.config.bands, roleLabels: roleLabels(this.config.explain.templates) }));
+  }
+
+  /** One champion in one role, looked up. With the client closed the shard rows come from CommunityDragon, like a draft's. */
+  async exploreChampion(championId: ChampionId, role: Position): Promise<ExploreChampionView | null> {
+    const index = this.metaIndex;
+    if (!index) return null;
+    if (!this.shardRows.length) await this.loadShardsFallback();
+    const { engine, explain, bands } = this.config;
+    const data = this.staticData();
+    return exploreChampionView(index, championId, role, {
+      games: this.profile?.games ?? [],
+      lookup: this.championLookup,
+      loadout: engine.loadout,
+      minGames: this.view.limits.minGames,
+      data,
+      templates: explain.templates,
+      championName: (id) => this.championLookup(id)?.name ?? `#${id}`,
+      bands,
+      perk: (id) => this.perks.get(id),
+      shardRows: this.shardRows,
+      runeMechanics: engine.loadout.runeMechanics,
+      itemMechanics: engine.loadout.itemMechanics,
+      buildsFrom: (id) => data?.itemInfo.get(id)?.from ?? [],
+    });
+  }
+
+  /** Me > My games: your own games, from the history on this PC. */
+  exploreGames(): MyGames {
+    return myGamesView(this.profile?.matches ?? [], this.championLookup, roleLabels(this.config.explain.templates));
+  }
+
+  /** Data Dragon's static data, or null before it is loaded. */
+  private staticData(): StaticData | null {
+    try {
+      return this.deps.ddragon.data;
+    } catch {
+      return null;
+    }
+  }
+
   /** An item's name from Data Dragon ("#id" while it isn't loaded). */
   private itemName(id: number): string {
     try {
@@ -680,12 +729,6 @@ export class PersonalCoach extends Coach {
   private cardContext(live: PickCardContext["live"], draft: DraftState, role: Position | null, profile: PersonalProfile): PickCardContext {
     const lookup = this.championLookup;
     const nameOf = (id: number) => lookup(id)?.name ?? `#${id}`;
-    let data: PickCardContext["data"] = null;
-    try {
-      data = this.deps.ddragon.data;
-    } catch {
-      // Data Dragon not loaded yet: names fall back to ids.
-    }
     return {
       live,
       draft,
@@ -695,7 +738,8 @@ export class PersonalCoach extends Coach {
       config: this.config,
       bands: this.config.bands,
       band: this.band,
-      data,
+      // Data Dragon not loaded yet: names fall back to ids.
+      data: this.staticData(),
       lookup,
       say: (r) => renderReason(r, this.config.explain.templates, nameOf, { item: (id) => this.itemName(id) }),
       canImport: this.canImport,

@@ -17,6 +17,9 @@ export const IPC = {
   deleteData: "coach:delete-data",
   importLoadout: "coach:import-loadout",
   retry: "coach:retry",
+  exploreList: "coach:explore-list",
+  exploreChampion: "coach:explore-champion",
+  exploreGames: "coach:explore-games",
 } as const;
 
 /** A game's result is still missing this long after it was played: Riot may never send it, so the card stops promising it. */

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type { ExploreChampionView, ExploreList, MyGames } from "../shared/explore";
 import type { HintId } from "../shared/ui-state";
 import { IPC, type ViewState } from "../shared/view";
 
@@ -49,6 +50,18 @@ const api = {
   /** This one-time hint was on screen: it won't show again on this PC. */
   hintSeen(id: HintId): void {
     ipcRenderer.send(IPC.hintSeen, id);
+  },
+  /** Champions > Browse: the band's numbers per champion and role; null without live data. On demand, never in the view state. */
+  exploreList(): Promise<ExploreList | null> {
+    return ipcRenderer.invoke(IPC.exploreList);
+  },
+  /** One champion in one role, looked up; null when there's nothing for it. */
+  exploreChampion(championId: number, role: string): Promise<ExploreChampionView | null> {
+    return ipcRenderer.invoke(IPC.exploreChampion, championId, role);
+  },
+  /** Me > My games: your own games. */
+  exploreGames(): Promise<MyGames> {
+    return ipcRenderer.invoke(IPC.exploreGames);
   },
   /** The main process minimizes: a sandboxed renderer has no way to. */
   minimize(): void {

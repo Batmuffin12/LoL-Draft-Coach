@@ -28,6 +28,7 @@ import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH,
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
+import { exploreArgs } from "../shared/explore";
 import { isHintId } from "../shared/ui-state";
 import { UiStateStore } from "./ui-state";
 
@@ -371,6 +372,12 @@ async function main(): Promise<void> {
     (kind === "runes" || kind === "items" || kind === "all") && (pageKey === undefined || typeof pageKey === "string") ? coach.importLoadout(kind, pageKey) : undefined,
   );
   ipcMain.handle(IPC.retry, () => coach.retryNow());
+  ipcMain.handle(IPC.exploreList, () => coach.exploreList());
+  ipcMain.handle(IPC.exploreChampion, (_e, championId: unknown, role: unknown) => {
+    const args = exploreArgs(championId, role);
+    return args ? coach.exploreChampion(args.championId, args.role) : null;
+  });
+  ipcMain.handle(IPC.exploreGames, () => coach.exploreGames());
   ipcMain.on(IPC.minimize, () => win?.minimize());
   ipcMain.on(IPC.restartToUpdate, () => {
     if (canRestartToUpdate(coach.state)) restartToUpdate();
