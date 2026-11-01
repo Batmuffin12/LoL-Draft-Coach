@@ -3,6 +3,7 @@ import type { DraftView, ViewState } from "../../shared/view";
 import { BanTable, type BanRow } from "../components/BanTable";
 import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
+import { Facts } from "../components/Facts";
 import { PhaseBar } from "../components/PhaseBar";
 import { OtherPicks, SuggestedPick } from "../components/SuggestedPick";
 import { Section } from "../components/Section";
@@ -44,7 +45,7 @@ type PickTab = "picks" | "runes" | "build";
 const BAN_ROWS = 5;
 /** The suggested pick and the three under it. */
 const PICKS = 4;
-/** Reason lines on the card; one fewer when a draft note (filled, their team) takes a line, or the hover tabs show. */
+/** Reason lines on the card; fewer for each line the draft notes (filled, their team) take, and when the hover tabs show. */
 const REASONS = 5;
 
 function banRows(state: ViewState): BanRow[] {
@@ -104,7 +105,9 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const picks = state.picks.slice(0, PICKS);
   const cur = picks[sel] ?? picks[0];
   const at = cur ? picks.indexOf(cur) : -1;
-  const notes = [state.filledNote, state.enemyNotes.length ? `Their team: ${state.enemyNotes.join(" · ")}` : null].filter(Boolean).join(" ");
+  const theirTeam = state.enemyNotes.length ? { label: t("pick.theirTeam"), items: state.enemyNotes.map((text) => ({ text })) } : null;
+  const notes = [state.filledNote, theirTeam].filter((row) => row != null);
+  const noteLines = (state.filledNote?.items.length ?? 0) + (theirTeam ? 1 : 0);
   const record = cur ? (state.roles.find((r) => r.role === state.pickRole)?.pool.find((c) => c.champion.id === cur.champion.id) ?? null) : null;
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
@@ -118,9 +121,9 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
       ) : (
         <>
           <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
-            {notes && <p className="caption">{notes}</p>}
+            {notes.length > 0 && <Facts rows={notes} flow />}
             {cur ? (
-              <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={REASONS - (notes ? 1 : 0) - (hover ? 1 : 0)} />
+              <SuggestedPick pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - noteLines - (hover ? 1 : 0))} />
             ) : (
               <p className="caption">{profile.state === "loading" ? "Suggestions appear once your match history is loaded." : "Suggestions appear during champ select."}</p>
             )}

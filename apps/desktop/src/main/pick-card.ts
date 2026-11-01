@@ -18,7 +18,7 @@ import {
   type RankBandConfig,
 } from "@ldc/engine";
 import type { BanSuggestion, ChampionId, DraftState, Position, RankBandId, Reason, UserMatch } from "@ldc/shared";
-import type { BanView, ChampView, ImportLine, MyPickView } from "../shared/view";
+import type { BanView, ChampView, FactRow, ImportLine, MyPickView } from "../shared/view";
 import type { LoadedConfig } from "./config";
 import { champView, type ChampionLookup } from "./draft-view";
 import { toLoadoutView } from "./loadout-view";
@@ -132,11 +132,17 @@ export function draftNotes(
   live: LiveInput | null,
   filled: ReturnType<typeof filledRole>,
   ctx: Pick<PickCardContext, "index" | "lookup" | "say">,
-): { enemyNotes: string[]; lane: { role: Position; champion: ChampView | null } | null; filledNote: string | null } {
+): { enemyNotes: string[]; lane: { role: Position; champion: ChampView | null } | null; filledNote: FactRow | null } {
   const { say } = ctx;
   return {
     enemyNotes: live ? enemyTeamNotes(live).map(say) : [],
     lane: role ? { role, champion: champView(laneOpponent(draft, role, ctx.index) ?? 0, ctx.lookup) } : null,
-    filledNote: filled && live ? say({ id: "picks.filled", slots: { role: filled.role, share: filled.share, games: filled.games } }) : null,
+    filledNote:
+      filled && live
+        ? {
+            label: say({ id: "picks.filled.label", slots: {} }),
+            items: [{ text: say({ id: "picks.filled.share", slots: { role: filled.role, share: filled.share, games: filled.games } }) }, { text: say({ id: "picks.filled.lean", slots: {} }) }],
+          }
+        : null,
   };
 }
