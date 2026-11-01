@@ -9,7 +9,17 @@ export const IPC = {
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
   importLoadout: "coach:import-loadout",
+  retry: "coach:retry",
 } as const;
+
+/** A game's result is still missing this long after it was played: Riot may never send it, so the card stops promising it. */
+export const RESULT_WAIT_MS = 3 * 60 * 60_000;
+
+/** The post-game card has no result and shouldn't promise one: the panel stopped asking, or the game is hours old. */
+export function resultOverdue(game: { result: unknown; endedAt: number | null; lockedAt: number }, wait: { pending: boolean; gaveUp: boolean }, now: number): boolean {
+  if (game.result || wait.pending) return false;
+  return wait.gaveUp || now - (game.endedAt ?? game.lockedAt) > RESULT_WAIT_MS;
+}
 
 export interface ChampView {
   id: number;
@@ -511,6 +521,8 @@ export interface ViewState {
   queuePreview: { roles: { role: string; picks: PickView[]; whyNot: string | null; confidence: PickAdviceView["confidence"] }[] } | null;
   /** A game you just played isn't in your history yet (Riot publishes it a little later): the panel is asking for it. */
   lastGamePending: boolean;
+  /** The panel asked for that game for as long as it does, and Riot hasn't published it. */
+  lastGameGaveUp: boolean;
   /** Your growth focus, or null without enough games. */
   focus: FocusView | null;
   /** New champions per role (needs the band's live meta), roles in the lobby's order. */
@@ -549,6 +561,7 @@ export function emptyViewState(): ViewState {
     side: null,
     lastGame: null,
     lastGamePending: false,
+    lastGameGaveUp: false,
     queuePreview: null,
     focus: null,
     newChamps: [],

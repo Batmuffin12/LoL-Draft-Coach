@@ -26,6 +26,10 @@ const api = {
   importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     return ipcRenderer.invoke(IPC.importLoadout, kind);
   },
+  /** Tries again now what failed (your games, the live meta); resolves when that is done. */
+  retry(): Promise<void> {
+    return ipcRenderer.invoke(IPC.retry);
+  },
   close(): void {
     window.close();
   },

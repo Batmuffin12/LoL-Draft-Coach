@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { AccountView, ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count, versionText } from "../format";
+import { count, profileProgress, t, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
@@ -56,19 +56,16 @@ export function ProgressRow({ text, done, total }: { text: string; done?: number
 /** One notice per problem, at the top of the scrolling area; loading shows as a progress row. */
 export function Notices({ state, extra }: { state: ViewState; extra?: string | null }) {
   const { profile } = state.status;
-  const items: { tone: "warn" | "info"; text: string }[] = [
+  const canRetry = state.account?.state === "registered";
+  const items: { tone: "warn" | "info"; text: string; retry?: boolean }[] = [
     ...state.notices.map((text) => ({ tone: "warn" as const, text })),
-    ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message }] : []),
-    ...(profile.state === "ready" && profile.problem ? [{ tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.` }] : []),
-    ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}` }] : []),
+    ...(profile.state === "error" ? [{ tone: "warn" as const, text: profile.message, retry: canRetry }] : []),
+    ...(profile.state === "ready" && profile.problem ? [{ tone: "warn" as const, text: `${profile.problem} Coaching from your games saved on this PC.`, retry: canRetry }] : []),
+    ...(state.meta?.state === "error" ? [{ tone: "warn" as const, text: `No live meta yet: ${state.meta.message}`, retry: canRetry }] : []),
     ...(extra ? [{ tone: "info" as const, text: extra }] : []),
   ];
-  const progress =
-    profile.state === "loading" ? (
-      <ProgressRow text={`Loading your match history: ${profile.done} of ${profile.total}`} done={profile.done} total={profile.total} />
-    ) : profile.state === "ready" && profile.backlog ? (
-      <ProgressRow text={`Loading your older games: ${profile.backlog} to go`} />
-    ) : null;
+  const line = profileProgress(profile);
+  const progress = line && <ProgressRow text={line.text} {...(line.total !== undefined ? { done: line.done ?? 0, total: line.total } : {})} />;
   if (!items.length && !progress) return null;
   return (
     <div className="notices">
@@ -76,9 +73,33 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
       {items.map((n) => (
         <Notice key={n.text} tone={n.tone}>
           {n.text}
+          {n.retry && (
+            <>
+              {" "}
+              <RetryLink />
+            </>
+          )}
         </Notice>
       ))}
     </div>
+  );
+}
+
+/** Tries again now what failed; says so until that is done. */
+function RetryLink() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      className="foot-link gold"
+      disabled={busy}
+      onClick={() => {
+        setBusy(true);
+        void window.coach.retry().finally(() => setBusy(false));
+      }}
+    >
+      {t(busy ? "profile.retrying" : "profile.retry")}
+    </button>
   );
 }
 

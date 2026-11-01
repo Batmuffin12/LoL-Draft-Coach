@@ -21,6 +21,30 @@ const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
 const NOW = Date.now();
 
+describe("MetaSource after a failure", () => {
+  it("asks the server again on the next refresh: a failure doesn't count as checked", async () => {
+    let calls = 0;
+    const client = {
+      meta: async () => {
+        calls++;
+        if (calls === 1) throw new ServerError(0, "unreachable", "down");
+        return { notModified: false as const, snapshot: snapshot(), etag: "e" };
+      },
+    } as unknown as ServerClient;
+    const m = new MetaSource({ client: () => client, cacheDir: tmp("ldc-meta-") });
+    const statuses: MetaStatus[] = [];
+    m.on("status", (s) => statuses.push(s));
+    await m.refresh(2);
+    expect(statuses.at(-1)).toMatchObject({ state: "error", message: "down" });
+    await m.refresh(2);
+    expect(calls).toBe(2);
+    expect(statuses.at(-1)).toMatchObject({ state: "ready", band: 2 });
+    // Once it worked, the minimum interval applies again (no needless wake-up).
+    await m.refresh(2);
+    expect(calls).toBe(2);
+  });
+});
+
 /** A small band-2 snapshot: in middle, 245 is strong and 103 is average. */
 function snapshot(createdAt = NOW): MetaSnapshot {
   const stat = (championId: number, games: number, wr: number) => ({ championId, role: "middle", games, wins: games * wr, n: games });

@@ -3,16 +3,16 @@ import { ServerError } from "../src/main/server-client";
 import { retryDelay, SERVER_RETRY_DELAYS_MS, serverProblem } from "../src/main/server-problem";
 
 describe("serverProblem", () => {
-  it("words each kind of failure, with when it tries again", () => {
-    const say = (code: string, status = 0) => serverProblem(new ServerError(status, code, `raw ${code}`), 120_000);
-    expect(say("asleep", 503)).toBe("The coach server is still starting up. Trying again in 2 min.");
-    expect(say("timeout")).toBe("The coach server didn't answer in time. Trying again in 2 min.");
-    expect(say("unreachable")).toBe("Can't reach the coach server: check your internet connection. Trying again in 2 min.");
-    expect(say("server_error", 500)).toBe("The coach server had a problem (HTTP 500). Trying again in 2 min.");
+  it("words each kind of failure, and says it tries again without a time that would go stale on screen", () => {
+    const say = (code: string, status = 0) => serverProblem(new ServerError(status, code, `raw ${code}`));
+    expect(say("asleep", 503)).toBe("The coach server is still starting up. Trying again automatically.");
+    expect(say("timeout")).toBe("The coach server didn't answer in time. Trying again automatically.");
+    expect(say("unreachable")).toBe("Can't reach the coach server: check your internet connection. Trying again automatically.");
+    expect(say("server_error", 500)).toBe("The coach server had a problem (HTTP 500). Trying again automatically.");
     expect(say("bad_response", 200)).toMatch(/^The coach server sent something this app doesn't understand/);
     // The server's own message for anything else (e.g. a refused request), and for other errors.
-    expect(say("rate_limited", 429)).toBe("raw rate_limited Trying again in 2 min.");
-    expect(serverProblem(new Error("boom"), 30_000)).toBe("boom Trying again in 30 s.");
+    expect(say("rate_limited", 429)).toBe("raw rate_limited Trying again automatically.");
+    expect(serverProblem(new Error("boom"))).toBe("boom Trying again automatically.");
   });
 });
 

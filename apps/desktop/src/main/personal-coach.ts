@@ -23,7 +23,7 @@ import {
   type ComfortStats,
   type Loadout,
 } from "@ldc/engine";
-import type { AdviceRecord, ChampionId, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
+import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, PickAdvice, Position, RankBandId, Reason } from "@ldc/shared";
 import type { MyPickView, NewChampRoleView } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder, adviceOption } from "./advice-log";
@@ -101,7 +101,10 @@ export class PersonalCoach extends Coach {
     retrySeconds: () => this.config.app.history.newGameRetrySeconds ?? [],
     hasGame: (gameId) => hasGame(this.profile?.matches, gameId),
     pending: (waiting) => this.update({ lastGamePending: waiting }),
+    gaveUp: (gaveUp) => this.update({ lastGameGaveUp: gaveUp }),
   });
+  /** Your games' source reported a problem, and hasn't recovered yet. */
+  private profileTroubled = false;
   /** The Riot ID logged into the League client (the local player's own), or null. */
   private clientRiotId: string | null = null;
   /**
@@ -186,7 +189,10 @@ export class PersonalCoach extends Coach {
       this.setProfileError(this.p.noProfileMessage ?? "No coach server or Riot API key configured.");
     } else {
       profiles.on("profile", (profile) => this.setProfile(profile));
-      profiles.on("status", (profile) => this.update({ status: { ...this.view.status, profile } }));
+      profiles.on("status", (profile) => {
+        this.update({ status: { ...this.view.status, profile } });
+        this.onProfileHealth(profile);
+      });
       profiles.on("band", (band) => this.setBand(band));
       profiles.on("account", (account) => this.update({ account: { ...account, clientRiotId: this.clientRiotId } }));
       profiles.on("advice", (advice) => {
@@ -234,8 +240,20 @@ export class PersonalCoach extends Coach {
       this.updateQueuePreview();
     });
     await super.start();
-    // Without the League client, fall back to the Riot ID from .env.
-    if (this.p.connector.status !== "connected") void this.loadFromRiotId();
+    // Without the League client: your games saved on this PC, then the Riot ID from .env (development).
+    if (this.p.connector.status !== "connected") void (this.p.profiles?.loadSaved?.() ?? Promise.resolve()).then(() => this.loadFromRiotId());
+  }
+
+  /** The server is back after a problem: a meta that failed meanwhile needn't wait for the next champ select. */
+  private onProfileHealth(profile: CoachStatus["profile"]): void {
+    const troubled = profile.state === "error" || (profile.state === "ready" && profile.problem !== undefined);
+    if (this.profileTroubled && profile.state === "ready" && !troubled) this.refreshMeta(false);
+    if (troubled || profile.state === "ready") this.profileTroubled = troubled;
+  }
+
+  /** The Retry now link: tries again whatever failed. A meta that failed was never marked as checked, so this asks the server. */
+  async retryNow(): Promise<void> {
+    await Promise.all([this.p.profiles?.retry?.(), this.p.meta?.refresh(this.band)]);
   }
 
   /** The game started: its id ties the advice shown in champ select to the game in your history. */
@@ -524,6 +542,8 @@ export class PersonalCoach extends Coach {
   private async onChampSelectStart(): Promise<void> {
     const { connector, config } = this.p;
     this.refreshMeta(false);
+    // A problem from earlier gets another try when it matters most.
+    void this.p.profiles?.retry?.();
     this.pickable = await connector.getPickableChampionIds().catch(() => []);
     const { queueId } = await currentGame(connector);
     this.queueId = queueId;

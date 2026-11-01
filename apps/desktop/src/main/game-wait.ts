@@ -29,6 +29,8 @@ export class NewGameWaiter {
       hasGame: (gameId: number) => boolean;
       /** The panel's "waiting for your last game" state. */
       pending: (waiting: boolean) => void;
+      /** Every retry is used and the game isn't there: the card stops promising a result. */
+      gaveUp?: (gaveUp: boolean) => void;
     },
   ) {}
 
@@ -38,6 +40,7 @@ export class NewGameWaiter {
     const refresh = () => profiles.refresh();
     const run = ++this.run;
     this.deps.pending(true);
+    this.deps.gaveUp?.(false);
     try {
       await refresh();
       for (const s of this.deps.retrySeconds()) {
@@ -46,6 +49,7 @@ export class NewGameWaiter {
         if (run !== this.run || this.deps.hasGame(gameId)) return;
         await refresh();
       }
+      if (run === this.run && !this.deps.hasGame(gameId)) this.deps.gaveUp?.(true);
     } finally {
       if (run === this.run) this.deps.pending(false);
     }

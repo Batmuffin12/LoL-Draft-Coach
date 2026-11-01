@@ -16,7 +16,7 @@ function ago(at: number, now: number): string {
  * The result band: your champion, the result, the game in a line, and whether you took the
  * coach's pick with its chance. Describes the game; never grades it.
  */
-export function ResultBand({ game: g, now }: { game: PostGameView; now: number }) {
+export function ResultBand({ game: g, now, overdue = false }: { game: PostGameView; now: number; overdue?: boolean }) {
   const where = [g.champion.name, g.role && positionLabel(g.role), g.minutes !== null ? `${g.minutes} min` : null, ago(g.endedAt ?? g.lockedAt, now)].filter(Boolean).join(" · ");
   const took = g.shown.find((s) => s.took);
   // The short form on the card; the full prediction (with the #1 suggestion's chance) on hover.
@@ -27,8 +27,8 @@ export function ResultBand({ game: g, now }: { game: PostGameView; now: number }
     <section className={cx("result-band", `is-${g.result ?? "pending"}`)}>
       <ChampIcon champ={g.champion} size={44} framed />
       <div className="who">
-        <span className={cx("t-title t-call", g.result === "win" ? "pos" : g.result === "loss" ? "neg" : "muted")} title={g.result ? undefined : "The result arrives once the server has synced your game"}>
-          {g.result === "win" ? "Victory" : g.result === "loss" ? "Defeat" : "Result soon"}
+        <span className={cx("t-title t-call", g.result === "win" ? "pos" : g.result === "loss" ? "neg" : "muted")} title={g.result ? undefined : t(overdue ? "last.noResultHint" : "last.resultSoonHint")}>
+          {g.result === "win" ? "Victory" : g.result === "loss" ? "Defeat" : t(overdue ? "last.noResult" : "last.resultSoon")}
         </span>
         <span className="caption text">{where}</span>
         {line && (

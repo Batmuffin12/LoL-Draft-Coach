@@ -11,11 +11,11 @@ import { StyleRadar } from "../components/StyleRadar";
 import { DraftTerms, ResultBand } from "../components/PostGameCard";
 import { PoolCoverage, PoolLegend } from "../components/PoolCoverage";
 import { Button } from "../components/Button";
-import { POOL_COLUMNS } from "../../shared/view";
+import { POOL_COLUMNS, resultOverdue } from "../../shared/view";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { cx, pct, positionLabel, roleName, t } from "../format";
+import { cx, needsClient, pct, positionLabel, roleName, t } from "../format";
 import { useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 import { Suggestion } from "./Suggestion";
@@ -66,7 +66,7 @@ function Lobby({ state }: { state: ViewState }) {
       }
       footer={<AccountFooter account={state.account} app={state.app} />}
     >
-      <Notices state={state} extra={state.roles.length ? null : "No champ select yet: open a lobby and the draft appears here."} />
+      <Notices state={state} extra={state.roles.length ? null : !needsClient(state.status) ? "No champ select yet: open a lobby and the draft appears here." : shown === "last" || shown === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
@@ -122,7 +122,7 @@ function LastGame({ state }: { state: ViewState }) {
       )}
       {g ? (
         <>
-          <ResultBand game={g} now={now} />
+          <ResultBand game={g} now={now} overdue={resultOverdue(g, { pending: state.lastGamePending, gaveUp: state.lastGameGaveUp }, now)} />
           {(g.terms.length > 0 || g.lines.length > 0) && (
             <Section title={t("last.decided")}>
               <DraftTerms game={g} />
@@ -238,7 +238,7 @@ function Lines({ lines }: { lines: string[] }) {
 /** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
 function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useSubTab(state.playstyle.map((p) => p.role));
-  if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">Your style per role shows here once your recent games are loaded.</p>}</Section>;
+  if (!state.playstyle.length) return <Section title="Your style">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your style per role shows here once your recent games are loaded."}</p>}</Section>;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
@@ -273,7 +273,7 @@ function Style({ state }: { state: ViewState }) {
 /** The monthly report: your last 30 days against the 30 before, from your own games. */
 function Month({ state }: { state: ViewState }) {
   const m = state.month;
-  if (!m) return <Section title="This month">{<p className="caption">Your month shows here once your recent games are loaded.</p>}</Section>;
+  if (!m) return <Section title="This month">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your month shows here once your recent games are loaded."}</p>}</Section>;
   return <MonthReport month={m} />;
 }
 
@@ -282,7 +282,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
   // Roles with too few games to judge have no pool to show: left out, so the others fit.
   const list = state.roles.filter((r) => r.enoughData);
   const [sub, setSub] = useSubTab(list.map((r) => r.role));
-  if (!list.length) return <Section title="Your pool">{<p className="caption">Your roles and pool show here once your recent games are loaded.</p>}</Section>;
+  if (!list.length) return <Section title="Your pool">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your roles and pool show here once your recent games are loaded."}</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
   const columns = r.pool.slice(0, POOL_COLUMNS);

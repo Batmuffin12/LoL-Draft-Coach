@@ -9,6 +9,7 @@ import { Header, Notices, RIOT_NOTICE } from "./common";
 /** Characters in an invite code (three boxes of four). */
 const CODE_LENGTH = 12;
 const STEPS = [1, 2, 3];
+const WAKE_NOTE_MS = 4_000;
 
 /** "https://coach.example.app/" → "coach.example.app". */
 const host = (url: string) => url.replace(/^\w+:\/\//, "").replace(/\/+$/, "");
@@ -24,6 +25,13 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
     if (account.inviteCode) setCode(account.inviteCode);
   }, [account.inviteCode]);
   const busy = account.state === "registering";
+  // Connecting takes a moment on an awake server; only a long wait gets the wake-up note.
+  const [waking, setWaking] = useState(false);
+  useEffect(() => {
+    if (!busy) return setWaking(false);
+    const timer = setTimeout(() => setWaking(true), WAKE_NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [busy]);
   const lcuConnected = state.status.lcu === "connected";
   const ready = codeLength(code) === CODE_LENGTH && serverUrl.trim() !== "" && lcuConnected;
   const submit = (e: FormEvent) => {
@@ -79,6 +87,7 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
         <Button variant="primary" type="submit" wide disabled={busy || !ready}>
           {busy ? "Connecting…" : "Connect"}
         </Button>
+        {waking && <span className="caption center">{t("profile.waking")}</span>}
         {error && <span className="caption neg center">{account.message}</span>}
       </form>
       <section className="connect-how">

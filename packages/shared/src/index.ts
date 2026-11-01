@@ -519,7 +519,13 @@ export interface CoachStatus {
   band: RankBandId | null;
   profile:
     | { state: "idle" }
-    | { state: "loading"; done: number; total: number }
+    | {
+        state: "loading";
+        done: number;
+        total: number;
+        /** Server mode: no answer yet, the server is probably waking up. */
+        waking?: boolean;
+      }
     | {
         state: "ready";
         games: number;
@@ -528,6 +534,8 @@ export interface CoachStatus {
         backlog?: number;
         /** Server mode: the server failed and these are your games saved on this PC; what went wrong. */
         problem?: string;
+        /** Server mode: no answer yet, the server is probably waking up. */
+        waking?: boolean;
       }
     | { state: "error"; message: string };
 }

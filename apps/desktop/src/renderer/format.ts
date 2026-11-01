@@ -1,4 +1,4 @@
-import type { Term } from "@ldc/shared";
+import type { CoachStatus, Term } from "@ldc/shared";
 import type { ReasonView } from "../shared/view";
 
 /** Joins class names, skipping empty ones. */
@@ -76,6 +76,25 @@ export function t(key: string, slots: Record<string, string | number> = {}): str
     if (one !== undefined) return v === 1 ? one : (many ?? "");
     return v === undefined ? "" : String(v);
   });
+}
+
+/**
+ * The loading line for your games, or null. No count while nothing is known yet ("0 of 0" reads as
+ * stuck), and none for the older games either: that number only changes when the panel asks again.
+ */
+export function profileProgress(profile: CoachStatus["profile"]): { text: string; done?: number; total?: number } | null {
+  if ((profile.state === "loading" || profile.state === "ready") && profile.waking) return { text: t("profile.waking") };
+  if (profile.state === "loading") {
+    const { done, total } = profile;
+    return total > 0 ? { text: t("profile.loading", { done, total }), done, total } : { text: t("profile.checking") };
+  }
+  return profile.state === "ready" && profile.backlog ? { text: t("profile.older") } : null;
+}
+
+/** Your games can't load until the League client opens: it isn't open, and nothing is saved on this PC. */
+export function needsClient(status: CoachStatus): boolean {
+  const { profile } = status;
+  return status.lcu !== "connected" && (profile.state === "idle" || (profile.state === "ready" && profile.games === 0));
 }
 
 let roleNames: Record<string, string> = {};

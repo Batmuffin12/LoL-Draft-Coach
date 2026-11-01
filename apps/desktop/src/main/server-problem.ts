@@ -8,14 +8,12 @@ export function retryDelay(failures: number, delays: readonly number[] = SERVER_
   return delays[Math.min(failures, delays.length) - 1]!;
 }
 
-const minutes = (ms: number) => (ms < 60_000 ? `${Math.round(ms / 1000)} s` : `${Math.round(ms / 60_000)} min`);
-
 /**
- * What the panel says when the server failed, one wording per kind of failure, and when it
- * tries again. Pure.
+ * What the panel says when the server failed, one wording per kind of failure. It says that it
+ * tries again, not when: the message stays on screen, so a time in it would go stale. Pure.
  */
-export function serverProblem(err: unknown, retryInMs: number): string {
-  const again = `Trying again in ${minutes(retryInMs)}.`;
+export function serverProblem(err: unknown): string {
+  const again = "Trying again automatically.";
   if (!(err instanceof ServerError)) return `${(err as Error).message} ${again}`;
   switch (err.code) {
     case "asleep":

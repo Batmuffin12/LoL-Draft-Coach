@@ -19,7 +19,7 @@ import { AdviceStore } from "./advice-store";
 import { ConfigSource } from "./config-source";
 import { MetaSource } from "./meta-source";
 import { MetaSnapshotSchema } from "./server-client";
-import { PersonalCoach } from "./personal-coach";
+import { PersonalCoach, uiCopy } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { startAutoUpdate } from "./updater";
 import { reportError, reportProblem, startCrashReports } from "./crash-reports";
@@ -280,6 +280,7 @@ async function createProfileSource(env: AppEnv, config: ReturnType<typeof loadCo
     defaultServerUrl: env.serverUrl ?? builtIn("ldcDefaultServerUrl"),
     outbox: new AdviceStore(join(app.getPath("userData"), "advice-outbox.json")),
     cacheFile: join(app.getPath("userData"), "profile-matches.json"),
+    copy: uiCopy(config.explain.templates),
   });
   await server.init();
   offerInvite = (code) => server.offerInvite(code);
@@ -353,6 +354,7 @@ async function main(): Promise<void> {
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
   ipcMain.handle(IPC.importLoadout, (_e, kind: unknown) => (kind === "runes" || kind === "items" || kind === "all" ? coach.importLoadout(kind) : undefined));
+  ipcMain.handle(IPC.retry, () => coach.retryNow());
 
   await coach.start();
   coach.setAppVersion(app.getVersion());
