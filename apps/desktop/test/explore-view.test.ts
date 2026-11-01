@@ -282,6 +282,14 @@ describe("a champion looked up", () => {
     expect(worst[0]!.delta!).toBeLessThan(0);
   });
 
+  it("a pair that plays about even is neither best nor worst, and an all-even lane says so", () => {
+    const even = exploreChampionView(index({ matchups: [[1, "middle", 5, "middle", 400, 208, 400]] }), 1, "middle", detailDeps)!;
+    expect(even.matchups).toEqual({ best: [], worst: [] });
+    const html = renderToStaticMarkup(createElement(ChampionPage, { view: even, tab: "matchups" as DetailTab, onTab: () => {}, onBack: () => {} }));
+    expect(html).toContain(t("explore.noMatchups"));
+    expect(html).not.toContain(">Even<");
+  });
+
   it("reads matchups from either side of the stored pair", () => {
     const zed = exploreChampionView(index(), 5, "middle", detailDeps)!;
     expect(zed.matchups.worst[0]!.champion!.id).toBe(1);

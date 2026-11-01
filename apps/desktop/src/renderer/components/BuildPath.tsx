@@ -94,7 +94,7 @@ export function BuildPath({ loadout, tight = false, winAdded = false }: { loadou
   const rows = steps(loadout);
   if (!rows.length) return <span className="caption">Not enough purchases to rank items yet.</span>;
   return (
-    <div className={tight ? "path tight" : "path"} role="table" aria-label="Build path">
+    <div className={cx("path", tight && "tight", winAdded && "with-added")} role="table" aria-label="Build path">
       {rows.map((c) => {
         const star = starOf(c);
         return (

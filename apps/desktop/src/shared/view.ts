@@ -187,6 +187,9 @@ export interface MatchupRowView {
   partner?: boolean;
 }
 
+/** Within this (points of win chance either way) a pair plays as expected: "Even". */
+export const MATCHUP_EVEN = 0.01;
+
 /** One outcome of an import click; `failed`: this part didn't work. */
 export interface ImportLine {
   text: string;

@@ -268,11 +268,13 @@ function Runes({ view: v }: { view: ExploreChampionView }) {
 /** Spells, skills, the most taken path, then the items one by one with their pick rate and win added. */
 function Build({ view: v }: { view: ExploreChampionView }) {
   const l = v.loadout!;
-  const core = l.items.length > 0 ? v.core : null;
+  // With a notice above, the screen runs short: after the path's rows get tighter (BuildTab), the core build goes, since the path below shows its items too.
+  const level = useFitLevel(v.champion.id, 2);
+  const core = l.items.length > 0 && level < 2 ? v.core : null;
   return (
     <>
       {(l.spells || l.skills) && (
-        <Section>
+        <Section className="explore-build">
           <SkillGrid spells={l.spells} skills={l.skills} />
         </Section>
       )}

@@ -1,7 +1,7 @@
 import { browseLoadout, completedBoots, deltaWin, type EngineConfig, type MetaIndex, type PlayerGame, type RankBandConfig } from "@ldc/engine";
 import type { ChampionBuild, ChampionId, Position, RankBandId, UserMatch } from "@ldc/shared";
 import type { ExploreChampionView, ExploreList, ExploreRow, MyGames, OwnRecord } from "../shared/explore";
-import type { IconView, LoadoutView, MatchupRowView } from "../shared/view";
+import { MATCHUP_EVEN, type IconView, type LoadoutView, type MatchupRowView } from "../shared/view";
 import { champView, type ChampionLookup } from "./draft-view";
 import { browsePageViews, iconOf, toLoadoutView, type LoadoutViewDeps } from "./loadout-view";
 
@@ -91,7 +91,8 @@ export function browseMatchups(index: MetaIndex, id: ChampionId, role: Position,
     .filter(({ stat }) => stat.n >= minGames)
     .map(({ enemy, stat }) => ({ champion: champView(enemy, lookup), role, lane: false, winRate: rateOf(stat), delta: deltaWin(index.matchupDelta(id, role, enemy, role).delta), games: stat.n }));
   const byDelta = rows.sort((a, b) => b.delta! - a.delta! || b.games - a.games);
-  return { best: byDelta.filter((r) => r.delta! > 0).slice(0, MATCHUP_ROWS), worst: byDelta.filter((r) => r.delta! < 0).reverse().slice(0, MATCHUP_ROWS) };
+  // A pair that plays about even is neither: the table would call it "Even" under "Worst against".
+  return { best: byDelta.filter((r) => r.delta! > MATCHUP_EVEN).slice(0, MATCHUP_ROWS), worst: byDelta.filter((r) => r.delta! < -MATCHUP_EVEN).reverse().slice(0, MATCHUP_ROWS) };
 }
 
 /** The most taken full path of completed items; never its win rate, which would be a raw item win rate. */

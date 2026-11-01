@@ -533,7 +533,7 @@
     "ui.explore.best": "Best against",
     "ui.explore.worst": "Worst against",
     "ui.explore.matchupsNote": "+ wins more, − wins less than the two champions' usual win rates predict. Lane opponents only.",
-    "ui.explore.noMatchups": "Not enough games against other champions in this lane yet.",
+    "ui.explore.noMatchups": "No clear best or worst lane opponents yet: too few games, or they all play about even.",
     "ui.explore.core": "Core build",
     "ui.explore.coreShare": "{rate} of players · {count}",
     "ui.build.spellsSkills": "Summoner spells & skill order",

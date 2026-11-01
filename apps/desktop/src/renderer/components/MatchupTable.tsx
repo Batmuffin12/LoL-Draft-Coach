@@ -1,10 +1,7 @@
-import type { MatchupRowView } from "../../shared/view";
+import { MATCHUP_EVEN as VERDICT_DEAD_ZONE, type MatchupRowView } from "../../shared/view";
 import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Facts } from "./Facts";
-
-/** Within this (points of win chance either way) a pair plays as expected: "Even". */
-const VERDICT_DEAD_ZONE = 0.01;
 
 /** The matchup in a word, from the change against expectation: Favoured, Even or Hard. */
 function verdict(delta: number | null): string {
