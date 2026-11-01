@@ -146,7 +146,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .btn.primary:hover { background: var(--gold-bright); color: var(--on-gold); }
 .btn.danger { color: var(--red); border-color: var(--red); }
 .btn.small { min-height: 26px; padding: 0 8px; font-size: var(--fs-label); }
-.btn.ghost { border-color: transparent; color: var(--muted); min-height: 28px; padding: 0 8px; }
+.btn.ghost { border-color: transparent; color: var(--muted); min-height: 28px; padding: 0 8px; text-transform: none; letter-spacing: 0; }
 .btn.ghost:hover { color: var(--text); }
 .btn.wide { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: default; }
@@ -239,8 +239,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table .neg { color: var(--negative); }
 .table .flat, .table .muted { color: var(--muted); }
 .table.bans .trow { min-height: 0; padding: 5px 6px; }
-.table .c-bar { height: 8px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
-.table .c-bar .fill { position: absolute; right: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
+.table .c-bar { height: 6px; border-radius: 3px; background: var(--track); position: relative; overflow: hidden; }
+.table .c-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--negative); }
 .table .open { padding: 8px 6px 0; font-size: var(--fs-caption); color: var(--muted); }
 
 /* Matchup rows: your lane opponent as a gold row, the verdict with its points */
@@ -433,8 +433,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .foot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
 .foot-row .who { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
 .foot-row .actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
-.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }
-.foot-link:hover { color: var(--text); text-decoration: underline; }
+.foot-link { all: unset; cursor: pointer; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 2px; }
+.foot-link:hover { color: var(--text); text-decoration-color: currentColor; }
 .foot-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .foot-link.danger { color: var(--red); }
 .foot-link.gold { color: var(--gold); }
