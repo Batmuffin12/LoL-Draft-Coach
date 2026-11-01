@@ -234,6 +234,18 @@ export interface SessionView {
   until: number;
 }
 
+/** One entry of a labelled row: short text, with the champion's icon when it is about one. */
+export interface FactItem {
+  text: string;
+  champion?: ChampView | null;
+}
+
+/** A short label with its values as separate entries, instead of a sentence ("Good matchups": Orianna +3.1%, Ahri +1.2%). */
+export interface FactRow {
+  label: string;
+  items: FactItem[];
+}
+
 /** A champion in the player's pool for a role. */
 export interface PoolChampView {
   champion: ChampView;
@@ -284,8 +296,8 @@ export interface RoleView {
   missing: string | null;
   /** Said when there are no holes. */
   noGaps: string;
-  /** Champions that didn't fit in the matrix: "Also rusty: Riven, Irelia", or null. */
-  also: string | null;
+  /** Champions that didn't fit in the matrix, a row per tier ("Also rusty": Riven, Irelia); empty when all fit. */
+  also: FactRow[];
 }
 
 /**
@@ -439,8 +451,8 @@ export interface LearnView {
   stage: string;
   /** The one thing to watch next game, and whether your last games on it reached it (oldest first). */
   focus: { text: string; recent: boolean[] } | null;
-  /** What to do at this stage, its job, the role's cue, when it's strong, matchups, how long to give it, your record. */
-  lines: string[];
+  /** What the data says about it, as labelled rows: how it plays, skills, how it wins, its spike, your first item, short vs long games, matchups, your record. */
+  lines: FactRow[];
 }
 
 /** One measurable focus on your main champion and role, with a target and your last games against it. */

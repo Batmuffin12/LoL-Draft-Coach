@@ -5,6 +5,7 @@ import { FocusCard } from "../components/FocusCard";
 import { MonthReport } from "../components/MonthReport";
 import { NewChampTable } from "../components/NewChampTable";
 import { ChampIcon } from "../components/ChampIcon";
+import { Facts } from "../components/Facts";
 import { howLines, NumberRows } from "../components/StyleNumbers";
 import { Pills } from "../components/Pills";
 import { StyleRadar } from "../components/StyleRadar";
@@ -16,7 +17,7 @@ import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { cx, needsClient, pct, positionLabel, roleName, t } from "../format";
-import { useNow } from "../hooks";
+import { useFitLevel, useFits, useNow } from "../hooks";
 import { AccountFooter, Header, Notices, ProgressRow } from "./common";
 import { Suggestion } from "./Suggestion";
 
@@ -168,6 +169,8 @@ function LastGame({ state }: { state: ViewState }) {
 function NewChamps({ state }: { state: ViewState }) {
   const list = state.newChamps.filter((r) => r.picks.length || r.learning);
   const [sub, setSub] = useRolePill(list.map((r) => r.role));
+  // Long plans: first each row's entries go side by side, then the picks' reasons or the picks after your current champion move to hover.
+  const level = useFitLevel(sub, 2);
   if (!list.length) {
     return (
       <Section title="New champions">
@@ -193,24 +196,24 @@ function NewChamps({ state }: { state: ViewState }) {
                   <span className="label gold">{l.title}</span>
                   {l.progress && <span className="micro">{l.progress}</span>}
                 </div>
-                <Learn learn={l.learn} />
+                <Learn learn={l.learn} flow={level > 0} />
               </div>
             )}
             {l && r.picks.length > 0 && (
-              <span className="label" title={l.why}>
+              <span className="label" title={level > 1 ? [l.why, ...r.picks.map((p) => p.champion.name)].join("\n") : l.why}>
                 {l.after} <span className="micro">· {l.why}</span>
               </span>
             )}
-            {r.picks.length > 0 && (
+            {r.picks.length > 0 && !(l && level > 1) && (
               <div className={l ? "after-learning" : undefined}>
-                <NewChampTable rows={r.picks} />
+                <NewChampTable rows={r.picks} brief={level > 1} />
               </div>
             )}
             {r.plan && (
               <div className="plan">
                 <span className="label gold">First games plan</span>
                 <span>{r.plan}</span>
-                {r.planLearn && <Learn learn={r.planLearn} />}
+                {r.planLearn && <Learn learn={r.planLearn} flow={level > 0} />}
               </div>
             )}
           </Section>
@@ -221,7 +224,7 @@ function NewChamps({ state }: { state: ViewState }) {
 }
 
 /** How to learn a champion: the one thing to watch next game (with your last games on it) under its stage, then short facts. */
-function Learn({ learn }: { learn: LearnView }) {
+function Learn({ learn, flow }: { learn: LearnView; flow: boolean }) {
   const f = learn.focus;
   return (
     <>
@@ -240,19 +243,8 @@ function Learn({ learn }: { learn: LearnView }) {
       ) : (
         learn.stage && <span className="label">{learn.stage}</span>
       )}
-      {learn.lines.length > 0 && <Lines lines={learn.lines} />}
+      {learn.lines.length > 0 && <Facts rows={learn.lines} flow={flow} />}
     </>
-  );
-}
-
-/** Short facts, one per line. */
-function Lines({ lines }: { lines: string[] }) {
-  return (
-    <ul className="notes">
-      {lines.map((t) => (
-        <li key={t}>{t}</li>
-      ))}
-    </ul>
   );
 }
 
@@ -304,6 +296,8 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
   // Roles with too few games to judge have no pool to show: left out, so the others fit.
   const list = state.roles.filter((r) => r.enoughData);
   const [sub, setSub] = useRolePill(list.map((r) => r.role));
+  // Many extra champions in a tight pool: their names move to hover.
+  const fits = useFits(sub);
   if (!list.length) return <Section title="Your pool">{<p className="caption">{needsClient(state.status) ? t("profile.openClient") : "Your roles and pool show here once your recent games are loaded."}</p>}</Section>;
   const stats = (r: ViewState["roles"][number]) => `${r.games} ${r.games === 1 ? "game" : "games"} · ${pct(r.winRate)} WR`;
   const r = list.find((x) => x.role === sub) ?? list[0]!;
@@ -323,7 +317,7 @@ function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => voi
         {columns.length > 0 && r.coverage ? (
           <>
             <PoolCoverage pool={columns} coverage={r.coverage} />
-            {r.also && <span className="micro">{r.also}</span>}
+            {r.also.length > 0 && <Facts rows={r.also} iconOnly={!fits} />}
             <PoolLegend />
           </>
         ) : (

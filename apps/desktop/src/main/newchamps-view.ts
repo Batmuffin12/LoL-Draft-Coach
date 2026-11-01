@@ -1,6 +1,6 @@
 import { formatMetric, metricLabel, renderReason, spikeReason, type ExplainConfig, type LearningMatchup, type LearningPlan, type NewChampAdvice } from "@ldc/engine";
 import type { Reason } from "@ldc/shared";
-import type { ChampView, LearnView, NewChampRoleView } from "../shared/view";
+import type { ChampView, FactItem, FactRow, LearnView, NewChampRoleView } from "../shared/view";
 
 export interface NewChampsViewDeps {
   explain: ExplainConfig;
@@ -21,21 +21,23 @@ export interface NewChampsViewDeps {
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
 /** Reasons the table's columns already show. */
 const COLUMN_REASONS = /^newchamp\.(meta|ease\.)/;
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * A learning plan as the New tab shows it: the stage, the one thing to watch next game, then
  * only what the data says about this champion: how it wins in your rank (with your numbers on
  * it), when it's strong, its matchups and your record on it. No generic advice.
  */
-export function learnView(p: LearningPlan, role: string, championId: number, deps: Pick<NewChampsViewDeps, "explain" | "championName" | "itemName" | "blockGames" | "learn">): LearnView {
+export function learnView(p: LearningPlan, role: string, championId: number, deps: Pick<NewChampsViewDeps, "explain" | "champion" | "championName" | "itemName" | "blockGames" | "learn">): LearnView {
   const { explain } = deps;
   const t = explain.templates;
   const say = (r: Reason) => renderReason(r, t, deps.championName, deps.itemName ? { item: deps.itemName } : {});
+  const sayId = (id: string, slots: Reason["slots"] = {}) => say({ id, slots });
   const pct = (v: number) => {
     const s = (v * 100).toFixed(1);
-    return v > 0 ? `+${s}%` : `${s.replace("-", "−")}%`;
+    return v > 0 ? `+${s}%` : `${s.replace("-", "\u2212")}%`;
   };
-  const list = (xs: LearningMatchup[]) => xs.map((x) => `${deps.championName(x.championId)} (${pct(x.deltaWin)})`).join(", ");
+  const champions = (xs: LearningMatchup[]): FactItem[] => xs.map((x) => ({ text: `${deps.championName(x.championId)} ${pct(x.deltaWin)}`, champion: deps.champion(x.championId) }));
 
   let focus: LearnView["focus"] = null;
   if (p.focus) {
@@ -52,54 +54,58 @@ export function learnView(p: LearningPlan, role: string, championId: number, dep
     focus = { text: say({ id, slots }), recent: f.recent };
   }
 
-  const lines: string[] = [];
+  const lines: FactRow[] = [];
+  /** A row of plain text entries, each starting with a capital. */
+  const row = (label: string, ...items: (string | null)[]) => lines.push({ label: sayId(`newchamp.label.${label}`), items: items.filter((x): x is string => x !== null).map((x) => ({ text: capitalize(x) })) });
   const cfgLearn = deps.learn;
   // How it plays: only what stands out (a damage type that dominates, high or low frontline and crowd control).
   if (p.profile && cfgLearn) {
     const { high, low } = cfgLearn.profile;
-    const traits: string[] = [];
-    if (p.profile.physical >= high) traits.push(say({ id: "newchamp.profile.physical", slots: {} }));
-    else if (p.profile.magic >= high) traits.push(say({ id: "newchamp.profile.magic", slots: {} }));
-    else traits.push(say({ id: "newchamp.profile.mixed", slots: {} }));
-    if (p.profile.frontline >= high) traits.push(say({ id: "newchamp.profile.tanky", slots: {} }));
-    else if (p.profile.frontline <= low) traits.push(say({ id: "newchamp.profile.fragile", slots: {} }));
-    if (p.profile.engage >= high) traits.push(say({ id: "newchamp.profile.cc", slots: {} }));
-    else if (p.profile.engage <= low) traits.push(say({ id: "newchamp.profile.nocc", slots: {} }));
-    lines.push(say({ id: "newchamp.learn.profile", slots: { traits: traits.join(", ") } }));
+    const trait = (id: string) => sayId(`newchamp.profile.${id}`);
+    row(
+      "profile",
+      trait(p.profile.physical >= high ? "physical" : p.profile.magic >= high ? "magic" : "mixed"),
+      p.profile.frontline >= high ? trait("tanky") : p.profile.frontline <= low ? trait("fragile") : null,
+      p.profile.engage >= high ? trait("cc") : p.profile.engage <= low ? trait("nocc") : null,
+    );
   }
   if (p.skills) {
     const key = (slot: number) => t[`skill.key.${slot}`] ?? String(slot);
-    lines.push(say({ id: "newchamp.learn.skills", slots: { first: p.skills.first.map(key).join(", "), order: p.skills.order.map(key).join(", then "), share: p.skills.share } }));
+    row("skills", sayId("newchamp.learn.skills.first", { first: p.skills.first.map(key).join(", ") }), sayId("newchamp.learn.skills.order", { order: p.skills.order.map(key).join(", then "), share: p.skills.share }));
   }
   if (p.wins.length) {
-    const items = p.wins.map((w) => {
-      const fmt = (v: number) => formatMetric(v, w.metric, explain);
-      return say({
-        id: `newchamp.learn.win.${w.lowerIsBetter ? "less" : "more"}${w.you === null ? "" : ".you"}`,
-        slots: { metric: metricLabel(w.metric, explain), winners: fmt(w.winners), losers: fmt(w.losers), you: w.you === null ? "" : fmt(w.you) },
-      });
-    });
-    lines.push(say({ id: "newchamp.learn.wins", slots: { items: items.join("; and ") } }));
+    row(
+      "wins",
+      ...p.wins.map((w) => {
+        const fmt = (v: number) => formatMetric(v, w.metric, explain);
+        return sayId(`newchamp.learn.win.${w.lowerIsBetter ? "less" : "more"}${w.you === null ? "" : ".you"}`, { metric: metricLabel(w.metric, explain), winners: fmt(w.winners), losers: fmt(w.losers), you: w.you === null ? "" : fmt(w.you) });
+      }),
+    );
   }
   // Its measured spikes, and your own first-item timing on it (both only when measured).
-  for (const s of p.spikes) lines.push(say(spikeReason(s, "learn", championId)));
+  if (p.spikes.length) row("spike", ...p.spikes.flatMap((s) => [say(spikeReason(s, "learn", championId)), sayId(`spike.learn.do.${s.kind}`)]));
   if (p.timing) {
     const { games, you, typical, slow } = p.timing;
-    const id = typical === null ? "newchamp.learn.timing.only" : slow ? "newchamp.learn.timing.slow" : "newchamp.learn.timing";
-    lines.push(say({ id, slots: { games, you: you.toFixed(1), typical: typical === null ? "" : typical.toFixed(1) } }));
+    row(
+      "timing",
+      sayId("newchamp.learn.timing.you", { games, you: you.toFixed(1) }),
+      typical === null ? null : sayId("newchamp.learn.timing.typical", { typical: typical.toFixed(1) }),
+      typical !== null && slow ? sayId("newchamp.learn.timing.slow") : null,
+    );
   }
-  if (p.curve) lines.push(say({ id: p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early", slots: { early: p.curve.early, late: p.curve.lateRate } }));
-  else if (p.evenCurve) lines.push(say({ id: "newchamp.learn.evenCurve", slots: { early: p.evenCurve.early, late: p.evenCurve.late } }));
-  if (p.good.length) lines.push(say({ id: "newchamp.learn.good", slots: { champions: list(p.good) } }));
-  if (p.hard.length) lines.push(say({ id: "newchamp.learn.hard", slots: { champions: list(p.hard) } }));
-  if (p.evenMatchups) lines.push(say({ id: "newchamp.learn.evenMatchups", slots: { role, count: p.evenMatchups } }));
+  if (p.curve) row("curve", sayId(p.curve.late ? "newchamp.learn.late" : "newchamp.learn.early"), sayId("newchamp.learn.curve.rates", { early: p.curve.early, late: p.curve.lateRate }));
+  else if (p.evenCurve) row("curve", sayId("newchamp.learn.evenCurve"), sayId("newchamp.learn.curve.rates", { early: p.evenCurve.early, late: p.evenCurve.late }));
+  if (p.good.length) lines.push({ label: sayId("newchamp.label.good"), items: champions(p.good) });
+  if (p.hard.length) lines.push({ label: sayId("newchamp.label.hard"), items: champions(p.hard) });
+  if (p.evenMatchups) row("even", sayId("newchamp.learn.evenMatchups", { role, count: p.evenMatchups }), sayId("newchamp.learn.evenMatchups.blind"));
   if (p.laneGold && cfgLearn) {
     const gold = Math.round(Math.abs(p.laneGold.diff));
-    const id = gold < cfgLearn.laneGoldEven ? "newchamp.learn.gold.even" : p.laneGold.diff > 0 ? "newchamp.learn.gold.ahead" : "newchamp.learn.gold.behind";
-    lines.push(say({ id, slots: { gold, role } }));
+    const even = gold < cfgLearn.laneGoldEven;
+    const behind = !even && p.laneGold.diff < 0;
+    row("gold", sayId(even ? "newchamp.learn.gold.even" : behind ? "newchamp.learn.gold.behind" : "newchamp.learn.gold.ahead", { gold, role }), behind ? sayId("newchamp.learn.gold.later") : null);
   }
-  if (p.record.games > 0) lines.push(say({ id: "newchamp.learn.record", slots: { wins: p.record.wins, losses: p.record.games - p.record.wins } }));
-  return { stage: say({ id: `newchamp.stage.${p.stage}.label`, slots: {} }), focus, lines };
+  if (p.record.games > 0) row("record", sayId("newchamp.learn.record", { wins: p.record.wins, losses: p.record.games - p.record.wins }));
+  return { stage: sayId(`newchamp.stage.${p.stage}.label`), focus, lines };
 }
 
 /** New champions for a role as the lobby shows them, with how to learn the one you're on or the top one. */

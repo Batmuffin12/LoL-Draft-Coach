@@ -4,8 +4,8 @@ import { ChampIcon } from "./ChampIcon";
 
 const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
 
-/** New champions for one role: the champion of yours it's most like, its win rate in your rank, ease; one reason under each. */
-export function NewChampTable({ rows }: { rows: NewChampView[] }) {
+/** New champions for one role: the champion of yours it's most like, its win rate in your rank, ease; one reason under each (on hover only when `brief`). */
+export function NewChampTable({ rows, brief = false }: { rows: NewChampView[]; brief?: boolean }) {
   return (
     <div className="table newchamps" role="table">
       <div className="thead" role="row">
@@ -45,7 +45,7 @@ export function NewChampTable({ rows }: { rows: NewChampView[] }) {
             {rate(c.winRate, 1)}
           </span>
           <span className={cx("c-num ease", EASE[c.ease])}>{c.easeLabel}</span>
-          {c.reasons[0] && <span className="sub">{c.reasons[0]}</span>}
+          {c.reasons[0] && !brief && <span className="sub">{c.reasons[0]}</span>}
         </div>
       ))}
     </div>

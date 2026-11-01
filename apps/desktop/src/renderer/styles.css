@@ -358,7 +358,15 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .progress .p-bar { height: 3px; border-radius: 2px; background: var(--track); overflow: hidden; }
 .progress .p-bar span { display: block; height: 100%; background: var(--gold); }
 
-/* Pills: role switches in the lobby */
+/* Labelled rows: a short label, its values as separate entries */
+.facts { display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.fact { display: grid; grid-template-columns: 84px minmax(0, 1fr); column-gap: 8px; align-items: baseline; }
+.fact-label { font-family: var(--font-display); font-size: var(--fs-label); line-height: var(--lh-caption); font-weight: 600; color: var(--muted); }
+.fact-items { display: flex; flex-direction: column; min-width: 0; }
+.fact-items.flow { flex-direction: row; flex-wrap: wrap; gap: 2px 10px; }
+.fact-item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+
+/* Pills: sub-tabs and role switches in the lobby */
 .pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
 .pills.compact { margin-bottom: 2px; }
 .pills.compact .pill { padding: 2px 8px; }
@@ -424,8 +432,6 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 /* Learning a champion in the role: its progress first; the next suggestions dimmed under "After …" */
 .plan.learning .learning-head { display: flex; align-items: center; gap: 8px; }
 .plan.learning .learning-head .micro { margin-left: auto; }
-.plan .notes { margin: 0; padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
-.plan .notes li::marker { color: var(--muted); }
 .after-learning { opacity: 0.6; }
 .learn-focus { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-left: 2px solid var(--gold); background: var(--track); border-radius: var(--radius-sm); }
 .learn-focus .games { display: flex; gap: 3px; }

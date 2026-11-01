@@ -11,21 +11,26 @@ export function useNow(intervalMs: number): number {
 }
 
 /**
- * False when the panel's scrolling area overflows with the full content: the screen then shows its
- * compact form (secondary lines move to hover). Measured after layout, again when `key` changes or
- * the window resizes, so the screen never needs a scrollbar.
+ * How many steps a screen must shrink for the panel's scrolling area not to overflow: 0 is the full
+ * content, up to `max` the most compact form (secondary lines move to hover). Measured after layout,
+ * again when `key` changes or the window resizes, so the screen never needs a scrollbar.
  */
-export function useFits(key: unknown): boolean {
-  const [fits, setFits] = useState(true);
-  useLayoutEffect(() => setFits(true), [key]);
+export function useFitLevel(key: unknown, max: number): number {
+  const [level, setLevel] = useState(0);
+  useLayoutEffect(() => setLevel(0), [key]);
   useLayoutEffect(() => {
     const check = () => {
       const s = document.querySelector(".window .scroll");
-      if (s && s.scrollHeight > s.clientHeight) setFits(false);
+      if (s && s.scrollHeight > s.clientHeight) setLevel((l) => Math.min(max, l + 1));
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   });
-  return fits;
+  return level;
+}
+
+/** False when the full content overflows: the screen then shows its compact form. */
+export function useFits(key: unknown): boolean {
+  return useFitLevel(key, 1) === 0;
 }

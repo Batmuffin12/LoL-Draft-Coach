@@ -27,7 +27,7 @@ export function poolAdvice(
 ): Pick<RoleView, "coverage" | "nextStep" | "missing" | "noGaps" | "also"> {
   const say = (id: string, slots: Record<string, string | number> = {}) => renderReason({ id, slots }, templates, (id) => lookup(id)?.name ?? `#${id}`);
   const noGaps = say("pool.noGaps", { role });
-  if (!pool || !pool.champions.length) return { coverage: null, nextStep: null, missing: null, noGaps, also: null };
+  if (!pool || !pool.champions.length) return { coverage: null, nextStep: null, missing: null, noGaps, also: [] };
   const holes = pool.holes;
   const gaps = new Set(holes.map((h) => h.need));
   const covers = poolCoverage(pool.champions.slice(0, POOL_COLUMNS), attributes, coverage);
@@ -56,19 +56,10 @@ export function poolAdvice(
         : null,
     missing: open.length ? say("pool.missing", { needs: words(open), role, n: open.length }) : null,
     noGaps,
-    also: tiers.length
-      ? tiers
-          .map((t) =>
-            say("pool.also", {
-              tier: say(`pool.tier.${t}`).toLowerCase(),
-              champions: extra
-                .filter((c) => c.tier === t)
-                .map((c) => lookup(c.championId)?.name ?? `#${c.championId}`)
-                .join(", "),
-            }),
-          )
-          .join(". ")
-      : null,
+    also: tiers.map((t) => ({
+      label: say("pool.also", { tier: say(`pool.tier.${t}`).toLowerCase() }),
+      items: extra.filter((c) => c.tier === t).map((c) => ({ text: lookup(c.championId)?.name ?? `#${c.championId}`, champion: champView(c.championId, lookup) })),
+    })),
   };
 }
 

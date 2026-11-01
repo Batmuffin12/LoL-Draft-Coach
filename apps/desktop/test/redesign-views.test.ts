@@ -71,7 +71,7 @@ describe("pool advice", () => {
     expect(a.coverage!.covers[2]).toEqual(expect.arrayContaining(["physical", "frontline"]));
     expect(a.coverage!.covers[3]).toBeUndefined();
     // The two champions past the matrix's columns are listed under it.
-    expect(a.also).toBe("Also rusty: Riven, Irelia");
+    expect(a.also).toEqual([{ label: "Also rusty", items: [{ text: "Riven", champion: expect.objectContaining({ id: 4, name: "Riven" }) }, { text: "Irelia", champion: expect.objectContaining({ id: 5, name: "Irelia" }) }] }]);
   });
 
   it("suggests the champion you know that fills the biggest gap, and says what nothing you know covers", () => {
