@@ -242,4 +242,10 @@ describe("first-use wording", () => {
     expect(copy["tour.live.import"]).toContain("only when you click");
     expect(copy["tour.live.browse"]).toContain("never shows other players' names or ranks");
   });
+
+  it("claims no privacy it doesn't have: your games are on the server too, and backups outlive a delete", () => {
+    for (const [key, text] of Object.entries(copy)) expect(text, key).not.toMatch(/kept on this PC|stays? on (this|your) PC|only on (this|your) PC/i);
+    expect(copy["account.delete.ask"]).not.toMatch(/everything/);
+    expect(copy["account.delete.ask"]).toContain("backups");
+  });
 });
