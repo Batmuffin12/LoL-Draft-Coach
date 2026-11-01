@@ -21,7 +21,7 @@ function Header({ m, brief }: { m: MonthView; brief: boolean }) {
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label gold" {...tip(m.rank)}>{`${m.period} · ${gameCount(m.games)}`}</span>
+        <span className="label" {...tip(m.rank)}>{`${m.period} · ${gameCount(m.games)}`}</span>
         <span className="rule" aria-hidden="true" />
         <span className="micro">{m.gamesBeforeText}</span>
       </div>
@@ -93,7 +93,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
         </Section>
       )}
       {m.champions.length > 0 && (
-        <Section title={t("month.champions")} gold={false} aside={m.focusLine ? <span className="micro">{m.focusLine}</span> : undefined}>
+        <Section title={t("month.champions")} aside={m.focusLine ? <span className="micro">{m.focusLine}</span> : undefined}>
           <div className="champcards">
             {m.champions.slice(0, CHAMPIONS).map((c) => {
               const wr = winToneOf(c.winRate, c.games);
@@ -119,7 +119,7 @@ export function MonthReport({ month: m }: { month: MonthView }) {
                   {met.length > 1 ? ` ${t("month.goalsMore", { n: met.length - 1 })}` : ""}
                 </span>
               )}
-              {m.focus.current && <span className="gold">{m.focus.current}</span>}
+              {m.focus.current && <span className="text">{m.focus.current}</span>}
             </span>
           )}
         </Section>

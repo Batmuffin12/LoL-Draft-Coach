@@ -5,14 +5,14 @@ export interface SectionProps {
   title?: string;
   /** At the right end of the rule: a chip, the screen's primary button, a key. */
   aside?: ReactNode;
-  /** False for a sub-section that follows a main one ("Against your Ahri"). */
+  /** Gold is for you, not for structure: only "Your next step" asks for it. */
   gold?: boolean;
   className?: string;
   children?: ReactNode;
 }
 
 /** A flat block with an uppercase head and a hairline rule, the way the client heads its panels. Never inside a card. */
-export function Section({ title, aside, gold = true, className, children }: SectionProps) {
+export function Section({ title, aside, gold = false, className, children }: SectionProps) {
   return (
     <section className={cx("section", className)}>
       {title && (

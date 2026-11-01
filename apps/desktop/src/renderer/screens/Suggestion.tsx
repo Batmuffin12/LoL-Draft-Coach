@@ -37,7 +37,7 @@ export function Suggestion({ state, preview }: { state: ViewState; preview: Prev
         <SuggestedPick pick={pick} first={at === 0} whyNot={cur.whyNot} record={record} maxReasons={4} />
       </Section>
       {cur.picks.length > 1 && (
-        <Section title={t("pick.ifNot", { champion: pick.champion.name })} gold={false}>
+        <Section title={t("pick.ifNot", { champion: pick.champion.name })}>
           <OtherPicks picks={cur.picks.map((p, index) => ({ pick: p, index })).filter((p) => p.index !== at)} onSelect={setSel} />
         </Section>
       )}

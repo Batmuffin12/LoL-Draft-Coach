@@ -14,8 +14,6 @@ interface Step {
   label: string;
   minute: number | null;
   main: Option;
-  /** The core build's items get the gold ring. */
-  core: boolean;
   /** Null: no pick rates to show (the start, the common path with thin data). */
   alternatives: ItemOptionView[] | null;
   /** The start's other items with how many (2 potions, a ward), shown as icons. */
@@ -44,18 +42,17 @@ function steps(l: LoadoutView): Step[] {
       label: t("build.start"),
       minute: 0,
       main: { ...s.items[0], reasons: [s.items.map((i, k) => `${s.counts[k] ?? 1} × ${i.name}`).join(", "), ...(s.reason ? [s.reason] : [])] },
-      core: false,
       alternatives: null,
       extras: s.items.slice(1).map((item, k) => ({ item, count: s.counts[k + 1] ?? 1 })),
     });
   }
-  if (l.boots) out.push({ key: "boots", label: t("build.boots"), minute: null, main: l.boots.top, core: false, alternatives: l.boots.alternatives.slice(0, ALTERNATIVES), extras: [] });
+  if (l.boots) out.push({ key: "boots", label: t("build.boots"), minute: null, main: l.boots.top, alternatives: l.boots.alternatives.slice(0, ALTERNATIVES), extras: [] });
   if (l.items.length) {
     for (const [i, slot] of l.items.slice(0, CORE_SLOTS).entries())
-      out.push({ key: `item${slot.slot}`, label: t("build.item", { n: i + 1 }), minute: slot.minute, main: slot.top, core: true, alternatives: slot.alternatives.slice(0, ALTERNATIVES), extras: [], spike: l.spikeSlots.includes(slot.slot) });
+      out.push({ key: `item${slot.slot}`, label: t("build.item", { n: i + 1 }), minute: slot.minute, main: slot.top, alternatives: slot.alternatives.slice(0, ALTERNATIVES), extras: [], spike: l.spikeSlots.includes(slot.slot) });
   } else {
     for (const [i, item] of (l.commonPath?.items ?? []).slice(0, CORE_SLOTS).entries())
-      out.push({ key: `common${i}`, label: t("build.item", { n: i + 1 }), minute: null, main: { ...item, reasons: l.commonPath?.reason ? [l.commonPath.reason] : [] }, core: true, alternatives: null, extras: [] });
+      out.push({ key: `common${i}`, label: t("build.item", { n: i + 1 }), minute: null, main: { ...item, reasons: l.commonPath?.reason ? [l.commonPath.reason] : [] }, alternatives: null, extras: [] });
   }
   return out;
 }
@@ -110,7 +107,7 @@ export function BuildPath({ loadout, tight = false, winAdded = false }: { loadou
               {c.minute !== null && <span className="micro">{t("build.minutes", { n: Math.round(c.minute) })}</span>}
             </span>
             <span className="main" tabIndex={0} aria-label={tip(c.main)} title={tip(c.main)}>
-              <ChampIcon champ={c.main} kind="game" size={32} lit={c.core} title="" />
+              <ChampIcon champ={c.main} kind="game" size={32} lit={star === 0} title="" />
               <span className="nm">
                 <span className="text">{c.main.name}</span>
               </span>
@@ -134,7 +131,7 @@ export function BuildPath({ loadout, tight = false, winAdded = false }: { loadou
                 (c.alternatives.length ? (
                   c.alternatives.map((a, i) => (
                     <span key={a.id} className="opt" tabIndex={0} aria-label={tip(a)} title={tip(a)}>
-                      <ChampIcon champ={a} kind="game" size={22} title="" />
+                      <ChampIcon champ={a} kind="game" size={22} lit={star === i + 1} title="" />
                       <span className="micro">
                         {rate(a.share)}
                         {star === i + 1 && <Star />}

@@ -116,7 +116,7 @@ export function BuildTab({ loadout: l, winAdded = false }: { loadout: LoadoutVie
         </Section>
       )}
       {l.laterPool.length > 0 && (
-        <Section title={t("build.later")} gold={false}>
+        <Section title={t("build.later")}>
           <ItemRows items={l.laterPool.slice(0, LATER_ROWS)} brief={level > 0} />
         </Section>
       )}
@@ -147,7 +147,7 @@ export function MatchupsPlanTab({ pick }: { pick: MyPickView }) {
           <Section title={t("matchups.against")} aside={<span className="micro">{t("matchups.note")}</span>}>
             <MatchupTable rows={m.against} />
           </Section>
-          <Section title={t("matchups.with")} gold={false}>
+          <Section title={t("matchups.with")}>
             <MatchupTable rows={m.with} />
           </Section>
         </>

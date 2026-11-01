@@ -35,7 +35,7 @@ export function NewChamps({ state }: { state: ViewState }) {
               <div className="plan learning" {...tip(level > 2 ? minorText(l.learn) : null)}>
                 <div className="learning-head">
                   {l.champion && <ChampIcon champ={l.champion} size={28} />}
-                  <span className="label gold">{l.title}</span>
+                  <span className="label">{l.title}</span>
                   {l.progress && <span className="micro">{l.progress}</span>}
                 </div>
                 <Learn learn={l.learn} level={level} />
@@ -53,7 +53,7 @@ export function NewChamps({ state }: { state: ViewState }) {
             )}
             {r.plan && (
               <div className="plan" {...tip(level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : null)}>
-                <span className="label gold">{t("new.plan")}</span>
+                <span className="label">{t("new.plan")}</span>
                 <span>{r.plan}</span>
                 {r.planLearn && <Learn learn={r.planLearn} level={level} />}
               </div>

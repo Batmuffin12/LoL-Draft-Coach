@@ -40,7 +40,7 @@ export function FocusCard({ focus: f, game }: { focus: FocusView; game: PostGame
       </div>
       {f.tips[0] && (
         <span className="caption next" title={f.tips.slice(1).join("\n") || undefined}>
-          <span className="label gold">{t("last.next")}</span> <span className="text">{f.tips[0]}</span>
+          <span className="label">{t("last.next")}</span> <span className="text">{f.tips[0]}</span>
         </span>
       )}
     </div>

@@ -131,14 +131,14 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
             )}
           </Section>
           {cur && picks.length > 1 && (
-            <Section title={t("pick.ifNot", { champion: cur.champion.name })} gold={false}>
+            <Section title={t("pick.ifNot", { champion: cur.champion.name })}>
               <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} />
             </Section>
           )}
         </>
       )}
       {!state.docked && (
-        <Section title={t("draft.head")} gold={false}>
+        <Section title={t("draft.head")}>
           <DraftBoard draft={draft} />
         </Section>
       )}

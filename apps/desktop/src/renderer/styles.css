@@ -157,7 +157,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-label); line-height: var(--lh-label); font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap; }
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .chip.clear { color: var(--ok); border-color: var(--ok); }
-.chip.close { color: var(--gold); border-color: var(--gold); }
+.chip.close { color: var(--text); }
 .chip.thin { color: var(--muted); border-style: dashed; }
 .chip.warn { color: var(--warn); border-color: var(--tag-line); border-radius: var(--radius-xs); font-family: var(--font-display); font-size: var(--fs-micro); line-height: var(--lh-micro); padding: 2px 6px; }
 .chip.pos { color: var(--positive); border-color: transparent; background: var(--track); }
@@ -255,7 +255,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .reasons li::before { content: "+"; position: absolute; left: 0; color: var(--positive); font-weight: 700; }
 .reasons li.but { color: var(--warn); }
 .reasons li.but::before { content: "\2212"; color: var(--warn); }
-.reasons li.why { color: var(--gold); }
+.reasons li.why { color: var(--muted); }
 .reasons.plan-lines li.why { color: var(--text); }
 .reasons li.why::before { content: "\203A"; color: var(--gold); }
 
@@ -395,7 +395,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .code .box { width: 96px; height: 44px; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--card); font-family: var(--font-mono); font-size: var(--fs-heading); letter-spacing: 0.16em; color: var(--text); text-align: center; text-transform: uppercase; }
 .connect-how { display: flex; flex-direction: column; gap: 12px; margin: 0 24px; padding: 16px 0; border-top: 1px solid var(--line); }
 .connect-how .step { display: flex; gap: 12px; align-items: flex-start; }
-.connect-how .step b { font-family: var(--font-display); color: var(--gold); font-size: var(--fs-heading); line-height: var(--lh-heading); width: 12px; flex-shrink: 0; }
+.connect-how .step b { font-family: var(--font-display); color: var(--muted); font-size: var(--fs-heading); line-height: var(--lh-heading); width: 12px; flex-shrink: 0; }
 .server-edit { display: flex; align-items: center; gap: 8px; }
 .server-edit input { flex: 1; min-width: 0; min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--fs-micro); }
 
@@ -460,7 +460,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .learn-focus { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-left: 2px solid var(--gold); background: var(--track); border-radius: var(--radius-sm); }
 .learn-focus .games { display: flex; gap: 3px; }
 .learn-focus .games .g { width: 10px; height: 10px; border-radius: var(--radius-xs); background: var(--card); border: 1px solid var(--line-strong); }
-.learn-focus .games .g.met { background: var(--gold); border-color: var(--gold); }
+.learn-focus .games .g.met { background: var(--positive); border-color: var(--positive); }
 
 .tree.shards { gap: 3px; }
 
@@ -497,7 +497,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .goal-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .squares { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .squares .sq { width: 20px; height: 20px; border-radius: var(--radius-xs); border: 1px solid var(--line-strong); }
-.squares .sq.met { background: var(--gold); border-color: var(--gold); }
+.squares .sq.met { background: var(--positive); border-color: var(--positive); }
 
 /* Style: radar against the rank average, then your numbers on bullet tracks */
 .style-top { padding-bottom: 4px; }

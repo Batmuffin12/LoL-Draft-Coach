@@ -41,7 +41,7 @@ export function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: ()
           <p className="caption">{t("pool.none", { role: roleName(r.role) })}</p>
         )}
       </section>
-      <Section title={t("pool.next")}>
+      <Section title={t("pool.next")} gold>
         {next && (
           <div className="you next-step" {...tip(next.evidence)}>
             <ChampIcon champ={next.champion} size={34} />

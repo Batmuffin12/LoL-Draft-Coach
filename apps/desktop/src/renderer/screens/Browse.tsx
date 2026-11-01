@@ -280,7 +280,7 @@ function Build({ view: v }: { view: ExploreChampionView }) {
       )}
       {core && (
         <Section className="core-row">
-          <span className="label gold">{t("explore.core")}</span>
+          <span className="label">{t("explore.core")}</span>
           <span className="icons">
             {core.items.map((i) => (
               <ChampIcon key={i.id} champ={i} kind="game" size={24} />
@@ -315,7 +315,7 @@ function Matchups({ view: v }: { view: ExploreChampionView }) {
         </Section>
       )}
       {worst.length > 0 && (
-        <Section title={t("explore.worst")} gold={false}>
+        <Section title={t("explore.worst")}>
           <MatchupTable rows={worst} />
         </Section>
       )}
