@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { AccountView, ViewState } from "../../shared/view";
+import { canRestartToUpdate, type AccountView, type ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { StatusHeader } from "../components/StatusHeader";
-import { count, t, versionText } from "../format";
+import { count, cx, t, versionText } from "../format";
 import { useNow } from "../hooks";
 
 /** Riot's required legal notice, both sentences (developer.riotgames.com/policies/general). */
@@ -86,9 +86,9 @@ export function Notices({ state, extra }: { state: ViewState; extra?: string | n
 }
 
 /** A small text action for the one-line footer. */
-function FootLink({ onClick, danger, children }: { onClick: () => void; danger?: boolean; children: string }) {
+function FootLink({ onClick, danger, gold, children }: { onClick: () => void; danger?: boolean; gold?: boolean; children: string }) {
   return (
-    <button type="button" className={danger ? "foot-link danger" : "foot-link"} onClick={onClick}>
+    <button type="button" className={cx("foot-link", danger && "danger", gold && "gold")} onClick={onClick}>
       {children}
     </button>
   );
@@ -115,7 +115,8 @@ export function ConfirmRow({ ask, yes, busyText, no, busy, danger, onYes, onNo }
 }
 
 /** Who the app is connected as, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
-export function AccountFooter({ account, app }: { account: AccountView | null; app: ViewState["app"] }) {
+export function AccountFooter({ state }: { state: ViewState }) {
+  const { account, app } = state;
   const [confirming, setConfirming] = useState<"signOut" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
   const run = (action: () => Promise<void>) => {
@@ -147,6 +148,14 @@ export function AccountFooter({ account, app }: { account: AccountView | null; a
       {account?.state === "registered" && account.message && <span className="micro neg">{account.message}</span>}
       <span className="legal">
         {app.version && <span className={app.updateReady ? "ver ready" : "ver"}>{versionText(app)} · </span>}
+        {canRestartToUpdate(state) && (
+          <>
+            <FootLink gold onClick={() => window.coach.restartToUpdate()}>
+              {t("update.restart")}
+            </FootLink>
+            {" · "}
+          </>
+        )}
         {RIOT_NOTICE}
       </span>
     </>

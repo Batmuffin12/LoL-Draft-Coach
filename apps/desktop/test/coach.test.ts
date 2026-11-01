@@ -72,7 +72,7 @@ describe("readEnv", () => {
 });
 
 describe("Coach app version", () => {
-  it("shows its version, then an update that installs on restart (once, with a notice)", () => {
+  it("shows its version, then an update that installs on restart, in the footer and never as a notice", () => {
     const connector = new LcuConnector({ discover: async () => null, pollIntervalMs: 20 });
     const ddragon = new DataDragon({ cacheDir: mkdtempSync(join(tmpdir(), "ldc-v-")), fetch: fakeDdragonFetch() });
     const c = new Coach({ connector, ddragon });
@@ -81,6 +81,6 @@ describe("Coach app version", () => {
     c.updateReady("1.0.1");
     c.updateReady("1.0.1");
     expect(c.state.app).toEqual({ version: "1.0.0", updateReady: "1.0.1" });
-    expect(c.state.notices).toEqual([{ key: "update", text: "Version 1.0.1 is ready and installs when you close the app." }]);
+    expect(c.state.notices).toEqual([]);
   });
 });

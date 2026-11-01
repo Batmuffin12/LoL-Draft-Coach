@@ -331,6 +331,7 @@
     "ui.account.delete.ask": "Delete everything the coach stores about you? You'll need a new invite code.",
     "ui.account.delete.busy": "Deleting…",
     "ui.account.delete.no": "Keep",
+    "ui.update.restart": "Restart to update",
     "ui.notice.dismiss": "Dismiss",
     "ui.meta.noSnapshot": "No live data for your rank yet. Suggestions use your own games for now.",
     "ui.meta.ownGames": "Suggestions use your own games for now.",

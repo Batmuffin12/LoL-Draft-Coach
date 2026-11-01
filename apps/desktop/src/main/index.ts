@@ -10,7 +10,7 @@ import { DataDragon } from "@ldc/ddragon";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
 import type { MetaSnapshot, UserMatch } from "@ldc/shared";
-import { IPC, type ViewState } from "../shared/view";
+import { canRestartToUpdate, IPC, type ViewState } from "../shared/view";
 import type { Coach } from "./coach";
 import { findConfigDir, loadConfig } from "./config";
 import { MatchStore } from "./match-store";
@@ -21,7 +21,7 @@ import { MetaSource } from "./meta-source";
 import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
-import { startAutoUpdate } from "./updater";
+import { restartToUpdate, startAutoUpdate } from "./updater";
 import { reportError, reportProblem, startCrashReports } from "./crash-reports";
 import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, shouldRestoreForDraft, type Rect } from "./dock";
@@ -363,6 +363,9 @@ async function main(): Promise<void> {
   });
   ipcMain.on(IPC.setDocked, (_e, docked: unknown) => coach.setDocked(docked === true));
   ipcMain.on(IPC.minimize, () => win?.minimize());
+  ipcMain.on(IPC.restartToUpdate, () => {
+    if (canRestartToUpdate(coach.state)) restartToUpdate();
+  });
   ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
     if (typeof key === "string") coach.dismissNotice(key);
   });

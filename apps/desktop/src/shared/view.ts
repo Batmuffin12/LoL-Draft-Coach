@@ -7,6 +7,7 @@ export const IPC = {
   setDocked: "coach:set-docked",
   minimize: "coach:minimize",
   dismissNotice: "coach:dismiss-notice",
+  restartToUpdate: "coach:restart-to-update",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
@@ -535,6 +536,14 @@ export interface ViewState {
   roleLabels: Record<string, string>;
   /** The panel's fixed wording (explain templates "ui.*", without the prefix). */
   copy: Record<string, string>;
+}
+
+/** Champ select or a game: not the moment to restart the panel. */
+const NO_RESTART_PHASES = new Set(["ChampSelect", "GameStart", "InProgress", "Reconnect"]);
+
+/** A downloaded update can be installed now: one is ready, and you're not in champ select or a game. */
+export function canRestartToUpdate(s: Pick<ViewState, "app" | "draft" | "status">): boolean {
+  return s.app.updateReady !== null && s.draft === null && !NO_RESTART_PHASES.has(s.status.gameflowPhase ?? "");
 }
 
 export function emptyViewState(): ViewState {

@@ -99,10 +99,9 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
     this.update({ app: { ...this.view.app, version } });
   }
 
-  /** A newer version is downloaded and installs when the app closes: footer and a notice. */
+  /** A newer version is downloaded: the lobby's footer says so and offers the restart. Never a notice, which would show in champ select. */
   updateReady(version: string): void {
     this.update({ app: { ...this.view.app, updateReady: version } });
-    this.notice("update", `Version ${version} is ready and installs when you close the app.`);
   }
 
   /** Fixed wording from the explain config (ui.* templates, without the prefix). */

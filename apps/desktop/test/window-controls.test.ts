@@ -6,7 +6,7 @@ import { setCopy, t } from "../src/renderer/format";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
 import { AccountFooter, ConfirmRow, Notices } from "../src/renderer/screens/common";
-import { emptyViewState, type AccountView, type ViewState } from "../src/shared/view";
+import { canRestartToUpdate, emptyViewState, type AccountView, type ViewState } from "../src/shared/view";
 
 beforeAll(() => setCopy(uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates)));
 
@@ -43,7 +43,7 @@ describe("AccountFooter", () => {
   const account = { state: "registered", riotId: "Me#EUW", serverUrl: "https://x", message: null, inviteCode: null, clientRiotId: "Me#EUW" } as AccountView;
 
   it("starts with the links only: nothing is asked, and nothing happens without a confirmation", () => {
-    const html = renderToStaticMarkup(createElement(AccountFooter, { account, app: { version: "1.0.0", updateReady: null } }));
+    const html = renderToStaticMarkup(createElement(AccountFooter, { state: { ...emptyViewState(), account, app: { version: "1.0.0", updateReady: null } } }));
     expect(html).toContain("Sign out");
     expect(html).toContain("Delete my data");
     expect(html).not.toContain("invite code");
@@ -52,6 +52,32 @@ describe("AccountFooter", () => {
   it("has wording that says signing out or deleting costs the invite", () => {
     expect(t("account.signOut.ask")).toContain("You'll need a new invite code");
     expect(t("account.delete.ask")).toContain("You'll need a new invite code");
+  });
+});
+
+describe("Restart to update", () => {
+  const ready = { ...emptyViewState(), app: { version: "1.0.0", updateReady: "1.0.1" } };
+  const inPhase = (gameflowPhase: string) => ({ ...ready, status: { ...ready.status, gameflowPhase } });
+  const draft = {} as NonNullable<ViewState["draft"]>;
+
+  it("is offered once an update is downloaded, outside champ select and games", () => {
+    expect(canRestartToUpdate(ready)).toBe(true);
+    for (const phase of ["None", "Lobby", "Matchmaking", "ReadyCheck", "EndOfGame"]) expect(canRestartToUpdate(inPhase(phase)), phase).toBe(true);
+  });
+
+  it("isn't offered without an update, in champ select or in a game", () => {
+    expect(canRestartToUpdate(emptyViewState())).toBe(false);
+    expect(canRestartToUpdate({ ...ready, draft })).toBe(false);
+    for (const phase of ["ChampSelect", "GameStart", "InProgress", "Reconnect"]) expect(canRestartToUpdate(inPhase(phase)), phase).toBe(false);
+  });
+
+  it("shows the link in the footer only when it can be used, with one wording for the version", () => {
+    const html = (state: ViewState) => renderToStaticMarkup(createElement(AccountFooter, { state }));
+    expect(html(ready)).toContain("Restart to update");
+    expect(html(ready)).toContain("v1.0.0 → 1.0.1 on restart");
+    expect(html(inPhase("InProgress"))).not.toContain("Restart to update");
+    expect(html(inPhase("InProgress"))).toContain("v1.0.0 → 1.0.1 on restart");
+    expect(html(emptyViewState())).not.toContain("Restart to update");
   });
 });
 

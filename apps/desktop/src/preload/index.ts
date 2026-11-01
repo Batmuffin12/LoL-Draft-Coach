@@ -26,6 +26,10 @@ const api = {
   importLoadout(kind: "runes" | "items" | "all"): Promise<void> {
     return ipcRenderer.invoke(IPC.importLoadout, kind);
   },
+  /** Installs the downloaded update and restarts; the main process refuses during champ select or a game. */
+  restartToUpdate(): void {
+    ipcRenderer.send(IPC.restartToUpdate);
+  },
   dismissNotice(key: string): void {
     ipcRenderer.send(IPC.dismissNotice, key);
   },
