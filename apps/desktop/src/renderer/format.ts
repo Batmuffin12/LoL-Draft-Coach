@@ -16,16 +16,6 @@ export function rate(x: number | null | undefined, digits = 0): string {
   return x == null ? "—" : `${(x * 100).toFixed(digits)}%`;
 }
 
-/** A change in win chance as players read it: 0.021 → "+2.1%", −0.004 → "−0.4%". */
-export function signedPct(x: number): string {
-  return `${signed(x)}%`;
-}
-
-/** signedPct, or "—" when there is no number. */
-export function signedPctOrDash(x: number | null | undefined): string {
-  return x == null ? "—" : signedPct(x);
-}
-
 /** Signed points, or "—" when there is no number. */
 export function signedOrDash(x: number | null | undefined): string {
   return x == null ? "—" : signed(x);
@@ -73,6 +63,19 @@ export function rateOf(x: number | null | undefined, games: number, digits = 1):
 /** winTone with the games behind it: neutral below the shared minimum. */
 export function winToneOf(x: number | null | undefined, games: number): "pos" | "neg" | "flat" {
   return isThin(games) ? "flat" : winTone(x);
+}
+
+/** Points of win chance without a sign, for sentences that already say which way: −0.012 → "1.2". */
+export function points(x: number): string {
+  return Math.abs(Math.round(x * 1000) / 10).toFixed(1);
+}
+
+/** The same number as signed points, in wins: 0.012 → "about 1 more win per 100 games". Empty without a number. */
+export function winsPer100(x: number | null | undefined): string {
+  if (x == null) return "";
+  const per = 100;
+  const n = Math.round(Math.abs(x) * per);
+  return n === 0 ? t("units.under", { per }) : t(x > 0 ? "units.more" : "units.fewer", { n, per });
 }
 
 /** Thousands separators: 1240 → "1,240". */

@@ -7,7 +7,7 @@ const ICON_SIZE = 18;
 
 function Entry({ item, iconOnly }: { item: FactItem; iconOnly: boolean }) {
   return (
-    <span className="fact-item">
+    <span className="fact-item" title={item.title}>
       {item.champion && <ChampIcon champ={item.champion} size={ICON_SIZE} />}
       {!(iconOnly && item.champion) && <span className="wrap">{item.text}</span>}
     </span>

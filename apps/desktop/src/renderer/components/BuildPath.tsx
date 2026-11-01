@@ -1,5 +1,5 @@
 import type { IconView, ItemOptionView, LoadoutView } from "../../shared/view";
-import { cx, rate, signedPctOrDash, t } from "../format";
+import { cx, rate, signedOrDash, t, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** Core item rows after Start and Boots. */
@@ -27,8 +27,8 @@ interface Step {
 const tip = (o: Option) =>
   [
     o.name,
-    o.share === undefined ? null : `Bought by ${rate(o.share)} of players`,
-    o.winAdded == null ? null : `Players who bought it won ${signedPctOrDash(o.winAdded)} points vs what their game state predicted`,
+    o.share === undefined ? null : t("build.bought", { rate: rate(o.share) }),
+    o.winAdded == null ? null : t("build.winAddedTip", { signed: signedOrDash(o.winAdded), wins: winsPer100(o.winAdded) }),
     ...(o.reasons ?? []),
   ]
     .filter(Boolean)

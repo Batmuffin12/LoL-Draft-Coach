@@ -1,5 +1,5 @@
 import type { PostGameView } from "../../shared/view";
-import { cx, pct, positionLabel, signedOrDash, t, tone } from "../format";
+import { cx, pct, positionLabel, signedOrDash, t, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 /** "12 min ago", "3 h ago", "yesterday", "4 days ago". */
@@ -63,10 +63,11 @@ export function DraftTerms({ game: g }: { game: PostGameView }) {
       {g.terms.map((x) => {
         const w = max > 0 ? (Math.abs(x.deltaWin) / max) * 50 : 0;
         const v = tone(x.deltaWin);
+        const tip = t("last.termTip", { label: x.label, signed: signedOrDash(x.deltaWin), wins: winsPer100(x.deltaWin) });
         return (
-          <div key={x.label} className="fx">
+          <div key={x.label} className="fx" title={tip}>
             <span>{x.label}</span>
-            <span className="bar" role="img" aria-label={`${x.label}: ${signedOrDash(x.deltaWin)} points`}>
+            <span className="bar" role="img" aria-label={tip}>
               <span className="zero" />
               <span className={cx("fill", v)} style={x.deltaWin >= 0 ? { left: "50%", width: `${w}%` } : { left: `${50 - w}%`, width: `${w}%` }} />
             </span>

@@ -242,9 +242,11 @@ export interface SessionView {
 export interface FactItem {
   text: string;
   champion?: ChampView | null;
+  /** What the number is, on hover. */
+  title?: string;
 }
 
-/** A short label with its values as separate entries, instead of a sentence ("Good matchups": Orianna +3.1%, Ahri +1.2%). */
+/** A short label with its values as separate entries, instead of a sentence ("Good matchups": Orianna +3.1% WR, Ahri +1.2% WR). */
 export interface FactRow {
   label: string;
   items: FactItem[];

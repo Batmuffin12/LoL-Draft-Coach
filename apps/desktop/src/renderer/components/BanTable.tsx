@@ -1,5 +1,5 @@
 import type { BanView } from "../../shared/view";
-import { rate, signedPct } from "../format";
+import { points, rate, t, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 
 export interface BanRow extends BanView {
@@ -28,7 +28,7 @@ export function BanTable({ bans }: { bans: BanRow[] }) {
             <ChampIcon champ={b.champion} size={34} framed={i === 0} title="" />
             <span className="nm">{b.champion.name}</span>
           </span>
-          <span className="c-bar" title={`Costs you ${signedPct(b.threat)} win chance`}>
+          <span className="c-bar" title={t("ban.cost", { points: points(b.threat), wins: winsPer100(b.threat) })}>
             <span className="fill" style={{ width: `${Math.max(6, Math.round((-b.threat / worst) * 100))}%` }} />
           </span>
           <span className="c-num">{rate(b.winRate, 1)}</span>
