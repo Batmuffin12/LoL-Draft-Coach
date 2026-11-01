@@ -14,7 +14,7 @@ import { PersonalCoach, uiCopy } from "../src/main/personal-coach";
 import { profileMode, ServerProfileSource } from "../src/main/profile-source";
 import { normalizeServerUrl, ServerClient, ServerError, WAKE_RETRY_DELAYS_MS } from "../src/main/server-client";
 import type { AccountView } from "../src/shared/view";
-import { fakeDdragonFetch, fakeRiotFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, fakeRiotFetch, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const BASE = "https://coach.test";
@@ -430,10 +430,10 @@ describe("PersonalCoach in server mode (mock client + real server API)", () => {
     expect(coach.state.account).toMatchObject({ state: "registered", riotId: "Me#EUW" });
     expect(coach.state.status.band).toBe(2); // GOLD, from the client
 
-    while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(lcu, coach, () => coach!.state.draft?.localAction === "pick");
     await waitFor(() => coach!.state.picks.length > 0);
     expect(coach.state.picks.every((p) => [103, 245, 84].includes(p.champion.id))).toBe(true);
-  });
+  }, 20_000); // 250 ms normally, 3.8 s seen once on a loaded machine.
 });
 
 describe("a sync that keeps failing (the stuck 'Loading your match history: 0 of 0')", () => {
@@ -802,7 +802,7 @@ describe("PersonalCoach and a server having problems", () => {
     const creds = await lcu.start();
     coach = coachWith(new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }), f);
     await coach.start();
-    while (!coach.state.draft && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(lcu, coach, () => coach!.state.draft !== null);
     await waitFor(() => f.profiles.retry.mock.calls.length === 1);
     expect(f.meta.refresh).toHaveBeenCalled();
   });

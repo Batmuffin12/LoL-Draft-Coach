@@ -44,6 +44,8 @@ describe("UiStateStore", () => {
     await store.load();
     store.sawHighlight("me");
     expect(store.sawHighlight("me").highlightsSeen).toEqual(["me"]);
+    // The write is still going: the temp folder's cleanup mustn't race it.
+    await store.flushed();
   });
 
   it("keeps highlights of a newer version", async () => {
