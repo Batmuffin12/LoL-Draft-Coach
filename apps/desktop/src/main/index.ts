@@ -7,6 +7,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
+import { firstAsk } from "./first-ask";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
 import type { MetaSnapshot, UserMatch } from "@ldc/shared";
@@ -345,6 +346,7 @@ async function main(): Promise<void> {
 
   win = createWindow();
   perf?.mark("windowCreated");
+  const pageAsked = firstAsk(ipcMain, IPC.ready);
   // One event often updates the state several times in a row: the renderer gets the last of them, once.
   const pusher = new StatePusher<ViewState>((s) => {
     if (!win || win.isDestroyed()) return;
@@ -384,6 +386,7 @@ async function main(): Promise<void> {
     if (isHighlightId(id)) coach.setUi(uiState.sawHighlight(id));
   });
 
+  await pageAsked;
   await coach.start();
   coach.setAppVersion(app.getVersion());
   startAutoUpdate((version) => coach.updateReady(version));
