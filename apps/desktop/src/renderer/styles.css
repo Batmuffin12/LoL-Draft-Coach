@@ -3,16 +3,17 @@
 :root {
   /* Color */
   --bg: #0b0f17;
-  --card: #131a26;
-  --card-raised: #1a2333;
-  --line: #222c3d;
-  --line-strong: #66738c;
+  --card: #171f2d;
+  --card-raised: #202a3a;
+  --line: #2a3546;
+  --line-strong: #707d95;
   --text: #e6e9ef;
   --muted: #a3acbe;
+  --faint: #8d97aa;
   --gold: #c8aa6e;
   --gold-bright: #f0e6d2;
   --gold-tint: rgba(200, 170, 110, 0.12);
-  --frame: #7a6640;
+  --frame: #7f6b44;
   --blue: #4fa3ff;
   --red: #ff5d5d;
   /* Damage types (Style tab): physical warm, magic blue-violet, true light */
@@ -20,10 +21,10 @@
   --dmg-magic: #7d8cff;
   --dmg-true: #d8dde6;
   --ok: #3ccf8e;
-  --warn: #ffb86b;
-  --warn-tint: rgba(255, 184, 107, 0.08);
-  --track: #1c2433;
-  --tag-line: #6b4a24;
+  --warn: #ff9e7a;
+  --warn-tint: rgba(255, 158, 122, 0.08);
+  --track: #263142;
+  --tag-line: #7a4a33;
   --ally: var(--blue);
   --enemy: var(--red);
   --positive: var(--ok);
@@ -47,6 +48,7 @@
   --fs-micro: 13px;   --lh-micro: 17px;
   --fs-key: 15px;
   --fs-legal: 12px;   --lh-legal: 15px;
+  --fs-tiny: 11px;
 
   /* Spacing, radius, shadow */
   --space-1: 2px;
@@ -58,9 +60,9 @@
   --space-7: 16px;
   --space-8: 20px;
   --space-9: 24px;
-  --radius-xs: 3px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
   --radius-pill: 999px;
   --shadow-pop: 0 6px 20px rgba(0, 0, 0, 0.5);
   --header-height: 36px;
@@ -100,7 +102,7 @@ p { margin: 0; }
 .t-heading { font-size: var(--fs-heading); line-height: var(--lh-heading); }
 .t-call { text-transform: uppercase; letter-spacing: 0.04em; }
 /* You: the suggested pick, your lane row, your next step */
-.you { border: 1px solid var(--frame); background: var(--gold-tint); border-radius: var(--radius-sm); }
+.you { border: 1px solid var(--frame); background: var(--gold-tint); border-radius: var(--radius-md); }
 /* Everything focusable gets the gold ring */
 button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -137,7 +139,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 /* Buttons: uppercase like the client, 40px tall */
-.btn { font-family: var(--font-display); font-size: var(--fs-button); line-height: var(--lh-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--hit-target); padding: 0 12px; border-radius: var(--radius-xs); border: 1px solid var(--line-strong); background: transparent; color: var(--text); cursor: pointer; white-space: nowrap; }
+.btn { font-family: var(--font-display); font-size: var(--fs-button); line-height: var(--lh-label); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--hit-target); padding: 0 12px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: transparent; color: var(--text); cursor: pointer; white-space: nowrap; }
 .btn:hover { background: var(--card); }
 .btn:focus-visible, .seg button:focus-visible, .table .trow:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .btn.primary { border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-bright); }
@@ -178,7 +180,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .icon.off { opacity: 0.32; filter: grayscale(1); }
 .icon.has-count { overflow: visible; }
 .icon.has-count img { border-radius: inherit; }
-.icon .count { position: absolute; right: -4px; bottom: -4px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line-strong); font-size: 11px; line-height: 14px; color: var(--text); text-align: center; }
+.icon .count { position: absolute; right: -4px; bottom: -4px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line-strong); font-size: var(--fs-tiny); line-height: 14px; color: var(--text); text-align: center; }
 
 /* Win chance */
 .win { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
@@ -207,10 +209,10 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .pick-card .nm { overflow-wrap: break-word; }
 .pick-card .chance { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.tiles .tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--card); border-radius: var(--radius-sm); }
+.tiles .tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--card); border-radius: var(--radius-md); }
 .tiles .flat { color: var(--text); }
 .alts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.alt { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); cursor: pointer; text-align: center; min-width: 0; }
+.alt { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--radius-md); border: 1px solid var(--line-strong); cursor: pointer; text-align: center; min-width: 0; }
 .alt:hover { background: var(--card); }
 .alt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .alt .t-heading { overflow-wrap: break-word; max-width: 100%; }
@@ -220,7 +222,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table .thead, .table .trow { display: grid; align-items: center; column-gap: 6px; }
 .table.bans .thead, .table.bans .trow { grid-template-columns: minmax(0, 1fr) 90px 50px; column-gap: 8px; }
 .table .thead { white-space: nowrap; padding: 0 6px 4px; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-label); line-height: var(--lh-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
-.table .trow { all: unset; box-sizing: border-box; display: grid; align-items: center; column-gap: 6px; min-height: 44px; padding: 4px 6px; border-bottom: 1px solid var(--line); border-radius: var(--radius-xs); }
+.table .trow { all: unset; box-sizing: border-box; display: grid; align-items: center; column-gap: 6px; min-height: 44px; padding: 4px 6px; border-bottom: 1px solid var(--line); border-radius: var(--radius-sm); }
 .table .trow .sub { grid-column: 1 / -1; padding-left: 42px; margin-top: -2px; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .table .trow .sub b { color: var(--text); font-weight: 600; }
 .table .trow:hover { background: var(--card-raised); }
@@ -266,7 +268,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .runes { display: flex; flex-direction: column; gap: 8px; }
 .runes .trees { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .runes .right { display: flex; flex-direction: column; gap: 8px; }
-.tree { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--card); border-radius: var(--radius-sm); }
+.tree { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--card); border-radius: var(--radius-md); }
 .tree-head { display: flex; align-items: center; gap: 6px; }
 .tree-row { display: flex; justify-content: space-around; align-items: center; }
 .tree-row.keys { padding-bottom: 4px; border-bottom: 1px solid var(--line); }
@@ -288,7 +290,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .skillgrid .grid { display: flex; flex-direction: column; gap: 2px; }
 .skillgrid .g-row { display: grid; grid-template-columns: 18px repeat(18, minmax(0, 1fr)); gap: 2px; }
 .skillgrid .g-key { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-label); color: var(--muted); display: grid; place-items: center; }
-.skillgrid .g-cell { height: 16px; border-radius: 2px; background: var(--card); font-family: var(--font-display); font-size: 10px; font-weight: 700; display: grid; place-items: center; color: var(--on-gold); }
+.skillgrid .g-cell { height: 16px; border-radius: var(--radius-xs); background: var(--card); font-family: var(--font-display); font-size: var(--fs-tiny); font-weight: 700; display: grid; place-items: center; color: var(--on-gold); }
 .skillgrid .g-cell.on { background: var(--gold); }
 .skillgrid .g-cell.ult { background: var(--gold-bright); }
 
@@ -312,7 +314,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .board { display: flex; flex-direction: column; gap: 12px; }
 .team { display: flex; flex-direction: column; gap: 8px; }
 .team-head { display: flex; align-items: center; gap: 8px; }
-.team-head .side { width: 10px; height: 10px; border-radius: 2px; }
+.team-head .side { width: 10px; height: 10px; border-radius: var(--radius-xs); }
 .team.ally .side { background: var(--ally); }
 .team.enemy .side { background: var(--enemy); }
 .team-head .bans { margin-left: auto; display: flex; gap: 4px; }
@@ -341,14 +343,14 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 
 
 /* Notice: one per problem, at the top of the scrolling area */
-.notice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); background: var(--warn-tint); color: var(--warn); }
+.notice { display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; border-radius: var(--radius-md); font-size: var(--fs-caption); line-height: var(--lh-caption); background: var(--warn-tint); color: var(--warn); }
 .notice.info { background: var(--card); color: var(--muted); }
 .import-status { display: flex; flex-direction: column; }
 .import-status:empty { display: none; }
 .crash { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .notice .g { font-weight: 700; font-family: var(--font-display); }
 .notice .body { flex: 1; min-width: 0; }
-.notice .dismiss, .tour-note .dismiss { all: unset; flex-shrink: 0; width: 16px; text-align: center; cursor: pointer; color: inherit; opacity: 0.7; }
+.notice .dismiss, .tour-note .dismiss { all: unset; flex-shrink: 0; width: 24px; height: 24px; margin: -3px -6px -3px 0; display: grid; place-items: center; cursor: pointer; color: inherit; opacity: 0.7; }
 .notice .dismiss:hover, .tour-note .dismiss:hover { opacity: 1; }
 .notice .dismiss:focus-visible, .tour-note .dismiss:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .notice strong { color: var(--text); font-weight: 600; }
@@ -395,14 +397,14 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .connect-how .step { display: flex; gap: 12px; align-items: flex-start; }
 .connect-how .step b { font-family: var(--font-display); color: var(--gold); font-size: var(--fs-heading); line-height: var(--lh-heading); width: 12px; flex-shrink: 0; }
 .server-edit { display: flex; align-items: center; gap: 8px; }
-.server-edit input { flex: 1; min-width: 0; min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--fs-micro); }
+.server-edit input { flex: 1; min-width: 0; min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: var(--fs-micro); }
 
 /* The lobby tour: all dimmed but a cut-out around the real element, with a small callout */
 .tour { position: fixed; inset: 0; z-index: 50; }
 .tour-shield { position: absolute; inset: 0; }
-.tour-dim { position: absolute; inset: 0; background: rgba(4, 7, 12, 0.62); }
-.tour-hole { position: absolute; border: 1px solid var(--gold); border-radius: var(--radius-sm); box-shadow: 0 0 0 2000px rgba(4, 7, 12, 0.62); transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
-.tour-callout { position: absolute; width: 316px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); }
+.tour-dim { position: absolute; inset: 0; background: rgba(4, 7, 12, 0.5); }
+.tour-hole { position: absolute; border: 1px solid var(--gold); border-radius: var(--radius-md); box-shadow: 0 0 0 2000px rgba(4, 7, 12, 0.5); transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
+.tour-callout { position: absolute; width: 316px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-md); }
 .tour-text { margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .tour-nav { display: flex; align-items: center; gap: 8px; }
 .tour-dots { flex: 1; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
@@ -411,7 +413,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .tour-actions { display: flex; gap: 6px; flex-shrink: 0; }
 /* Live screens: only a ring and a note. Clicks go through; nothing waits for them. */
 .tour-ring { position: fixed; z-index: 50; pointer-events: none; border: 2px solid var(--gold-bright); border-radius: var(--radius-sm); }
-.tour-note { position: fixed; z-index: 51; pointer-events: none; width: 300px; max-width: calc(100vw - 16px); display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
+.tour-note { position: fixed; z-index: 51; pointer-events: none; width: 300px; max-width: calc(100vw - 16px); display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-md); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
 .tour-note .dismiss { pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
 .window-buttons { display: flex; align-items: center; gap: 10px; }
@@ -448,15 +450,16 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .table .c-num.ease.easy { color: var(--positive); }
 .table .c-num.ease.hard { color: var(--negative); }
 .table .tag { font-family: var(--font-display); font-size: var(--fs-micro); line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line-strong); border-radius: var(--radius-xs); padding: 0 4px; white-space: nowrap; }
-.plan { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; background: var(--card); border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.plan { display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; background: var(--card); border-radius: var(--radius-md); font-size: var(--fs-caption); line-height: var(--lh-caption); }
 .plan .icons { gap: 3px; }
 /* Learning a champion in the role: its progress first; the next suggestions dimmed under "After …" */
 .plan.learning .learning-head { display: flex; align-items: center; gap: 8px; }
 .plan.learning .learning-head .micro { margin-left: auto; }
-.after-learning { opacity: 0.6; }
+.after-learning, .after-learning .table .nm, .after-learning .table .c-num { color: var(--muted); }
+.after-learning .icon { opacity: 0.6; }
 .learn-focus { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-left: 2px solid var(--gold); background: var(--track); border-radius: var(--radius-sm); }
 .learn-focus .games { display: flex; gap: 3px; }
-.learn-focus .games .g { width: 10px; height: 10px; border-radius: 2px; background: var(--card); border: 1px solid var(--line-strong); }
+.learn-focus .games .g { width: 10px; height: 10px; border-radius: var(--radius-xs); background: var(--card); border: 1px solid var(--line-strong); }
 .learn-focus .games .g.met { background: var(--gold); border-color: var(--gold); }
 
 .tree.shards { gap: 3px; }
@@ -471,7 +474,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .dmgbar .magic, .dmg-l.magic::before { background: var(--dmg-magic); }
 .dmgbar .true, .dmg-l.true::before { background: var(--dmg-true); }
 .dmg-l { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.dmg-l::before { content: ""; width: 8px; height: 8px; border-radius: 2px; }
+.dmg-l::before { content: ""; width: 8px; height: 8px; border-radius: var(--radius-xs); }
 
 /* Last game: the result band, what decided the draft, your goal */
 .result-band { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
@@ -534,17 +537,17 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .shift .dot.before, .shift .dot.before.pos, .shift .dot.before.neg { width: 12px; height: 12px; top: -3px; margin-left: -6px; background: var(--bg); border: 2px solid var(--line-strong); }
 .shift .val { text-align: right; font-size: var(--fs-caption); white-space: nowrap; }
 .shift .chg { text-align: right; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-caption); }
-.shift .chg.faint { opacity: 0.6; }
+.shift .chg.faint { color: var(--muted); }
 .champcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .trends { display: flex; flex-wrap: wrap; gap: 0 12px; }
 .goals { display: flex; flex-direction: column; }
-.champcard { display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--card); border-radius: var(--radius-sm); min-width: 0; }
+.champcard { display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--card); border-radius: var(--radius-md); min-width: 0; }
 .champcard .who { display: flex; flex-direction: column; min-width: 0; overflow-wrap: break-word; }
 
 /* Explore: long lists scroll inside their own area, the one exception to fitting; the page itself stays fixed */
 .section.explore { flex: 1; min-height: 0; gap: 6px; }
 .explore .pills { margin-bottom: 0; }
-.search, .select { min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-xs); font-size: var(--fs-caption); }
+.search, .select { min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-size: var(--fs-caption); }
 .search { width: 100%; flex-shrink: 0; }
 .search::placeholder { color: var(--muted); }
 .select { flex: 1 1 130px; min-width: 0; }
@@ -596,7 +599,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .mx-need, .mx-cell { border-top: 1px solid var(--line); }
 .mx-need { padding-right: 6px; }
 .mx-cell { justify-content: center; }
-.mx .dim { opacity: 0.7; }
+.mx .dim { color: var(--muted); }
+.mx .dim .icon, .mx .dim .dot { opacity: 0.7; }
 .mx .dot { width: 14px; height: 14px; border-radius: 50%; }
 .mx .dot.yes { background: var(--positive); }
 .mx .dot.no { border: 1px dashed var(--line-strong); }
