@@ -97,6 +97,20 @@ describe("skillPath", () => {
   });
 });
 
+describe("pickReasons with your record on screen", () => {
+  const own = { text: "277 recent mid games", negative: false, ownRecord: true };
+  const meta = { text: "Strong in your rank", negative: false };
+
+  it("drops the reason that only repeats it", () => {
+    expect(pickReasons([own, meta], 3, true)).toEqual([meta]);
+  });
+
+  it("keeps it when your record isn't shown", () => {
+    expect(pickReasons([own, meta], 3, false)).toEqual([own, meta]);
+    expect(pickReasons([own, meta], 3)).toEqual([own, meta]);
+  });
+});
+
 describe("pickReasons", () => {
   it("keeps the caveat when cutting reasons", () => {
     const r = (text: string, negative = false) => ({ text, negative });

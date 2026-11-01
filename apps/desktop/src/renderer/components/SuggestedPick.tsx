@@ -60,8 +60,9 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }:
           </div>
         ))}
       </div>
+      <span className="micro tiles-note">{t("pick.tile.unit")}</span>
       <ul className="reasons">
-        {pickReasons(pick.reasons, maxReasons).map((r) => (
+        {pickReasons(pick.reasons, maxReasons, record !== null).map((r) => (
           <li key={r.text} className={r.negative ? "but" : undefined}>
             {r.text}
           </li>

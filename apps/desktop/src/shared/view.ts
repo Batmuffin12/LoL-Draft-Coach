@@ -67,6 +67,8 @@ export interface DraftView {
 export interface ReasonView {
   text: string;
   negative: boolean;
+  /** It says your games and win rate on the champion in this role: not repeated where your record already shows. */
+  ownRecord?: boolean;
 }
 
 export interface PickView {

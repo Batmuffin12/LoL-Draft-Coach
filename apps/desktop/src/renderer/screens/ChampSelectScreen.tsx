@@ -108,7 +108,6 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const cur = picks[sel] ?? picks[0];
   const at = cur ? picks.indexOf(cur) : -1;
   const theirTeam = state.enemyNotes.length ? { label: t("pick.theirTeam"), items: state.enemyNotes.map((text) => ({ text })) } : null;
-  const notes = [state.filledNote, theirTeam].filter((row) => row != null);
   const record = cur ? (state.roles.find((r) => r.role === state.pickRole)?.pool.find((c) => c.champion.id === cur.champion.id) ?? null) : null;
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
@@ -123,12 +122,13 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
       ) : (
         <>
           <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
-            {notes.length > 0 && <Facts rows={notes} flow />}
+            {state.filledNote && <Facts rows={[state.filledNote]} flow />}
             {cur ? (
               <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
             ) : (
               <p className="caption">{t(noPicksKey(state))}</p>
             )}
+            {theirTeam && <Facts rows={[theirTeam]} flow />}
           </Section>
           {cur && picks.length > 1 && (
             <Section title={t("pick.ifNot", { champion: cur.champion.name })}>

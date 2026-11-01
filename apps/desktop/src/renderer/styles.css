@@ -211,8 +211,9 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tiles .tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: var(--card); border-radius: var(--radius-md); }
 .tiles .flat { color: var(--text); }
-.alts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.alt { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--radius-md); border: 1px solid var(--line-strong); cursor: pointer; text-align: center; min-width: 0; }
+.tiles-note { margin-top: -4px; text-align: right; }
+.alts { display: flex; gap: 6px; }
+.alt { all: unset; box-sizing: border-box; flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; border-radius: var(--radius-md); border: 1px solid var(--line-strong); cursor: pointer; text-align: center; min-width: 0; }
 .alt:hover { background: var(--card); }
 .alt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .alt .t-heading { overflow-wrap: break-word; max-width: 100%; }

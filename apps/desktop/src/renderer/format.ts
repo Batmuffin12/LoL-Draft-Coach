@@ -253,8 +253,9 @@ export function skillPath(first: string[], order: string[], ult: string): string
   return path;
 }
 
-/** The reasons to show in limited room: the strongest ones, and the caveat if there is one. */
-export function pickReasons(reasons: ReasonView[], max: number): ReasonView[] {
+/** The reasons to show in limited room: the strongest ones, and the caveat if there is one. `hasRecord`: your record is on screen, so a reason that only repeats it goes. */
+export function pickReasons(all: ReasonView[], max: number, hasRecord = false): ReasonView[] {
+  const reasons = hasRecord ? all.filter((r) => !r.ownRecord) : all;
   const caveat = reasons.find((r) => r.negative);
   if (!caveat || max < 2) return reasons.slice(0, max);
   return [...reasons.filter((r) => !r.negative).slice(0, max - 1), caveat];
