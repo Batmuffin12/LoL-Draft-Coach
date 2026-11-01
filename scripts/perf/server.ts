@@ -3,7 +3,7 @@
  * from packages/sim: no real player), this branch's built server (apps/server/dist) on a local
  * port with no Riot key and no admin token, so nothing can reach Riot or production.
  *
- *   tsx scripts/perf/server.ts <out.json> [--quick]
+ *   tsx scripts/perf/server.ts <out.json> [--quick] [--flows N]
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import { get } from "node:http";
@@ -34,6 +34,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const now = Date.now();
 const config = loadServerConfig(findConfigDir(root));
 const quick = process.argv.includes("--quick");
+const flowRuns = process.argv.includes("--flows") ? Number(process.argv[process.argv.indexOf("--flows") + 1]) : 5;
 
 /** Synthetic matches with ids unique to a prefix (several histories never share a match id). */
 function games(seed: number, count: number, prefix: string, days = 365): UserMatch[] {
@@ -286,7 +287,7 @@ for (const b of benches) {
 }
 // The panel's startup round trips (first start, then the next start with its caches), 5 times each.
 const flows = [];
-for (let i = 0; i < 5; i++) flows.push(await startupFlow(`http://127.0.0.1:${PORT}`, TOKEN, "Perf#SIM", BAND, join(dir, "panel")));
+for (let i = 0; i < flowRuns; i++) flows.push(await startupFlow(`http://127.0.0.1:${PORT}`, TOKEN, "Perf#SIM", BAND, join(dir, "panel")));
 const f = flows.at(-1)!;
 process.stdout.write(`startup flow: first ${f.first.requests.length} requests ${Math.round(f.first.totalMs)} ms, next ${f.next.requests.length} requests ${Math.round(f.next.totalMs)} ms\n`);
 await stop(child);

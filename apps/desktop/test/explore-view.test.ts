@@ -6,7 +6,7 @@ import { MetaIndex, playerGame } from "@ldc/engine";
 import type { ChampionBuild, MetaSnapshot, UserMatch } from "@ldc/shared";
 import { exploreChampionView, exploreListView, memoByInputs, myGamesView, orderRoles, type ExploreChampionDeps } from "../src/main/explore-view";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { uiCopy, roleLabels } from "../src/main/personal-coach";
+import { roleLabels, uiCopy } from "../src/main/view-copy";
 import { browseEmptyKey, setCopy, setMinGames, setRoleLabels, shortDate, t } from "../src/renderer/format";
 import { BrowseList, ChampionPage, type DetailTab } from "../src/renderer/screens/Browse";
 import { MyGamesList } from "../src/renderer/screens/MyGames";

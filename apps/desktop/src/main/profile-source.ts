@@ -11,7 +11,7 @@ import type { AccountStore } from "./account-store";
 import type { MatchStore } from "./match-store";
 import { loadProfile, profileFromMatches, type PersonalProfile } from "./profile";
 import { normalizeServerUrl, ServerClient, ServerError, type ServerProfile, type ServerSyncState } from "./server-client";
-import { reportUnexpected, retryDelay, serverProblem, serverProblemText } from "./server-problem";
+import { logUnexpected, retryDelay, serverProblem, serverProblemText } from "./server-problem";
 
 /** A sync the server says failed. */
 type SyncFailure = Extract<ServerSyncState, { state: "error" }>;
@@ -403,7 +403,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       await this.clearCache();
       this.setAccount({ state: "registered", riotId: r.riotId, serverUrl, message: null, inviteCode: null });
     } catch (err) {
-      reportUnexpected("Registering", err);
+      logUnexpected("Registering", err);
       this.setAccount({ state: "error", message: serverProblemText(err) });
       return;
     }
@@ -439,7 +439,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       await this.client?.deleteMe();
       await this.signOut();
     } catch (err) {
-      reportUnexpected("Deleting data", err);
+      logUnexpected("Deleting data", err);
       this.setAccount({ message: `Your data wasn't deleted. ${serverProblemText(err)}` });
     }
   }
@@ -690,7 +690,7 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
       this.emit("status", { state: "idle" });
       return;
     }
-    reportUnexpected("Coach server", err);
+    logUnexpected("Coach server", err);
     this.scheduleRetry();
     const problem = serverProblem(err);
     if (!this.matches.size) {

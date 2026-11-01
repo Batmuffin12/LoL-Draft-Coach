@@ -47,7 +47,7 @@ export function RuneOptions({ page: p, options, choose, maxSwaps }: { page: Rune
   const head = options.length ? { className: "rune-options" } : { title: t("runes.tab"), aside: <Stat winRate={p.winRate} n={p.games} title={p.reason ?? undefined} /> };
   return (
     <Section {...head}>
-      {options.length > 0 && <Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={choose} />}
+      {options.length > 0 && <div data-tour="rune-options"><Pills label={t("runes.options")} options={options.map((o) => ({ value: o.key, label: optionText(o), title: o.reason ?? undefined }))} value={p.key} onChange={choose} /></div>}
       {p.primaryTree && p.secondaryTree ? (
         <RunePage primary={p.primaryTree} secondary={p.secondaryTree} runes={p.runes} shards={p.shardRows} swaps={p.situationalRunes} {...(maxSwaps === undefined ? {} : { maxSwaps })} />
       ) : (

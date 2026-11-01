@@ -5,13 +5,13 @@ import { emptyUiState, type UiState } from "./ui-state";
 export const IPC = {
   state: "coach:state",
   tourDone: "coach:tour-done",
-  hintSeen: "coach:hint-seen",
+  highlightSeen: "coach:highlight-seen",
   ready: "coach:ready",
   setDocked: "coach:set-docked",
   minimize: "coach:minimize",
   dismissNotice: "coach:dismiss-notice",
   restartToUpdate: "coach:restart-to-update",
-  reportError: "coach:report-error",
+  logError: "coach:log-error",
   register: "coach:register",
   signOut: "coach:sign-out",
   deleteData: "coach:delete-data",
@@ -607,7 +607,7 @@ export interface ViewState {
   roleLabels: Record<string, string>;
   /** The panel's fixed wording (explain templates "ui.*", without the prefix). */
   copy: Record<string, string>;
-  /** The tour and hints already shown on this PC. */
+  /** The tour and highlights already shown on this PC. */
   ui: UiState;
   limits: ViewLimits;
 }

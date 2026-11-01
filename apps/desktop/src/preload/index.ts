@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { ExploreChampionView, ExploreList, MyGames } from "../shared/explore";
-import type { HintId } from "../shared/ui-state";
+import type { HighlightId } from "../shared/ui-state";
 import { IPC, type ViewState } from "../shared/view";
 
 /** The only API the renderer gets: view state, docking, account actions, minimize, close. No secrets, no Node. */
@@ -36,9 +36,9 @@ const api = {
   restartToUpdate(): void {
     ipcRenderer.send(IPC.restartToUpdate);
   },
-  /** A render error's detail, for crash reports (scrubbed in the main process). */
-  reportError(detail: string): void {
-    ipcRenderer.send(IPC.reportError, detail);
+  /** A render error's detail, for the local log (scrubbed in the main process). */
+  logError(detail: string): void {
+    ipcRenderer.send(IPC.logError, detail);
   },
   dismissNotice(key: string): void {
     ipcRenderer.send(IPC.dismissNotice, key);
@@ -47,9 +47,9 @@ const api = {
   tourDone(): void {
     ipcRenderer.send(IPC.tourDone);
   },
-  /** This one-time hint was on screen: it won't show again on this PC. */
-  hintSeen(id: HintId): void {
-    ipcRenderer.send(IPC.hintSeen, id);
+  /** This first-time highlight was on screen: it won't show again on this PC. */
+  highlightSeen(id: HighlightId): void {
+    ipcRenderer.send(IPC.highlightSeen, id);
   },
   /** Champions > Browse: the band's numbers per champion and role; null without live data. On demand, never in the view state. */
   exploreList(): Promise<ExploreList | null> {

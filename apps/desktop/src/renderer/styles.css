@@ -348,9 +348,9 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .crash { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .notice .g { font-weight: 700; font-family: var(--font-display); }
 .notice .body { flex: 1; min-width: 0; }
-.notice .dismiss { all: unset; flex-shrink: 0; width: 16px; text-align: center; cursor: pointer; color: inherit; opacity: 0.7; }
-.notice .dismiss:hover { opacity: 1; }
-.notice .dismiss:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.notice .dismiss, .tour-note .dismiss { all: unset; flex-shrink: 0; width: 16px; text-align: center; cursor: pointer; color: inherit; opacity: 0.7; }
+.notice .dismiss:hover, .tour-note .dismiss:hover { opacity: 1; }
+.notice .dismiss:focus-visible, .tour-note .dismiss:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .notice strong { color: var(--text); font-weight: 600; }
 
 /* Progress: a micro line and a thin bar instead of a boxed notice */
@@ -397,19 +397,24 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .server-edit { display: flex; align-items: center; gap: 8px; }
 .server-edit input { flex: 1; min-width: 0; min-height: 28px; padding: 0 8px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-xs); font-family: var(--font-mono); font-size: var(--fs-micro); }
 
-/* The tour after connecting: one short card at a time */
-.tour-card { display: flex; flex-direction: column; gap: 16px; margin: auto 0; padding: 24px; }
-.tour-lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
-.tour-line { display: flex; gap: 12px; align-items: flex-start; font-size: var(--fs-caption); line-height: var(--lh-caption); }
-.tour-line b { width: 12px; flex-shrink: 0; color: var(--gold); text-align: center; }
-.tour-line b.num { font-family: var(--font-display); font-size: var(--fs-heading); line-height: var(--lh-heading); }
-.tour-note { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: var(--fs-caption); line-height: var(--lh-caption); }
-.tour-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
-.tour-nav > .foot-link { justify-self: start; }
-.tour-dots { display: flex; gap: 6px; }
-.tour-dots .d { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+/* The lobby tour: all dimmed but a cut-out around the real element, with a small callout */
+.tour { position: fixed; inset: 0; z-index: 50; }
+.tour-shield { position: absolute; inset: 0; }
+.tour-dim { position: absolute; inset: 0; background: rgba(4, 7, 12, 0.62); }
+.tour-hole { position: absolute; border: 1px solid var(--gold); border-radius: var(--radius-sm); box-shadow: 0 0 0 2000px rgba(4, 7, 12, 0.62); transition: top 0.18s ease, left 0.18s ease, width 0.18s ease, height 0.18s ease; }
+.tour-callout { position: absolute; width: 316px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); }
+.tour-text { margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
+.tour-nav { display: flex; align-items: center; gap: 8px; }
+.tour-dots { flex: 1; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.tour-dots .d { width: 6px; height: 6px; border-radius: 50%; background: var(--line-strong); }
 .tour-dots .d.on { background: var(--gold); }
-.tour-actions { display: flex; gap: 8px; justify-self: end; }
+.tour-actions { display: flex; gap: 6px; flex-shrink: 0; }
+/* Live screens: only a ring and a note. Clicks go through; nothing waits for them. */
+.tour-ring { position: fixed; z-index: 50; pointer-events: none; border: 2px solid var(--gold-bright); border-radius: var(--radius-sm); }
+.tour-note { position: fixed; z-index: 51; pointer-events: none; width: 300px; max-width: calc(100vw - 16px); display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-sm); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
+.tour-note .dismiss { pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
+.window-buttons { display: flex; align-items: center; gap: 10px; }
 
 /* Footer pieces */
 .foot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }

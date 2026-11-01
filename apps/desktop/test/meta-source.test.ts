@@ -15,7 +15,7 @@ import { MetaSource, type MetaStatus } from "../src/main/meta-source";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { ServerProfileSource } from "../src/main/profile-source";
 import { ServerClient, ServerError } from "../src/main/server-client";
-import { fakeDdragonFetch, fakeRiotFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, fakeRiotFetch, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -254,7 +254,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     // Stat shards with the client's names, shown in the client's order (offense, flex, defense).
     expect(coach.state.hoverPick!.loadout!.page!.shards.map((s) => s.name)).toEqual(["Attack Speed", "Adaptive Force", "Health"]);
 
-    while (coach.state.draft?.localAction !== "pick" && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(lcu, coach, () => coach!.state.draft?.localAction === "pick");
     await waitFor(() => coach!.state.picks.length > 0);
     const picks = coach.state.picks;
     // The phase band's lane opponent: your role, with their champion once it's revealed.
@@ -281,7 +281,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     expect(coach.state.limits.minGames).toBe(config.app.display!.minGames);
 
     // Once the player locks in, suggestions stop and the panel shows their own pick.
-    while (coach.state.myPick === null && lcu.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(lcu, coach, () => coach!.state.myPick !== null);
     await waitFor(() => coach!.state.myPick !== null);
     expect(coach.state.myPick).toMatchObject({ champion: { id: 103 }, role: "middle" });
     expect(coach.state.myPick!.expectedWin).toBeGreaterThan(0);

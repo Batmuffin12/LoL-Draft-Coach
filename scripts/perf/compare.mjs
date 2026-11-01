@@ -2,6 +2,7 @@
  * pnpm perf:compare <a> <b> [--all]
  * Prints a markdown before → after table of two `pnpm perf` results (docs/perf/results/<label>.json),
  * with the change in %, and each budget (scripts/perf/budgets.json) as within / over before and after.
+ * A metric can have several budgets: "metric" and "metric@p95", "metric@p99".
  * Changes under 5% (or inside the runs' spread) are marked as noise.
  */
 import { readFileSync } from "node:fs";
@@ -52,12 +53,13 @@ for (const key of keys) {
   const ma = A.metrics[key];
   const mb = B.metrics[key];
   const unit = (ma ?? mb).unit;
-  const budget = budgets[key];
-  const within = (m) => {
-    if (!budget || !m) return "";
+  const metricBudgets = [budgets[key], budgets[`${key}@p95`], budgets[`${key}@p99`]].filter(Boolean);
+  const within = (budget, m) => {
+    if (!m) return "";
     const v = stat(m, budget.stat);
     return v === null ? "" : v <= budget.max ? "within" : "**over**";
   };
+  const percentiles = (m) => (m?.p95 !== undefined && m?.p99 !== undefined ? `${fmt(m.p95, unit)} / ${fmt(m.p99, unit)}` : fmt(m?.p95 ?? m?.p99, unit));
   const c = change(key, ma, mb);
   rows.push({
     key,
@@ -66,21 +68,22 @@ for (const key of keys) {
       fmt(main(ma), unit),
       fmt(main(mb), unit),
       c.text,
-      (ma?.p95 ?? ma?.p99) !== undefined || (mb?.p95 ?? mb?.p99) !== undefined ? `${fmt(ma?.p95 ?? ma?.p99, unit)} → ${fmt(mb?.p95 ?? mb?.p99, unit)}` : "",
-      budget ? `${budget.stat} ≤ ${budget.max}` : "",
-      budget ? `${within(ma)} → ${within(mb)}` : "",
+      (ma?.p95 ?? ma?.p99) !== undefined || (mb?.p95 ?? mb?.p99) !== undefined ? `${percentiles(ma)} → ${percentiles(mb)}` : "",
+      metricBudgets.map((b) => `${b.stat} ≤ ${b.max}`).join("; "),
+      metricBudgets.map((b) => `${within(b, ma)} → ${within(b, mb)}`).join("; "),
     ],
     tone: c.tone,
-    budget: !!budget,
+    budget: metricBudgets.length > 0,
   });
 }
 const all = process.argv.includes("--all");
 const shown = all ? rows : rows.filter((r) => r.budget || r.tone !== "same");
 console.log(`### ${A.label} → ${B.label}\n`);
-console.log(`Same machine: ${A.machine.cpu === B.machine.cpu ? "yes" : "no"} (${B.machine.cpu}, ${B.machine.cores} cores, Node ${B.machine.node}, Electron ${B.machine.electron}). Medians; p95 (p99 for server latency) in its own column.\n`);
-console.log("| Metric | Before | After | Change | p95/p99 before → after | Budget | Budget before → after |");
+console.log(`Same machine: ${A.machine.cpu === B.machine.cpu ? "yes" : "no"} (${B.machine.cpu}, ${B.machine.cores} cores, Node ${B.machine.node}, Electron ${B.machine.electron}). Medians; p95 / p99 in their own column (a p99 needs 100+ samples: see samples in the results file).\n`);
+console.log("| Metric | Before | After | Change | p95 / p99 before → after | Budget | Budget before → after |");
 console.log("| --- | --- | --- | --- | --- | --- | --- |");
 for (const r of shown) console.log(`| ${r.cells.join(" | ")} |`);
-const count = (src) => Object.entries(budgets).filter(([k, bud]) => !k.startsWith("$") && src.metrics[k] && stat(src.metrics[k], bud.stat) !== null);
-const met = (src) => count(src).filter(([k, bud]) => stat(src.metrics[k], bud.stat) <= bud.max).length;
+const metricOf = (k) => k.split("@")[0];
+const count = (src) => Object.entries(budgets).filter(([k, bud]) => !k.startsWith("$") && src.metrics[metricOf(k)] && stat(src.metrics[metricOf(k)], bud.stat) !== null);
+const met = (src) => count(src).filter(([k, bud]) => stat(src.metrics[metricOf(k)], bud.stat) <= bud.max).length;
 console.log(`\nBudgets met: ${met(A)}/${count(A).length} → ${met(B)}/${count(B).length}. ${all ? "" : "Unchanged metrics without a budget are hidden (--all shows them)."}`);

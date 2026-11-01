@@ -17,8 +17,8 @@ export function MyGames({ state }: { state: ViewState }) {
   const { profile } = state.status;
   const key = profile.state === "ready" ? `ready|${profile.games}` : profile.state;
   const data = useFetched(() => window.coach.exploreGames(), key, null);
-  if (data === undefined) return <Section title={t("tabs.games")}><p className="caption">{t("explore.loading")}</p></Section>;
-  if (!data?.games.length) return <Section title={t("tabs.games")}><p className="caption">{lobbyEmpty(state.status, "games")}</p></Section>;
+  if (data === undefined) return <Section title={t("tabs.my-games")}><p className="caption">{t("explore.loading")}</p></Section>;
+  if (!data?.games.length) return <Section title={t("tabs.my-games")}><p className="caption">{lobbyEmpty(state.status, "games")}</p></Section>;
   return <MyGamesList data={data} now={Date.now()} />;
 }
 

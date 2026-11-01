@@ -146,12 +146,12 @@ describe("ErrorBoundary", () => {
     expect(html).not.toContain("crash.");
   });
 
-  it("sends what happened to crash reports", () => {
-    const reportError = vi.fn();
-    vi.stubGlobal("window", { coach: { reportError } });
+  it("logs what happened", () => {
+    const logError = vi.fn();
+    vi.stubGlobal("window", { coach: { logError } });
     new ErrorBoundary({ children: null }).componentDidCatch(new Error("boom"), { componentStack: "\n at App" });
     vi.unstubAllGlobals();
-    expect(reportError).toHaveBeenCalledWith("boom\n at App");
+    expect(logError).toHaveBeenCalledWith("boom\n at App");
   });
 });
 

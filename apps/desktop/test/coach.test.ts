@@ -8,7 +8,7 @@ import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
 import { Coach } from "../src/main/coach";
 import { readEnv } from "../src/main/env";
 import type { ViewState } from "../src/shared/view";
-import { fakeDdragonFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, stepUntil, waitFor } from "./helpers";
 
 let server: MockLcuServer | null = null;
 let coach: Coach | null = null;
@@ -36,7 +36,7 @@ describe("Coach (mock League client end to end)", () => {
     expect(me.position).toBe("middle");
 
     // Play until the local player's pick turn.
-    while (coach.state.draft?.localAction !== "pick" && server.step()) await new Promise((r) => setTimeout(r, 15));
+    await stepUntil(server, coach, () => coach!.state.draft?.localAction === "pick");
     expect(coach.state.draft?.localAction).toBe("pick");
     // The phase length comes with the draft, for the draining line.
     expect(coach.state.draft!.totalSeconds).toBeGreaterThanOrEqual(Math.round(coach.state.draft!.timeLeftMs / 1000));

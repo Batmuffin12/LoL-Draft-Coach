@@ -29,16 +29,11 @@ export function useFetched<T>(fetch: () => Promise<T>, key: string, fallback: T)
   return value;
 }
 
-/** A one-time hint on screen (its class), and the event that asks it to make room. */
-export const HINT_CLASS = "first-hint";
-export const HINT_YIELD = "ldc:hint-yield";
-
 /**
  * How many steps a screen must shrink for the panel's scrolling area not to overflow: 0 is the full
  * content, up to `max` the most compact form (secondary lines move to hover). Measured after layout,
  * again when `key` changes or the window resizes, and from the top when the area gets taller (a notice
  * or an import result went) or the fonts arrive, so the screen never needs a scrollbar and never stays compact for nothing.
- * A one-time hint goes before anything real does: while one shows, an overflow removes it instead.
  */
 export function useFitLevel(key: unknown, max: number): number {
   const [level, setLevel] = useState(0);
@@ -57,10 +52,7 @@ export function useFitLevel(key: unknown, max: number): number {
       const grew = s.clientHeight > room.current;
       room.current = s.clientHeight;
       if (grew && level > 0) setLevel(0);
-      else if (s.scrollHeight > s.clientHeight) {
-        if (s.querySelector(`.${HINT_CLASS}`)) window.dispatchEvent(new Event(HINT_YIELD));
-        else setLevel((l) => Math.min(max, l + 1));
-      }
+      else if (s.scrollHeight > s.clientHeight) setLevel((l) => Math.min(max, l + 1));
     };
     check();
     window.addEventListener("resize", check);
@@ -72,4 +64,13 @@ export function useFitLevel(key: unknown, max: number): number {
 /** False when the full content overflows: the screen then shows its compact form. */
 export function useFits(key: unknown): boolean {
   return useFitLevel(key, 1) === 0;
+}
+
+/**
+ * Which role is shown: the one you chose while it still exists, else the first.
+ * Each role is its own small pill, so one role shows at a time and nothing scrolls.
+ */
+export function useRolePill(keys: string[]): [string, (key: string) => void] {
+  const [chosen, setChosen] = useState(keys[0] ?? "");
+  return [keys.includes(chosen) ? chosen : (keys[0] ?? ""), setChosen];
 }

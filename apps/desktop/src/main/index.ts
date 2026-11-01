@@ -22,14 +22,14 @@ import { MetaSnapshotSchema } from "./server-client";
 import { PersonalCoach, uiCopy } from "./personal-coach";
 import { DirectProfileSource, FileProfileSource, profileMode, ServerProfileSource } from "./profile-source";
 import { restartToUpdate, startAutoUpdate } from "./updater";
-import { reportError, reportProblem, startCrashReports } from "./crash-reports";
+import { logProblem } from "./problem-log";
 import { inviteFromArgs, JOIN_SCHEME } from "./join-link";
 import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH, sameRect, shouldRestoreForDraft, type Rect } from "./dock";
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
 import { exploreArgs } from "../shared/explore";
-import { isHintId } from "../shared/ui-state";
+import { isHighlightId } from "../shared/ui-state";
 import { UiStateStore } from "./ui-state";
 
 const DOCK_POLL_MS = 500;
@@ -80,7 +80,8 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
     },
   });
-  w.once("ready-to-show", () => w.show());
+  // Dev aid LDC_SCREENSHOT: a test run doesn't take focus from whatever you're doing.
+  w.once("ready-to-show", () => (process.env.LDC_SCREENSHOT ? w.showInactive() : w.show()));
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) void w.loadURL(devUrl);
   else void w.loadFile(join(__dirname, "../renderer/index.html"), perf ? { query: { perf: "1" } } : undefined);
@@ -118,31 +119,12 @@ async function startDocking(coach: Coach): Promise<void> {
 }
 
 /** A setting baked into the installer at build time (electron-builder extraMetadata), if any. */
-function builtIn(key: "ldcDefaultServerUrl" | "ldcSentryDsn"): string | null {
+function builtIn(key: "ldcDefaultServerUrl"): string | null {
   try {
     const pkg = JSON.parse(readFileSync(join(app.getAppPath(), "package.json"), "utf8")) as Record<string, unknown>;
     return typeof pkg[key] === "string" ? pkg[key] : null;
   } catch {
     return null;
-  }
-}
-
-/**
- * Crash reports: on in installers built with LDC_SENTRY_DSN (LDC_SENTRY_DSN in a development
- * build too). The SDK must start before Electron's "ready" (~60 ms); builds without a DSN skip
- * it. LDC_CRASH_TEST=1 sends a test error report once the panel is up.
- */
-function startCrashReportsEarly(): void {
-  const dsn = builtIn("ldcSentryDsn") ?? (!app.isPackaged ? (process.env.LDC_SENTRY_DSN ?? null) : null);
-  if (!dsn) return;
-  try {
-    startCrashReports(dsn, app.getVersion());
-    console.log("Crash reports on (Sentry)");
-  } catch (err) {
-    return console.warn(`Crash reports off: ${(err as Error).message}`);
-  }
-  if (process.env.LDC_CRASH_TEST === "1") {
-    setTimeout(() => reportError(new Error("LoL Draft Coach test crash (LDC_CRASH_TEST)")), 8_000);
   }
 }
 
@@ -201,6 +183,16 @@ function scheduleScreenshot(coach: PersonalCoach): void {
       )
       .catch(() => null);
     console.log(`LDC_SCREENSHOT: layout ${layout}`);
+    // A window without focus may not have painted the last clicks yet: ask for a fresh frame, so the picture matches the layout above.
+    win?.webContents.invalidate();
+    await win?.webContents
+      .executeJavaScript(`new Promise((r) => { setTimeout(r, 1500); requestAnimationFrame(() => requestAnimationFrame(r)); })`)
+      .catch(() => null);
+    const step = await win?.webContents.executeJavaScript(`document.querySelector(".tour-text")?.textContent ?? ""`).catch(() => "");
+    if (step) console.log(`LDC_SCREENSHOT: tour step: ${step}`);
+    // The first capture makes it paint; the second has the frame.
+    await win?.webContents.capturePage();
+    await new Promise((r) => setTimeout(r, 300));
     const image = await win?.webContents.capturePage();
     if (image) await writeFile(path, image.toPNG());
     const dump = process.env.LDC_VIEW_DUMP;
@@ -211,7 +203,7 @@ function scheduleScreenshot(coach: PersonalCoach): void {
       const shown = await win?.webContents
         .executeJavaScript(`({ rows: [...document.querySelectorAll(".explore-list .trow")].map((e) => e.getAttribute("aria-label")), stats: document.querySelector(".explore-stats")?.innerText ?? null, you: document.querySelector(".explore-who .end-note")?.innerText ?? null, text: document.querySelector(".window .scroll")?.innerText ?? "", listBox: (() => { const l = document.querySelector(".explore-list"); return l ? { scrollHeight: l.scrollHeight, clientHeight: l.clientHeight } : null; })() })`)
         .catch(() => null);
-      await writeFile(explore, JSON.stringify({ list: coach.exploreList(), games: coach.exploreGames(), shown }, null, 2));
+      await writeFile(explore, JSON.stringify({ list: coach.explore.list(), games: coach.explore.games(), shown }, null, 2));
     }
     app.quit();
   }, Number(process.env.LDC_SCREENSHOT_DELAY_MS ?? 8_000));
@@ -243,7 +235,7 @@ async function followServerConfig(serverProfiles: ServerProfileSource, coach: Pe
   const remoteConfig = new ConfigSource({
     client: () => serverProfiles.serverClient,
     cacheFile: join(app.getPath("userData"), "config", "server-config.json"),
-    onRejected: (err) => reportProblem(`Server config rejected: ${err.message}`),
+    onRejected: (err) => logProblem(`Server config rejected: ${err.message}`),
   });
   remoteConfig.on("config", (c) => coach.setConfig(c));
   await remoteConfig.loadCached();
@@ -384,25 +376,25 @@ async function main(): Promise<void> {
     (kind === "runes" || kind === "items" || kind === "all") && (pageKey === undefined || typeof pageKey === "string") ? coach.importLoadout(kind, pageKey) : undefined,
   );
   ipcMain.handle(IPC.retry, () => coach.retryNow());
-  ipcMain.handle(IPC.exploreList, () => coach.exploreList());
+  ipcMain.handle(IPC.exploreList, () => coach.explore.list());
   ipcMain.handle(IPC.exploreChampion, (_e, championId: unknown, role: unknown) => {
     const args = exploreArgs(championId, role);
-    return args ? coach.exploreChampion(args.championId, args.role) : null;
+    return args ? coach.explore.champion(args.championId, args.role) : null;
   });
-  ipcMain.handle(IPC.exploreGames, () => coach.exploreGames());
+  ipcMain.handle(IPC.exploreGames, () => coach.explore.games());
   ipcMain.on(IPC.minimize, () => win?.minimize());
   ipcMain.on(IPC.restartToUpdate, () => {
     if (canRestartToUpdate(coach.state)) restartToUpdate();
   });
-  ipcMain.on(IPC.reportError, (_e, detail: unknown) => {
-    if (typeof detail === "string") reportProblem(`Panel render error: ${detail.slice(0, 4000)}`);
+  ipcMain.on(IPC.logError, (_e, detail: unknown) => {
+    if (typeof detail === "string") logProblem(`Panel render error: ${detail.slice(0, 4000)}`);
   });
   ipcMain.on(IPC.dismissNotice, (_e, key: unknown) => {
     if (typeof key === "string") coach.dismissNotice(key);
   });
   ipcMain.on(IPC.tourDone, () => coach.setUi(uiState.finishTour()));
-  ipcMain.on(IPC.hintSeen, (_e, id: unknown) => {
-    if (isHintId(id)) coach.setUi(uiState.sawHint(id));
+  ipcMain.on(IPC.highlightSeen, (_e, id: unknown) => {
+    if (isHighlightId(id)) coach.setUi(uiState.sawHighlight(id));
   });
 
   await coach.start();
@@ -441,6 +433,5 @@ if (!process.env.LDC_SCREENSHOT && !perf && !app.requestSingleInstanceLock()) {
     win.show();
     win.focus();
   });
-  if (!perf) startCrashReportsEarly();
   void main();
 }

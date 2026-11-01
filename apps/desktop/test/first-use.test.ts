@@ -1,112 +1,213 @@
 import { describe, expect, it } from "vitest";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
-import { draftHint, lobbyHint, nextVisit, screenFor, tourStep, TOUR_CARDS } from "../src/renderer/first-use";
-import { HINT_IDS, isHintId } from "../src/shared/ui-state";
+import { closeHighlight, draftHighlights, highlightVisit, LOBBY_TOUR, moveTour, openAt, placeCallout, screenFor, skipStep, spotlight, startTour, tourRunning, tourSteps, type TourStep } from "../src/renderer/first-use";
+import { HIGHLIGHT_IDS, isHighlightId } from "../src/shared/ui-state";
 import type { AccountView, DraftView, MyPickView } from "../src/shared/view";
 
 const registered = { state: "registered" } as AccountView;
 const draft = {} as DraftView;
 const pick = {} as MyPickView;
-const fresh = { tourDone: false, hintsSeen: [] };
-const done = { tourDone: true, hintsSeen: [] };
+const fresh = { tourDone: false, highlightsSeen: [] };
+const done = { tourDone: true, highlightsSeen: [] };
 
 describe("screenFor", () => {
-  it("shows the tour once registered, and the lobby after it", () => {
-    expect(screenFor({ account: registered, draft: null, myPick: null, ui: fresh }, false)).toBe("tour");
-    expect(screenFor({ account: registered, draft: null, myPick: null, ui: done }, false)).toBe("lobby");
-  });
-
-  it("works without an account (development mode)", () => {
-    expect(screenFor({ account: null, draft: null, myPick: null, ui: fresh }, false)).toBe("tour");
-    expect(screenFor({ account: null, draft: null, myPick: null, ui: done }, false)).toBe("lobby");
-    expect(screenFor({ account: null, draft, myPick: null, ui: fresh }, false)).toBe("champSelect");
+  it("is the lobby once registered, also without an account (development mode)", () => {
+    expect(screenFor({ account: registered, draft: null, myPick: null })).toBe("lobby");
+    expect(screenFor({ account: null, draft: null, myPick: null })).toBe("lobby");
   });
 
   it.each(["unregistered", "registering", "mismatch", "error"] as const)("never blocks Connect: %s", (state) => {
-    const account = { state } as AccountView;
-    expect(screenFor({ account, draft: null, myPick: null, ui: fresh }, false)).toBe("connect");
-    expect(screenFor({ account, draft: null, myPick: null, ui: done }, true)).toBe("connect");
+    expect(screenFor({ account: { state } as AccountView, draft: null, myPick: null })).toBe("connect");
   });
 
-  it("gives way to a draft, also when opened from the footer, and comes back after", () => {
-    expect(screenFor({ account: registered, draft, myPick: null, ui: fresh }, false)).toBe("champSelect");
-    expect(screenFor({ account: registered, draft, myPick: null, ui: done }, true)).toBe("champSelect");
-    expect(screenFor({ account: registered, draft, myPick: pick, ui: fresh }, false)).toBe("lockedIn");
-    expect(screenFor({ account: registered, draft: null, myPick: pick, ui: fresh }, false)).toBe("lockedIn");
-    expect(screenFor({ account: registered, draft: null, myPick: null, ui: fresh }, false)).toBe("tour");
-  });
-
-  it("reopens from the footer", () => {
-    expect(screenFor({ account: registered, draft: null, myPick: null, ui: done }, true)).toBe("tour");
+  it("gives way to a draft and your pick", () => {
+    expect(screenFor({ account: registered, draft, myPick: null })).toBe("champSelect");
+    expect(screenFor({ account: null, draft, myPick: null })).toBe("champSelect");
+    expect(screenFor({ account: registered, draft, myPick: pick })).toBe("lockedIn");
+    expect(screenFor({ account: registered, draft: null, myPick: pick })).toBe("lockedIn");
   });
 });
 
-describe("tourStep", () => {
-  it("stays within the cards", () => {
-    expect(tourStep(0, -1)).toBe(0);
-    expect(tourStep(0, 1)).toBe(1);
-    expect(tourStep(TOUR_CARDS.length - 1, 1)).toBe(TOUR_CARDS.length - 1);
+describe("tourRunning", () => {
+  it("runs the first time, and from the footer", () => {
+    expect(tourRunning(fresh, false, false)).toBe(true);
+    expect(tourRunning(done, false, false)).toBe(false);
+    expect(tourRunning(done, true, false)).toBe(true);
+  });
+
+  it("stops at once when closed, before the saved state is back", () => {
+    expect(tourRunning(fresh, false, true)).toBe(false);
+  });
+
+  it("a draft doesn't mark it done: leaving the lobby hides it, and it is still running after", () => {
+    const during = { account: registered, draft, myPick: null };
+    expect(screenFor(during)).toBe("champSelect");
+    expect(tourRunning(fresh, false, false)).toBe(true);
+    const moved = moveTour(startTour(), 1, LOBBY_TOUR.length)!;
+    expect(moved.index).toBe(1);
   });
 });
 
-describe("hints", () => {
-  it("opens on a first visit, not when seen", () => {
-    expect(nextVisit(null, "me", [])).toEqual({ id: "me", open: true });
-    expect(nextVisit(null, "me", ["me"])).toEqual({ id: "me", open: false });
-    expect(nextVisit(null, null, [])).toEqual({ id: null, open: false });
+describe("the lobby tour's steps", () => {
+  const onlyHas = (subs: string[]) => (_tab: string, sub: string) => subs.includes(sub);
+
+  it("leaves out sub-tabs the lobby doesn't have, so no dot stands for nothing", () => {
+    const ids = tourSteps(LOBBY_TOUR, onlyHas(["style", "pool"]), []).map((s) => s.id);
+    expect(ids).not.toContain("browse");
+    expect(ids).not.toContain("my-games");
+    expect(ids).toContain("champions");
   });
 
-  it("stays open once saved as seen, while on the same screen", () => {
-    const visit = nextVisit(null, "me", []);
-    expect(nextVisit(visit, "me", ["me"])).toBe(visit);
+  it("includes them once the lobby has them", () => {
+    const ids = tourSteps(LOBBY_TOUR, onlyHas(["style", "pool", "browse", "my-games"]), []).map((s) => s.id);
+    expect(ids).toContain("browse");
+    expect(ids).toContain("my-games");
   });
 
-  it("stays closed on the same screen after dismissing", () => {
-    const dismissed = { id: "me", open: false } as const;
-    expect(nextVisit(dismissed, "me", [])).toBe(dismissed);
+  it("starts centred and ends centred", () => {
+    expect(LOBBY_TOUR[0]!.target).toBeUndefined();
+    expect(LOBBY_TOUR.at(-1)!.target).toBeUndefined();
   });
 
-  it("is gone when you come back to the screen", () => {
-    const left = nextVisit(nextVisit(null, "me", []), "last", ["me"]);
-    expect(left).toEqual({ id: "last", open: true });
-    expect(nextVisit(left, "me", ["me", "last"])).toEqual({ id: "me", open: false });
+  it("the numbers step falls back to the middle, other targets to being skipped", () => {
+    expect(LOBBY_TOUR.find((s) => s.id === "numbers")!.orCentre).toBe(true);
+    expect(LOBBY_TOUR.find((s) => s.id === "browse")!.orCentre).toBeUndefined();
+  });
+});
+
+describe("moving through the tour", () => {
+  it("moves on and back, stops at the first, and ends past the last", () => {
+    const at1 = moveTour(startTour(), 1, 3)!;
+    expect(at1.index).toBe(1);
+    expect(moveTour(at1, -1, 3)!.index).toBe(0);
+    expect(moveTour(startTour(), -1, 3)!.index).toBe(0);
+    expect(moveTour({ index: 2, dir: 1, skipped: [] }, 1, 3)).toBeNull();
   });
 
-  it("opens again on a later visit when it had no room and was never seen", () => {
-    const noRoom = { id: "pick", open: false } as const;
-    const banning = nextVisit(noRoom, "ban", []);
-    expect(nextVisit(banning, "pick", ["ban"])).toEqual({ id: "pick", open: true });
+  const steps: TourStep[] = [{ id: "a" }, { id: "b", target: "gone" }, { id: "c" }];
+  const list = (skipped: string[]) => tourSteps(steps, () => true, skipped);
+
+  it("going forward, passes a step without a target to the next", () => {
+    const run = skipStep({ index: 1, dir: 1, skipped: [] }, "b");
+    expect(list(run.skipped)[run.index]!.id).toBe("c");
   });
 
-  it("names each screen's hint", () => {
-    expect(lobbyHint("last")).toBe("last");
-    expect(lobbyHint("me")).toBe("me");
-    expect(lobbyHint("champions")).toBe("champions");
-    expect(lobbyHint("suggestion")).toBeNull();
-    expect(draftHint({ banning: true, loadout: false, canImport: false })).toBe("ban");
-    expect(draftHint({ banning: false, loadout: false, canImport: false })).toBe("pick");
-    expect(draftHint({ banning: false, loadout: true, canImport: true })).toBe("locked");
-    expect(draftHint({ banning: false, loadout: true, canImport: false })).toBeNull();
+  it("going back, passes it to the one before", () => {
+    const run = skipStep({ index: 1, dir: -1, skipped: [] }, "b");
+    expect(list(run.skipped)[run.index]!.id).toBe("a");
+  });
+
+  it("shows the last thing opened up to a step, or nothing before the first", () => {
+    const open = { tab: "me" } as const;
+    const s: TourStep[] = [{ id: "a" }, { id: "b", open }, { id: "c" }];
+    expect(openAt(s, 0)).toBeNull();
+    expect(openAt(s, 1)).toEqual(open);
+    expect(openAt(s, 2)).toEqual(open);
+  });
+});
+
+describe("placing the callout", () => {
+  const view = { width: 440, height: 720 };
+  const size = { width: 300, height: 80 };
+  const inside = (p: { top: number; left: number }) => {
+    expect(p.top).toBeGreaterThanOrEqual(0);
+    expect(p.left).toBeGreaterThanOrEqual(0);
+    expect(p.top + size.height).toBeLessThanOrEqual(view.height);
+    expect(p.left + size.width).toBeLessThanOrEqual(view.width);
+  };
+
+  it("goes in the middle without a target", () => {
+    expect(placeCallout(null, size, view)).toEqual({ top: 320, left: 70, side: "centre" });
+  });
+
+  it("goes under its target when there's room", () => {
+    const p = placeCallout({ top: 40, left: 100, width: 40, height: 30 }, size, view);
+    expect(p.side).toBe("below");
+    expect(p.top).toBe(78);
+    inside(p);
+  });
+
+  it("flips above a target at the bottom", () => {
+    const p = placeCallout({ top: 680, left: 20, width: 80, height: 20 }, size, view);
+    expect(p.side).toBe("above");
+    expect(p.top).toBe(592);
+    inside(p);
+  });
+
+  it("stays inside the window sideways", () => {
+    inside(placeCallout({ top: 10, left: 0, width: 10, height: 10 }, size, view));
+    inside(placeCallout({ top: 10, left: 430, width: 10, height: 10 }, size, view));
+  });
+
+  it("stays inside the window with a target as tall as it", () => {
+    inside(placeCallout({ top: 0, left: 0, width: 440, height: 720 }, size, view));
+    inside(placeCallout({ top: 30, left: 0, width: 440, height: 650 }, size, view));
+  });
+
+  it("keeps the spotlight inside the window, with room around the target", () => {
+    expect(spotlight({ top: 100, left: 100, width: 50, height: 20 }, view)).toEqual({ top: 96, left: 96, width: 58, height: 28 });
+    expect(spotlight({ top: 0, left: 0, width: 440, height: 720 }, view)).toEqual({ top: 0, left: 0, width: 440, height: 720 });
+  });
+});
+
+describe("live highlights", () => {
+  const all = () => true;
+
+  it("names each screen's", () => {
+    expect(draftHighlights({ banning: true, loadout: false })).toEqual(["bans"]);
+    expect(draftHighlights({ banning: false, loadout: false })).toEqual(["picks"]);
+    expect(draftHighlights({ banning: false, loadout: true })).toEqual(["rune-options", "import"]);
+  });
+
+  it("shows the first not seen, and none when all are", () => {
+    expect(highlightVisit(null, ["a", "b"], [], all).current).toBe("a");
+    expect(highlightVisit(null, ["a", "b"], ["a"], all).current).toBe("b");
+    expect(highlightVisit(null, ["a", "b"], ["a", "b"], all).current).toBeNull();
+  });
+
+  it("passes one whose target isn't on screen, and doesn't count it as closed", () => {
+    const v = highlightVisit(null, ["a", "b"], [], (id) => id === "b");
+    expect(v.current).toBe("b");
+    expect(v.closed).toEqual([]);
+  });
+
+  it("stays once saved as seen, while it's showing", () => {
+    const v = highlightVisit(null, ["a"], [], all);
+    expect(highlightVisit(v, ["a"], ["a"], all)).toBe(v);
+  });
+
+  it("goes when its target does", () => {
+    const v = highlightVisit(null, ["a"], [], all);
+    expect(highlightVisit(v, ["a"], [], () => false).current).toBeNull();
+  });
+
+  it("a click closes it for good on this screen, and the next may show", () => {
+    const v = closeHighlight(highlightVisit(null, ["a", "b"], [], all));
+    expect(v.current).toBeNull();
+    expect(highlightVisit(v, ["a", "b"], [], all).current).toBe("b");
+    const both = closeHighlight(highlightVisit(v, ["a", "b"], [], all));
+    expect(highlightVisit(both, ["a", "b"], [], all).current).toBeNull();
+  });
+
+  it("another screen starts over, without what was closed on the last", () => {
+    const v = closeHighlight(highlightVisit(null, ["a"], [], all));
+    expect(highlightVisit(v, ["b"], [], all)).toEqual({ key: "b", current: "b", closed: [] });
   });
 
   it("only takes known ids from the renderer", () => {
-    for (const id of HINT_IDS) expect(isHintId(id)).toBe(true);
-    expect(isHintId("nope")).toBe(false);
-    expect(isHintId(1)).toBe(false);
+    for (const id of HIGHLIGHT_IDS) expect(isHighlightId(id)).toBe(true);
+    expect(isHighlightId("nope")).toBe(false);
+    expect(isHighlightId(1)).toBe(false);
   });
 });
 
 describe("first-use wording", () => {
   const copy = uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates);
   const keys = [
-    ...HINT_IDS.map((id) => `hint.${id}`),
+    ...HIGHLIGHT_IDS.map((id) => `tour.live.${id}`),
     ...["reopen", "skip", "back", "next", "done"].map((k) => `tour.${k}`),
-    ...TOUR_CARDS.flatMap((c, i) => {
-      const card = `tour.card${i + 1}`;
-      const lines = Array.from({ length: c.lines }, (_, l) => [`${card}.line${l + 1}.lead`, `${card}.line${l + 1}`]).flat();
-      return [`${card}.title`, ...lines, ...(c.note ? [`${card}.note.lead`, `${card}.note`] : [])];
-    }),
+    ...LOBBY_TOUR.flatMap((s) => [`tour.${s.id}.lead`, `tour.${s.id}`]),
   ];
 
   it("has every key", () => {
@@ -117,7 +218,7 @@ describe("first-use wording", () => {
     for (const key of keys) expect(copy[key], key).not.toMatch(/\d/);
   });
 
-  it("keeps hints to one short line", () => {
-    for (const id of HINT_IDS) expect(copy[`hint.${id}`]!.length, id).toBeLessThanOrEqual(90);
+  it("keeps it to a short line", () => {
+    for (const key of keys) expect(copy[key]!.length, key).toBeLessThanOrEqual(130);
   });
 });

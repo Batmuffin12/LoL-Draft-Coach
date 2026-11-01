@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    window.coach.reportError(`${error.message}${info.componentStack ?? ""}`);
+    window.coach.logError(`${error.message}${info.componentStack ?? ""}`);
   }
 
   override render(): ReactNode {

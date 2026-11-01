@@ -14,45 +14,47 @@ describe("UiStateStore", () => {
   afterEach(() => rm(dir, { recursive: true, force: true }));
 
   it("starts empty without a file", async () => {
-    expect(await new UiStateStore(file).load()).toEqual({ tourDone: false, hintsSeen: [] });
+    expect(await new UiStateStore(file).load()).toEqual({ tourDone: false, highlightsSeen: [] });
   });
 
   it.each(["{not json", "null", "[]", '"text"'])("starts empty from a corrupt file: %s", async (text) => {
     await writeFile(file, text);
-    expect(await new UiStateStore(file).load()).toEqual({ tourDone: false, hintsSeen: [] });
+    expect(await new UiStateStore(file).load()).toEqual({ tourDone: false, highlightsSeen: [] });
   });
 
   it("keeps the good field when the other is broken", async () => {
-    await writeFile(file, JSON.stringify({ tourDone: true, hintsSeen: "nope" }));
-    expect(await new UiStateStore(file).load()).toEqual({ tourDone: true, hintsSeen: [] });
-    await writeFile(file, JSON.stringify({ tourDone: "yes", hintsSeen: ["me"] }));
-    expect(await new UiStateStore(file).load()).toEqual({ tourDone: false, hintsSeen: ["me"] });
+    await writeFile(file, JSON.stringify({ tourDone: true, highlightsSeen: "nope" }));
+    expect(await new UiStateStore(file).load()).toEqual({ tourDone: true, highlightsSeen: [] });
+    await writeFile(file, JSON.stringify({ tourDone: "yes", highlightsSeen: ["me"] }));
+    expect(await new UiStateStore(file).load()).toEqual({ tourDone: false, highlightsSeen: ["me"] });
   });
 
   it("is still there after a restart", async () => {
     const store = new UiStateStore(file);
     await store.load();
     store.finishTour();
-    store.sawHint("me");
-    expect(store.sawHint("pick")).toEqual({ tourDone: true, hintsSeen: ["me", "pick"] });
+    store.sawHighlight("me");
+    expect(store.sawHighlight("pick")).toEqual({ tourDone: true, highlightsSeen: ["me", "pick"] });
     await store.flushed();
-    expect(await new UiStateStore(file).load()).toEqual({ tourDone: true, hintsSeen: ["me", "pick"] });
+    expect(await new UiStateStore(file).load()).toEqual({ tourDone: true, highlightsSeen: ["me", "pick"] });
   });
 
-  it("records a hint once", async () => {
+  it("records a highlight once", async () => {
     const store = new UiStateStore(file);
     await store.load();
-    store.sawHint("me");
-    expect(store.sawHint("me").hintsSeen).toEqual(["me"]);
+    store.sawHighlight("me");
+    expect(store.sawHighlight("me").highlightsSeen).toEqual(["me"]);
+    // The write is still going: the temp folder's cleanup mustn't race it.
+    await store.flushed();
   });
 
-  it("keeps hints of a newer version", async () => {
-    await writeFile(file, JSON.stringify({ tourDone: true, hintsSeen: ["from-the-future"] }));
+  it("keeps highlights of a newer version", async () => {
+    await writeFile(file, JSON.stringify({ tourDone: true, highlightsSeen: ["from-the-future"] }));
     const store = new UiStateStore(file);
     await store.load();
-    store.sawHint("me");
+    store.sawHighlight("me");
     await store.flushed();
-    expect(JSON.parse(await readFile(file, "utf8")).hintsSeen).toEqual(["from-the-future", "me"]);
+    expect(JSON.parse(await readFile(file, "utf8")).highlightsSeen).toEqual(["from-the-future", "me"]);
   });
 
   it("creates its folder, and a failed write doesn't throw", async () => {

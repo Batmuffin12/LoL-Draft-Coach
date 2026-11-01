@@ -3,7 +3,7 @@ import type { DataDragon } from "@ldc/ddragon";
 import { sanitizeChampSelect, type LcuConnector } from "@ldc/lcu";
 import type { DraftState } from "@ldc/shared";
 import { emptyViewState, type ViewState } from "../shared/view";
-import { reportProblem } from "./crash-reports";
+import { logProblem } from "./problem-log";
 import { PhaseLength, toDraftView } from "./draft-view";
 
 export interface CoachDeps {
@@ -50,7 +50,7 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
       this.onDraft();
     });
     connector.on("schemaError", (err) => {
-      if (this.notice("schema", this.wording("notice.schema"))) reportProblem(`League client data: ${err.message}`);
+      if (this.notice("schema", this.wording("notice.schema"))) logProblem(`League client data: ${err.message}`);
     });
     ddragon.on("patch", (d) => {
       this.update({ status: { ...this.view.status, patch: d.version } });
@@ -69,7 +69,7 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
       this.clearNotice("championData");
     } catch (err) {
       this.championDataMissing = true;
-      if (this.notice("championData", this.wording("notice.championData"))) reportProblem(`Champion data: ${(err as Error).message}`);
+      if (this.notice("championData", this.wording("notice.championData"))) logProblem(`Champion data: ${(err as Error).message}`);
     }
   }
 
@@ -81,7 +81,7 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
     this.update({ docked });
   }
 
-  /** What first use has shown so far changed (the tour, a hint). */
+  /** What first use has shown so far changed (the tour, a highlight). */
   setUi(ui: ViewState["ui"]): void {
     this.update({ ui });
   }

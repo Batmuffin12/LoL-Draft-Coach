@@ -23,5 +23,21 @@
   "server.coldStart": { "stat": "median", "max": 1000, "why": "Wake-up: process start → first 200" },
   "desktop.replay.mid-counter.heapGrowth": { "stat": "value", "max": 1, "why": "No memory growth between replays (MB, after GC)" },
   "desktop.replay.full-game.heapGrowth": { "stat": "value", "max": 1, "why": "No memory growth between replays (MB, after GC)" },
-  "desktop.replay.full-game.mainHeapGrowth": { "stat": "value", "max": 1, "why": "No main-process memory growth between replays (MB, after GC)" }
+  "desktop.replay.full-game.mainHeapGrowth": { "stat": "value", "max": 1, "why": "No main-process memory growth between replays (MB, after GC)" },
+  "desktop.coldStart.firstPaint@p95": { "stat": "p95", "max": 422, "why": "App start to first paint: v1.0.3 measured 384 ms (N 999), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "desktop.coldStart.firstPaint@p99": { "stat": "p99", "max": 436, "why": "App start to first paint: v1.0.3 measured 396 ms (N 999), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "desktop.coldStart.firstScreen@p95": { "stat": "p95", "max": 385, "why": "App start to the first screen: v1.0.3 measured 349 ms (N 1000), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "desktop.coldStart.firstScreen@p99": { "stat": "p99", "max": 394, "why": "App start to the first screen: v1.0.3 measured 358 ms (N 1000), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "desktop.coldStart.fullScreen@p95": { "stat": "p95", "max": 570, "why": "App start to a usable panel: v1.0.3 measured 518 ms (N 1000), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "desktop.coldStart.fullScreen@p99": { "stat": "p99", "max": 927, "why": "App start to a usable panel: v1.0.3 measured 842 ms (N 1000), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.first.profileFetch@p95": { "stat": "p95", "max": 160, "why": "First start: the /me/profile fetch: v1.0.3 measured 145 ms (N 200), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.first.profileFetch@p99": { "stat": "p99", "max": 167, "why": "First start: the /me/profile fetch: v1.0.3 measured 151 ms (N 200), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.next.profileFetch@p95": { "stat": "p95", "max": 25, "why": "Next start: the /me/profile fetch: v1.0.3 measured 22 ms (N 200), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.next.profileFetch@p99": { "stat": "p99", "max": 25, "why": "Next start: the /me/profile fetch: v1.0.3 measured 23 ms (N 200), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.first.metaFetch@p95": { "stat": "p95", "max": 8, "why": "First start: the meta fetch: v1.0.3 measured 7 ms (N 200), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.first.metaFetch@p99": { "stat": "p99", "max": 8, "why": "First start: the meta fetch: v1.0.3 measured 7 ms (N 200), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.first.total@p95": { "stat": "p95", "max": 249, "why": "First start: profile, meta and config all in: v1.0.3 measured 226 ms (N 200), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.first.total@p99": { "stat": "p99", "max": 259, "why": "First start: profile, meta and config all in: v1.0.3 measured 235 ms (N 200), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.next.total@p95": { "stat": "p95", "max": 74, "why": "Next start: profile, meta and config all in: v1.0.3 measured 66 ms (N 200), plus 10%. A real p95 needs many runs: --cold-starts 200 --flows 200" },
+  "server.flow.next.total@p99": { "stat": "p99", "max": 75, "why": "Next start: profile, meta and config all in: v1.0.3 measured 68 ms (N 200), plus 10%. A real p99 needs many runs: --cold-starts 200 --flows 200" }
 }

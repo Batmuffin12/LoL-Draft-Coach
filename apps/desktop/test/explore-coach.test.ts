@@ -45,7 +45,7 @@ async function started(meta: MetaSnapshot | null): Promise<PersonalCoach> {
   await coach.start();
   if (source) {
     await source.refresh(config.bands.defaultBand);
-    await waitFor(() => coach!.exploreList() !== null);
+    await waitFor(() => coach!.explore.list() !== null);
   }
   return coach;
 }
@@ -59,23 +59,23 @@ describe("explore through the coach", () => {
     coach!.stop();
     const c = await started(snapshot(400));
     expect(stateSize(c)).toBe(small);
-    expect(c.exploreList()!.rows).toHaveLength(400);
-    await c.exploreChampion(1, "middle");
-    c.exploreGames();
+    expect(c.explore.list()!.rows).toHaveLength(400);
+    await c.explore.champion(1, "middle");
+    c.explore.games();
     expect(stateSize(c)).toBe(small);
     expect(Object.keys(c.state).filter((k) => /explore|browse|myGames/i.test(k))).toEqual([]);
   });
 
   it("works the list out once per snapshot", async () => {
     const c = await started(snapshot(5));
-    expect(c.exploreList()).toBe(c.exploreList());
+    expect(c.explore.list()).toBe(c.explore.list());
   });
 
   it("without a snapshot there's no list and no champion; without games an empty history", async () => {
     const c = await started(null);
-    expect(c.exploreList()).toBeNull();
-    expect(await c.exploreChampion(1, "middle")).toBeNull();
-    expect(c.exploreGames().games).toEqual([]);
+    expect(c.explore.list()).toBeNull();
+    expect(await c.explore.champion(1, "middle")).toBeNull();
+    expect(c.explore.games().games).toEqual([]);
   });
 
   it("an older server's config keeps the wording this version bundles", async () => {

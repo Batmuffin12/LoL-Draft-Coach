@@ -15,7 +15,7 @@ import type { Fixture } from "@ldc/lcu";
 import { MockLcuServer } from "@ldc/lcu/testing";
 import { history, loadScenario } from "@ldc/sim";
 import { world } from "../../packages/sim/scenarios/_world";
-import { HINT_IDS } from "../../apps/desktop/src/shared/ui-state";
+import { HIGHLIGHT_IDS } from "../../apps/desktop/src/shared/ui-state";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const desktop = join(root, "apps", "desktop");
@@ -155,10 +155,10 @@ async function withMock<T>(setup: Setup, until: number, run: (lcuOverride: strin
   }
 }
 
-/** The measured screens stay comparable across versions: a profile past the tour and every one-time hint. */
+/** The measured screens stay comparable across versions: a profile past the tour and every first-time highlight. */
 function skipFirstUse(): void {
   mkdirSync(profileDir, { recursive: true });
-  writeFileSync(join(profileDir, "ui-state.json"), JSON.stringify({ tourDone: true, hintsSeen: HINT_IDS }));
+  writeFileSync(join(profileDir, "ui-state.json"), JSON.stringify({ tourDone: true, highlightsSeen: HIGHLIGHT_IDS }));
 }
 
 function baseEnv(setup: Setup, lcu: string, opts: { profile?: boolean; serverUrl?: string } = {}): Record<string, string> {
@@ -258,7 +258,7 @@ async function screens(outDir: string): Promise<void> {
  */
 async function exploreShots(outDir: string, meta: string, old: string, hist: string, empty: string): Promise<void> {
   mkdirSync(outDir, { recursive: true });
-  const shots: { name: string; click: string; meta?: string | null; history?: string; closed?: boolean; hint?: boolean; height?: number }[] = [
+  const shots: { name: string; click: string; meta?: string | null; history?: string; closed?: boolean; height?: number }[] = [
     { name: "list", click: "Champions>Browse" },
     { name: "list-support-pick", click: "Champions>Browse>Support>Pick" },
     { name: "list-ban", click: "Champions>Browse>Ban" },
@@ -269,7 +269,6 @@ async function exploreShots(outDir: string, meta: string, old: string, hist: str
     { name: "thin-runes", click: "Champions>Browse>type:kaisa>Bot>Kai'Sa" },
     { name: "thin-build", click: "Champions>Browse>type:kaisa>Bot>Kai'Sa>Build" },
     { name: "no-build", click: "Champions>Browse>type:kaisa>Top>Kai'Sa" },
-    { name: "hint", click: "Champions>Browse", hint: true },
     { name: "ahri-build-short", click: "Champions>Browse>type:ahri>Mid>Ahri>Build", height: 660 },
     { name: "ahri-matchups-short", click: "Champions>Browse>type:ahri>Mid>Ahri>Matchups", height: 660 },
     { name: "games-short", click: "Me>My games", height: 660 },
@@ -290,10 +289,8 @@ async function exploreShots(outDir: string, meta: string, old: string, hist: str
   for (const s of shots) {
     const setup: Setup = { fixture: idleFixture("None"), meta: s.meta === null ? null : (s.meta ?? meta), timeScale: 0 };
     const shoot = async (lcu: string) => {
-      const env = baseEnv(setup, lcu);
-      if (s.hint) writeFileSync(join(profileDir, "ui-state.json"), JSON.stringify({ tourDone: true, hintsSeen: HINT_IDS.filter((id) => id !== "champions") }));
       const r = await launch({
-        ...env,
+        ...baseEnv(setup, lcu),
         ...(s.height ? { LDC_SCREENSHOT_HEIGHT: String(s.height) } : {}),
         LDC_PROFILE_FILE: s.history ?? hist,
         LDC_SCREENSHOT: join(outDir, `g-${s.name}.png`),

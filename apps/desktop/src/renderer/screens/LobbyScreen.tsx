@@ -1,54 +1,53 @@
 import { useEffect, useState } from "react";
-import type { LearnView, ViewState } from "../../shared/view";
+import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
-import { useHint } from "../components/Hint";
-import { lobbyHint } from "../first-use";
-import { FocusCard } from "../components/FocusCard";
-import { MonthReport } from "../components/MonthReport";
-import { NewChampTable } from "../components/NewChampTable";
-import { ChampIcon } from "../components/ChampIcon";
-import { Facts } from "../components/Facts";
-import { howLines, NumberRows } from "../components/StyleNumbers";
+import { LobbyTour } from "../components/Tour";
+import { LOBBY_TOUR, openAt, tourSteps, type TourRun } from "../first-use";
 import { Pills } from "../components/Pills";
-import { StyleRadar } from "../components/StyleRadar";
-import { DraftTerms, ResultBand } from "../components/PostGameCard";
-import { PoolCoverage, PoolLegend } from "../components/PoolCoverage";
-import { Button } from "../components/Button";
-import { POOL_COLUMNS, resultOverdue } from "../../shared/view";
-import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
-import { cx, gameCount, lobbyEmpty, needsClient, pct, positionLabel, roleName, t, tip } from "../format";
-import { useFitLevel, useFits, useNow } from "../hooks";
+import { needsClient, t } from "../format";
+import { useNow } from "../hooks";
 import { Browse, initialBrowse, type BrowseState } from "./Browse";
-import { AccountFooter, Header, Notices, ProgressRow } from "./common";
+import { AccountFooter, Header, Notices } from "./common";
+import { LastGame } from "./LastGame";
+import { Month } from "./Month";
 import { MyGames } from "./MyGames";
+import { NewChamps } from "./NewChamps";
+import { Pool } from "./Pool";
+import { Style } from "./Style";
 import { Suggestion } from "./Suggestion";
 
 type MainTab = "suggestion" | "last" | "me" | "champions";
-type SubTab = "style" | "month" | "games" | "browse" | "pool" | "new";
+type SubTab = "style" | "month" | "my-games" | "browse" | "pool" | "new";
 
 /** The main tabs with sub-tabs, the first one opening first. A new sub-tab is one entry here, one line in `SubScreen` and its `tabs.*` label. */
 const SUB_TABS: Record<"me" | "champions", SubTab[]> = {
-  me: ["style", "month", "games"],
+  me: ["style", "month", "my-games"],
   champions: ["browse", "pool", "new"],
 };
 
-/** Sub-tabs the tour points at. */
-const TOUR_TARGETS: Partial<Record<SubTab, string>> = { browse: "browse", games: "my-games" };
-
 /** These two don't depend on being in a lobby or on your roles: no line about a draft or the client above them. */
-const LOOK_UP_TABS: readonly (SubTab | null)[] = ["browse", "games"];
+const LOOK_UP_TABS: readonly (SubTab | null)[] = ["browse", "my-games"];
 
 /** After a game the Last game tab opens first, for this long. */
 const RECENT_GAME_MS = 12 * 3_600_000;
 
 /** Out of champ select: your playstyle per role, and your pool per role with its gaps. As many roles open as fit, so nothing scrolls. */
-export function LobbyScreen({ state, onHowItWorks }: { state: ViewState; onHowItWorks?: () => void }) {
-  return <Lobby state={state} onHowItWorks={onHowItWorks} />;
+export function LobbyScreen({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks?: () => void; tour?: LobbyTourControl | null }) {
+  return <Lobby state={state} onHowItWorks={onHowItWorks} tour={tour ?? null} />;
 }
 
-function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() => void) | undefined }) {
+/** The lobby tour while it runs: where it is, and what to do when it moves or ends. */
+export interface LobbyTourControl {
+  run: TourRun;
+  onRun: (run: TourRun) => void;
+  onClose: () => void;
+}
+
+const hasSub = (tab: string, sub: string) => (SUB_TABS[tab as keyof typeof SUB_TABS] as string[] | undefined)?.includes(sub) ?? false;
+
+function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: (() => void) | undefined; tour: LobbyTourControl | null }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const home: MainTab = recent ? "last" : "me";
   const [tab, setTab] = useState<MainTab>(home);
@@ -64,18 +63,23 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
   useEffect(() => {
     if (queued) setTab("suggestion");
   }, [queued]);
-  const shown: MainTab = tab === "suggestion" && !preview ? home : tab;
+  // The tour opens tabs itself while it runs; afterwards you are back where you were.
+  const steps = tour ? tourSteps(LOBBY_TOUR, hasSub, tour.run.skipped) : [];
+  const opened = tour ? openAt(steps, tour.run.index) : null;
+  const wanted: MainTab = opened?.tab ?? tab;
+  const shown: MainTab = wanted === "suggestion" && !preview ? home : wanted;
   const group = shown === "me" || shown === "champions" ? shown : null;
-  const sub = group ? subs[group] : null;
+  const sub = group ? ((opened?.sub as SubTab | undefined) ?? subs[group]) : null;
   const openSub = (g: keyof typeof SUB_TABS, value: SubTab) => {
     setSubs((now) => ({ ...now, [g]: value }));
     setTab(g);
   };
-  const hint = useHint(lobbyHint(shown), state.ui.hintsSeen);
   // Kept here: search and sort survive opening a champion and leaving the tab.
   const [browse, setBrowse] = useState(initialBrowse);
-  const champion = sub === "browse" && browse.open !== null;
+  // A champion's page takes the sub-tabs' room; the tour needs them, so it goes back to the list.
+  const champion = sub === "browse" && browse.open !== null && !tour;
   return (
+    <>
     <Window
       variant="lobby"
       header={<Header state={state} />}
@@ -86,14 +90,14 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
             onChange={setTab}
             options={[
               ...(preview ? [{ value: "suggestion" as const, label: t("queue.tab") }] : []),
-              { value: "last", label: t("tabs.last") },
-              { value: "me", label: t("tabs.me") },
-              { value: "champions", label: t("tabs.champions") },
+              { value: "last", label: t("tabs.last"), tour: "tab-last" },
+              { value: "me", label: t("tabs.me"), tour: "tab-me" },
+              { value: "champions", label: t("tabs.champions"), tour: "tab-champions" },
             ]}
           />
           {group && sub && !champion && (
             <div className="subtabs">
-              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), ...(TOUR_TARGETS[value] ? { tour: TOUR_TARGETS[value] } : {}) }))} value={sub} onChange={(value) => openSub(group, value)} />
+              <Pills label={t(`tabs.${group}`)} options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), tour: `subtab-${value}` }))} value={sub} onChange={(value) => openSub(group, value)} />
             </div>
           )}
         </>
@@ -102,15 +106,16 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
     >
       <Notices state={state} extra={state.roles.length || LOOK_UP_TABS.includes(sub) ? null : !needsClient(state.status) ? t("lobby.noDraft") : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
-      {hint}
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
       ) : sub ? (
-        <SubScreen sub={sub} state={state} browse={browse} onBrowse={setBrowse} onNewChamps={() => openSub("champions", "new")} />
+        <SubScreen sub={sub} state={state} browse={tour ? { ...browse, open: null } : browse} onBrowse={setBrowse} onNewChamps={() => openSub("champions", "new")} />
       ) : (
         <LastGame state={state} />
       )}
     </Window>
+    {tour && <LobbyTour steps={steps} run={tour.run} onRun={tour.onRun} onClose={tour.onClose} />}
+    </>
   );
 }
 
@@ -118,7 +123,7 @@ function Lobby({ state, onHowItWorks }: { state: ViewState; onHowItWorks: (() =>
 function SubScreen({ sub, state, browse, onBrowse, onNewChamps }: { sub: SubTab; state: ViewState; browse: BrowseState; onBrowse: (next: BrowseState) => void; onNewChamps: () => void }) {
   if (sub === "style") return <Style state={state} />;
   if (sub === "month") return <Month state={state} />;
-  if (sub === "games") return <MyGames state={state} />;
+  if (sub === "my-games") return <MyGames state={state} />;
   if (sub === "browse") return <Browse state={state} browse={browse} onBrowse={onBrowse} />;
   if (sub === "pool") return <Pool state={state} onNewChamps={onNewChamps} />;
   return <NewChamps state={state} />;
@@ -136,243 +141,5 @@ function SessionNotice({ state }: { state: ViewState }) {
         {s.record && <span className="caption block">{s.record}</span>}
       </Notice>
     </div>
-  );
-}
-
-/**
- * Which role is shown: the one you chose while it still exists, else the first.
- * Each role is its own small pill, so one role shows at a time and nothing scrolls.
- */
-function useRolePill(keys: string[]): [string, (key: string) => void] {
-  const [chosen, setChosen] = useState(keys[0] ?? "");
-  return [keys.includes(chosen) ? chosen : (keys[0] ?? ""), setChosen];
-}
-
-/** Your last game against the advice the coach gave (the advice log). */
-function LastGame({ state }: { state: ViewState }) {
-  const now = useNow(60_000);
-  const g = state.lastGame;
-  return (
-    <>
-      {state.lastGamePending && (
-        <div className="notices">
-          <ProgressRow text={t("last.pending")} />
-        </div>
-      )}
-      {g ? (
-        <>
-          <ResultBand game={g} now={now} overdue={resultOverdue(g, { pending: state.lastGamePending, gaveUp: state.lastGameGaveUp }, now)} />
-          {(g.terms.length > 0 || g.lines.length > 0) && (
-            <Section title={t("last.decided")}>
-              <DraftTerms game={g} />
-            </Section>
-          )}
-        </>
-      ) : (
-        <Section title={t("tabs.last")}>
-          <p className="caption">{t("last.empty")}</p>
-        </Section>
-      )}
-      {state.focus && (
-        <Section title={t("last.goal")} aside={<span className="micro">{state.focus.on}</span>}>
-          <FocusCard focus={state.focus} game={g?.focus ?? null} />
-        </Section>
-      )}
-    </>
-  );
-}
-
-/** New champions per role (a sub-tab each): meta in your rank, like what you play well; first-games plan under the table. */
-function NewChamps({ state }: { state: ViewState }) {
-  const list = state.newChamps.filter((r) => r.picks.length || r.learning);
-  const [sub, setSub] = useRolePill(list.map((r) => r.role));
-  // Long plans: first each row's entries go side by side, then the picks' reasons or the picks after your current champion move to hover, then the minor rows and the other picks.
-  const level = useFitLevel(sub, 3);
-  if (!list.length) {
-    return (
-      <Section title={t("tabs.new")}>
-        <p className="caption">{state.meta?.state === "ready" ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")}</p>
-      </Section>
-    );
-  }
-  const summary = (r: (typeof list)[number]) => (r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", "));
-  return (
-    <>
-      <section className="section pills-row">
-        <Pills compact label={t("label.role")} options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
-      </section>
-      {list.filter((r) => r.role === sub).map((r) => {
-        const title = t("new.head", { role: roleName(r.role) });
-        const l = r.learning;
-        return (
-          <Section key={r.role} title={title} aside={<span className="micro">{t("new.aside")}</span>}>
-            {l && (
-              <div className="plan learning" {...tip(level > 2 ? minorText(l.learn) : null)}>
-                <div className="learning-head">
-                  {l.champion && <ChampIcon champ={l.champion} size={28} />}
-                  <span className="label gold">{l.title}</span>
-                  {l.progress && <span className="micro">{l.progress}</span>}
-                </div>
-                <Learn learn={l.learn} level={level} />
-              </div>
-            )}
-            {l && r.picks.length > 0 && (
-              <span className="label" {...tip(level > 1 ? [l.why, ...r.picks.map((p) => p.champion.name)].join("\n") : l.why)}>
-                {l.after} <span className="micro">· {l.why}</span>
-              </span>
-            )}
-            {r.picks.length > 0 && !(l && level > 1) && (
-              <div className={l ? "after-learning" : undefined}>
-                <NewChampTable rows={level > 2 ? r.picks.slice(0, 1) : r.picks} brief={level > 1} />
-              </div>
-            )}
-            {r.plan && (
-              <div className="plan" {...tip(level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : null)}>
-                <span className="label gold">{t("new.plan")}</span>
-                <span>{r.plan}</span>
-                {r.planLearn && <Learn learn={r.planLearn} level={level} />}
-              </div>
-            )}
-          </Section>
-        );
-      })}
-    </>
-  );
-}
-
-/** The rows a short screen moved to hover. */
-function minorText(learn: LearnView): string {
-  return learn.lines
-    .filter((r) => r.minor)
-    .map((r) => `${r.label}: ${r.items.map((i) => i.text).join(", ")}`)
-    .join("\n");
-}
-
-/** How to learn a champion: the one thing to watch next game (with your last games on it) under its stage, then short facts. */
-function Learn({ learn, level }: { learn: LearnView; level: number }) {
-  const f = learn.focus;
-  return (
-    <>
-      {f ? (
-        <div className="learn-focus" title={t("new.squaresTip")}>
-          <span className="label gold">{learn.stage ? t("new.thisGameStage", { stage: learn.stage }) : t("new.thisGame")}</span>
-          <span>{f.text}</span>
-          {f.recent.length > 0 && (
-            <span className="games">
-              {f.recent.map((ok, i) => (
-                <span key={i} className={cx("g", ok && "met")} />
-              ))}
-            </span>
-          )}
-        </div>
-      ) : (
-        learn.stage && <span className="label">{learn.stage}</span>
-      )}
-      {learn.lines.length > 0 && <Facts rows={level > 2 ? learn.lines.filter((r) => !r.minor) : learn.lines} flow={level > 0} />}
-    </>
-  );
-}
-
-/** Your style per role: role pills, the radar against your rank, a one-line summary, then your numbers vs your rank. */
-function Style({ state }: { state: ViewState }) {
-  const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
-  // Many strengths and weak spots: the note under your numbers moves to hover.
-  const fits = useFits(sub);
-  if (!state.playstyle.length) return <Section title={t("style.head")}><p className="caption">{lobbyEmpty(state.status, "style", { n: state.limits.styleGames })}</p></Section>;
-  const summary = (p: ViewState["playstyle"][number]) => {
-    const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
-    const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);
-    return [gameCount(p.games), high.length ? t("style.pillStrong", { list: high.join(", ") }) : null, low.length ? t("style.pillGrow", { list: low.join(", ") }) : null].filter(Boolean).join(" · ");
-  };
-  const p = state.playstyle.find((x) => x.role === sub) ?? state.playstyle[0]!;
-  // How you play (pool, classes, damage) and the side split are on hover over the numbers' head.
-  const how = [...(p.how ? howLines(p.how) : []), ...(state.side ? [state.side] : [])].join("\n");
-  return (
-    <>
-      <section className="section style-top">
-        <Pills
-          compact
-          label={t("label.role")}
-          options={state.playstyle.map((x) => ({ value: x.role, label: positionLabel(x.role), title: summary(x) }))}
-          value={p.role}
-          onChange={setSub}
-          end={`${gameCount(p.games)} · ${t("style.dashed")}`}
-        />
-        <StyleRadar axes={p.axes} role={roleName(p.role)} />
-        {p.summary.length > 0 && <Facts rows={p.summary} flow />}
-      </section>
-      {p.numbers.length > 0 && (
-        <Section title={t("style.numbers")} aside={<span className="micro" {...tip(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n"))}>{t("style.legend")}</span>}>
-          <NumberRows items={p.numbers} />
-          {fits && <span className="micro">{t("style.numbersNote")}</span>}
-        </Section>
-      )}
-    </>
-  );
-}
-
-/** The monthly report: your last 30 days against the 30 before, from your own games. */
-function Month({ state }: { state: ViewState }) {
-  const m = state.month;
-  if (!m) return <Section title={t("tabs.month")}><p className="caption">{lobbyEmpty(state.status, "month", { n: state.limits.monthDays })}</p></Section>;
-  return <MonthReport month={m} />;
-}
-
-/** Your pool per role: what each champion covers against what a team needs, then your next step. */
-function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: () => void }) {
-  // Roles with too few games to judge have no pool to show: left out, so the others fit.
-  const list = state.roles.filter((r) => r.enoughData);
-  const [sub, setSub] = useRolePill(list.map((r) => r.role));
-  // A big pool: first the extra champions' names move to hover, then the legend and the note under what's missing.
-  const level = useFitLevel(sub, 2);
-  if (!list.length) return <Section title={t("pool.head")}><p className="caption">{lobbyEmpty(state.status, "pool", { n: state.limits.poolGames })}</p></Section>;
-  const stats = (r: ViewState["roles"][number]) => `${gameCount(r.games)} · ${pct(r.winRate)} WR`;
-  const r = list.find((x) => x.role === sub) ?? list[0]!;
-  const columns = r.pool.slice(0, POOL_COLUMNS);
-  const next = r.nextStep;
-  return (
-    <>
-      <section className="section">
-        <Pills
-          compact
-          label={t("label.role")}
-          options={list.map((x) => ({ value: x.role, label: positionLabel(x.role), title: [stats(x), x.pool.slice(0, 3).map((c) => c.champion.name).join(", ")].filter(Boolean).join(" · ") }))}
-          value={r.role}
-          onChange={setSub}
-          end={stats(r)}
-        />
-        {columns.length > 0 && r.coverage ? (
-          <>
-            <PoolCoverage pool={columns} coverage={r.coverage} />
-            {r.also.length > 0 && <Facts rows={r.also} iconOnly={level > 0} wide />}
-            {level < 2 && <PoolLegend />}
-          </>
-        ) : (
-          <p className="caption">{t("pool.none", { role: roleName(r.role) })}</p>
-        )}
-      </section>
-      <Section title={t("pool.next")}>
-        {next && (
-          <div className="you next-step" {...tip(next.evidence)}>
-            <ChampIcon champ={next.champion} size={34} />
-            <span className="who">
-              <span className="t-heading gold-bright">{next.title}</span>
-              <Facts rows={[next.adds]} flow />
-            </span>
-          </div>
-        )}
-        {r.missing ? (
-          <div className="missing">
-            <span className="who" {...tip(level < 2 ? null : r.missing.note)}>
-              <Facts rows={[r.missing.row]} flow />
-              {level < 2 && <span className="micro">{r.missing.note}</span>}
-            </span>
-            <Button onClick={onNewChamps}>{t("pool.seeNew")}</Button>
-          </div>
-        ) : (
-          !next && <span className="caption">{r.noGaps}</span>
-        )}
-      </Section>
-    </>
   );
 }

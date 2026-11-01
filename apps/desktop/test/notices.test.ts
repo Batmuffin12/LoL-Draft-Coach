@@ -8,11 +8,11 @@ import { LcuConnector } from "@ldc/lcu";
 import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
 import { Coach } from "../src/main/coach";
 import { findConfigDir, loadConfig } from "../src/main/config";
-import { reportProblem } from "../src/main/crash-reports";
+import { logProblem } from "../src/main/problem-log";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { fakeDdragonFetch, waitFor } from "./helpers";
 
-vi.mock("../src/main/crash-reports", () => ({ reportProblem: vi.fn(), reportError: vi.fn(), startCrashReports: vi.fn() }));
+vi.mock("../src/main/problem-log", () => ({ logProblem: vi.fn() }));
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -32,10 +32,10 @@ function handCoach(fetchFn: typeof fetch = fakeDdragonFetch()) {
   return { coach, connector };
 }
 
-beforeEach(() => vi.mocked(reportProblem).mockClear());
+beforeEach(() => vi.mocked(logProblem).mockClear());
 
 describe("Coach notices", () => {
-  it("says a schema problem in plain words, sends the detail to crash reports, and clears when good data comes", async () => {
+  it("says a schema problem in plain words, logs the detail, and clears when good data comes", async () => {
     const { coach, connector } = handCoach();
     await coach.start();
     const zod = new Error("Unexpected data from /lol-champ-select/v1/session:\n✖ Invalid input");
@@ -43,8 +43,8 @@ describe("Coach notices", () => {
     connector.emit("schemaError", zod);
     expect(coach.state.notices).toHaveLength(1);
     expect(coach.state.notices[0]!.text).not.toMatch(/lol-champ-select|Invalid input/);
-    expect(reportProblem).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(reportProblem).mock.calls[0]![0]).toMatch(/lol-champ-select/);
+    expect(logProblem).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(logProblem).mock.calls[0]![0]).toMatch(/lol-champ-select/);
     connector.emit("champSelect", null);
     expect(coach.state.notices).toEqual([]);
   });
@@ -85,7 +85,7 @@ describe("Coach notices", () => {
     await coach.start();
     expect(keys(coach)).toEqual(["championData"]);
     expect(coach.state.notices[0]!.text).not.toMatch(/fetch failed|ddragon/);
-    expect(vi.mocked(reportProblem).mock.calls[0]![0]).toMatch(/fetch failed/);
+    expect(vi.mocked(logProblem).mock.calls[0]![0]).toMatch(/fetch failed/);
     connector.emit("gameflowPhase", "Lobby");
     expect(keys(coach)).toEqual(["championData"]);
     online = true;
@@ -178,9 +178,9 @@ describe("PersonalCoach import clicks that can't write anything", () => {
 
   it("says the client isn't connected, as a failure on the card", async () => {
     const c = make();
-    (c as unknown as { shownLoadout: unknown }).shownLoadout = { loadout: {}, champion: "Ahri" };
+    (c as unknown as { imports: { shown: unknown } }).imports.shown = { loadout: {}, champion: "Ahri" };
     await c.importLoadout("all");
-    expect((c as unknown as { importLines: unknown }).importLines).toEqual([{ text: "The League client isn't connected: open it, then import again", failed: true }]);
+    expect((c as unknown as { imports: { lines: unknown } }).imports.lines).toEqual([{ text: "The League client isn't connected: open it, then import again", failed: true }]);
   });
 });
 
