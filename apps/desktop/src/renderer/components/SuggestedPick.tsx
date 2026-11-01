@@ -47,7 +47,7 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }:
           )}
         </div>
         {/* No good/bad colour: the chance compares your options in this draft, and #1 is the best one even below 50%. */}
-        <div className="chance" title="Its strength in your rank plus your experience on it">
+        <div className="chance" title="Its strength in your rank plus your experience on it" data-tour={tour ? "chance" : undefined}>
           <span className="t-number">{pick.expectedWin === null ? "—" : pct(pick.expectedWin)}</span>
           <span className="micro">{t("pick.chance")}</span>
         </div>

@@ -36,9 +36,7 @@ export function Style({ state }: { state: ViewState }) {
       </section>
       {p.numbers.length > 0 && (
         <Section title={t("style.numbers")} aside={<span className="micro" {...tip(fits ? how : [t("style.numbersNote"), how].filter(Boolean).join("\n"))}>{t("style.legend")}</span>}>
-          <div data-tour="numbers">
-            <NumberRows items={p.numbers} />
-          </div>
+          <NumberRows items={p.numbers} />
           {fits && <span className="micro">{t("style.numbersNote")}</span>}
         </Section>
       )}

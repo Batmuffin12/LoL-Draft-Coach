@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
-import { closeHighlight, draftHighlights, highlightVisit, LOBBY_TOUR, moveTour, openAt, placeCallout, screenFor, skipStep, spotlight, startTour, tourRunning, tourSteps, type TourStep } from "../src/renderer/first-use";
+import { closeHighlight, draftHighlights, highlightVisit, LOBBY_TOUR, moveTour, placeCallout, placeNote, screenFor, skipStep, spotlight, startTour, tourRunning, tourSteps, type TourStep } from "../src/renderer/first-use";
 import { HIGHLIGHT_IDS, isHighlightId } from "../src/shared/ui-state";
 import type { AccountView, DraftView, MyPickView } from "../src/shared/view";
 
@@ -50,29 +50,14 @@ describe("tourRunning", () => {
 });
 
 describe("the lobby tour's steps", () => {
-  const onlyHas = (subs: string[]) => (_tab: string, sub: string) => subs.includes(sub);
-
-  it("leaves out sub-tabs the lobby doesn't have, so no dot stands for nothing", () => {
-    const ids = tourSteps(LOBBY_TOUR, onlyHas(["style", "pool"]), []).map((s) => s.id);
-    expect(ids).not.toContain("browse");
-    expect(ids).not.toContain("my-games");
-    expect(ids).toContain("champions");
-  });
-
-  it("includes them once the lobby has them", () => {
-    const ids = tourSteps(LOBBY_TOUR, onlyHas(["style", "pool", "browse", "my-games"]), []).map((s) => s.id);
-    expect(ids).toContain("browse");
-    expect(ids).toContain("my-games");
-  });
-
-  it("starts centred and ends centred", () => {
+  it("is four steps, the most important first, ending on how to see it again", () => {
+    expect(LOBBY_TOUR.map((s) => s.id)).toEqual(["intro", "window", "tabs", "footer"]);
     expect(LOBBY_TOUR[0]!.target).toBeUndefined();
-    expect(LOBBY_TOUR.at(-1)!.target).toBeUndefined();
+    expect(LOBBY_TOUR.at(-1)!.target).toBe("how-it-works");
   });
 
-  it("the numbers step falls back to the middle, other targets to being skipped", () => {
-    expect(LOBBY_TOUR.find((s) => s.id === "numbers")!.orCentre).toBe(true);
-    expect(LOBBY_TOUR.find((s) => s.id === "browse")!.orCentre).toBeUndefined();
+  it("leaves out a step already found to have no target", () => {
+    expect(tourSteps(LOBBY_TOUR, ["tabs"]).map((s) => s.id)).toEqual(["intro", "window", "footer"]);
   });
 });
 
@@ -86,7 +71,7 @@ describe("moving through the tour", () => {
   });
 
   const steps: TourStep[] = [{ id: "a" }, { id: "b", target: "gone" }, { id: "c" }];
-  const list = (skipped: string[]) => tourSteps(steps, () => true, skipped);
+  const list = (skipped: string[]) => tourSteps(steps, skipped);
 
   it("going forward, passes a step without a target to the next", () => {
     const run = skipStep({ index: 1, dir: 1, skipped: [] }, "b");
@@ -98,13 +83,6 @@ describe("moving through the tour", () => {
     expect(list(run.skipped)[run.index]!.id).toBe("a");
   });
 
-  it("shows the last thing opened up to a step, or nothing before the first", () => {
-    const open = { tab: "me" } as const;
-    const s: TourStep[] = [{ id: "a" }, { id: "b", open }, { id: "c" }];
-    expect(openAt(s, 0)).toBeNull();
-    expect(openAt(s, 1)).toEqual(open);
-    expect(openAt(s, 2)).toEqual(open);
-  });
 });
 
 describe("placing the callout", () => {
@@ -151,13 +129,47 @@ describe("placing the callout", () => {
   });
 });
 
+describe("placing a live note", () => {
+  const view = { width: 440, height: 720 };
+  const size = { width: 424, height: 40 };
+  const box = (top: number, height: number) => ({ top, left: 16, width: 408, height });
+
+  it("goes to the bottom edge, over the footer's line, when that's off its target and block", () => {
+    expect(placeNote({ target: box(100, 60), about: box(90, 300), footer: null, size, view }).top).toBe(672);
+  });
+
+  it("stays above a footer with a button in it, which it would otherwise cover", () => {
+    expect(placeNote({ target: box(100, 30), about: box(90, 300), footer: box(640, 80), size, view }).top).toBe(594);
+  });
+
+  it("explaining the footer's own button, sits right above it", () => {
+    const button = box(650, 32);
+    expect(placeNote({ target: button, about: button, footer: box(640, 80), size, view }).top).toBe(594);
+  });
+
+  it("goes under the block when the bottom edge is on it", () => {
+    expect(placeNote({ target: box(100, 60), about: box(90, 610), footer: null, size: { width: 424, height: 10 }, view }).top).toBeGreaterThan(90 + 610 - 1);
+    expect(placeNote({ target: box(100, 60), about: box(90, 200), footer: box(200, 500), size, view }).top).toBe(296);
+  });
+
+  it("goes over the block when there's no room under it", () => {
+    expect(placeNote({ target: box(660, 20), about: box(650, 40), footer: null, size, view }).top).toBe(604);
+  });
+
+  it("with no free place at all, stays in the window at the bottom", () => {
+    const p = placeNote({ target: box(0, 720), about: box(0, 720), footer: null, size, view });
+    expect(p.top).toBe(672);
+    expect(p.left).toBe(8);
+  });
+});
+
 describe("live highlights", () => {
   const all = () => true;
 
   it("names each screen's", () => {
     expect(draftHighlights({ banning: true, loadout: false })).toEqual(["bans"]);
-    expect(draftHighlights({ banning: false, loadout: false })).toEqual(["picks"]);
-    expect(draftHighlights({ banning: false, loadout: true })).toEqual(["rune-options", "import"]);
+    expect(draftHighlights({ banning: false, loadout: false })).toEqual(["picks", "chance"]);
+    expect(draftHighlights({ banning: false, loadout: true })).toEqual(["rune-options", "import", "rough"]);
   });
 
   it("shows the first not seen, and none when all are", () => {
@@ -207,7 +219,7 @@ describe("first-use wording", () => {
   const keys = [
     ...HIGHLIGHT_IDS.map((id) => `tour.live.${id}`),
     ...["reopen", "skip", "back", "next", "done"].map((k) => `tour.${k}`),
-    ...LOBBY_TOUR.flatMap((s) => [`tour.${s.id}.lead`, `tour.${s.id}`]),
+    ...LOBBY_TOUR.flatMap((s) => [`tour.${s.id}.lead`, `tour.${s.id}`, ...(s.end ? [`tour.${s.id}.end`] : [])]),
   ];
 
   it("has every key", () => {
@@ -220,5 +232,11 @@ describe("first-use wording", () => {
 
   it("keeps it to a short line", () => {
     for (const key of keys) expect(copy[key]!.length, key).toBeLessThanOrEqual(130);
+  });
+
+  it("keeps the compliance wording, each where it applies", () => {
+    expect(copy["tour.intro.end"]).toContain("It never picks, bans or locks");
+    expect(copy["tour.live.import"]).toContain("only when you click");
+    expect(copy["tour.live.browse"]).toContain("never shows other players' names or ranks");
   });
 });

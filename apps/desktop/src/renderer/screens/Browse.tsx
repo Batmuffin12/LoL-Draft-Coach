@@ -8,6 +8,7 @@ import { RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { SkillGrid } from "../components/SkillGrid";
+import { LiveHighlight } from "../components/Tour";
 import { browseEmptyKey, cx, gameCount, games, positionLabel, rate, rateOf, record, roleName, t, tip, winToneOf } from "../format";
 import { useFetched, useFitLevel } from "../hooks";
 
@@ -30,8 +31,8 @@ function exploreKey(state: ViewState): string {
   return [meta?.state === "ready" ? meta.createdAt : "", status.profile.state === "ready" ? status.profile.games : "", status.patch ?? ""].join("|");
 }
 
-/** Champions > Browse: the list, or the champion opened from it. */
-export function Browse({ state, browse, onBrowse }: { state: ViewState; browse: BrowseState; onBrowse: (next: BrowseState) => void }) {
+/** Champions > Browse: the list, or the champion opened from it. Says once what it is, on your first visit. */
+export function Browse({ state, browse, onBrowse, touring }: { state: ViewState; browse: BrowseState; onBrowse: (next: BrowseState) => void; touring: boolean }) {
   const key = exploreKey(state);
   const list = useFetched(() => window.coach.exploreList(), key, null);
   const scrollTop = useRef(0);
@@ -40,15 +41,18 @@ export function Browse({ state, browse, onBrowse }: { state: ViewState; browse: 
   if (list === undefined) return <Section title={t("tabs.browse")}><p className="caption">{t("explore.loading")}</p></Section>;
   if (list === null) return <Section title={t("tabs.browse")}><p className="caption">{t(browseEmptyKey(state))}</p></Section>;
   return (
-    <BrowseList
-      list={list}
-      filter={browse.filter}
-      minGames={state.limits.minGames}
-      scrollTop={scrollTop}
-      opened={opened}
-      onFilter={(filter) => onBrowse({ ...browse, filter })}
-      onOpen={(id, role) => onBrowse({ ...browse, open: { id, role }, tab: "runes" })}
-    />
+    <>
+      <LiveHighlight ids={touring ? [] : ["browse"]} seen={state.ui.highlightsSeen} />
+      <BrowseList
+        list={list}
+        filter={browse.filter}
+        minGames={state.limits.minGames}
+        scrollTop={scrollTop}
+        opened={opened}
+        onFilter={(filter) => onBrowse({ ...browse, filter })}
+        onOpen={(id, role) => onBrowse({ ...browse, open: { id, role }, tab: "runes" })}
+      />
+    </>
   );
 }
 
@@ -137,7 +141,7 @@ export function BrowseList({
   const where = filter.role ? positionLabel(filter.role) : t("explore.all");
   return (
     <Section className="explore">
-      <input type="search" className="search" placeholder={t("explore.search")} aria-label={t("explore.search")} value={filter.search} onChange={(e) => change({ search: e.target.value })} />
+      <input type="search" data-tour="browse" className="search" placeholder={t("explore.search")} aria-label={t("explore.search")} value={filter.search} onChange={(e) => change({ search: e.target.value })} />
       <RoleChoice all roles={list.roles} value={filter.role} onChange={(role) => change({ role })} />
       <span className="micro" {...tip(t("explore.sourceTip", { patch: list.patch ?? "—" }))}>
         {t("explore.source", { rank: list.rank, games: games(list.matches), n: list.matches })}

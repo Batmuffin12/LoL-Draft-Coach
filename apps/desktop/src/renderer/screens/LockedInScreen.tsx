@@ -43,7 +43,14 @@ function LoadoutSource({ pick }: { pick: MyPickView }) {
   return (
     <span className="micro" {...tip([l.thinNote, l.sourceAbove ? t("loadout.sourceTip") : null].filter(Boolean).join("\n"))}>
       {t("loadout.source", { games: count(l.games), n: l.games, source: l.source })}
-      {l.thinNote ? ` · ${t("loadout.rough")}` : "."}
+      {l.thinNote ? (
+        <>
+          {" · "}
+          <span data-tour="rough">{t("loadout.rough")}</span>
+        </>
+      ) : (
+        "."
+      )}
     </span>
   );
 }

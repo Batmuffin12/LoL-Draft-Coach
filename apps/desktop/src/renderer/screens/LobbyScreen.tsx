@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { LobbyTour } from "../components/Tour";
-import { LOBBY_TOUR, openAt, tourSteps, type TourRun } from "../first-use";
+import { LOBBY_TOUR, tourSteps, type TourRun } from "../first-use";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { needsClient, t } from "../format";
@@ -44,8 +44,6 @@ export interface LobbyTourControl {
   onClose: () => void;
 }
 
-const hasSub = (tab: string, sub: string) => (SUB_TABS[tab as keyof typeof SUB_TABS] as string[] | undefined)?.includes(sub) ?? false;
-
 function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: (() => void) | undefined; tour: LobbyTourControl | null }) {
   const recent = state.lastGame !== null && Date.now() - (state.lastGame.endedAt ?? state.lastGame.lockedAt) < RECENT_GAME_MS;
   const home: MainTab = recent ? "last" : "me";
@@ -62,21 +60,17 @@ function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: 
   useEffect(() => {
     if (queued) setTab("suggestion");
   }, [queued]);
-  // The tour opens tabs itself while it runs; afterwards you are back where you were.
-  const steps = tour ? tourSteps(LOBBY_TOUR, hasSub, tour.run.skipped) : [];
-  const opened = tour ? openAt(steps, tour.run.index) : null;
-  const wanted: MainTab = opened?.tab ?? tab;
-  const shown: MainTab = wanted === "suggestion" && !preview ? home : wanted;
+  const shown: MainTab = tab === "suggestion" && !preview ? home : tab;
   const group = shown === "me" || shown === "champions" ? shown : null;
-  const sub = group ? ((opened?.sub as SubTab | undefined) ?? subs[group]) : null;
+  const sub = group ? subs[group] : null;
   const openSub = (g: keyof typeof SUB_TABS, value: SubTab) => {
     setSubs((now) => ({ ...now, [g]: value }));
     setTab(g);
   };
   // Kept here: search and sort survive opening a champion and leaving the tab.
   const [browse, setBrowse] = useState(initialBrowse);
-  // A champion's page takes the sub-tabs' room; the tour needs them, so it goes back to the list.
-  const champion = sub === "browse" && browse.open !== null && !tour;
+  // A champion's page takes the sub-tabs' room.
+  const champion = sub === "browse" && browse.open !== null;
   return (
     <>
     <Window
@@ -85,16 +79,17 @@ function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: 
       band={
         <>
           <Segmented<MainTab>
+            tour="tab-row"
             value={shown}
             onChange={setTab}
             options={[
               ...(preview ? [{ value: "suggestion" as const, label: t("queue.tab") }] : []),
-              { value: "last", label: t("tabs.last"), tour: "tab-last" },
-              { value: "me", label: t("tabs.me"), tour: "tab-me" },
-              { value: "champions", label: t("tabs.champions"), tour: "tab-champions" },
+              { value: "last", label: t("tabs.last") },
+              { value: "me", label: t("tabs.me") },
+              { value: "champions", label: t("tabs.champions") },
             ]}
           />
-          {group && sub && !champion && <Segmented<SubTab> sub options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`), tour: `subtab-${value}` }))} value={sub} onChange={(value) => openSub(group, value)} />}
+          {group && sub && !champion && <Segmented<SubTab> sub options={SUB_TABS[group].map((value) => ({ value, label: t(`tabs.${value}`) }))} value={sub} onChange={(value) => openSub(group, value)} />}
         </>
       }
       footer={<AccountFooter state={state} onHowItWorks={onHowItWorks} />}
@@ -104,22 +99,22 @@ function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: 
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />
       ) : sub ? (
-        <SubScreen sub={sub} state={state} browse={tour ? { ...browse, open: null } : browse} onBrowse={setBrowse} onNewChamps={() => openSub("champions", "new")} />
+        <SubScreen sub={sub} state={state} browse={browse} onBrowse={setBrowse} onNewChamps={() => openSub("champions", "new")} touring={tour !== null} />
       ) : (
         <LastGame state={state} />
       )}
     </Window>
-    {tour && <LobbyTour steps={steps} run={tour.run} onRun={tour.onRun} onClose={tour.onClose} />}
+    {tour && <LobbyTour steps={tourSteps(LOBBY_TOUR, tour.run.skipped)} run={tour.run} onRun={tour.onRun} onClose={tour.onClose} />}
     </>
   );
 }
 
 /** What a sub-tab shows. */
-function SubScreen({ sub, state, browse, onBrowse, onNewChamps }: { sub: SubTab; state: ViewState; browse: BrowseState; onBrowse: (next: BrowseState) => void; onNewChamps: () => void }) {
+function SubScreen({ sub, state, browse, onBrowse, onNewChamps, touring }: { sub: SubTab; state: ViewState; browse: BrowseState; onBrowse: (next: BrowseState) => void; onNewChamps: () => void; touring: boolean }) {
   if (sub === "style") return <Style state={state} />;
   if (sub === "month") return <Month state={state} />;
-  if (sub === "my-games") return <MyGames state={state} />;
-  if (sub === "browse") return <Browse state={state} browse={browse} onBrowse={onBrowse} />;
+  if (sub === "my-games") return <MyGames state={state} touring={touring} />;
+  if (sub === "browse") return <Browse state={state} browse={browse} onBrowse={onBrowse} touring={touring} />;
   if (sub === "pool") return <Pool state={state} onNewChamps={onNewChamps} />;
   return <NewChamps state={state} />;
 }

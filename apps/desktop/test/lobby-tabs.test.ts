@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it } from "vitest";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
-import { LOBBY_TOUR, startTour, tourSteps } from "../src/renderer/first-use";
 import { setCopy } from "../src/renderer/format";
 import { LobbyScreen } from "../src/renderer/screens/LobbyScreen";
 import { emptyViewState, type ViewState } from "../src/shared/view";
@@ -22,20 +21,6 @@ describe("lobby tabs", () => {
     expect(selected(html)).toBe("Me");
     expect(subTabs(html)).toEqual(["Style", "This month", "My games"]);
     expect(html.split('class="seg sub"')[1]).toMatch(/aria-selected="true"[^>]*>Style</);
-  });
-
-  it("My games has the name the tour's step looks for", () => {
-    const step = LOBBY_TOUR.find((s) => s.id === "my-games")!;
-    expect(render()).toContain(`data-tour="${step.target}"`);
-    expect(step.open?.sub).toBe("my-games");
-  });
-
-  it("the tour's Browse step opens Browse and spotlights its pill", () => {
-    const step = LOBBY_TOUR.find((s) => s.id === "browse")!;
-    const tour = { run: { ...startTour(), index: tourSteps(LOBBY_TOUR, () => true, []).findIndex((s) => s.id === "browse") }, onRun: () => {}, onClose: () => {} };
-    const html = renderToStaticMarkup(createElement(LobbyScreen, { state: emptyViewState(), tour }));
-    expect(html).toContain(`data-tour="${step.target}"`);
-    expect(html.split('class="seg sub"')[1]).toMatch(/aria-selected="true"[^>]*>Browse</);
   });
 
   it("opens Last game after a recent game, without sub-tabs", () => {

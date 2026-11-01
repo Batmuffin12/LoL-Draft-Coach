@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { isHighlightId, type HighlightId } from "../../shared/ui-state";
-import { closeHighlight, highlightVisit, moveTour, placeCallout, skipStep, spotlight, type Box, type HighlightVisit, type TourRun, type TourStep } from "../first-use";
+import { closeHighlight, highlightVisit, moveTour, placeCallout, placeNote, skipStep, spotlight, type Box, type HighlightVisit, type TourRun, type TourStep } from "../first-use";
 import { t } from "../format";
 import { Button } from "./Button";
 
@@ -15,6 +15,8 @@ interface Spot {
   hole: Box | null;
   top: number;
   left: number;
+  /** The target's own corners, for the ring around it; null: it has none. */
+  radius?: string | null;
 }
 
 /**
@@ -60,6 +62,18 @@ function measureSpot(target: Element | null, box: RefObject<HTMLElement | null>)
   return { hole, top, left };
 }
 
+/** Where a live note and its ring go: off the target and off the block it explains, and off a footer with a button in it. */
+function measureNote(target: Element, box: RefObject<HTMLElement | null>): Spot | null {
+  const note = box.current;
+  if (!note) return null;
+  const view = { width: window.innerWidth, height: window.innerHeight };
+  const r = target.getBoundingClientRect();
+  const footer = document.querySelector(".window .foot:has(.btn)")?.getBoundingClientRect() ?? null;
+  const about = (target.closest(".section") ?? target).getBoundingClientRect();
+  const corner = getComputedStyle(target).borderTopLeftRadius;
+  return { hole: spotlight(r, view), ...placeNote({ target: r, about, footer, size: { width: note.offsetWidth, height: note.offsetHeight }, view }), radius: corner === "0px" ? null : corner };
+}
+
 function sameSpot(a: Spot | null, b: Spot | null): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -78,7 +92,6 @@ export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; r
   const last = index === steps.length - 1;
   const box = useRef<HTMLDivElement>(null);
   const [spot, setSpot] = useState<Spot | null>(null);
-  const stepText = t("tour.stepOf", { n: index + 1, total: steps.length });
   const go = (delta: 1 | -1) => {
     const next = moveTour({ ...run, index }, delta, steps.length);
     if (next) onRun(next);
@@ -87,7 +100,7 @@ export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; r
 
   useRemeasure(() => {
     const el = step.target ? targetOf(step.target) : null;
-    if (step.target && !el && !step.orCentre) return onRun(skipStep({ ...run, index }, step.id));
+    if (step.target && !el) return onRun(skipStep({ ...run, index }, step.id));
     const next = measureSpot(el, box);
     setSpot((now) => (sameSpot(now, next) ? now : next));
   }, step.target ?? null);
@@ -124,21 +137,17 @@ export function LobbyTour({ steps, run, onRun, onClose }: { steps: TourStep[]; r
       {spot?.hole ? <div className="tour-hole" aria-hidden="true" style={holeStyle(spot.hole)} /> : <div className="tour-dim" aria-hidden="true" />}
       <div ref={box} className="tour-callout" role="dialog" aria-modal="true" aria-label={t("tour.reopen")} style={place(spot)}>
         <p className="tour-text" aria-live="polite">
-          <span className="sr-only">{`${stepText}: `}</span>
           <span className="text">{t(`tour.${step.id}.lead`)}</span> {t(`tour.${step.id}`)}
+          {step.end && <span className="text"> {t(`tour.${step.id}.end`)}</span>}
         </p>
         <div className="tour-nav">
           <button type="button" className="foot-link" onClick={onClose}>
             {t("tour.skip")}
           </button>
-          <span className="tour-dots" aria-hidden="true">
-            {steps.map((s, i) => (
-              <span key={s.id} className={i === index ? "d on" : "d"} />
-            ))}
-          </span>
+          <span className="micro tour-step">{t("tour.stepOf", { n: index + 1, total: steps.length })}</span>
           <span className="tour-actions">
             {index > 0 && (
-              <Button small onClick={() => go(-1)}>
+              <Button small variant="ghost" onClick={() => go(-1)}>
                 {t("tour.back")}
               </Button>
             )}
@@ -170,7 +179,7 @@ export function LiveHighlight({ ids, seen }: { ids: HighlightId[]; seen: readonl
     const next = highlightVisit(visit, ids, seen, (id) => targetOf(id) !== null);
     if (next !== visit) setVisit(next);
     const el = next.current ? targetOf(next.current) : null;
-    const found = el && measureSpot(el, box);
+    const found = el && measureNote(el, box);
     setSpot((now) => (sameSpot(now, found) ? now : found));
   }, current);
 
@@ -191,7 +200,7 @@ export function LiveHighlight({ ids, seen }: { ids: HighlightId[]; seen: readonl
   if (!current) return null;
   return (
     <>
-      {spot?.hole && <div className="tour-ring" aria-hidden="true" style={holeStyle(spot.hole)} />}
+      {spot?.hole && <div className="tour-ring" aria-hidden="true" style={{ ...holeStyle(spot.hole), ...(spot.radius ? { borderRadius: spot.radius } : {}) }} />}
       <div ref={box} className="tour-note" role="status" style={place(spot)}>
         <span>{t(`tour.live.${current}`)}</span>
         <button type="button" className="dismiss" title={t("notice.dismiss")} aria-label={t("notice.dismiss")}>

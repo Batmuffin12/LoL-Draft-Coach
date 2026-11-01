@@ -4,6 +4,7 @@ import type { ChampView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
 import { ChoiceGroup, RoleChoice } from "../components/ChoiceGroup";
 import { Section } from "../components/Section";
+import { LiveHighlight } from "../components/Tour";
 import { cx, gameCount, lobbyEmpty, positionLabel, rateOf, record, shortDate, t, tip, winToneOf } from "../format";
 import { useFetched } from "../hooks";
 
@@ -12,14 +13,19 @@ const PAGE = 200;
 
 type View = "recent" | "champions";
 
-/** Me > My games: your own games from the history on this PC, so it works with the client closed. */
-export function MyGames({ state }: { state: ViewState }) {
+/** Me > My games: your own games from the history on this PC, so it works with the client closed. Says once what it is, on your first visit. */
+export function MyGames({ state, touring }: { state: ViewState; touring: boolean }) {
   const { profile } = state.status;
   const key = profile.state === "ready" ? `ready|${profile.games}` : profile.state;
   const data = useFetched(() => window.coach.exploreGames(), key, null);
   if (data === undefined) return <Section title={t("tabs.my-games")}><p className="caption">{t("explore.loading")}</p></Section>;
   if (!data?.games.length) return <Section title={t("tabs.my-games")}><p className="caption">{lobbyEmpty(state.status, "games")}</p></Section>;
-  return <MyGamesList data={data} now={Date.now()} />;
+  return (
+    <>
+      <LiveHighlight ids={touring ? [] : ["my-games"]} seen={state.ui.highlightsSeen} />
+      <MyGamesList data={data} now={Date.now()} />
+    </>
+  );
 }
 
 const noChampion: ChampView = { id: 0, name: "", iconUrl: null };
@@ -81,7 +87,7 @@ export function MyGamesList({ data, now }: { data: MyGamesData; now: number }) {
   const left = games.length - shown;
   return (
     <Section className="explore">
-      <div className="games-filters">
+      <div className="games-filters" data-tour="my-games">
         <RoleChoice all roles={data.roles} value={filter.role} onChange={(role) => change({ role })} />
         <ChoiceGroup<View>
           label={t("games.views")}

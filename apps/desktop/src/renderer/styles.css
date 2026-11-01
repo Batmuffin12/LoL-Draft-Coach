@@ -415,13 +415,12 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .tour-callout { position: absolute; width: 316px; max-width: calc(100vw - 16px); display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-md); }
 .tour-text { margin: 0; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--muted); }
 .tour-nav { display: flex; align-items: center; gap: 8px; }
-.tour-dots { flex: 1; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.tour-dots .d { width: 6px; height: 6px; border-radius: 50%; background: var(--line-strong); }
-.tour-dots .d.on { background: var(--gold); }
+.tour-step { flex: 1; text-align: center; }
 .tour-actions { display: flex; gap: 6px; flex-shrink: 0; }
 /* Live screens: only a ring and a note. Clicks go through; nothing waits for them. */
-.tour-ring { position: fixed; z-index: 50; pointer-events: none; border: 2px solid var(--gold-bright); border-radius: var(--radius-sm); }
-.tour-note { position: fixed; z-index: 51; pointer-events: none; width: 300px; max-width: calc(100vw - 16px); display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-md); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
+.tour-ring { position: fixed; z-index: 50; pointer-events: none; border: 1.5px solid var(--gold); border-radius: var(--radius-sm); }
+.tour-note { position: fixed; z-index: 51; pointer-events: none; width: calc(100vw - 16px); box-shadow: var(--shadow-pop); display: flex; gap: 8px; align-items: flex-start; padding: 6px 10px; background: var(--card); border: 1px solid var(--frame); border-radius: var(--radius-md); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text); }
+.tour-note > span { flex: 1; min-width: 0; }
 .tour-note .dismiss { pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
 .window-buttons { display: flex; align-items: center; gap: 10px; }

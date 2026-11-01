@@ -1,5 +1,5 @@
-/** The highlights on the live screens (champ select, locked in); each has its wording in the explain config ("ui.tour.live.<id>"). */
-export const HIGHLIGHT_IDS = ["bans", "picks", "rune-options", "import"] as const;
+/** The one-time notes on the real screens (champ select, locked in, a first visit to Browse or My games); each has its wording in the explain config ("ui.tour.live.<id>"). */
+export const HIGHLIGHT_IDS = ["bans", "picks", "chance", "rune-options", "import", "rough", "browse", "my-games"] as const;
 export type HighlightId = (typeof HIGHLIGHT_IDS)[number];
 
 export function isHighlightId(id: unknown): id is HighlightId {

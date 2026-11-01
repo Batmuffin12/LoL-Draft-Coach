@@ -14,8 +14,6 @@ const noop = () => {};
 const registered = { state: "registered", riotId: "Sim#SIM", serverUrl: null, defaultServerUrl: null, message: null } satisfies AccountView;
 const lobby = (over: Partial<ViewState> = {}, run: TourRun | null = null) =>
   renderToStaticMarkup(createElement(LobbyScreen, { state: { ...emptyViewState(), ...over }, onHowItWorks: noop, tour: run && { run, onRun: noop, onClose: noop } }));
-const selected = (html: string) => /aria-selected="true"[^>]*>([^<]+)</.exec(html)?.[1];
-const at = (id: string) => ({ ...startTour(), index: steps().findIndex((s) => s.id === id) });
 const steps = () => LOBBY_TOUR;
 
 describe("the lobby tour", () => {
@@ -28,14 +26,12 @@ describe("the lobby tour", () => {
     expect(html).not.toContain(">Back<");
   });
 
-  it("says where it is, for screen readers too", () => {
-    expect(lobby({}, startTour())).toContain(`Step 1 of ${steps().length}`);
+  it("says where it is, in words", () => {
+    expect(lobby({}, startTour())).toContain(`>1 of ${steps().length}<`);
   });
 
-  it("opens the tab each step is about", () => {
-    expect(selected(lobby({}, at("last")))).toBe("Last game");
-    expect(selected(lobby({}, at("me")))).toBe("Me");
-    expect(selected(lobby({}, at("champions")))).toBe("Champions");
+  it("says at once that you choose", () => {
+    expect(lobby({}, startTour())).toContain(t("tour.intro.end"));
   });
 
   it("isn't there when not running", () => {
@@ -45,7 +41,7 @@ describe("the lobby tour", () => {
 
   it("has what its steps spotlight on the screen", () => {
     const html = lobby({ account: registered });
-    for (const target of ["tab-last", "tab-me", "tab-champions", "status-dot", "window-buttons", "how-it-works"]) expect(html).toContain(`data-tour="${target}"`);
+    for (const step of steps()) if (step.target) expect(html).toContain(`data-tour="${step.target}"`);
   });
 });
 

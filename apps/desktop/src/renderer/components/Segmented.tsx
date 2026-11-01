@@ -1,7 +1,7 @@
 import { cx } from "../format";
 
 export interface SegmentedProps<T extends string> {
-  options: { value: T; label: string; title?: string; tour?: string }[];
+  options: { value: T; label: string; title?: string }[];
   value: T;
   onChange: (value: T) => void;
   /** A second level, under the main tabs: smaller. */
@@ -20,7 +20,7 @@ export function Segmented<T extends string>({ options, value, onChange, sub, end
     <div className={cx("seg", sub && "sub")} data-tour={tour}>
       <div className="seg-tabs" role="tablist">
         {options.map((o) => (
-          <button key={o.value} data-tour={o.tour} role="tab" aria-selected={o.value === value} className={o.value === value ? "on" : undefined} title={o.title} onClick={() => onChange(o.value)}>
+          <button key={o.value} role="tab" aria-selected={o.value === value} className={o.value === value ? "on" : undefined} title={o.title} onClick={() => onChange(o.value)}>
             {o.label}
           </button>
         ))}
