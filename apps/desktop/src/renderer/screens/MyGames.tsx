@@ -3,6 +3,7 @@ import { championRecords, filterMyGames, kda, type ChampionRecord, type MyGameRo
 import type { ChampView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
 import { ChoiceGroup, RoleChoice } from "../components/ChoiceGroup";
+import { EmptyState } from "../components/EmptyState";
 import { Section } from "../components/Section";
 import { LiveHighlight } from "../components/Tour";
 import { cx, gameCount, lobbyEmpty, positionLabel, rateOf, record, shortDate, t, tip, winToneOf } from "../format";
@@ -18,8 +19,8 @@ export function MyGames({ state, touring }: { state: ViewState; touring: boolean
   const { profile } = state.status;
   const key = profile.state === "ready" ? `ready|${profile.games}` : profile.state;
   const data = useFetched(() => window.coach.exploreGames(), key, null);
-  if (data === undefined) return <Section title={t("tabs.my-games")}><p className="caption">{t("explore.loading")}</p></Section>;
-  if (!data?.games.length) return <Section title={t("tabs.my-games")}><p className="caption">{lobbyEmpty(state.status, "games")}</p></Section>;
+  if (data === undefined) return <EmptyState message={t("explore.loading")} />;
+  if (!data?.games.length) return <EmptyState message={lobbyEmpty(state.status, "games")} />;
   return (
     <>
       <LiveHighlight ids={touring ? [] : ["my-games"]} seen={state.ui.highlightsSeen} />

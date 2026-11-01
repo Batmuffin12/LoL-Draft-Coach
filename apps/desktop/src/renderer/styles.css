@@ -358,6 +358,11 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2
 .notice .dismiss:focus-visible, .tour-note .dismiss:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .notice strong { color: var(--text); font-weight: 600; }
 
+/* Nothing to show yet: one centred message, no heading over nothing */
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 20vh 32px 16px; text-align: center; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--text); }
+.empty-state.inline { flex: none; padding: 24px 32px 16px; }
+.empty-state .progress { margin: 8px auto 0; width: 240px; text-align: left; }
+
 /* Progress: a micro line and a thin bar instead of a boxed notice */
 .progress { display: flex; flex-direction: column; gap: 4px; }
 .progress .p-text { display: flex; gap: 8px; justify-content: space-between; font-size: var(--fs-micro); line-height: var(--lh-micro); color: var(--muted); }

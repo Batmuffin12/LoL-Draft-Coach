@@ -174,6 +174,13 @@ export function lobbyEmpty(status: CoachStatus, tab: string, slots: Record<strin
   return t(p === "ready" ? `${tab}.empty` : `${tab}.loading`, slots);
 }
 
+/** How close your most played role is to `need` games, when your games are loaded and it's on the way. */
+export function roleGamesProgress(state: Pick<ViewState, "roles" | "status">, need: number): { text: string; done: number; total: number } | null {
+  if (state.status.profile.state !== "ready") return null;
+  const done = Math.max(0, ...state.roles.map((r) => r.games));
+  return done > 0 && done < need ? { text: t("empty.roleProgress", { done, total: need }), done, total: need } : null;
+}
+
 /** Why Browse has no numbers, as a copy key: the live data for your rank failed, doesn't exist yet, or waits on your games. */
 export function browseEmptyKey(state: Pick<ViewState, "status" | "meta">): string {
   const { meta } = state;

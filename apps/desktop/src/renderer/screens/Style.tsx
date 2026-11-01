@@ -1,10 +1,11 @@
 import type { ViewState } from "../../shared/view";
 import { Facts } from "../components/Facts";
 import { RoleChoice } from "../components/ChoiceGroup";
+import { EmptyState } from "../components/EmptyState";
 import { Section } from "../components/Section";
 import { howLines, NumberRows } from "../components/StyleNumbers";
 import { StyleRadar } from "../components/StyleRadar";
-import { gameCount, lobbyEmpty, roleName, t, tip } from "../format";
+import { gameCount, lobbyEmpty, roleGamesProgress, roleName, t, tip } from "../format";
 import { useFits, useRolePill } from "../hooks";
 
 /** No axis stands out: a chart would only say what one sentence can. */
@@ -17,7 +18,7 @@ export function Style({ state }: { state: ViewState }) {
   const [sub, setSub] = useRolePill(state.playstyle.map((p) => p.role));
   // Many strengths and weak spots: the note under your numbers moves to hover.
   const fits = useFits(sub);
-  if (!state.playstyle.length) return <Section title={t("style.head")}><p className="caption">{lobbyEmpty(state.status, "style", { n: state.limits.styleGames })}</p></Section>;
+  if (!state.playstyle.length) return <EmptyState message={lobbyEmpty(state.status, "style", { n: state.limits.styleGames })} progress={roleGamesProgress(state, state.limits.styleGames)} />;
   const summary = (p: ViewState["playstyle"][number]) => {
     const high = p.axes.filter((a) => a.level === "high").map((a) => a.label);
     const low = p.axes.filter((a) => a.level === "low").map((a) => a.label);

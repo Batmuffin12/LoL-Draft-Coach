@@ -3,8 +3,9 @@ import { ChampIcon } from "../components/ChampIcon";
 import { Facts } from "../components/Facts";
 import { NewChampTable } from "../components/NewChampTable";
 import { RoleChoice } from "../components/ChoiceGroup";
+import { EmptyState } from "../components/EmptyState";
 import { Section } from "../components/Section";
-import { cx, lobbyEmpty, roleName, t, tip } from "../format";
+import { cx, lobbyEmpty, roleGamesProgress, roleName, t, tip } from "../format";
 import { useFitLevel, useRolePill } from "../hooks";
 
 /** New champions per role (a sub-tab each): meta in your rank, like what you play well; first-games plan under the table. */
@@ -14,11 +15,8 @@ export function NewChamps({ state }: { state: ViewState }) {
   // Long plans: first each row's entries go side by side, then the picks' reasons or the picks after your current champion move to hover, then the minor rows and the other picks.
   const level = useFitLevel(sub, 3);
   if (!list.length) {
-    return (
-      <Section title={t("tabs.new")}>
-        <p className="caption">{state.meta?.state === "ready" ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")}</p>
-      </Section>
-    );
+    const ready = state.meta?.state === "ready";
+    return <EmptyState message={ready ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")} progress={ready ? roleGamesProgress(state, state.limits.poolGames) : null} />;
   }
   const summary = (r: (typeof list)[number]) => (r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", "));
   return (

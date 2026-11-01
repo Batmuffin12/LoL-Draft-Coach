@@ -3,6 +3,7 @@ import type { DraftView, ViewState } from "../../shared/view";
 import { BanTable, type BanRow } from "../components/BanTable";
 import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
+import { EmptyState } from "../components/EmptyState";
 import { LiveHighlight } from "../components/Tour";
 import { draftHighlights } from "../first-use";
 import { Facts } from "../components/Facts";
@@ -116,21 +117,23 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
       {showLoadout ? (
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
-        <Section title={t("ban.head")}>
-          {state.bans.length > 0 || state.hoverBans?.bans.length ? <div data-tour="bans"><BanTable bans={banRows(state)} /></div> : <p className="caption">{t(noBansKey(state))}</p>}
-        </Section>
+        state.bans.length > 0 || state.hoverBans?.bans.length ? (
+          <Section title={t("ban.head")}>
+            <div data-tour="bans"><BanTable bans={banRows(state)} /></div>
+          </Section>
+        ) : (
+          <EmptyState message={t(noBansKey(state))} inline={!state.docked} />
+        )
+      ) : !cur ? (
+        <EmptyState message={t(noPicksKey(state))} inline={!state.docked} />
       ) : (
         <>
-          <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
+          <Section title={t("pick.head")} aside={<ConfidenceChip confidence={state.pickAdvice.confidence} />}>
             {state.filledNote && <Facts rows={[state.filledNote]} flow />}
-            {cur ? (
-              <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
-            ) : (
-              <p className="caption">{t(noPicksKey(state))}</p>
-            )}
+            <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
             {theirTeam && <Facts rows={[theirTeam]} flow />}
           </Section>
-          {cur && picks.length > 1 && (
+          {picks.length > 1 && (
             <Section title={t("pick.ifNot", { champion: cur.champion.name })}>
               <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} />
             </Section>

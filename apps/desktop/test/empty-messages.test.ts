@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { CoachStatus } from "@ldc/shared";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy, viewLimits } from "../src/main/personal-coach";
-import { lobbyEmpty, noBansKey, noPicksKey, setCopy, t } from "../src/renderer/format";
+import { lobbyEmpty, noBansKey, noPicksKey, roleGamesProgress, setCopy, t } from "../src/renderer/format";
 import { emptyViewState, type ViewState } from "../src/shared/view";
 
 const config = loadConfig(findConfigDir(__dirname));
@@ -40,13 +40,27 @@ describe("champ select says why there is no suggestion", () => {
   const bans = (over: Partial<Pick<ViewState, "meta" | "unsupportedQueue">>, profile: CoachStatus["profile"] = ready) => t(noBansKey({ unsupportedQueue: false, meta: metaReady, status: status(profile), ...over }));
 
   it("bans: the live data's problem first, then your games, and no promise after a failure", () => {
-    expect(bans({ meta: null })).toMatch(/need the live data/);
-    expect(bans({ meta: { state: "error", message: "x", noSnapshot: true } })).toMatch(/no live data for your rank yet/);
-    expect(bans({ meta: { state: "error", message: "x" } })).toMatch(/couldn't get the live data/);
+    expect(bans({ meta: null })).toBe("No ban suggestions yet: there's no data for your rank.");
+    expect(bans({ meta: { state: "error", message: "x", noSnapshot: true } })).toBe("No ban suggestions yet: there's no data for your rank.");
+    expect(bans({ meta: { state: "error", message: "x" } })).toMatch(/couldn't get the data/);
     expect(bans({}, failed)).toMatch(/didn't load/);
     expect(bans({}, failed)).not.toMatch(/once/);
     expect(bans({}, loading)).toMatch(/once your match history is loaded/);
     expect(bans({ unsupportedQueue: true }, failed)).toMatch(/this queue/);
+  });
+});
+
+describe("an empty tab shows how far along you are", () => {
+  const roles = (...games: number[]) => games.map((g) => ({ games: g })) as ViewState["roles"];
+
+  it("counts your most played role towards what it takes", () => {
+    expect(roleGamesProgress({ roles: roles(1, 3), status: status(ready) }, 8)).toEqual({ text: "3 of 8 games in a role", done: 3, total: 8 });
+  });
+
+  it("shows nothing with no games yet, once there's enough, or while they load", () => {
+    expect(roleGamesProgress({ roles: [], status: status(ready) }, 8)).toBeNull();
+    expect(roleGamesProgress({ roles: roles(8), status: status(ready) }, 8)).toBeNull();
+    expect(roleGamesProgress({ roles: roles(3), status: status(loading) }, 8)).toBeNull();
   });
 });
 

@@ -5,6 +5,7 @@ import { ChampIcon } from "../components/ChampIcon";
 import { BuildTab, RuneOptions } from "../components/Loadout";
 import { MatchupTable } from "../components/MatchupTable";
 import { RoleChoice } from "../components/ChoiceGroup";
+import { EmptyState } from "../components/EmptyState";
 import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { SkillGrid } from "../components/SkillGrid";
@@ -38,8 +39,8 @@ export function Browse({ state, browse, onBrowse, touring }: { state: ViewState;
   const scrollTop = useRef(0);
   const opened = useRef<string | null>(null);
   if (browse.open) return <ChampionLoader open={browse.open} fetchKey={key} tab={browse.tab} onTab={(tab) => onBrowse({ ...browse, tab })} onBack={() => onBrowse({ ...browse, open: null })} />;
-  if (list === undefined) return <Section title={t("tabs.browse")}><p className="caption">{t("explore.loading")}</p></Section>;
-  if (list === null) return <Section title={t("tabs.browse")}><p className="caption">{t(browseEmptyKey(state))}</p></Section>;
+  if (list === undefined) return <EmptyState message={t("explore.loading")} />;
+  if (list === null) return <EmptyState message={t(browseEmptyKey(state))} />;
   return (
     <>
       <LiveHighlight ids={touring ? [] : ["browse"]} seen={state.ui.highlightsSeen} />
@@ -250,7 +251,7 @@ export function ChampionPage({ view: v, tab, onTab, onBack }: { view: ExploreCha
         end={note}
         endTitle={builds && v.loadout!.sourceAbove ? t("explore.buildsTip", { rank: v.rank }) : undefined}
       />
-      {tab === "matchups" ? <Matchups view={v} /> : v.loadout ? tab === "runes" ? <Runes view={v} /> : <Build view={v} /> : <Section><p className="caption">{t("explore.noBuild", { champion: v.champion.name, role: roleName(v.role) })}</p></Section>}
+      {tab === "matchups" ? <Matchups view={v} /> : v.loadout ? tab === "runes" ? <Runes view={v} /> : <Build view={v} /> : <EmptyState message={t("explore.noBuild", { champion: v.champion.name, role: roleName(v.role) })} />}
     </>
   );
 }
@@ -266,7 +267,7 @@ function Runes({ view: v }: { view: ExploreChampionView }) {
           <p className="caption">{v.loadout.thinNote}</p>
         </Section>
       )}
-      {page ? <RuneOptions page={page} options={v.pages.length > 1 ? v.pages : []} choose={setKey} /> : <Section><p className="caption">{t("explore.noBuild", { champion: v.champion.name, role: roleName(v.role) })}</p></Section>}
+      {page ? <RuneOptions page={page} options={v.pages.length > 1 ? v.pages : []} choose={setKey} /> : <EmptyState message={t("explore.noBuild", { champion: v.champion.name, role: roleName(v.role) })} />}
     </>
   );
 }
@@ -306,7 +307,7 @@ function Matchups({ view: v }: { view: ExploreChampionView }) {
   const level = useFitLevel(v.champion.id, 2);
   const rows = (list: MatchupRowView[]) => (level > 1 ? list.slice(0, -1) : list);
   const [best, worst] = [rows(v.matchups.best), rows(v.matchups.worst)];
-  if (!v.matchups.best.length && !v.matchups.worst.length) return <Section><p className="caption">{t("explore.noMatchups")}</p></Section>;
+  if (!v.matchups.best.length && !v.matchups.worst.length) return <EmptyState message={t("explore.noMatchups")} />;
   const note = t("explore.matchupsNote");
   return (
     <>

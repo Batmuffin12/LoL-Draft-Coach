@@ -6,6 +6,7 @@ import { BuildPath } from "./BuildPath";
 import { ChampIcon } from "./ChampIcon";
 import { MatchupTable } from "./MatchupTable";
 import { ChoiceGroup } from "./ChoiceGroup";
+import { EmptyState } from "./EmptyState";
 import { RunePage } from "./RunePage";
 import { Section } from "./Section";
 import { SkillGrid, Stat } from "./SkillGrid";
@@ -132,6 +133,7 @@ export function BuildTab({ loadout: l, winAdded = false }: { loadout: LoadoutVie
 /** How this game is likely to go, then your champion against their team (your lane first) and with yours. */
 export function MatchupsPlanTab({ pick }: { pick: MyPickView }) {
   const m = pick.matchups;
+  if (!m && !pick.plan.length) return <EmptyState message={t("matchups.empty")} />;
   return (
     <>
       <Section title={t("plan.head")}>
@@ -147,7 +149,7 @@ export function MatchupsPlanTab({ pick }: { pick: MyPickView }) {
           <p className="caption">{t("plan.empty")}</p>
         )}
       </Section>
-      {m ? (
+      {m && (
         <>
           <Section title={t("matchups.against")} aside={<span className="micro">{t("matchups.note")}</span>}>
             <MatchupTable rows={m.against} />
@@ -156,10 +158,6 @@ export function MatchupsPlanTab({ pick }: { pick: MyPickView }) {
             <MatchupTable rows={m.with} />
           </Section>
         </>
-      ) : (
-        <Section title={t("matchups.against")}>
-          <p className="caption">{t("matchups.empty")}</p>
-        </Section>
       )}
     </>
   );

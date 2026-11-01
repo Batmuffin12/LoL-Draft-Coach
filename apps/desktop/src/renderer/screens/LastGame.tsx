@@ -1,10 +1,11 @@
+import { EmptyState } from "../components/EmptyState";
 import { FocusCard } from "../components/FocusCard";
+import { ProgressRow } from "../components/ProgressRow";
 import { DraftTerms, ResultBand } from "../components/PostGameCard";
 import { Section } from "../components/Section";
 import { resultOverdue, type ViewState } from "../../shared/view";
 import { t } from "../format";
 import { useNow } from "../hooks";
-import { ProgressRow } from "./common";
 
 /** Your last game against the advice the coach gave (the advice log). */
 export function LastGame({ state }: { state: ViewState }) {
@@ -27,9 +28,7 @@ export function LastGame({ state }: { state: ViewState }) {
           )}
         </>
       ) : (
-        <Section title={t("tabs.last")}>
-          <p className="caption">{t("last.empty")}</p>
-        </Section>
+        !state.lastGamePending && <EmptyState message={t("last.empty")} hint={t("last.emptyHint")} inline={state.focus !== null} />
       )}
       {state.focus && (
         <Section title={t("last.goal")} aside={<span className="micro">{state.focus.on}</span>}>
