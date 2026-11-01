@@ -57,19 +57,24 @@ export class Coach extends EventEmitter<{ state: [ViewState] }> {
       this.onDraft();
     });
 
-    await this.loadChampionData();
+    // The last patch's names and icons from disk; the network never holds up connecting to the client.
+    await ddragon.loadCached();
     connector.start();
+    void this.loadChampionData();
   }
 
-  /** Champion names and icons; a failure is tried again at the next champ select. */
+  /** The newest patch's names and icons; a failure is tried again at the next champ select. Never rejects. */
   private async loadChampionData(): Promise<void> {
+    const { ddragon } = this.deps;
     try {
-      await this.deps.ddragon.load();
+      await ddragon.update();
       this.championDataMissing = false;
       this.clearNotice("championData");
     } catch (err) {
+      if (!this.championDataMissing) logProblem(`Champion data: ${(err as Error).message}`);
       this.championDataMissing = true;
-      if (this.notice("championData", this.wording("notice.championData"))) logProblem(`Champion data: ${(err as Error).message}`);
+      // With the last patch's data on screen there's nothing to tell.
+      if (!ddragon.loaded) this.notice("championData", this.wording("notice.championData"));
     }
   }
 
