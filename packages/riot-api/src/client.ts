@@ -27,7 +27,12 @@ export interface RiotApiOptions {
   region: string;
   limiter?: RateLimiter;
   fetch?: typeof fetch;
+  /** How long one attempt may take, body included (default DEFAULT_REQUEST_TIMEOUT_MS). */
+  requestTimeoutMs?: number;
 }
+
+/** A request Riot never answers must not hold a sync or a collector run open for ever. */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
 
 export class RiotApiError extends Error {
   constructor(
@@ -85,16 +90,28 @@ export class RiotApi {
     }
     if (this.keyError) throw this.keyError;
     const host = `${routing}.api.riotgames.com`;
-    const res = await this.limiter.schedule({ appScope: host, methodScope: `${host}|${methodId}`, priority }, () =>
-      this.fetchFn(`https://${host}${path}`, { headers: { "X-Riot-Token": this.opts.apiKey } }),
-    );
-    if (res.status === 401 || res.status === 403) {
-      this.keyError = new RiotKeyError(res.status, methodId, keyErrorMessage(this.opts.keyType, res.status));
-      throw this.keyError;
+    const timeoutMs = this.opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    let json: unknown;
+    let res: Response;
+    try {
+      // A timer per attempt (the limiter may send it again), which also ends a body that stops arriving.
+      res = await this.limiter.schedule({ appScope: host, methodScope: `${host}|${methodId}`, priority }, () =>
+        this.fetchFn(`https://${host}${path}`, { headers: { "X-Riot-Token": this.opts.apiKey }, signal: AbortSignal.timeout(timeoutMs) }),
+      );
+      if (res.status === 401 || res.status === 403) {
+        this.keyError = new RiotKeyError(res.status, methodId, keyErrorMessage(this.opts.keyType, res.status));
+        throw this.keyError;
+      }
+      if (res.status === 404) return null;
+      if (!res.ok) throw new RiotApiError(res.status, methodId);
+      json = await res.json();
+    } catch (err) {
+      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+        throw new RiotApiError(0, methodId, `Riot API ${methodId} didn't answer within ${timeoutMs / 1000} s`);
+      }
+      throw err;
     }
-    if (res.status === 404) return null;
-    if (!res.ok) throw new RiotApiError(res.status, methodId);
-    const parsed = schema.safeParse(await res.json());
+    const parsed = schema.safeParse(json);
     if (!parsed.success) {
       throw new RiotSchemaError(`Riot ${methodId} response changed shape:\n${z.prettifyError(parsed.error)}`);
     }
