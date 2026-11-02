@@ -273,7 +273,7 @@ describe("ServerProfileSource match cache (kept on disk between starts)", () => 
     await a.s.load(ME, { bandFromApi: false });
     await a.s.register(BASE, server.invite());
     expect(a.games()).toBe(23);
-    await waitFor(() => existsSync(join(dir, "matches.json")));
+    await a.s.cacheSaved();
     return { dir, first: a };
   }
   const cacheOf = (dir: string) => JSON.parse(readFileSync(join(dir, "matches.json"), "utf8")) as { riotId: string; matches: { match: { matchId: string; timeline?: unknown } }[] };
@@ -312,7 +312,9 @@ describe("ServerProfileSource match cache (kept on disk between starts)", () => 
     await b.s.init();
     await b.s.load(ME, { bandFromApi: false });
     expect(b.profileCalls().at(-1)).toContain(`ids=${id}`);
-    await waitFor(() => cacheOf(dir).matches.find((m) => m.match.matchId === id)?.match.timeline !== undefined);
+    // Not polled: on Windows a read at the wrong moment makes the rename into place fail, and that save is lost (it's only a cache).
+    await b.s.cacheSaved();
+    expect(cacheOf(dir).matches.find((m) => m.match.matchId === id)?.match.timeline).toBeDefined();
   });
 
   it("downloads the whole history from a server that can't say what changed (an older server)", async () => {
@@ -379,12 +381,13 @@ describe("ServerProfileSource match cache (kept on disk between starts)", () => 
     it("signing out cancels the retry", async () => {
       const dir = tmp("ldc-down-");
       await new AccountStore(join(dir, "account.json"), box).save({ serverUrl: BASE, token: "t", riotId: "Me#EUW" });
-      const b = flaky(startServer(history), dir, () => new Error("ECONNREFUSED"), [20]);
+      // Long enough for a busy machine to reach the sign-out before the retry is due.
+      const b = flaky(startServer(history), dir, () => new Error("ECONNREFUSED"), [250]);
       await b.s.init();
       await b.s.load(ME, { bandFromApi: false });
       const calls = b.down.calls;
       await b.s.signOut();
-      await new Promise((r) => setTimeout(r, 60));
+      await new Promise((r) => setTimeout(r, 300));
       expect(b.down.calls).toBe(calls);
     });
   });

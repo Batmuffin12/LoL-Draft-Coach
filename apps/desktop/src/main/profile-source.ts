@@ -345,13 +345,15 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
    * as invalid (HTTP 400) is dropped, since sending it again can't succeed.
    */
   private async flushOutbox(): Promise<void> {
-    if (!this.client || this.flushing || !this.pending.length) return;
+    const client = this.client;
+    if (!client || this.flushing || !this.pending.length) return;
     this.flushing = true;
     const done: number[] = [];
     try {
       for (const record of [...this.pending].reverse()) {
+        if (this.client !== client) break;
         try {
-          await this.client.postAdvice(record);
+          await client.postAdvice(record);
           done.push(record.gameId);
         } catch (err) {
           if (err instanceof ServerError && err.status === 400) {
@@ -462,14 +464,15 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
 
   /** `failed`: the sync that just failed. That's what gets shown, and nothing waits for another. */
   private async fetchProfile(failed?: SyncFailure): Promise<void> {
-    if (!this.client) return;
+    const client = this.client;
+    if (!client) return;
     let endWait = () => {};
     try {
       await this.readCache();
+      if (this.client !== client) return;
       this.showSaved();
       if (!failed && !this.matches.size) this.emit("status", { state: "loading", done: 0, total: 0 });
       endWait = this.wakeNotice();
-      const client = this.client;
       const newest = Math.max(0, ...[...this.matches.values()].map((m) => m.match.endedAt));
       const cached = this.matches.size > 0;
       let p = await client.profile(cached ? newest : undefined, cached ? { timelines: true } : {});
@@ -485,13 +488,15 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
         }
       }
       endWait();
+      // Signed out while this was on its way: that player's games must not come back on screen.
+      if (this.client !== client) return;
       const sync = failed ?? p.sync;
       if (this.apply({ ...p, sync })) this.saveCache();
       await this.flushOutbox();
       if (sync.state === "running") await this.waitForSync();
     } catch (err) {
       endWait();
-      this.onServerError(err);
+      if (this.client === client) this.onServerError(err);
     }
   }
 
@@ -511,10 +516,12 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
 
   private async readCacheFile(): Promise<void> {
     const file = this.deps.cacheFile;
-    if (!file || this.matches.size || !this.registeredAs) return;
+    const riotId = this.registeredAs;
+    if (!file || this.matches.size || !riotId) return;
     try {
       const c = MatchCacheSchema.parse(JSON.parse(await readFile(file, "utf8")));
-      if (c.serverUrl !== this.view.serverUrl || !sameRiotId(c.riotId, this.registeredAs)) return;
+      // `registeredAs` again: signed out while the file was being read, it's not for this PC's screen any more.
+      if (this.registeredAs !== riotId || c.serverUrl !== this.view.serverUrl || !sameRiotId(c.riotId, riotId)) return;
       for (const m of c.matches as unknown as UserMatch[]) this.matches.set(m.match.matchId, m);
       this.masteries = c.masteries ?? [];
       this.rankHistory = c.rankHistory ?? [];
@@ -607,21 +614,28 @@ export class ServerProfileSource extends EventEmitter<ProfileSourceEvents> imple
    * champ select or Retry now, so the server can sleep.
    */
   private async waitForSync(): Promise<void> {
-    if (!this.client || this.polling) return;
+    const client = this.client;
+    if (!client || this.polling) return;
     this.polling = true;
     let failed: SyncFailure | undefined;
     try {
       for (;;) {
         if (this.stopped) return;
-        const s = await this.client.syncState();
+        const s = await client.syncState();
+        // Signed out meanwhile: nothing left to wait for.
+        if (this.client !== client) return;
         if (s.state === "running") {
           if (!this.matches.size) this.emit("status", { state: "loading", done: s.done, total: s.total });
           await new Promise((r) => setTimeout(r, this.deps.pollMs ?? 2_000));
+          if (this.client !== client) return;
           continue;
         }
         if (s.state === "error") failed = s;
         break;
       }
+    } catch (err) {
+      if (this.client === client) throw err;
+      return;
     } finally {
       this.polling = false;
     }

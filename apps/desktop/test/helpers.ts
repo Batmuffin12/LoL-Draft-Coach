@@ -35,7 +35,8 @@ export async function seededDdragonCache(): Promise<string> {
   return cacheDir;
 }
 
-export const waitFor = async (cond: () => boolean, timeoutMs = 5_000) => {
+/** Polls `cond`. Well under the test timeout (vitest.config.ts), so a condition that never comes fails here, by name, and not as a bare timeout. */
+export const waitFor = async (cond: () => boolean, timeoutMs = 15_000) => {
   const start = Date.now();
   while (!cond()) {
     if (Date.now() - start > timeoutMs) throw new Error("timed out");
@@ -78,7 +79,8 @@ export function fakeRiotFetch(opts: { expiredKey?: boolean; myChamps?: [number, 
   ];
   const others = [86, 32, 51, 111, 54, 59, 21, 25, 122];
   const ids = mine.map((_, i) => `EUW1_${1000 + i}`);
-  const headers = { "x-app-rate-limit": "100:1", "x-method-rate-limit": "100:1" };
+  // High enough that the rate limiter never waits: a test of paging shouldn't sit out a real second.
+  const headers = { "x-app-rate-limit": "100000:1", "x-method-rate-limit": "100000:1" };
   const participant = (puuid: string, championId: number, pos: string, win: boolean, magic: boolean) => ({
     puuid,
     riotIdGameName: `name-${puuid}`,
