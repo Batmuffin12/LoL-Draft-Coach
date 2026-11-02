@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
 import { LobbyTour } from "../components/Tour";
-import { LOBBY_TOUR, tourSteps, type TourRun } from "../first-use";
+import { LOBBY_TOUR, seenADraft, tourSteps, type TourRun } from "../first-use";
 import { Segmented } from "../components/Segmented";
 import { Window } from "../components/Window";
 import { needsClient, t } from "../format";
@@ -94,7 +94,7 @@ function Lobby({ state, onHowItWorks, tour }: { state: ViewState; onHowItWorks: 
       }
       footer={<AccountFooter state={state} onHowItWorks={onHowItWorks} />}
     >
-      <Notices state={state} extra={state.roles.length || LOOK_UP_TABS.includes(sub) ? null : !needsClient(state.status) ? t("lobby.noDraft") : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
+      <Notices state={state} extra={state.roles.length || LOOK_UP_TABS.includes(sub) ? null   : !needsClient(state.status) ? (seenADraft(state.ui) ? null : t("lobby.noDraft")) : shown === "last" || sub === "new" ? t("profile.openClient") : null} />
       <SessionNotice state={state} />
       {shown === "suggestion" && preview ? (
         <Suggestion state={state} preview={preview} />

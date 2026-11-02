@@ -132,6 +132,11 @@ export function placeNote(o: { target: Box; about: Box; footer: Box | null; size
   return { top, left };
 }
 
+/** A note from champ select or locked in has shown, so you've been through a draft: the lobby stops explaining that one will come. */
+export function seenADraft(ui: Pick<UiState, "highlightsSeen">): boolean {
+  return draftHighlights({ banning: false, loadout: true }).concat(draftHighlights({ banning: true, loadout: false }), draftHighlights({ banning: false, loadout: false })).some((id) => ui.highlightsSeen.includes(id));
+}
+
 /** The highlights for a live screen, in order. Those whose target isn't on screen (no second rune page, no import, no "rough guide") simply don't show. */
 export function draftHighlights(d: { banning: boolean; loadout: boolean }): HighlightId[] {
   if (d.loadout) return ["rune-options", "import", "rough"];

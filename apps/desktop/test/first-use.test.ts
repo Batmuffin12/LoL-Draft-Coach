@@ -5,7 +5,7 @@ import { StatusHeader } from "../src/renderer/components/StatusHeader";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { filledShareId } from "../src/main/pick-card";
 import { uiCopy } from "../src/main/personal-coach";
-import { closeHighlight, draftHighlights, highlightVisit, LOBBY_TOUR, moveTour, placeCallout, placeNote, screenFor, skipStep, spotlight, startTour, stepKey, tourRunning, tourSteps, type TourStep } from "../src/renderer/first-use";
+import { closeHighlight, draftHighlights, highlightVisit, LOBBY_TOUR, moveTour, placeCallout, placeNote, screenFor, seenADraft, skipStep, spotlight, startTour, stepKey, tourRunning, tourSteps, type TourStep } from "../src/renderer/first-use";
 import { HIGHLIGHT_IDS, isHighlightId } from "../src/shared/ui-state";
 import type { AccountView, DraftView, MyPickView } from "../src/shared/view";
 
@@ -235,6 +235,16 @@ describe("live highlights", () => {
     for (const id of HIGHLIGHT_IDS) expect(isHighlightId(id)).toBe(true);
     expect(isHighlightId("nope")).toBe(false);
     expect(isHighlightId(1)).toBe(false);
+  });
+});
+
+describe("the lobby's note that a draft will come", () => {
+  it("goes once a note from a draft has shown, not for one from Browse or My games", () => {
+    expect(seenADraft({ highlightsSeen: [] })).toBe(false);
+    expect(seenADraft({ highlightsSeen: ["browse", "my-games"] })).toBe(false);
+    expect(seenADraft({ highlightsSeen: ["picks"] })).toBe(true);
+    expect(seenADraft({ highlightsSeen: ["bans"] })).toBe(true);
+    expect(seenADraft({ highlightsSeen: ["import"] })).toBe(true);
   });
 });
 
