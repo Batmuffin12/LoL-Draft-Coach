@@ -16,7 +16,7 @@ import { MetaSource } from "../src/main/meta-source";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { profileFromMatches } from "../src/main/profile";
 import type { ProfileSource, ProfileSourceEvents } from "../src/main/profile-source";
-import { fakeDdragonFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, seededDdragonCache, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -66,7 +66,7 @@ describe("advice log on a simulated game", () => {
     const profiles = new FakeProfiles();
     coach = new PersonalCoach({
       connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
       config,
       profiles,
       riotId: null,
@@ -192,7 +192,7 @@ describe("a game Riot hasn't published yet", () => {
     const fast = { ...config, app: { ...config.app, history: { ...config.app.history, newGameRetrySeconds: [0.05, 0.05, 0.05, 0.05] } } };
     coach = new PersonalCoach({
       connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
       config: fast,
       profiles,
       riotId: null,
@@ -218,7 +218,7 @@ describe("the client's state", () => {
     const creds = await server.start();
     coach = new PersonalCoach({
       connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
       config,
       profiles: new FakeProfiles(),
       riotId: null,

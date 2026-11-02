@@ -12,7 +12,7 @@ import { PersonalCoach } from "../src/main/personal-coach";
 import { DirectProfileSource } from "../src/main/profile-source";
 import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
 import type { ViewState } from "../src/shared/view";
-import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, stepUntil, waitFor } from "./helpers";
+import { CLIENT_PUUID, fakeDdragonFetch, seededDdragonCache, fakeRiotFetch, LOCAL_PUUID, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -101,7 +101,7 @@ async function startCoach(riot: RiotApi | null, overrides: Record<string, unknow
     : null;
   coach = new PersonalCoach({
     connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-    ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+    ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
     config,
     profiles,
     noProfileMessage: "No Riot API key configured. Set RIOT_API_KEY in your .env to get personal picks.",

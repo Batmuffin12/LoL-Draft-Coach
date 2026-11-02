@@ -1,3 +1,7 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DataDragon } from "@ldc/ddragon";
 import type { Coach } from "../src/main/coach";
 
 /** Fake Data Dragon CDN that knows a few champions from the fixture. */
@@ -22,6 +26,13 @@ export function fakeDdragonFetch(): typeof fetch {
     if (url.endsWith("runesReforged.json")) return Response.json([]);
     return new Response("nf", { status: 404 });
   }) as typeof fetch;
+}
+
+/** A Data Dragon cache holding the fake CDN's patch, as an earlier run leaves it: the coach has its names from the start. */
+export async function seededDdragonCache(): Promise<string> {
+  const cacheDir = mkdtempSync(join(tmpdir(), "ldc-dd-"));
+  await new DataDragon({ cacheDir, fetch: fakeDdragonFetch() }).load();
+  return cacheDir;
 }
 
 export const waitFor = async (cond: () => boolean, timeoutMs = 5_000) => {

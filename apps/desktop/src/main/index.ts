@@ -7,6 +7,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
+import { firstAsk } from "./first-ask";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
 import type { MetaSnapshot, UserMatch } from "@ldc/shared";
@@ -132,6 +133,12 @@ function builtIn(key: "ldcDefaultServerUrl"): string | null {
 function overrideCredentials(): LcuCredentials | null {
   const m = /^(\d+):(.+)$/.exec(process.env.LDC_LCU_OVERRIDE ?? "");
   return m ? { port: Number(m[1]), password: m[2]!, protocol: "https" } : null;
+}
+
+/** Dev aid: LDC_DDRAGON_URL points Data Dragon and CommunityDragon at a local stand-in (scripts/perf). Development builds only. */
+function devDdragonUrls(): { baseUrl: string; communityDragonUrl: string } | null {
+  const url = process.env.LDC_DDRAGON_URL;
+  return url && !app.isPackaged ? { baseUrl: url, communityDragonUrl: `${url}/cdragon/` } : null;
 }
 
 /** Dev aid: LDC_META_FILE=snapshot.json (from `pnpm --filter @ldc/sim mock`) replaces the live meta. Development builds only. */
@@ -316,7 +323,7 @@ async function main(): Promise<void> {
   const connector = new LcuConnector({
     discover: async () => override ?? discoverCredentials({ installDir: env.lolInstallDir }),
   });
-  const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
+  const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon"), ...devDdragonUrls() });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
   const profiles = await createProfileSource(env, config);
   // Live meta snapshots come from the coach server (none in dev-only direct mode).
@@ -352,6 +359,7 @@ async function main(): Promise<void> {
 
   win = createWindow();
   perf?.mark("windowCreated");
+  const pageAsked = firstAsk(ipcMain, IPC.ready);
   // One event often updates the state several times in a row: the renderer gets the last of them, once.
   const pusher = new StatePusher<ViewState>((s) => {
     if (!win || win.isDestroyed()) return;
@@ -397,6 +405,7 @@ async function main(): Promise<void> {
     if (isHighlightId(id)) coach.setUi(uiState.sawHighlight(id));
   });
 
+  await pageAsked;
   await coach.start();
   coach.setAppVersion(app.getVersion());
   startAutoUpdate((version) => coach.updateReady(version));

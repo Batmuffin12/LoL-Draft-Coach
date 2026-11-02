@@ -8,7 +8,7 @@ import { loadFixture, MockLcuServer } from "@ldc/lcu/testing";
 import { Coach } from "../src/main/coach";
 import { readEnv } from "../src/main/env";
 import type { ViewState } from "../src/shared/view";
-import { fakeDdragonFetch, stepUntil, waitFor } from "./helpers";
+import { fakeDdragonFetch, seededDdragonCache, stepUntil, waitFor } from "./helpers";
 
 let server: MockLcuServer | null = null;
 let coach: Coach | null = null;
@@ -22,7 +22,7 @@ describe("Coach (mock League client end to end)", () => {
     server = new MockLcuServer(loadFixture("synthetic-draft-pick"));
     const creds = await server.start();
     const connector = new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 });
-    const ddragon = new DataDragon({ cacheDir: mkdtempSync(join(tmpdir(), "ldc-c-")), fetch: fakeDdragonFetch() });
+    const ddragon = new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() });
     coach = new Coach({ connector, ddragon });
     const states: ViewState[] = [];
     coach.on("state", (s) => states.push(s));

@@ -195,6 +195,7 @@ export class PersonalCoach extends Coach {
       this.updateFocus();
       this.updateRoleAdvice();
       this.updateLastGame();
+      this.updatePlaystyle();
     });
     // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
     this.p.ddragon.on("patch", () => {
