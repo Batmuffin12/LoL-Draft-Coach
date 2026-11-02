@@ -133,6 +133,8 @@ export function BuildTab({ loadout: l, winAdded = false }: { loadout: LoadoutVie
 /** How this game is likely to go, then your champion against their team (your lane first) and with yours. */
 export function MatchupsPlanTab({ pick }: { pick: MyPickView }) {
   const m = pick.matchups;
+  // A short window: the caption's full sentence moves to hover.
+  const level = useFitLevel(pick.champion.id, 1);
   if (!m && !pick.plan.length) return <EmptyState message={t("matchups.empty")} />;
   return (
     <>
@@ -151,7 +153,7 @@ export function MatchupsPlanTab({ pick }: { pick: MyPickView }) {
       </Section>
       {m && (
         <>
-          <Section title={t("matchups.against")} aside={<span className="micro">{t("matchups.note")}</span>}>
+          <Section title={t("matchups.against")} aside={level > 0 ? <span className="micro" {...focusTip(t("matchups.note"))}>{t("pick.tile.unit")}</span> : <span className="micro">{t("matchups.note")}</span>}>
             <MatchupTable rows={m.against} />
           </Section>
           <Section title={t("matchups.with")}>

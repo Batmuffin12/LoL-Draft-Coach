@@ -136,7 +136,7 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
           </Section>
           {picks.length > 1 && (
             <Section title={t("pick.ifNot", { champion: cur.champion.name })}>
-              <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} />
+              <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} brief={brief} />
             </Section>
           )}
         </>
