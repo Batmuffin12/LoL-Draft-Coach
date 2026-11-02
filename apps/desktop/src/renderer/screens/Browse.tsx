@@ -308,7 +308,7 @@ function Matchups({ view: v }: { view: ExploreChampionView }) {
   const rows = (list: MatchupRowView[]) => (level > 1 ? list.slice(0, -1) : list);
   const [best, worst] = [rows(v.matchups.best), rows(v.matchups.worst)];
   if (!v.matchups.best.length && !v.matchups.worst.length) return <EmptyState message={t("explore.noMatchups")} />;
-  const note = t("explore.matchupsNote");
+  const note = t("matchups.note");
   return (
     <>
       {level === 0 && (
@@ -317,7 +317,7 @@ function Matchups({ view: v }: { view: ExploreChampionView }) {
         </Section>
       )}
       {best.length > 0 && (
-        <Section title={t("explore.best")} aside={level > 0 ? <span className="micro" {...tip(note)}>{t("matchups.note")}</span> : undefined}>
+        <Section title={t("explore.best")} aside={level > 0 ? <span className="micro" {...tip(note)}>{t("pick.tile.unit")}</span> : undefined}>
           <MatchupTable rows={best} />
         </Section>
       )}
