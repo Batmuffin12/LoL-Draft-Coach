@@ -126,6 +126,34 @@ describe("signing out while the server is still answering", () => {
     b.s.stop();
   });
 
+  it("a poll that fails after the sign-out isn't a problem to report: that registration is gone", async () => {
+    const server = startServer();
+    const first = await registered(server);
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    let asked = () => {};
+    const arrived = new Promise<void>((r) => (asked = r));
+    const failing = (async (input: string | URL | Request, init?: RequestInit) => {
+      if (new URL(String(input)).pathname === "/me/sync" && (init?.method ?? "GET") === "GET") {
+        asked();
+        await held;
+        return new Response("oops", { status: 400 });
+      }
+      return server.fetchFn(input as never, init);
+    }) as typeof fetch;
+    const b = source(failing, first.dir);
+    await b.s.init();
+    await b.s.load(ME, { bandFromApi: false });
+    const refresh = b.s.refresh();
+    await arrived;
+    await b.s.signOut();
+    b.statuses.length = 0;
+    release();
+    await refresh;
+    expect(b.statuses).toEqual([]);
+    b.s.stop();
+  });
+
   it("a new sign-in doesn't take the old request's answer", async () => {
     const server = startServer();
     const first = await registered(server);

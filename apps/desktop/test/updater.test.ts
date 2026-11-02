@@ -6,7 +6,8 @@ const updater = vi.hoisted(() => ({
 const electron = vi.hoisted(() => ({ app: { isPackaged: true } }));
 vi.mock("electron-updater", () => updater);
 vi.mock("electron", () => electron);
-vi.mock("node:fs", () => ({ existsSync: () => true }));
+const fs = vi.hoisted(() => ({ hasUpdateFile: true }));
+vi.mock("node:fs", () => ({ existsSync: () => fs.hasUpdateFile }));
 
 import { restartToUpdate, startAutoUpdate, UPDATE_CHECK_EVERY_MS } from "../src/main/updater";
 
@@ -17,6 +18,7 @@ describe("auto update", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     electron.app.isPackaged = true;
+    fs.hasUpdateFile = true;
     (process as { resourcesPath?: string }).resourcesPath = "resources";
   });
   afterEach(() => vi.useRealTimers());
@@ -47,6 +49,27 @@ describe("auto update", () => {
     startAutoUpdate(() => {});
     vi.advanceTimersByTime(UPDATE_CHECK_EVERY_MS * 2);
     expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("does nothing in an installer built without an update location", () => {
+    fs.hasUpdateFile = false;
+    startAutoUpdate(() => {});
+    vi.advanceTimersByTime(UPDATE_CHECK_EVERY_MS * 2);
+    expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+    expect(autoUpdater.on).not.toHaveBeenCalled();
+  });
+
+  it("downloads and installs by itself, and an updater error (offline, nothing published) stays quiet", () => {
+    const ready = vi.fn();
+    startAutoUpdate(ready);
+    expect(autoUpdater.autoDownload).toBe(true);
+    expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
+    const onError = autoUpdater.on.mock.calls.find((c) => c[0] === "error")![1] as (e: Error) => void;
+    expect(() => onError(new Error("net::ERR_INTERNET_DISCONNECTED"))).not.toThrow();
+    expect(ready).not.toHaveBeenCalled();
+    // The next check still comes.
+    vi.advanceTimersByTime(UPDATE_CHECK_EVERY_MS);
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
   });
 
   it("restarts silently into the new version", () => {

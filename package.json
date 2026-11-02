@@ -11,7 +11,7 @@
     "invite": "node scripts/invite.mjs",
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r test",
-    "coverage": "pnpm -r --filter=!@ldc/jev --filter=!@ldc/perf exec vitest run --coverage && node scripts/coverage-summary.mjs",
+    "coverage": "pnpm --filter=./packages/* --filter=./apps/* --filter=!@ldc/jev exec vitest run --coverage && node scripts/coverage-summary.mjs",
     "check": "pnpm typecheck && pnpm test",
     "desktop": "pnpm --filter @ldc/desktop start",
     "infra:plan": "node scripts/railway-iac.mjs plan",
