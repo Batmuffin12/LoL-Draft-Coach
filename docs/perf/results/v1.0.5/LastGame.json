@@ -1,0 +1,1626 @@
+{
+  "account": null,
+  "status": {
+    "lcu": "connected",
+    "gameflowPhase": "None",
+    "patch": "16.21.1",
+    "band": 2,
+    "profile": {
+      "state": "ready",
+      "games": 1000,
+      "role": "middle"
+    }
+  },
+  "draft": null,
+  "picks": [],
+  "pickAdvice": {
+    "whyNot": null,
+    "confidence": null
+  },
+  "bans": [],
+  "unsupportedQueue": false,
+  "hoverBans": null,
+  "myPick": null,
+  "hoverPick": null,
+  "meta": {
+    "state": "ready",
+    "band": 2,
+    "patch": "16.19",
+    "matches": 21400,
+    "createdAt": 1793583331138,
+    "offline": false
+  },
+  "pickRole": "middle",
+  "enemyNotes": [],
+  "laneOpponent": null,
+  "roles": [
+    {
+      "role": "middle",
+      "games": 598,
+      "winRate": 0.5551839464882943,
+      "score": 0.7529362614219535,
+      "enoughData": true,
+      "pool": [
+        {
+          "champion": {
+            "id": 103,
+            "name": "Ahri",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ahri.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 277,
+          "winRate": 0.5992779783393501
+        },
+        {
+          "champion": {
+            "id": 245,
+            "name": "Ekko",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ekko.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 145,
+          "winRate": 0.5586206896551724
+        },
+        {
+          "champion": {
+            "id": 99,
+            "name": "Lux",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Lux.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 101,
+          "winRate": 0.45544554455445546
+        },
+        {
+          "champion": {
+            "id": 238,
+            "name": "Zed",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Zed.png"
+          },
+          "tier": "comfortable",
+          "tierLabel": "Comfortable",
+          "games": 75,
+          "winRate": 0.52
+        }
+      ],
+      "holes": [],
+      "coverage": {
+        "needs": [
+          {
+            "need": "magic",
+            "label": "Magic damage",
+            "gap": false
+          },
+          {
+            "need": "physical",
+            "label": "Physical damage",
+            "gap": false
+          },
+          {
+            "need": "frontline",
+            "label": "Frontline",
+            "gap": false
+          },
+          {
+            "need": "engage",
+            "label": "Crowd control",
+            "gap": false
+          }
+        ],
+        "covers": {
+          "99": [
+            "magic",
+            "engage"
+          ],
+          "103": [
+            "magic",
+            "engage"
+          ],
+          "238": [
+            "physical"
+          ],
+          "245": [
+            "magic"
+          ]
+        }
+      },
+      "nextStep": null,
+      "missing": null,
+      "noGaps": "Your mid pool has no gap that's costing you games.",
+      "also": []
+    },
+    {
+      "role": "top",
+      "games": 269,
+      "winRate": 0.5204460966542751,
+      "score": 0.6893437352942455,
+      "enoughData": true,
+      "pool": [
+        {
+          "champion": {
+            "id": 86,
+            "name": "Garen",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Garen.png"
+          },
+          "tier": "main",
+          "tierLabel": "Main",
+          "games": 155,
+          "winRate": 0.5870967741935483
+        },
+        {
+          "champion": {
+            "id": 122,
+            "name": "Darius",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Darius.png"
+          },
+          "tier": "comfortable",
+          "tierLabel": "Comfortable",
+          "games": 114,
+          "winRate": 0.4298245614035088
+        }
+      ],
+      "holes": [],
+      "coverage": {
+        "needs": [
+          {
+            "need": "physical",
+            "label": "Physical damage",
+            "gap": false
+          },
+          {
+            "need": "frontline",
+            "label": "Frontline",
+            "gap": false
+          },
+          {
+            "need": "engage",
+            "label": "Crowd control",
+            "gap": false
+          }
+        ],
+        "covers": {
+          "86": [
+            "physical",
+            "frontline"
+          ],
+          "122": [
+            "physical"
+          ]
+        }
+      },
+      "nextStep": null,
+      "missing": null,
+      "noGaps": "Your top pool has no gap that's costing you games.",
+      "also": []
+    },
+    {
+      "role": "jungle",
+      "games": 133,
+      "winRate": 0.43609022556390975,
+      "score": 0.49915257583910916,
+      "enoughData": true,
+      "pool": [
+        {
+          "champion": {
+            "id": 32,
+            "name": "Amumu",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Amumu.png"
+          },
+          "tier": "comfortable",
+          "tierLabel": "Comfortable",
+          "games": 133,
+          "winRate": 0.43609022556390975
+        }
+      ],
+      "holes": [],
+      "coverage": {
+        "needs": [
+          {
+            "need": "physical",
+            "label": "Physical damage",
+            "gap": false
+          },
+          {
+            "need": "frontline",
+            "label": "Frontline",
+            "gap": false
+          },
+          {
+            "need": "engage",
+            "label": "Crowd control",
+            "gap": false
+          }
+        ],
+        "covers": {
+          "32": [
+            "physical",
+            "frontline"
+          ]
+        }
+      },
+      "nextStep": null,
+      "missing": null,
+      "noGaps": "Your jungle pool has no gap that's costing you games.",
+      "also": []
+    }
+  ],
+  "playstyle": [
+    {
+      "role": "middle",
+      "games": 598,
+      "axes": [
+        {
+          "axis": "earlyPressure",
+          "label": "Early pressure",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "turret plates: you 1.9, typical in your rank 2.0",
+          "games": 598,
+          "metrics": [
+            "turret plates: you 1.9, typical in your rank 2.0",
+            "lane lead at 14 min: you 0.4, typical in your rank 1.0",
+            "early lane lead: you 0.5, typical in your rank 1.0",
+            "biggest CS lead: you 10, typical in your rank 10",
+            "enemy jungle camps taken: you 1.5, typical in your rank 1.0",
+            "takedowns before 10 min: you 2.0, typical in your rank 2.0",
+            "early gank kills: you 0.0, typical in your rank 0.0"
+          ]
+        },
+        {
+          "axis": "fighting",
+          "label": "Fighting",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "kill participation: you 52%, typical in your rank 53%",
+          "games": 598,
+          "metrics": [
+            "kill participation: you 52%, typical in your rank 53%",
+            "solo kills: you 1.5, typical in your rank 1.0",
+            "share of team damage: you 23%, typical in your rank 23%",
+            "damage per minute: you 857, typical in your rank 826"
+          ]
+        },
+        {
+          "axis": "farming",
+          "label": "Farming",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "CS at 10 min: you 68, typical in your rank 67",
+          "games": 598,
+          "metrics": [
+            "CS at 10 min: you 68, typical in your rank 67",
+            "CS per minute: you 6.8, typical in your rank 6.7",
+            "gold per minute: you 390, typical in your rank 389",
+            "jungle CS at 10 min: you 0, typical in your rank 0"
+          ]
+        },
+        {
+          "axis": "vision",
+          "label": "Vision",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "wards cleared: you 4.2, typical in your rank 4.0",
+          "games": 598,
+          "metrics": [
+            "wards cleared: you 4.2, typical in your rank 4.0",
+            "control wards: you 1.5, typical in your rank 1.0",
+            "vision lead over your opponent: you 1%, typical in your rank 1%",
+            "vision score per minute: you 0.9, typical in your rank 0.8"
+          ]
+        },
+        {
+          "axis": "riskControl",
+          "label": "Staying alive",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "deaths to champions: you 4.3, typical in your rank 4.0",
+          "games": 598,
+          "metrics": [
+            "deaths to champions: you 4.3, typical in your rank 4.0",
+            "deaths per minute: you 0.15, typical in your rank 0.15",
+            "deaths before 14 min: you 1.0, typical in your rank 1.0"
+          ]
+        },
+        {
+          "axis": "objectives",
+          "label": "Objectives",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "heralds: you 0.9, typical in your rank 1.0",
+          "games": 598,
+          "metrics": [
+            "heralds: you 0.9, typical in your rank 1.0",
+            "barons: you 0.5, typical in your rank 0.0",
+            "turrets: you 2.4, typical in your rank 2.0",
+            "dragons: you 2.1, typical in your rank 2.0",
+            "objective damage per minute: you 306, typical in your rank 300"
+          ]
+        },
+        {
+          "axis": "roaming",
+          "label": "Roaming",
+          "score": 49,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "early kills in other lanes: you 0.9, typical in your rank 1.0",
+          "games": 598,
+          "metrics": [
+            "early kills in other lanes: you 0.9, typical in your rank 1.0",
+            "early takedowns in every lane: you 0.5, typical in your rank 1.0",
+            "enemy jungle taken vs opponent: you -0.1, typical in your rank 0.2"
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "label": "KDA",
+          "you": "5.6",
+          "typical": "3.3",
+          "tone": null,
+          "relative": 0.04465384219097657,
+          "title": "KDA: you 5.6, typical in your rank 3.3, from 598 games"
+        },
+        {
+          "label": "KP",
+          "you": "52%",
+          "typical": "53%",
+          "tone": null,
+          "relative": -0.05394971920467262,
+          "title": "kill participation: you 52%, typical in your rank 53%, from 598 games"
+        },
+        {
+          "label": "CS/min",
+          "you": "6.8",
+          "typical": "6.7",
+          "tone": null,
+          "relative": 0.012744130588071556,
+          "title": "CS per minute: you 6.8, typical in your rank 6.7, from 598 games"
+        },
+        {
+          "label": "Dmg/min",
+          "you": "857",
+          "typical": "826",
+          "tone": null,
+          "relative": 0.019475700830485776,
+          "title": "damage per minute: you 857, typical in your rank 826, from 598 games"
+        },
+        {
+          "label": "Vision/min",
+          "you": "0.9",
+          "typical": "0.8",
+          "tone": null,
+          "relative": 0.009901514496459152,
+          "title": "vision score per minute: you 0.9, typical in your rank 0.8, from 598 games"
+        },
+        {
+          "label": "Deaths/min",
+          "you": "0.15",
+          "typical": "0.15",
+          "tone": null,
+          "relative": 0,
+          "title": "deaths per minute: you 0.15, typical in your rank 0.15, from 598 games"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Your style",
+          "items": [
+            {
+              "text": "Your style is close to your rank's average"
+            }
+          ]
+        }
+      ],
+      "how": {
+        "games": 100,
+        "focus": "top 1 41% · top 3 85% · top 5 100%",
+        "champions": "4 champions",
+        "classes": [
+          {
+            "label": "Mage",
+            "share": 0.61
+          },
+          {
+            "label": "Assassin",
+            "share": 0.39
+          }
+        ],
+        "damage": [
+          {
+            "kind": "physical",
+            "label": "physical",
+            "share": 0.14985687355466037
+          },
+          {
+            "kind": "magic",
+            "label": "magic",
+            "share": 0.7949879317252003
+          },
+          {
+            "kind": "true",
+            "label": "true",
+            "share": 0.05515519472013935
+          }
+        ]
+      }
+    },
+    {
+      "role": "top",
+      "games": 269,
+      "axes": [
+        {
+          "axis": "earlyPressure",
+          "label": "Early pressure",
+          "score": 49,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "takedowns before 10 min: you 1.9, typical in your rank 2.0",
+          "games": 269,
+          "metrics": [
+            "takedowns before 10 min: you 1.9, typical in your rank 2.0",
+            "early lane lead: you 0.5, typical in your rank 0.0",
+            "enemy jungle camps taken: you 1.5, typical in your rank 1.0",
+            "lane lead at 14 min: you 0.5, typical in your rank 0.0",
+            "turret plates: you 2.0, typical in your rank 2.0",
+            "biggest CS lead: you 9, typical in your rank 9",
+            "early gank kills: you 0.0, typical in your rank 0.0"
+          ]
+        },
+        {
+          "axis": "fighting",
+          "label": "Fighting",
+          "score": 52,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "kill participation: you 55%, typical in your rank 52%",
+          "games": 269,
+          "metrics": [
+            "kill participation: you 55%, typical in your rank 52%",
+            "damage per minute: you 648, typical in your rank 658",
+            "share of team damage: you 23%, typical in your rank 23%",
+            "solo kills: you 1.5, typical in your rank 1.0"
+          ]
+        },
+        {
+          "axis": "farming",
+          "label": "Farming",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "gold per minute: you 397, typical in your rank 390",
+          "games": 269,
+          "metrics": [
+            "gold per minute: you 397, typical in your rank 390",
+            "CS at 10 min: you 67, typical in your rank 67",
+            "CS per minute: you 6.8, typical in your rank 6.8",
+            "jungle CS at 10 min: you 0, typical in your rank 0"
+          ]
+        },
+        {
+          "axis": "vision",
+          "label": "Vision",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "wards cleared: you 4.1, typical in your rank 4.0",
+          "games": 269,
+          "metrics": [
+            "wards cleared: you 4.1, typical in your rank 4.0",
+            "vision score per minute: you 0.9, typical in your rank 0.9",
+            "control wards: you 1.5, typical in your rank 2.0",
+            "vision lead over your opponent: you -1%, typical in your rank 0%"
+          ]
+        },
+        {
+          "axis": "riskControl",
+          "label": "Staying alive",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "deaths before 14 min: you 0.9, typical in your rank 1.0",
+          "games": 269,
+          "metrics": [
+            "deaths before 14 min: you 0.9, typical in your rank 1.0",
+            "deaths per minute: you 0.15, typical in your rank 0.16",
+            "deaths to champions: you 4.5, typical in your rank 5.0"
+          ]
+        },
+        {
+          "axis": "objectives",
+          "label": "Objectives",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "heralds: you 1.1, typical in your rank 1.0",
+          "games": 269,
+          "metrics": [
+            "heralds: you 1.1, typical in your rank 1.0",
+            "barons: you 0.5, typical in your rank 1.0",
+            "objective damage per minute: you 284, typical in your rank 285",
+            "turrets: you 2.4, typical in your rank 2.0",
+            "dragons: you 2.0, typical in your rank 2.0"
+          ]
+        },
+        {
+          "axis": "roaming",
+          "label": "Roaming",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "early kills in other lanes: you 1.1, typical in your rank 1.0",
+          "games": 269,
+          "metrics": [
+            "early kills in other lanes: you 1.1, typical in your rank 1.0",
+            "early takedowns in every lane: you 0.5, typical in your rank 1.0",
+            "enemy jungle taken vs opponent: you -0.1, typical in your rank -0.2"
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "label": "KDA",
+          "you": "5.0",
+          "typical": "3.3",
+          "tone": null,
+          "relative": 0.008285507215767707,
+          "title": "KDA: you 5.0, typical in your rank 3.3, from 269 games"
+        },
+        {
+          "label": "KP",
+          "you": "55%",
+          "typical": "52%",
+          "tone": "pos",
+          "relative": 0.10978520900273803,
+          "title": "kill participation: you 55%, typical in your rank 52%, from 269 games"
+        },
+        {
+          "label": "CS/min",
+          "you": "6.8",
+          "typical": "6.8",
+          "tone": null,
+          "relative": 0,
+          "title": "CS per minute: you 6.8, typical in your rank 6.8, from 269 games"
+        },
+        {
+          "label": "Dmg/min",
+          "you": "648",
+          "typical": "658",
+          "tone": null,
+          "relative": -0.06208631696136924,
+          "title": "damage per minute: you 648, typical in your rank 658, from 269 games"
+        },
+        {
+          "label": "Vision/min",
+          "you": "0.9",
+          "typical": "0.9",
+          "tone": null,
+          "relative": 0,
+          "title": "vision score per minute: you 0.9, typical in your rank 0.9, from 269 games"
+        },
+        {
+          "label": "Deaths/min",
+          "you": "0.15",
+          "typical": "0.16",
+          "tone": null,
+          "relative": 0.030026432547912263,
+          "title": "deaths per minute: you 0.15, typical in your rank 0.16, from 269 games"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Your style",
+          "items": [
+            {
+              "text": "Your style is close to your rank's average"
+            }
+          ]
+        }
+      ],
+      "how": {
+        "games": 100,
+        "focus": "top 1 61% · top 3 100% · top 5 100%",
+        "champions": "2 champions",
+        "classes": [
+          {
+            "label": "Fighter",
+            "share": 1
+          }
+        ],
+        "damage": [
+          {
+            "kind": "physical",
+            "label": "physical",
+            "share": 0.7157909943439191
+          },
+          {
+            "kind": "magic",
+            "label": "magic",
+            "share": 0.2144545921990157
+          },
+          {
+            "kind": "true",
+            "label": "true",
+            "share": 0.0697544134570652
+          }
+        ]
+      }
+    },
+    {
+      "role": "jungle",
+      "games": 133,
+      "axes": [
+        {
+          "axis": "earlyPressure",
+          "label": "Early pressure",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "early lane lead: you 0.4, typical in your rank 0.0",
+          "games": 133,
+          "metrics": [
+            "early lane lead: you 0.4, typical in your rank 0.0",
+            "early gank kills: you 2.2, typical in your rank 2.0",
+            "enemy jungle camps taken: you 10.6, typical in your rank 10.0",
+            "lane lead at 14 min: you 0.5, typical in your rank 0.0",
+            "takedowns before 10 min: you 1.9, typical in your rank 2.0",
+            "turret plates: you 2.0, typical in your rank 2.0",
+            "biggest CS lead: you 10, typical in your rank 10"
+          ]
+        },
+        {
+          "axis": "fighting",
+          "label": "Fighting",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "kill participation: you 54%, typical in your rank 52%",
+          "games": 133,
+          "metrics": [
+            "kill participation: you 54%, typical in your rank 52%",
+            "damage per minute: you 655, typical in your rank 652",
+            "share of team damage: you 24%, typical in your rank 23%",
+            "solo kills: you 1.5, typical in your rank 2.0"
+          ]
+        },
+        {
+          "axis": "farming",
+          "label": "Farming",
+          "score": 48,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "CS at 10 min: you 5, typical in your rank 5",
+          "games": 133,
+          "metrics": [
+            "CS at 10 min: you 5, typical in your rank 5",
+            "gold per minute: you 387, typical in your rank 391",
+            "jungle CS at 10 min: you 54, typical in your rank 55",
+            "CS per minute: you 6.8, typical in your rank 6.8"
+          ]
+        },
+        {
+          "axis": "vision",
+          "label": "Vision",
+          "score": 48,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "wards cleared: you 3.5, typical in your rank 4.0",
+          "games": 133,
+          "metrics": [
+            "wards cleared: you 3.5, typical in your rank 4.0",
+            "vision lead over your opponent: you -1%, typical in your rank 0%",
+            "vision score per minute: you 0.9, typical in your rank 0.9",
+            "control wards: you 1.5, typical in your rank 1.0"
+          ]
+        },
+        {
+          "axis": "riskControl",
+          "label": "Staying alive",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "deaths before 14 min: you 1.1, typical in your rank 1.0",
+          "games": 133,
+          "metrics": [
+            "deaths before 14 min: you 1.1, typical in your rank 1.0",
+            "deaths per minute: you 0.16, typical in your rank 0.15",
+            "deaths to champions: you 4.5, typical in your rank 4.0"
+          ]
+        },
+        {
+          "axis": "objectives",
+          "label": "Objectives",
+          "score": 51,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "heralds: you 1.2, typical in your rank 1.0",
+          "games": 133,
+          "metrics": [
+            "heralds: you 1.2, typical in your rank 1.0",
+            "dragons: you 2.2, typical in your rank 2.0",
+            "turrets: you 2.3, typical in your rank 3.0",
+            "barons: you 0.5, typical in your rank 1.0",
+            "objective damage per minute: you 1389, typical in your rank 1373"
+          ]
+        },
+        {
+          "axis": "roaming",
+          "label": "Roaming",
+          "score": 50,
+          "level": "mid",
+          "levelLabel": "Around typical for your rank",
+          "detail": "enemy jungle taken vs opponent: you -0.1, typical in your rank 0.0",
+          "games": 133,
+          "metrics": [
+            "enemy jungle taken vs opponent: you -0.1, typical in your rank 0.0",
+            "early kills in other lanes: you 1.0, typical in your rank 1.0",
+            "early takedowns in every lane: you 0.5, typical in your rank 0.0"
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "label": "KDA",
+          "you": "5.5",
+          "typical": "3.3",
+          "tone": null,
+          "relative": 0,
+          "title": "KDA: you 5.5, typical in your rank 3.3, from 133 games"
+        },
+        {
+          "label": "KP",
+          "you": "54%",
+          "typical": "52%",
+          "tone": null,
+          "relative": 0.05496814957295282,
+          "title": "kill participation: you 54%, typical in your rank 52%, from 133 games"
+        },
+        {
+          "label": "CS/min",
+          "you": "6.8",
+          "typical": "6.8",
+          "tone": null,
+          "relative": 0,
+          "title": "CS per minute: you 6.8, typical in your rank 6.8, from 133 games"
+        },
+        {
+          "label": "Dmg/min",
+          "you": "655",
+          "typical": "652",
+          "tone": null,
+          "relative": 0,
+          "title": "damage per minute: you 655, typical in your rank 652, from 133 games"
+        },
+        {
+          "label": "Obj dmg/min",
+          "you": "1389",
+          "typical": "1373",
+          "tone": null,
+          "relative": 0,
+          "title": "objective damage per minute: you 1389, typical in your rank 1373, from 133 games"
+        },
+        {
+          "label": "Deaths/min",
+          "you": "0.16",
+          "typical": "0.15",
+          "tone": null,
+          "relative": 0,
+          "title": "deaths per minute: you 0.16, typical in your rank 0.15, from 133 games"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Your style",
+          "items": [
+            {
+              "text": "Your style is close to your rank's average"
+            }
+          ]
+        }
+      ],
+      "how": {
+        "games": 100,
+        "focus": "top 1 100% · top 3 100% · top 5 100%",
+        "champions": "1 champion",
+        "classes": [
+          {
+            "label": "Tank",
+            "share": 1
+          }
+        ],
+        "damage": [
+          {
+            "kind": "physical",
+            "label": "physical",
+            "share": 0.7309729945142502
+          },
+          {
+            "kind": "magic",
+            "label": "magic",
+            "share": 0.19876385011644782
+          },
+          {
+            "kind": "true",
+            "label": "true",
+            "share": 0.07026315536930193
+          }
+        ]
+      }
+    }
+  ],
+  "side": null,
+  "lastGame": {
+    "champion": {
+      "id": 86,
+      "name": "Garen",
+      "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Garen.png"
+    },
+    "role": "top",
+    "lockedAt": 1793577956177,
+    "endedAt": 1793579731177,
+    "minutes": 30,
+    "result": "win",
+    "shown": [],
+    "verdict": "",
+    "followed": false,
+    "lines": [],
+    "terms": [],
+    "prediction": null,
+    "focus": {
+      "label": "Control wards",
+      "value": "3",
+      "target": "1.8",
+      "met": true
+    }
+  },
+  "lastGamePending": false,
+  "lastGameGaveUp": false,
+  "queuePreview": null,
+  "focus": {
+    "label": "Control wards",
+    "title": "More control wards",
+    "goalText": "1.8 or more",
+    "metLine": "Goal met: 1.8 or more",
+    "missedLine": "Goal not met: 1.8 or more",
+    "averageLine": "Your average is 1.6.",
+    "streak": "6 of your last 10 met it, the last 3 in a row",
+    "goalHint": "Your next step: 50% of the way to the average",
+    "on": "Garen · Top",
+    "you": 1.6,
+    "target": 1.8181818181818183,
+    "typical": 2,
+    "youText": "1.6",
+    "targetText": "1.8",
+    "typicalText": "2.0",
+    "typicalLine": "Typical top player in your games: 2.0",
+    "lowerIsBetter": false,
+    "checkGames": 10,
+    "recent": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true
+    ],
+    "why": "A control ward shows and disables enemy wards near it until it's killed",
+    "whyHover": "In your games, top players above typical here won 2 more games per 100 (a link, not a cause)",
+    "tips": [
+      "Buy one control ward on your first back and put it in river or tri-brush."
+    ],
+    "met": []
+  },
+  "newChamps": [
+    {
+      "role": "middle",
+      "picks": [
+        {
+          "champion": {
+            "id": 84,
+            "name": "Akali",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Akali.png"
+          },
+          "like": null,
+          "winRate": 0.4990995475113122,
+          "games": 1500,
+          "ease": 3,
+          "easeLabel": "Hard",
+          "owned": true,
+          "reasons": []
+        },
+        {
+          "champion": {
+            "id": 157,
+            "name": "Yasuo",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Yasuo.png"
+          },
+          "like": null,
+          "winRate": 0.49588186813186813,
+          "games": 2600,
+          "ease": 3,
+          "easeLabel": "Hard",
+          "owned": true,
+          "reasons": []
+        }
+      ],
+      "learning": null,
+      "plan": "Try Akali in 3 to 5 Normal Draft games.",
+      "planLearn": {
+        "stage": "First game on it",
+        "focus": {
+          "text": "Keep your deaths before 14 min at 0.8 or fewer, your usual",
+          "recent": []
+        },
+        "lines": [
+          {
+            "label": "Good matchups",
+            "items": [
+              {
+                "text": "Ahri +3.5 pts",
+                "champion": {
+                  "id": 103,
+                  "name": "Ahri",
+                  "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ahri.png"
+                },
+                "title": "Into Ahri: about 3 more wins per 100 games than their usual win rates predict (1,010 games)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "role": "top",
+      "picks": [
+        {
+          "champion": {
+            "id": 54,
+            "name": "Malphite",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Malphite.png"
+          },
+          "like": null,
+          "winRate": 0.5182627218934911,
+          "games": 1100,
+          "ease": 1,
+          "easeLabel": "Easy",
+          "owned": false,
+          "reasons": [
+            "You don't own it yet"
+          ]
+        },
+        {
+          "champion": {
+            "id": 266,
+            "name": "Aatrox",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Aatrox.png"
+          },
+          "like": null,
+          "winRate": 0.4974119658119658,
+          "games": 1600,
+          "ease": 2,
+          "easeLabel": "Medium",
+          "owned": false,
+          "reasons": [
+            "You don't own it yet"
+          ]
+        }
+      ],
+      "learning": null,
+      "plan": "Try Malphite in 3 to 5 Normal Draft games.",
+      "planLearn": {
+        "stage": "First game on it",
+        "focus": {
+          "text": "Your top goal applies here too: control wards 1.8 or more",
+          "recent": []
+        },
+        "lines": []
+      }
+    },
+    {
+      "role": "jungle",
+      "picks": [
+        {
+          "champion": {
+            "id": 59,
+            "name": "Jarvan IV",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/JarvanIV.png"
+          },
+          "like": null,
+          "winRate": 0.5045471698113208,
+          "games": 1500,
+          "ease": 2,
+          "easeLabel": "Medium",
+          "owned": false,
+          "reasons": [
+            "You don't own it yet"
+          ]
+        },
+        {
+          "champion": {
+            "id": 64,
+            "name": "Lee Sin",
+            "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/LeeSin.png"
+          },
+          "like": null,
+          "winRate": 0.487165457184325,
+          "games": 2400,
+          "ease": 2,
+          "easeLabel": "Medium",
+          "owned": false,
+          "reasons": [
+            "You don't own it yet"
+          ]
+        }
+      ],
+      "learning": null,
+      "plan": "Try Jarvan IV in 3 to 5 Normal Draft games.",
+      "planLearn": {
+        "stage": "First game on it",
+        "focus": {
+          "text": "Keep your jungle CS at 10 min at 54 or more, your usual",
+          "recent": []
+        },
+        "lines": []
+      }
+    }
+  ],
+  "month": {
+    "period": "Oct 3 – Nov 2",
+    "games": 104,
+    "steadyNote": "Real changes over 104 games",
+    "rank": null,
+    "winRate": {
+      "from": 0.5192307692307693,
+      "to": 0.5576923076923077,
+      "text": "win rate, up 4 points"
+    },
+    "gamesBefore": 104,
+    "gamesBeforeText": "104 games before",
+    "roles": [
+      {
+        "role": "Mid",
+        "share": 0.6153846153846154,
+        "text": "Mid 62%"
+      },
+      {
+        "role": "Top",
+        "share": 0.25,
+        "text": "Top 25%"
+      },
+      {
+        "role": "Jungle",
+        "share": 0.1346153846153846,
+        "text": "Jungle 13%"
+      }
+    ],
+    "role": "Mid",
+    "axes": [
+      {
+        "label": "Early pressure",
+        "from": 49,
+        "to": 49,
+        "changed": "steady"
+      },
+      {
+        "label": "Fighting",
+        "from": 51,
+        "to": 48,
+        "changed": "steady"
+      },
+      {
+        "label": "Farming",
+        "from": 53,
+        "to": 51,
+        "changed": "steady"
+      },
+      {
+        "label": "Vision",
+        "from": 56,
+        "to": 50,
+        "changed": "steady"
+      },
+      {
+        "label": "Staying alive",
+        "from": 55,
+        "to": 49,
+        "changed": "steady"
+      },
+      {
+        "label": "Objectives",
+        "from": 50,
+        "to": 50,
+        "changed": "steady"
+      },
+      {
+        "label": "Roaming",
+        "from": 51,
+        "to": 46,
+        "changed": "steady"
+      }
+    ],
+    "stats": [
+      {
+        "label": "KDA",
+        "title": "KDA",
+        "from": "7.0",
+        "to": "5.4",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "KP",
+        "title": "Kill participation",
+        "from": "50%",
+        "to": "52%",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "CS/min",
+        "title": "CS per minute",
+        "from": "6.9",
+        "to": "6.8",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "Dmg/min",
+        "title": "Damage per minute",
+        "from": "908",
+        "to": "833",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "Deaths/min",
+        "title": "Deaths per minute",
+        "from": "0.14",
+        "to": "0.16",
+        "changed": "steady",
+        "tone": null
+      },
+      {
+        "label": "Vision/min",
+        "title": "Vision score per minute",
+        "from": "0.9",
+        "to": "0.8",
+        "changed": "steady",
+        "tone": null
+      }
+    ],
+    "focusLine": "Top 3: 56% of games, 60% before",
+    "champions": [
+      {
+        "champion": {
+          "id": 103,
+          "name": "Ahri",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ahri.png"
+        },
+        "games": 27,
+        "winRate": 0.5925925925925926,
+        "change": -0.007407407407407418
+      },
+      {
+        "champion": {
+          "id": 245,
+          "name": "Ekko",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Ekko.png"
+        },
+        "games": 16,
+        "winRate": 0.5,
+        "change": -0.06589147286821706
+      },
+      {
+        "champion": {
+          "id": 86,
+          "name": "Garen",
+          "iconUrl": "https://ddragon.leagueoflegends.com/cdn/16.21.1/img/champion/Garen.png"
+        },
+        "games": 15,
+        "winRate": 0.6,
+        "change": 0.014285714285714235
+      }
+    ],
+    "focus": {
+      "met": [],
+      "current": "Current goal: Control wards, 1.8 (you're at 1.6)"
+    }
+  },
+  "session": null,
+  "notices": [],
+  "app": {
+    "version": "1.0.4",
+    "updateReady": null
+  },
+  "docked": true,
+  "roleLabels": {
+    "top": "top",
+    "jungle": "jungle",
+    "middle": "mid",
+    "bottom": "bot",
+    "utility": "support"
+  },
+  "copy": {
+    "build.spikeNote": "gold = power spike",
+    "build.spikeTip": "Power spike: players on this champion gain clearly more on their lane opponent right after this item than before it",
+    "connect.title": "Connect to your coach",
+    "connect.intro": "Picks from your own pool, with the reasons.",
+    "connect.code": "Invite code",
+    "connect.found": "League client found:",
+    "connect.foundNoId": "League client found",
+    "connect.mismatch": "Different account",
+    "connect.submit": "Connect",
+    "connect.busy": "Connecting…",
+    "connect.needCode": "Enter your invite code first.",
+    "connect.needServer": "Enter the server address first.",
+    "connect.noClient": "Open the League client and log in first.",
+    "connect.server": "Server:",
+    "connect.change": "Change",
+    "connect.step1.lead": "In champ select",
+    "connect.step1": "it suggests bans and picks you already play.",
+    "connect.step2.lead": "When you lock in",
+    "connect.step2": "import runes, spells and items in one click.",
+    "connect.step3.lead": "After the game",
+    "connect.step3": "see what decided it and one goal to work on.",
+    "tour.reopen": "How it works",
+    "tour.skip": "Skip",
+    "tour.back": "Back",
+    "tour.next": "Next",
+    "tour.done": "Got it",
+    "tour.stepOf": "{n} of {total}",
+    "tour.intro.lead": "Your draft coach.",
+    "tour.intro": "It suggests picks, bans and builds from your games and players of your rank, and says why.",
+    "tour.intro.end": "You choose. It never picks, bans or locks.",
+    "tour.window.lead": "Dock it beside League",
+    "tour.window": "with the first button. It comes up by itself in champ select. Nothing to type.",
+    "tour.window.docked.lead": "It docks beside League.",
+    "tour.window.docked": "This button undocks it. It comes up by itself in champ select. Nothing to type.",
+    "tour.tabs.lead": "Between games:",
+    "tour.tabs": "see your last game, how you play, and your champions.",
+    "tour.footer.lead": "That's it.",
+    "tour.footer": "Open a lobby to start. Tips appear as you go, and this link replays the tour.",
+    "tour.live.bans": "These champions would hurt you most in this draft. You make the ban in the client.",
+    "tour.live.picks": "Our top suggestion for this draft, and why. Click another to compare.",
+    "tour.live.chance": "An estimate for this draft, not a promise. More games behind it means more trust.",
+    "tour.live.rune-options": "Two rune pages. Switch to compare; Import takes the one on screen.",
+    "tour.live.import": "Copies these runes, spells and items into League, only when you click.",
+    "tour.live.rough": "Rough guide: few games behind this so far, so take it as a hint.",
+    "tour.live.browse": "Look up any champion in your rank. Totals only: it never shows other players' names or ranks.",
+    "tour.live.my-games": "Your own games. Filter them, or see them by champion.",
+    "pick.head": "We suggest",
+    "pick.theirTeam": "Their team",
+    "pick.empty.queue": "No suggestions in this queue: the coach covers Ranked and Normal Draft.",
+    "pick.empty.error": "No suggestions: your match history didn't load.",
+    "pick.empty.loading": "Suggestions appear once your match history is loaded.",
+    "pick.empty.idle": "Suggestions appear once the coach has your account and can load your match history.",
+    "pick.empty.none": "No suggestions for this draft yet.",
+    "ban.empty.queue": "No ban suggestions in this queue: the coach covers Ranked and Normal Draft.",
+    "ban.empty.noSnapshot": "No ban suggestions yet: there's no data for your rank.",
+    "ban.empty.metaError": "No ban suggestions: couldn't get the data for your rank.",
+    "ban.empty.noMeta": "No ban suggestions yet: there's no data for your rank.",
+    "ban.empty.error": "No ban suggestions: your match history didn't load.",
+    "ban.empty.loading": "Ban suggestions appear once your match history is loaded.",
+    "ban.empty.idle": "Ban suggestions appear once the coach has your account and can load your match history.",
+    "ban.empty.none": "No ban suggestions for this draft yet.",
+    "profile.emptyError": "Your games didn't load, so there's nothing to show here yet.",
+    "style.loading": "Your style per role shows here once your recent games are loaded.",
+    "style.empty": "Play {n} {n|game|games} in a role to see your style in it.",
+    "month.loading": "Your month shows here once your recent games are loaded.",
+    "month.empty": "No games in the last {n} {n|day|days}.",
+    "pool.loading": "Your roles and pool show here once your recent games are loaded.",
+    "pool.empty": "Play {n} {n|game|games} in a role to see its pool.",
+    "new.loading": "New champions to try show here once your recent games are loaded.",
+    "new.empty": "Play {n} {n|game|games} in a role to see new champions for it.",
+    "new.noMeta": "No new champions to suggest yet: there's no data for your rank.",
+    "units.more": "about {n} more {n|win|wins} per {per} games",
+    "units.fewer": "about {n} fewer {n|win|wins} per {per} games",
+    "units.under": "less than one win per {per} games either way",
+    "pick.tile.you": "You",
+    "pick.tile.you.tip": "Your experience on it in this role, and your record on it",
+    "pick.tile.meta": "Meta",
+    "pick.tile.meta.tip": "Its strength in your rank",
+    "pick.tile.lane": "Lane",
+    "pick.tile.lane.tip": "Into their laner (for information: matchups barely change who wins)",
+    "pick.tile.value": "{tip}: {signed} points of win chance, {wins}",
+    "pick.tile.unit": "points of win chance",
+    "last.termTip": "{label}: {signed} points of win chance, {wins}",
+    "matchups.tip": "{signed} points of win chance compared with their usual win rates: {wins}",
+    "ban.cost": "Costs you {points} points of win chance: {wins}",
+    "build.bought": "Bought by {rate} of players",
+    "build.winAddedTip": "Players who bought it: {signed} points of win chance vs what their game state predicted, {wins}",
+    "count.games": "{games} {n|game|games}",
+    "label.role": "Role",
+    "label.winRate": "WR",
+    "label.champion": "Champion",
+    "chip.patch": "Patch {patch}",
+    "chip.live": "Live data",
+    "chip.offline": "offline",
+    "chip.metaTip": "Live data for your rank: {games} recent ranked {n|game|games}, updated {age}",
+    "chip.offlineTip": "The server is unreachable: using the last copy.",
+    "time.justNow": "just now",
+    "time.minutes": "{n} min ago",
+    "time.hours": "{n} h ago",
+    "time.yesterday": "yesterday",
+    "time.days": "{n} days ago",
+    "phase.planning": "Declare your pick",
+    "phase.banPick": "Champ select",
+    "phase.finalization": "Last changes",
+    "phase.gameStarting": "Game starting",
+    "phase.secondsLeft": "{n} {n|second|seconds} left",
+    "phase.yourBan": "Your ban",
+    "phase.yourPick": "Your pick",
+    "phase.bansNext": "Bans next",
+    "phase.allyBanning": "Your team is banning",
+    "phase.allyPicking": "Your team is picking",
+    "phase.enemyBanning": "Their team is banning",
+    "phase.enemyPicking": "Their team is picking",
+    "phase.setLoadout": "Set your runes and spells",
+    "phase.waiting": "Waiting for the next turn",
+    "phase.hovering": "Hovering {champion}",
+    "phase.hoveringFor": "Hovering {champion} for {role}",
+    "phase.against": "{role} · against {champion}",
+    "phase.notShown": "{role} · their {lane} not shown yet",
+    "pick.tab": "Picks",
+    "runes.tab": "Runes",
+    "build.tab": "Build",
+    "pick.only": "Suggestions only. You choose and lock your champion.",
+    "ban.only": "Suggestions only. You choose your ban.",
+    "ban.head": "Suggested bans",
+    "ban.threat": "Threat",
+    "ban.threatTip": "How much win chance it costs you, weighted by how often it's picked",
+    "ban.winRateTip": "Win rate: in your rank (pick and ban rates on hover)",
+    "ban.rates": "Picked in {pick} of games, banned in {ban}",
+    "ban.forHover": "For your pick.",
+    "draft.head": "Draft",
+    "draft.yourTeam": "Your team",
+    "locked.hovering": "Hovering",
+    "locked.lockedIn": "Locked in",
+    "locked.vs": "vs {champion}",
+    "locked.after": "Champ select is over: your loadout stays here until the game ends.",
+    "lobby.noDraft": "No champ select yet: open a lobby and the draft appears here.",
+    "last.empty": "Your last game shows here after you play one.",
+    "last.emptyHint": "Your pick, the suggestions, the result and what mattered most in the draft.",
+    "empty.roleProgress": "{done} of {total} {total|game|games} in a role",
+    "new.head": "Try new · {role}",
+    "new.aside": "strong in your rank",
+    "new.plan": "First games plan",
+    "new.likeHead": "Plays like",
+    "new.likeTip": "The champion you play that it's most like",
+    "new.likeYour": "Plays like your {champion}",
+    "new.winRateTip": "Win rate: in your rank and role",
+    "new.difficulty": "Difficulty",
+    "new.difficultyTip": "Riot's difficulty rating",
+    "new.notOwned": "Not owned",
+    "new.notOwnedTip": "You don't own it yet",
+    "new.thisGame": "This game",
+    "new.thisGameStage": "This game · {stage}",
+    "new.squaresTip": "Filled: you reached it in that game on this champion",
+    "style.head": "Your style",
+    "style.pillStrong": "strong: {list}",
+    "style.pillGrow": "grow: {list}",
+    "pool.head": "Your pool",
+    "pool.none": "No champions in your {role} pool yet.",
+    "queue.tab": "Next game",
+    "tabs.last": "Last game",
+    "tabs.me": "Me",
+    "tabs.champions": "Champions",
+    "tabs.style": "Style",
+    "tabs.month": "This month",
+    "tabs.pool": "Pool",
+    "tabs.new": "Try new",
+    "tabs.browse": "Browse",
+    "tabs.my-games": "My games",
+    "explore.search": "Search champions",
+    "explore.clear": "Clear search",
+    "explore.all": "All",
+    "explore.source": "Players in your rank ({rank}): {games} recent {n|game|games}",
+    "explore.sourceTip": "The app only has numbers for the rank you play in. Patch {patch}.",
+    "explore.loading": "Loading…",
+    "explore.col.champion": "Champion",
+    "explore.col.winRate": "WR",
+    "explore.col.pickRate": "Pick",
+    "explore.col.banRate": "Ban",
+    "explore.col.yours": "You",
+    "explore.tip.winRate": "Sort by win rate: how often it wins. Champions with few games go last.",
+    "explore.tip.pickRate": "Sort by pick rate: the share of games in this role it's picked in.",
+    "explore.tip.banRate": "Sort by ban rate: the share of all games it's banned in, whatever the role.",
+    "explore.tip.yours": "Sort by your own games on it in this role.",
+    "explore.tip.noBans": "These numbers don't include bans yet.",
+    "explore.rowLabel": "{name}, {role}: {winRate} win rate from {games}, picked in {pickRate}, banned in {banRate}, your games {yours}",
+    "explore.empty.client": "No numbers yet: open the League client. Once it knows your rank, they load here by themselves.",
+    "explore.empty.loading": "Getting the numbers for your rank. They show here as soon as they arrive.",
+    "explore.empty.noSnapshot": "No numbers for your rank yet: not enough games collected. They show here once there are, and your own games are under Me.",
+    "explore.empty.failed": "Couldn't get the numbers for your rank. Your own games are still under Me.",
+    "explore.noMatch": "No champion matches \"{search}\".",
+    "explore.noMatchRole": "No champion matches \"{search}\" in {role}.",
+    "explore.noRows": "No champions in {role} yet.",
+    "explore.back": "Back",
+    "explore.detailTabs": "About this champion",
+    "explore.gone": "No numbers for this champion in this role any more: the live data has changed.",
+    "explore.stat.winRate": "win rate",
+    "explore.stat.pickRate": "pick rate",
+    "explore.stat.banRate": "ban rate",
+    "explore.stat.games": "{n|game|games}",
+    "explore.you": "You: {games} · {record} · {rate}",
+    "explore.youTip": "Your own games on it in this role: wins–losses and win rate",
+    "explore.buildsFrom": "Builds from {source}",
+    "explore.buildsTip": "Your rank ({rank}) and the one above, so builds rest on more games. The other numbers here are your rank only.",
+    "explore.playersIn": "Players in {rank}",
+    "explore.noBuild": "No build for {champion} in {role} yet: not enough games collected in your rank.",
+    "explore.best": "Best against",
+    "explore.worst": "Worst against",
+    "explore.noMatchups": "No clear best or worst lane opponents yet: too few games, or they all play about even.",
+    "explore.core": "Core build",
+    "explore.coreShare": "{rate} of players · {count}",
+    "build.spellsSkills": "Summoner spells & skill order",
+    "build.noteWinAdded": "pick rate · + or − win added · ★ adds the most",
+    "games.recent": "Recent",
+    "games.byChampion": "By champion",
+    "games.views": "How to list your games",
+    "games.allChampions": "All champions",
+    "games.summary": "{games} · {rate} WR",
+    "games.loading": "Your games show here once they're loaded.",
+    "games.empty": "No ranked games in your history yet. They show here after your next game.",
+    "games.noMatch": "No games with these filters.",
+    "games.clear": "Clear filters",
+    "games.more": "Show {n} more",
+    "games.win": "Win",
+    "games.loss": "Loss",
+    "games.col.champion": "Champion",
+    "games.col.result": "Result",
+    "games.col.kda": "KDA",
+    "games.col.cs": "CS",
+    "games.col.games": "Games",
+    "games.col.record": "W–L",
+    "games.csTip": "{cs} CS in {minutes} min: {perMinute} per minute",
+    "games.rowLabel": "{name}, {role}, {date}: {result}, {kills} kills, {deaths} deaths, {assists} assists, {cs} CS",
+    "games.championLabel": "{name}: {games}, {record}, {rate} win rate. Show these games",
+    "queue.context": "blind pick until champ select",
+    "queue.primary": "Your first role",
+    "queue.secondary": "Your second role",
+    "pick.ifNot": "If not {champion}",
+    "pick.chance": "win chance",
+    "pick.record": "{tier} · {games} {games|game|games} · {wr} WR",
+    "build.head": "Build path",
+    "build.note": "pick rate · ★ adds the most",
+    "build.noteThin": "most common path",
+    "build.noteRate": "pick rate",
+    "build.start": "Start",
+    "build.boots": "Boots",
+    "build.item": "Item {n}",
+    "build.or": "or",
+    "build.noAlt": "No other common pick",
+    "build.minutes": "{n} min",
+    "build.vsTeam": "Vs this team",
+    "build.quest": "Role quest",
+    "import.all": "Import runes, spells & items",
+    "import.runes": "Import runes & spells",
+    "import.items": "Import item set",
+    "import.busy": "Importing…",
+    "import.title": "Creates (or updates) one 'LDC:' rune page with the rune option you chose on the Runes tab, sets your two summoner spells in champ select (Flash keeps its key) and saves an item set for this champion. Only when you click.",
+    "runes.options": "Rune options",
+    "runes.optionWinRate": "{rate} WR",
+    "runes.option.popular": "Most taken",
+    "runes.option.best": "Best win rate",
+    "runes.option.matchup": "This lane",
+    "runes.option.personal": "Your usual",
+    "runes.option.second": "Second",
+    "runes.option.usual": "Usual",
+    "runes.option.personalOther": "Your other",
+    "runes.option.band": "Your rank",
+    "window.minimize": "Minimize",
+    "window.dock": "Undocked. Click to dock beside the client",
+    "window.undock": "Docked to the client. Click to undock",
+    "window.close": "Close",
+    "account.menu": "Account",
+    "account.close": "Close",
+    "account.signOut": "Sign out",
+    "account.signOut.ask": "Sign out? You'll need a new invite code.",
+    "account.signOut.busy": "Signing out…",
+    "account.signOut.no": "Cancel",
+    "account.deleteLink": "Delete my data",
+    "account.delete": "Delete",
+    "account.delete.ask": "Delete your account and games from the coach? Old encrypted backups expire by themselves. You'll need a new invite code.",
+    "account.delete.busy": "Deleting…",
+    "account.delete.no": "Keep",
+    "update.restart": "Restart to update",
+    "crash.text": "Something went wrong drawing the panel.",
+    "crash.reload": "Reload",
+    "crash.close": "Close",
+    "notice.dismiss": "Dismiss",
+    "meta.noSnapshot": "No live data for your rank yet. Suggestions use your own games for now.",
+    "meta.ownGames": "Suggestions use your own games for now.",
+    "notice.schema": "The League client sent draft data this app can't read, so the draft here may be out of date. An app update may fix this.",
+    "notice.championData": "Couldn't load champion names and icons. Trying again at your next champ select.",
+    "notice.clientAccount": "Couldn't read your account from the League client. Trying again when it reconnects.",
+    "notice.queue": "This queue isn't supported yet: suggestions are for Ranked and Normal Draft.",
+    "matchups.tab": "Matchups",
+    "matchups.note": "Points of win chance, compared with what the two champions' usual win rates predict.",
+    "matchups.yourLane": "your lane",
+    "matchups.partner": "your lane partner",
+    "matchups.none": "No data yet",
+    "matchups.noneRow": "No data yet:",
+    "plan.head": "Game plan",
+    "plan.empty": "No plan yet: it needs data for your rank and your lane opponent's pick.",
+    "matchups.against": "Against their team",
+    "matchups.with": "With your team",
+    "matchups.empty": "No matchups yet: there's no data for your rank.",
+    "loadout.none": "No build data for {champion} in this role yet.",
+    "loadout.source": "From {games} {n|game|games} in {source}",
+    "loadout.sourceTip": "Your rank and the one above, so builds rest on more games.",
+    "loadout.rough": "rough guide",
+    "build.later": "Later: pick by situation",
+    "matchups.open": "Not picked yet",
+    "matchups.source": "Matchups from {games} recent ranked {n|game|games} in your rank.",
+    "last.decided": "What decided the draft",
+    "last.goal": "Your goal",
+    "last.thisGame": "this game",
+    "last.yourAverage": "your average",
+    "last.next": "Next game",
+    "last.pending": "Your last game shows here once Riot publishes it, usually within a few minutes.",
+    "last.resultSoon": "Result soon",
+    "last.resultSoonHint": "The result arrives once the server has synced your game",
+    "last.noResult": "No result from Riot yet",
+    "last.noResultHint": "Riot hasn't published this game. It shows up here when it does.",
+    "profile.checking": "Checking for new games…",
+    "profile.loading": "Loading your match history: {done} of {total}",
+    "profile.older": "Older games still loading on the server",
+    "profile.waking": "Waking the coach server, up to a minute",
+    "profile.openClient": "Open the League client to load your games",
+    "profile.retry": "Retry now",
+    "profile.retrying": "Retrying…",
+    "profile.syncFailed": "Couldn't get your newest games: {reason}",
+    "profile.syncFailedEmpty": "The server couldn't load your games: {reason}",
+    "last.lockedChance": "{chance} when you locked in",
+    "last.goalIs": "Goal: {goal}",
+    "style.dashed": "dashed = rank average",
+    "style.numbers": "Your numbers vs your rank",
+    "style.numbersNote": "Right of the line is better, even for deaths.",
+    "style.legend": "● you · | rank average",
+    "month.champions": "Champions this month",
+    "month.style": "Your {role} style, before → now",
+    "month.others": "Other {n}: about the same",
+    "month.allSteady": "About the same as before",
+    "month.othersUnknown": "Other {n}: too few games to compare",
+    "month.more": "+{n} more",
+    "month.goalsMet": "Goal met: {first}",
+    "month.goalsMore": "and {n} more",
+    "pool.recordTip": "{games} {games|game|games} · {wr} WR on it in this role",
+    "pool.legendCovers": "● covers it · ○ doesn’t.",
+    "pool.legendRusty": "Rusty: no games lately.",
+    "pool.next": "Your next step",
+    "pool.seeNew": "Try new champions"
+  },
+  "ui": {
+    "tourDone": true,
+    "highlightsSeen": [
+      "bans",
+      "picks",
+      "chance",
+      "rune-options",
+      "import",
+      "rough",
+      "browse",
+      "my-games"
+    ]
+  },
+  "limits": {
+    "minGames": 10,
+    "poolGames": 5,
+    "styleGames": 8,
+    "monthDays": 30
+  },
+  "filledNote": null
+}
