@@ -11,7 +11,7 @@ pnpm perf:screens before          # screenshots + view dumps of every screen int
 pnpm perf:guard before after      # regression guard: dumps equal, pixels equal (timer ring masked), overflow 0
 ```
 
-Cold starts ask the real Data Dragon unless `LDC_PERF_DDRAGON_DIR` names a copy of a panel's Data Dragon cache (any profile's `ddragon` folder): then a local stub (`scripts/perf/ddragon-stub.ts`) serves it, with `LDC_PERF_DDRAGON_DELAYS` on `versions.json`: a number of ms, `hang` (never answers) or `tail` (the delays seen from the real CDN).
+Cold starts ask the real Data Dragon unless `LDC_PERF_DDRAGON_DIR` names a copy of a panel's Data Dragon cache (any profile's `ddragon` folder): then a local stub (`scripts/perf/ddragon-stub.ts`) serves it, with `LDC_PERF_DDRAGON_DELAYS` on `versions.json`: a number of ms, `hang` (never answers) or `tail` (the delays seen from the real CDN). `scripts/perf/interleave.mjs` compares two builds that way, batch by batch; run it on a quiet machine.
 
 How it works: `LDC_PERF=out.json` (dev builds only) makes the panel record marks, every ViewState push, the renderer's commits, long tasks, frames, clicks and memory, then quit (`apps/desktop/src/main/perf.ts`, `src/renderer/perf.ts`). `scripts/perf/desktop.ts` runs it against the mock League client; `scripts/perf/server.ts` builds a synthetic database and benchmarks this branch's built server on port 8799 with autocannon; `apps/desktop/bench` and `packages/sim/bench` are micro benchmarks. Medians and p95 from at least 10 runs or 30 samples; changes under 5% or inside the spread are noise.
 
