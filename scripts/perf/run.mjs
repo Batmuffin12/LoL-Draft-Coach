@@ -68,7 +68,9 @@ function bundle() {
 function startup() {
   const out = join(local, "startup.json");
   tsx("scripts/perf/desktop.ts", ["startup", String(coldStarts), out]);
-  const runs = readJson(out);
+  const all = readJson(out);
+  const runs = all.filter((r) => !r.lost);
+  metrics["desktop.coldStart.lost"] = value(all.length - runs.length, "count");
   raw.startup = runs.map((r) => ({ marks: r.marks, renderer: r.renderer?.marks, emits: r.emits }));
   const since = (r, mark) => {
     const t = r.marks[mark] ?? r.renderer?.marks?.[mark];

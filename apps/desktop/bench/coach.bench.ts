@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DataDragon } from "@ldc/ddragon";
 import { LcuConnector, sanitizeChampSelect, type ChampSelectSession } from "@ldc/lcu";
+import type { Position } from "@ldc/shared";
 import { history, loadScenario } from "@ldc/sim";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { PersonalCoach } from "../src/main/personal-coach";
@@ -45,7 +46,8 @@ const profile = () => profileFromMatches(h.matches, h.masteries);
 const warm = coach();
 warm.setBand(pickTurn.meta!.band);
 warm.setSnapshot(pickTurn.meta!);
-warm.setProfile(profile());
+const warmProfile = profile();
+warm.setProfile(warmProfile);
 
 await measure("coach: profile from 1,000 games (profileFromMatches)", () => profile());
 await measure(
@@ -67,4 +69,24 @@ await measure("coach: champ select update, locked in (onDraft)", () => {
   warm.draft = finalDraft(locked);
   warm.onDraft();
 });
+
+// Explore's on-demand calls: the panel waits for these, and their answers cross IPC whole.
+const exploreOf = (c: unknown) => (c as { explore: PersonalCoach["explore"] }).explore;
+const explore = exploreOf(warm);
+const someone = explore.list()!.rows[0]!;
+const role = someone.role as Position;
+// The first ask works the list out; later ones get it from memory. A loaded coach per run, so only the list is timed.
+const fresh = Array.from({ length: 23 }, () => {
+  const c = coach();
+  c.setBand(pickTurn.meta!.band);
+  c.setSnapshot(pickTurn.meta!);
+  c.setProfile(warmProfile);
+  return exploreOf(c);
+});
+await measure("explore: Browse list, first ask", () => fresh.pop()!.list(), { runs: 20 });
+await measure("explore: Browse list, asked again", () => explore.list());
+await measure("explore: one champion", () => explore.champion(someone.id, role));
+await measure("explore: My games, 1,000 games", () => explore.games());
+const kb = (x: unknown) => `${(Buffer.byteLength(JSON.stringify(x)) / 1024).toFixed(1)} kB`;
+console.log(`explore answers: list ${kb(explore.list())}, champion ${kb(await explore.champion(someone.id, role))}, games ${kb(explore.games())}`);
 save();

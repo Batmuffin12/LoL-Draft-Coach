@@ -27,10 +27,11 @@ mkdirSync(local, { recursive: true });
 
 /** What one cold start measured, in ms since the process was spawned. */
 function times(run) {
+  if (run.lost) return { lost: run.lost.slice(0, 300), launchMs: run.launchMs };
   const since = (t) => (t === undefined ? null : t - run.marks.spawn);
   const firstEvent = (source) => since(run.emits.find((e) => e.source === source)?.at);
   const marks = run.renderer?.marks ?? {};
-  return { client: firstEvent("lcu:gameflowPhase"), ddragon: firstEvent("ddragon:patch"), firstScreen: since(marks.firstScreen), fullScreen: since(marks.fullScreen) };
+  return { launchMs: run.launchMs, client: firstEvent("lcu:gameflowPhase"), ddragon: firstEvent("ddragon:patch"), firstPaint: since(marks.firstPaint), firstScreen: since(marks.firstScreen), fullScreen: since(marks.fullScreen) };
 }
 
 /** Runs one batch with this build in place; the build goes back to its folder whatever happens. */
@@ -64,12 +65,19 @@ for (let batch = 0; batch < Number(batches); batch++) {
   }
 }
 
-const quantile = (s, q) => s[Math.min(s.length - 1, Math.max(0, Math.ceil(q * s.length) - 1))];
+const at = (s, i) => s[Math.min(s.length - 1, Math.max(0, i))];
+/** A quantile with its 95% interval (from the order statistics, so it assumes nothing about the shape). */
+function quantile(s, q) {
+  const spread = 1.96 * Math.sqrt(s.length * q * (1 - q));
+  const rank = q * s.length;
+  return `p${Math.round(q * 100)}=${at(s, Math.ceil(rank) - 1).toFixed(0)} [${at(s, Math.floor(rank - spread) - 1).toFixed(0)}–${at(s, Math.ceil(rank + spread) - 1).toFixed(0)}]`;
+}
 const rows = measured();
-for (const metric of ["client", "ddragon", "firstScreen", "fullScreen"]) {
+for (const metric of ["client", "ddragon", "firstPaint", "firstScreen", "fullScreen", "launchMs"]) {
   for (const build of ["before", "after"]) {
-    const s = rows.filter((r) => r.build === build && r[metric] !== null).map((r) => r[metric]).sort((a, b) => a - b);
-    if (s.length) console.log(metric.padEnd(12), build.padEnd(7), `N=${s.length}`, ...[0.5, 0.95, 0.99].map((q) => `p${q * 100}=${quantile(s, q).toFixed(0)}`), `max=${s.at(-1).toFixed(0)}`);
+    const s = rows.filter((r) => r.build === build && typeof r[metric] === "number").map((r) => r[metric]).sort((a, b) => a - b);
+    if (s.length) console.log(metric.padEnd(12), build.padEnd(7), `N=${s.length}`, ...[0.5, 0.95, 0.99].map((q) => quantile(s, q)), `max=${s.at(-1).toFixed(0)}`);
   }
 }
-for (const l of lost) console.log("LOST", l);
+for (const r of rows.filter((x) => x.lost)) console.log("LOST launch", r.build, "batch", r.batch, `${r.launchMs} ms`, r.lost);
+for (const l of lost) console.log("LOST batch", l);

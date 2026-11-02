@@ -188,12 +188,15 @@ async function startup(runs: number, out: string): Promise<void> {
     rmSync(file, { force: true });
     // The warm-up fills the cache, so it always gets an answer.
     stub?.setDelay(i === 0 ? 0 : stubDelay(delays, Number(first) + i - 1));
-    await withMock(setup, 0, async (lcu) => {
+    // A launch that wrote nothing counts as lost rather than ending the batch; launchMs shows one that wouldn't quit.
+    const started = Date.now();
+    const lost = await withMock(setup, 0, async (lcu) => {
       const r = await launch({ ...baseEnv(setup, lcu), ...(stub ? { LDC_DDRAGON_URL: stub.url } : {}), LDC_PERF: file, LDC_PERF_MODE: "startup", LDC_PERF_T0: String(Date.now()) });
-      if (!existsSync(file)) throw new Error(`startup run ${i} wrote no results (exit ${r.code}):\n${r.stdout.slice(-2000)}`);
+      return existsSync(file) ? null : `exit ${r.code}: ${r.stdout.slice(-2000)}`;
     });
-    if (i > 0) results.push(JSON.parse(readFileSync(file, "utf8")));
-    process.stdout.write(`startup ${i === 0 ? "warm-up" : `${i}/${runs}`} done\n`);
+    const launchMs = Date.now() - started;
+    if (i > 0) results.push(lost === null ? { ...JSON.parse(readFileSync(file, "utf8")), launchMs } : { lost, launchMs });
+    process.stdout.write(`startup ${i === 0 ? "warm-up" : `${i}/${runs}`} ${lost === null ? "done" : "LOST"} in ${launchMs} ms\n`);
   }
   stub?.stop();
   writeFileSync(out, JSON.stringify(results));
