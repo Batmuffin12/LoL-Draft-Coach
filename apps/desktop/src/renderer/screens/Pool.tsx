@@ -38,7 +38,7 @@ export function Pool({ state, onNewChamps }: { state: ViewState; onNewChamps: ()
           <>
             <PoolCoverage pool={columns} coverage={r.coverage} />
             {r.also.length > 0 && <Facts rows={r.also} iconOnly={level > 0} wide />}
-            {level < 2 && <PoolLegend />}
+            {level < 2 && <PoolLegend rusty={columns.some((c) => c.tier === "rusty")} />}
           </>
         ) : (
           <p className="caption">{t("pool.none", { role: roleName(r.role) })}</p>

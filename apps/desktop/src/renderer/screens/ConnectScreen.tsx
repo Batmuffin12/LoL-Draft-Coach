@@ -21,6 +21,11 @@ export function connectBlocker(code: string, serverUrl: string, lcuConnected: bo
   return serverUrl.trim() === "" ? "connect.needServer" : null;
 }
 
+/** The server line is only for someone who has to choose: a build that comes with its server doesn't show it, unless another address is set. */
+export function showsServer(serverUrl: string, defaultServerUrl: string | null | undefined): boolean {
+  return !defaultServerUrl || serverUrl !== defaultServerUrl;
+}
+
 /** First run (or after sign-out): connect this PC to the coach server with an invite code. */
 export function ConnectScreen({ state, account }: { state: ViewState; account: AccountView }) {
   const [serverUrl, setServerUrl] = useState(account.serverUrl ?? account.defaultServerUrl ?? "");
@@ -61,12 +66,14 @@ export function ConnectScreen({ state, account }: { state: ViewState; account: A
               <input id="server-url" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} placeholder="https://" autoComplete="off" spellCheck={false} />
             </span>
           ) : (
-            <span className="foot-row">
-              <span className="micro">{`${t("connect.server")} ${host(serverUrl)}`}</span>
-              <button type="button" className="foot-link gold" onClick={() => setEditServer(true)}>
-                {t("connect.change")}
-              </button>
-            </span>
+            showsServer(serverUrl, account.defaultServerUrl) && (
+              <span className="foot-row">
+                <span className="micro">{`${t("connect.server")} ${host(serverUrl)}`}</span>
+                <button type="button" className="foot-link" onClick={() => setEditServer(true)}>
+                  {t("connect.change")}
+                </button>
+              </span>
+            )
           )}
           <span className="legal">{RIOT_NOTICE}</span>
         </>

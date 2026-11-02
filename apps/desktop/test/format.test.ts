@@ -97,6 +97,15 @@ describe("skillPath", () => {
   });
 });
 
+describe("pickReasons with little room", () => {
+  it("keeps the first plus and the warning, not just the first line", () => {
+    const plus = { text: "a", negative: false };
+    const minus = { text: "bad", negative: true };
+    expect(pickReasons([plus, { text: "b", negative: false }, minus], 1)).toEqual([plus, minus]);
+    expect(pickReasons([plus, { text: "b", negative: false }], 1)).toEqual([plus]);
+  });
+});
+
 describe("pickReasons with your record on screen", () => {
   const own = { text: "277 recent mid games", negative: false, ownRecord: true };
   const meta = { text: "Strong in your rank", negative: false };

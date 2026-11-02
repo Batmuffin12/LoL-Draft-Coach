@@ -5,6 +5,7 @@ import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
 import { LOBBY_TOUR, startTour, type TourRun } from "../src/renderer/first-use";
 import { setCopy, t } from "../src/renderer/format";
+import { showsServer } from "../src/renderer/screens/ConnectScreen";
 import { LobbyScreen } from "../src/renderer/screens/LobbyScreen";
 import { emptyViewState, type AccountView, type ViewState } from "../src/shared/view";
 
@@ -42,6 +43,17 @@ describe("the lobby tour", () => {
   it("has what its steps spotlight on the screen", () => {
     const html = lobby({ account: registered });
     for (const step of steps()) if (step.target) expect(html).toContain(`data-tour="${step.target}"`);
+  });
+});
+
+describe("Connect's server line", () => {
+  it("doesn't show in a build that comes with its server", () => {
+    expect(showsServer("https://coach", "https://coach")).toBe(false);
+  });
+
+  it("shows when there's no built-in server, or another is set", () => {
+    expect(showsServer("https://x", null)).toBe(true);
+    expect(showsServer("https://x", "https://coach")).toBe(true);
   });
 });
 

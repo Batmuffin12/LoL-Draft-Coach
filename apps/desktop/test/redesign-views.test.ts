@@ -93,7 +93,7 @@ describe("pool advice", () => {
     const none = poolAdvice("top", pool([]), attributes, cov, templates, lookup);
     expect(none.nextStep).toBeNull();
     expect(none.missing).toBeNull();
-    expect(none.noGaps).toBe("No gap in your top pool shows up in your losses.");
+    expect(none.noGaps).toBe("Your top pool has no gap that's costing you games.");
     expect(poolAdvice("top", null, attributes, cov, templates, lookup).coverage).toBeNull();
     // Only the needs the role usually fills are rows: a bot laner isn't judged on frontline.
     expect(poolAdvice("bottom", pool([], ["physical"]), attributes, cov, templates, lookup).coverage!.needs.map((n) => n.need)).toEqual(["physical"]);

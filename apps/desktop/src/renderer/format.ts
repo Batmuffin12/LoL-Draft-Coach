@@ -264,8 +264,9 @@ export function skillPath(first: string[], order: string[], ult: string): string
 export function pickReasons(all: ReasonView[], max: number, hasRecord = false): ReasonView[] {
   const reasons = hasRecord ? all.filter((r) => !r.ownRecord) : all;
   const caveat = reasons.find((r) => r.negative);
-  if (!caveat || max < 2) return reasons.slice(0, max);
-  return [...reasons.filter((r) => !r.negative).slice(0, max - 1), caveat];
+  if (!caveat) return reasons.slice(0, max);
+  // However little room: the best plus and the warning, never only the plus.
+  return [...reasons.filter((r) => !r.negative).slice(0, Math.max(1, max - 1)), caveat];
 }
 
 /** "v1.0.0", or "v1.0.0 → 1.0.1 on restart" once an update is downloaded; "" without a version. */
