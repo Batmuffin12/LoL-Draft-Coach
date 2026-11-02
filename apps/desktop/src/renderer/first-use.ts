@@ -20,12 +20,6 @@ export function tourRunning(ui: UiState, reopened: boolean, closed: boolean): bo
   return reopened || (!ui.tourDone && !closed);
 }
 
-/** What a tour step opens in the lobby, so its target and the real content show. */
-export interface TourOpen {
-  tab: "last" | "me" | "champions";
-  sub?: string;
-}
-
 /**
  * One step of the lobby tour. To add one: put `data-tour="<target>"` on the element and an entry here, with its
  * wording in "ui.tour.<id>.lead" and "ui.tour.<id>" in the explain config.
@@ -34,29 +28,28 @@ export interface TourStep {
   id: string;
   /** The `data-tour` attribute to spotlight; none: a centred card. */
   target?: string;
-  /** With its target off screen: centred anyway. Otherwise the step is skipped. */
-  orCentre?: boolean;
-  open?: TourOpen;
+  /** Ends on a second strong line ("ui.tour.<id>.end"). */
+  end?: boolean;
+  /** About the dock button, whose action depends on the state: while docked its wording is "ui.tour.<id>.docked". */
+  dock?: boolean;
 }
 
+/** Short on purpose: what it is, where it lives, the rest of the app, how to see this again. Everything else is a note on first use, where it applies. */
 export const LOBBY_TOUR: TourStep[] = [
-  { id: "intro" },
-  { id: "last", target: "tab-last", open: { tab: "last" } },
-  { id: "me", target: "tab-me", open: { tab: "me", sub: "style" } },
-  { id: "numbers", target: "numbers", orCentre: true, open: { tab: "me", sub: "style" } },
-  { id: "my-games", target: "subtab-my-games", open: { tab: "me", sub: "my-games" } },
-  { id: "champions", target: "tab-champions", open: { tab: "champions", sub: "pool" } },
-  { id: "browse", target: "subtab-browse", open: { tab: "champions", sub: "browse" } },
-  { id: "status", target: "status-dot" },
-  { id: "window", target: "window-buttons" },
+  { id: "intro", end: true },
+  { id: "window", target: "dock", dock: true },
+  { id: "tabs", target: "tab-row" },
   { id: "footer", target: "how-it-works" },
-  { id: "use" },
-  { id: "never" },
 ];
 
-/** The steps this tour has: without those for a sub-tab the lobby doesn't have, or already found to have no target. */
-export function tourSteps(steps: readonly TourStep[], hasSub: (tab: string, sub: string) => boolean, skipped: readonly string[]): TourStep[] {
-  return steps.filter((s) => !skipped.includes(s.id) && (!s.open?.sub || hasSub(s.open.tab, s.open.sub)));
+/** The wording key of a step: the dock button undocks while docked, so it can't say "dock it" then. */
+export function stepKey(step: TourStep, docked: boolean): string {
+  return step.dock && docked ? `${step.id}.docked` : step.id;
+}
+
+/** The steps this tour has: without those already found to have no target. */
+export function tourSteps(steps: readonly TourStep[], skipped: readonly string[]): TourStep[] {
+  return steps.filter((s) => !skipped.includes(s.id));
 }
 
 /** Where the tour is. It lasts over a draft, so the tour picks up where it was. */
@@ -78,18 +71,9 @@ export function moveTour(run: TourRun, delta: 1 | -1, count: number): TourRun | 
   return { ...run, index: Math.max(0, index), dir: delta };
 }
 
-/** The current step's target isn't on screen: pass it, without a gap in the dots. The list gets shorter, so going on is the same index. */
+/** The current step's target isn't on screen: pass it. The list gets shorter, so going on is the same index. */
 export function skipStep(run: TourRun, id: string): TourRun {
   return { ...run, skipped: [...run.skipped, id], index: run.dir < 0 ? Math.max(0, run.index - 1) : run.index };
-}
-
-/** What the lobby shows at this step: the last thing a step up to here opened (none: what you had open). */
-export function openAt(steps: readonly TourStep[], index: number): TourOpen | null {
-  for (let i = Math.min(index, steps.length - 1); i >= 0; i--) {
-    const open = steps[i]!.open;
-    if (open) return open;
-  }
-  return null;
 }
 
 export interface Box {
@@ -128,10 +112,35 @@ export function placeCallout(target: Box | null, size: { width: number; height: 
   return roomBelow >= roomAbove ? { top: clamp(below, view.height - size.height), left, side: "below" } : { top: clamp(above, view.height - size.height), left, side: "above" };
 }
 
-/** The highlights for a live screen, in order. Those whose target isn't on screen (no second rune page, no import) simply don't show. */
+const overlaps = (a: Box, b: Box) => a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
+
+/**
+ * Where a live note goes, so it covers neither its target nor the block it explains: first the window's bottom edge
+ * (over the footer's line, or just above a footer with a button or Riot's notice in it), then under the block, then over
+ * it if it's low on the screen (never on the tabs). With no such place (a block as tall as the window): the bottom edge anyway.
+ */
+export function placeNote(o: { target: Box; about: Box; footer: Box | null; size: { width: number; height: number }; view: { width: number; height: number } }, gap = 6, margin = 8): { top: number; left: number } {
+  const { target, about, footer, size, view } = o;
+  const left = margin;
+  const bottom = (footer ? footer.top - gap : view.height - margin) - size.height;
+  const fits = (top: number) => {
+    const box = { top, left, width: size.width, height: size.height };
+    return top >= margin && top + size.height <= view.height - margin && !overlaps(box, target) && !overlaps(box, about) && !(footer && overlaps(box, footer));
+  };
+  const over = about.top > view.height / 2 ? [about.top - gap - size.height] : [];
+  const top = [bottom, about.top + about.height + gap, ...over].find(fits) ?? Math.max(margin, bottom);
+  return { top, left };
+}
+
+/** A note from champ select or locked in has shown, so you've been through a draft: the lobby stops explaining that one will come. */
+export function seenADraft(ui: Pick<UiState, "highlightsSeen">): boolean {
+  return draftHighlights({ banning: false, loadout: true }).concat(draftHighlights({ banning: true, loadout: false }), draftHighlights({ banning: false, loadout: false })).some((id) => ui.highlightsSeen.includes(id));
+}
+
+/** The highlights for a live screen, in order. Those whose target isn't on screen (no second rune page, no import, no "rough guide") simply don't show. */
 export function draftHighlights(d: { banning: boolean; loadout: boolean }): HighlightId[] {
-  if (d.loadout) return ["rune-options", "import"];
-  return d.banning ? ["bans"] : ["picks"];
+  if (d.loadout) return ["rune-options", "import", "rough"];
+  return d.banning ? ["bans"] : ["picks", "chance"];
 }
 
 /** Highlights on one screen: the one showing, and those closed since you got there. */

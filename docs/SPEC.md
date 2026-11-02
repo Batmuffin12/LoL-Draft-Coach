@@ -297,6 +297,8 @@ Revised Oct 5, 2026 after the research in [research/ROADMAP.md](../research/ROAD
 8. **Power spikes** (v0.8.0, added Oct 8, 2026 by the owner): each champion's item and level spikes measured from collected timelines (gold lead and fights won around each completed item and level, against the role average, all rank bands pooled), shown in the New tab, the game plan and the build, plus your own item timing against your rank. Plan: [ENGINE-PLAN.md](ENGINE-PLAN.md). Done when spikes pass a split-half check and show for champions with enough games.
    Exit rule: if the check still fails on Oct 15, 2026, v0.8.0 ships with spikes hidden behind the check and your own item timing shown.
 
+Added Nov 1, 2026 (owner, D39): **Explore** (v1.0.5). Besides suggestions, players can look up any champion's stats, runes, build and matchups in their rank, and their own games.
+
 Revised Oct 8, 2026 (owner): the old milestone 9 ("In game and polish") is split so friends get the app before in-game work, and the engine upgrades in [ENGINE-PLAN.md](ENGINE-PLAN.md) (steps 7–11) get milestones of their own. The first build for friends stays v1.0.0; later milestones are minors of 1.x.
 
 9. **Friends release** (v1.0.0): a public download that updates itself (GitHub Releases), crash reports (Sentry), a backup of user data, an install guide for friends, a patch-day checklist, and the product description on Riot's Developer Portal brought up to date. Done when two friends installed from the public link, an update arrived on its own, and a test crash reached Sentry. (Product numbers moved to milestone 11 by the owner, 2026-10-12. Sentry removed from the app by the owner, 2026-11-01: technical detail now stays in the local log, and the app sends no crash reports.)

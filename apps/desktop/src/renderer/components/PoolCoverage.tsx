@@ -46,6 +46,6 @@ export function PoolCoverage({ pool, coverage }: { pool: PoolChampView[]; covera
 }
 
 /** Legend under the matrix. */
-export function PoolLegend() {
-  return <span className="micro">{t("pool.legend")}</span>;
+export function PoolLegend({ rusty }: { rusty: boolean }) {
+  return <span className="micro">{rusty ? `${t("pool.legendCovers")} ${t("pool.legendRusty")}` : t("pool.legendCovers")}</span>;
 }

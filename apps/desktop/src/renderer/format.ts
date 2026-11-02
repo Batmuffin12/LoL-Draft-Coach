@@ -174,6 +174,31 @@ export function lobbyEmpty(status: CoachStatus, tab: string, slots: Record<strin
   return t(p === "ready" ? `${tab}.empty` : `${tab}.loading`, slots);
 }
 
+/** How close your most played role is to `need` games, when your games are loaded and it's on the way. */
+export function roleGamesProgress(state: Pick<ViewState, "roles" | "status">, need: number): { text: string; done: number; total: number } | null {
+  if (state.status.profile.state !== "ready") return null;
+  const done = Math.max(0, ...state.roles.map((r) => r.games));
+  return done > 0 && done < need ? { text: t("empty.roleProgress", { done, total: need }), done, total: need } : null;
+}
+
+/** Why Browse has no numbers, as a copy key: the live data for your rank failed, doesn't exist yet, or waits on your games. */
+export function browseEmptyKey(state: Pick<ViewState, "status" | "meta">): string {
+  const { meta } = state;
+  if (meta?.state === "error") return meta.noSnapshot ? "explore.empty.noSnapshot" : "explore.empty.failed";
+  return needsClient(state.status) ? "explore.empty.client" : "explore.empty.loading";
+}
+
+/** A game's date: "Oct 12", with the year when it isn't this year's. */
+export function shortDate(at: number, now: number): string {
+  const d = new Date(at);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.getFullYear() === new Date(now).getFullYear() ? {} : { year: "numeric" as const }) });
+}
+
+/** Wins and losses: "7–5". */
+export function record(games: number, wins: number): string {
+  return `${wins}–${games - wins}`;
+}
+
 let roleNames: Record<string, string> = {};
 
 /** Sets the position names from the view state (the explain config's "role.<id>" templates). */
@@ -235,11 +260,13 @@ export function skillPath(first: string[], order: string[], ult: string): string
   return path;
 }
 
-/** The reasons to show in limited room: the strongest ones, and the caveat if there is one. */
-export function pickReasons(reasons: ReasonView[], max: number): ReasonView[] {
+/** The reasons to show in limited room: the strongest ones, and the caveat if there is one. `hasRecord`: your record is on screen, so a reason that only repeats it goes. */
+export function pickReasons(all: ReasonView[], max: number, hasRecord = false): ReasonView[] {
+  const reasons = hasRecord ? all.filter((r) => !r.ownRecord) : all;
   const caveat = reasons.find((r) => r.negative);
-  if (!caveat || max < 2) return reasons.slice(0, max);
-  return [...reasons.filter((r) => !r.negative).slice(0, max - 1), caveat];
+  if (!caveat) return reasons.slice(0, max);
+  // However little room: the best plus and the warning, never only the plus.
+  return [...reasons.filter((r) => !r.negative).slice(0, Math.max(1, max - 1)), caveat];
 }
 
 /** "v1.0.0", or "v1.0.0 → 1.0.1 on restart" once an update is downloaded; "" without a version. */

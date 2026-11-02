@@ -1,9 +1,9 @@
 {
   "name": "@ldc/ddragon",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": { ".": "./src/index.ts", "./assets": "./src/assets.ts" },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"

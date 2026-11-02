@@ -2,9 +2,10 @@ import type { LearnView, ViewState } from "../../shared/view";
 import { ChampIcon } from "../components/ChampIcon";
 import { Facts } from "../components/Facts";
 import { NewChampTable } from "../components/NewChampTable";
-import { Pills } from "../components/Pills";
+import { RoleChoice } from "../components/ChoiceGroup";
+import { EmptyState } from "../components/EmptyState";
 import { Section } from "../components/Section";
-import { cx, lobbyEmpty, positionLabel, roleName, t, tip } from "../format";
+import { cx, lobbyEmpty, roleGamesProgress, roleName, t, tip } from "../format";
 import { useFitLevel, useRolePill } from "../hooks";
 
 /** New champions per role (a sub-tab each): meta in your rank, like what you play well; first-games plan under the table. */
@@ -14,17 +15,14 @@ export function NewChamps({ state }: { state: ViewState }) {
   // Long plans: first each row's entries go side by side, then the picks' reasons or the picks after your current champion move to hover, then the minor rows and the other picks.
   const level = useFitLevel(sub, 3);
   if (!list.length) {
-    return (
-      <Section title={t("tabs.new")}>
-        <p className="caption">{state.meta?.state === "ready" ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")}</p>
-      </Section>
-    );
+    const ready = state.meta?.state === "ready";
+    return <EmptyState message={ready ? lobbyEmpty(state.status, "new", { n: state.limits.poolGames }) : t("new.noMeta")} progress={ready ? roleGamesProgress(state, state.limits.poolGames) : null} />;
   }
   const summary = (r: (typeof list)[number]) => (r.learning ? [r.learning.title, r.learning.progress].filter(Boolean).join(" · ") : r.picks.map((p) => p.champion.name).join(", "));
   return (
     <>
-      <section className="section pills-row">
-        <Pills compact label={t("label.role")} options={list.map((r) => ({ value: r.role, label: positionLabel(r.role), title: summary(r) }))} value={sub} onChange={setSub} />
+      <section className="section filter-row">
+        <RoleChoice roles={list.map((r) => r.role)} about={(role) => summary(list.find((r) => r.role === role)!)} value={sub} onChange={setSub} />
       </section>
       {list.filter((r) => r.role === sub).map((r) => {
         const title = t("new.head", { role: roleName(r.role) });
@@ -35,7 +33,7 @@ export function NewChamps({ state }: { state: ViewState }) {
               <div className="plan learning" {...tip(level > 2 ? minorText(l.learn) : null)}>
                 <div className="learning-head">
                   {l.champion && <ChampIcon champ={l.champion} size={28} />}
-                  <span className="label gold">{l.title}</span>
+                  <span className="label">{l.title}</span>
                   {l.progress && <span className="micro">{l.progress}</span>}
                 </div>
                 <Learn learn={l.learn} level={level} />
@@ -53,7 +51,7 @@ export function NewChamps({ state }: { state: ViewState }) {
             )}
             {r.plan && (
               <div className="plan" {...tip(level > 2 && r.planLearn ? [r.picks.slice(1).map((p) => p.champion.name).join(", "), minorText(r.planLearn)].filter(Boolean).join("\n") : null)}>
-                <span className="label gold">{t("new.plan")}</span>
+                <span className="label">{t("new.plan")}</span>
                 <span>{r.plan}</span>
                 {r.planLearn && <Learn learn={r.planLearn} level={level} />}
               </div>

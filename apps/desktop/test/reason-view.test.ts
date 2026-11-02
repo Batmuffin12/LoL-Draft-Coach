@@ -11,5 +11,7 @@ describe("reasonView", () => {
     const render = (r: { id: string }) => `text of ${r.id}`;
     expect(reasonView({ id: "lane.bad", slots: {} }, render)).toEqual({ text: "text of lane.bad", negative: true });
     expect(reasonView({ id: "lane.good", slots: {} }, render)).toEqual({ text: "text of lane.good", negative: false });
+    expect(reasonView({ id: "comfort.role", slots: {} }, render).ownRecord).toBe(true);
+    expect(reasonView({ id: "comfort.role.weak", slots: {} }, render).ownRecord).toBeUndefined();
   });
 });

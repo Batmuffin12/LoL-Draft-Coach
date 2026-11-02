@@ -7,6 +7,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from "electron";
 import { DataDragon } from "@ldc/ddragon";
+import { firstAsk } from "./first-ask";
 import { discoverCredentials, LcuConnector, type LcuCredentials } from "@ldc/lcu";
 import { RiotApi } from "@ldc/riot-api";
 import type { MetaSnapshot, UserMatch } from "@ldc/shared";
@@ -28,6 +29,7 @@ import { computeDockBounds, createWin32Finder, dockWidth, dockZoom, PANEL_WIDTH,
 import { loadEnv, type AppEnv } from "./env";
 import { PerfProbe, perfOptions } from "./perf";
 import { StatePusher } from "./state-pusher";
+import { exploreArgs } from "../shared/explore";
 import { isHighlightId } from "../shared/ui-state";
 import { UiStateStore } from "./ui-state";
 
@@ -133,6 +135,12 @@ function overrideCredentials(): LcuCredentials | null {
   return m ? { port: Number(m[1]), password: m[2]!, protocol: "https" } : null;
 }
 
+/** Dev aid: LDC_DDRAGON_URL points Data Dragon and CommunityDragon at a local stand-in (scripts/perf). Development builds only. */
+function devDdragonUrls(): { baseUrl: string; communityDragonUrl: string } | null {
+  const url = process.env.LDC_DDRAGON_URL;
+  return url && !app.isPackaged ? { baseUrl: url, communityDragonUrl: `${url}/cdragon/` } : null;
+}
+
 /** Dev aid: LDC_META_FILE=snapshot.json (from `pnpm --filter @ldc/sim mock`) replaces the live meta. Development builds only. */
 function devMetaFile(): MetaSnapshot | null {
   const file = process.env.LDC_META_FILE;
@@ -146,7 +154,7 @@ function devMetaFile(): MetaSnapshot | null {
  * Dev aid: LDC_SCREENSHOT=path.png saves a screenshot of the panel after a delay and quits;
  * LDC_VIEW_DUMP=path.json also saves everything the panel shows (its state), to check the numbers.
  */
-function scheduleScreenshot(coach: Coach): void {
+function scheduleScreenshot(coach: PersonalCoach): void {
   const path = process.env.LDC_SCREENSHOT;
   if (!path) return;
   setTimeout(async () => {
@@ -158,9 +166,13 @@ function scheduleScreenshot(coach: Coach): void {
     // LDC_SCREENSHOT_CLICK=Build: click the first button whose text is (or starts with) that first, e.g. to open a tab;
     // "Pool>Mid" clicks one after the other.
     for (const click of (process.env.LDC_SCREENSHOT_CLICK ?? "").split(">").filter(Boolean)) {
+      // "type:kaisa" types in the search box instead.
+      const typed = click.startsWith("type:") ? click.slice(5) : null;
       await win?.webContents
         .executeJavaScript(
-          `(() => { const t = ${JSON.stringify(click)}; const all = [...document.querySelectorAll("button")]; const b = all.find((x) => x.textContent.trim() === t) ?? all.find((x) => x.textContent.trim().startsWith(t)); b?.click(); return !!b; })()`,
+          typed !== null
+            ? `(() => { const i = document.querySelector("input[type=search]"); if (!i) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(i, ${JSON.stringify(typed)}); i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`
+            : `(() => { const t = ${JSON.stringify(click)}; const all = [...document.querySelectorAll("button")]; const b = all.find((x) => x.textContent.trim() === t) ?? all.find((x) => x.textContent.trim().startsWith(t)); b?.click(); return !!b; })()`,
         )
         .then((found: boolean) => console.log(`LDC_SCREENSHOT: clicked "${click}": ${found}`))
         .catch(() => null);
@@ -192,6 +204,14 @@ function scheduleScreenshot(coach: Coach): void {
     if (image) await writeFile(path, image.toPNG());
     const dump = process.env.LDC_VIEW_DUMP;
     if (dump) await writeFile(dump, JSON.stringify(coach.state, null, 2));
+    // LDC_EXPLORE_DUMP=path.json: what the state deliberately leaves out (Browse, My games), and what's on screen, to check the numbers.
+    const explore = process.env.LDC_EXPLORE_DUMP;
+    if (explore) {
+      const shown = await win?.webContents
+        .executeJavaScript(`({ rows: [...document.querySelectorAll(".explore-list .trow")].map((e) => e.getAttribute("aria-label")), stats: document.querySelector(".explore-stats")?.innerText ?? null, you: document.querySelector(".explore-who .end-note")?.innerText ?? null, text: document.querySelector(".window .scroll")?.innerText ?? "", listBox: (() => { const l = document.querySelector(".explore-list"); return l ? { scrollHeight: l.scrollHeight, clientHeight: l.clientHeight } : null; })() })`)
+        .catch(() => null);
+      await writeFile(explore, JSON.stringify({ list: coach.explore.list(), games: coach.explore.games(), shown }, null, 2));
+    }
     app.quit();
   }, Number(process.env.LDC_SCREENSHOT_DELAY_MS ?? 8_000));
 }
@@ -303,7 +323,7 @@ async function main(): Promise<void> {
   const connector = new LcuConnector({
     discover: async () => override ?? discoverCredentials({ installDir: env.lolInstallDir }),
   });
-  const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon") });
+  const ddragon = new DataDragon({ cacheDir: join(app.getPath("userData"), "ddragon"), ...devDdragonUrls() });
   const config = loadConfig(findConfigDir(app.getAppPath(), process.resourcesPath));
   const profiles = await createProfileSource(env, config);
   // Live meta snapshots come from the coach server (none in dev-only direct mode).
@@ -339,6 +359,7 @@ async function main(): Promise<void> {
 
   win = createWindow();
   perf?.mark("windowCreated");
+  const pageAsked = firstAsk(ipcMain, IPC.ready);
   // One event often updates the state several times in a row: the renderer gets the last of them, once.
   const pusher = new StatePusher<ViewState>((s) => {
     if (!win || win.isDestroyed()) return;
@@ -363,6 +384,12 @@ async function main(): Promise<void> {
     (kind === "runes" || kind === "items" || kind === "all") && (pageKey === undefined || typeof pageKey === "string") ? coach.importLoadout(kind, pageKey) : undefined,
   );
   ipcMain.handle(IPC.retry, () => coach.retryNow());
+  ipcMain.handle(IPC.exploreList, () => coach.explore.list());
+  ipcMain.handle(IPC.exploreChampion, (_e, championId: unknown, role: unknown) => {
+    const args = exploreArgs(championId, role);
+    return args ? coach.explore.champion(args.championId, args.role) : null;
+  });
+  ipcMain.handle(IPC.exploreGames, () => coach.explore.games());
   ipcMain.on(IPC.minimize, () => win?.minimize());
   ipcMain.on(IPC.restartToUpdate, () => {
     if (canRestartToUpdate(coach.state)) restartToUpdate();
@@ -378,6 +405,7 @@ async function main(): Promise<void> {
     if (isHighlightId(id)) coach.setUi(uiState.sawHighlight(id));
   });
 
+  await pageAsked;
   await coach.start();
   coach.setAppVersion(app.getVersion());
   startAutoUpdate((version) => coach.updateReady(version));

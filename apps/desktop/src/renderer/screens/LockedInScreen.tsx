@@ -2,10 +2,10 @@ import { useState, type ReactNode } from "react";
 import type { LoadoutView, MyPickView, ViewState } from "../../shared/view";
 import { Button } from "../components/Button";
 import { ChampIcon } from "../components/ChampIcon";
+import { EmptyState } from "../components/EmptyState";
 import { LiveHighlight } from "../components/Tour";
 import { draftHighlights } from "../first-use";
 import { BuildTab, MatchupsPlanTab, RunesTab, type LoadoutTab } from "../components/Loadout";
-import { Section } from "../components/Section";
 import { Segmented } from "../components/Segmented";
 import { WinChance } from "../components/WinChance";
 import { Window } from "../components/Window";
@@ -41,9 +41,16 @@ function LoadoutSource({ pick }: { pick: MyPickView }) {
   const l = pick.loadout;
   if (!l) return <span className="micro">{t("loadout.none", { champion: pick.champion.name })}</span>;
   return (
-    <span className="micro" {...tip(l.thinNote)}>
+    <span className="micro" {...tip([l.thinNote, l.sourceAbove ? t("loadout.sourceTip") : null].filter(Boolean).join("\n"))}>
       {t("loadout.source", { games: count(l.games), n: l.games, source: l.source })}
-      {l.thinNote ? ` · ${t("loadout.rough")}` : "."}
+      {l.thinNote ? (
+        <>
+          {" · "}
+          <span data-tour="rough">{t("loadout.rough")}</span>
+        </>
+      ) : (
+        "."
+      )}
     </span>
   );
 }
@@ -79,13 +86,7 @@ export function LoadoutFooter({ pick, runes }: { pick: MyPickView; runes: RuneCh
 /** The body of one loadout tab (or why there is none). */
 export function LoadoutBody({ pick, tab, runes }: { pick: MyPickView; tab: LoadoutTab; runes: RuneChoice }) {
   if (tab === "matchups") return <MatchupsPlanTab pick={pick} />;
-  if (!pick.loadout) {
-    return (
-      <Section title={tab === "runes" ? t("runes.tab") : t("build.head")}>
-        <p className="caption">{t("loadout.none", { champion: pick.champion.name })}</p>
-      </Section>
-    );
-  }
+  if (!pick.loadout) return <EmptyState message={t("loadout.none", { champion: pick.champion.name })} />;
   return tab === "runes" ? <RunesTab loadout={pick.loadout} runes={runes} /> : <BuildTab loadout={pick.loadout} />;
 }
 

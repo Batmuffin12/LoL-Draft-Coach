@@ -131,6 +131,29 @@ Regression guard (`pnpm perf:screens m8`, `pnpm perf:guard baseline m8`): overfl
 
 Server: measuring spikes on the production copy (62,617 timeline games) takes 100 s per hourly run on this PC, against 37 s for band 2's whole snapshot; peak memory 483 MB, streamed. Since the check fails, `meta.v1.json` `spikes.publish` is off: the hourly run skips it and the panel hides spikes as built.
 
+## v1.0.5: starting without waiting on Data Dragon (`2a21d97`, 2026-11-02)
+
+The start waited for `versions.json` before connecting to the client, with no timeout: a slow answer held up everything and a hung one left the panel stuck (reproduced against a local stub). Now the last patch loads from disk, the coach starts once the page first asks for state (a busy main process holds up the page's paint), and new patches arrive in the background.
+
+`scripts/perf/interleave.mjs`, 48face4 (v1.0.4's start plus the stub) against 2a21d97: N 1,000 per version in 10 interleaved batches, on a quiet machine (CPU 2–4% before and after), with the stub's delay tail on `versions.json`. No lost launches. Results: `v1.0.4-stub-loading.json`, `v1.0.5-loading.json`. In brackets, each number's 95% interval. The tail is modelled on the CDN delays seen in the v1.0.3 and v1.0.4 runs, not new CDN measurements.
+
+| ms | Before p50 | p95 | p99 | max | After p50 | p95 | p99 | max |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Client connected | 368 [367–369] | 393 [392–395] | 701 [692–1794] | 10,897 | 356 [355–357] | 368 [367–369] | 380 [373–394] | 405 |
+| First paint | 351 [351–352] | 368 [366–371] | 384 [376–393] | 439 | 378 [377–379] | 401 [399–406] | 415 [412–424] | 434 |
+| First screen | 321 [321–321] | 336 [335–339] | 351 [347–363] | 460 | 338 [338–338] | 347 [346–348] | 356 [351–366] | 373 |
+| Full screen | 518 [517–519] | 548 [544–552] | 845 [837–1936] | 11,056 | 507 [506–508] | 524 [523–526] | 537 [532–563] | 679 |
+
+The tail is gone. First paint and first screen are later at the median (+27 and +17 ms; this comparison also includes the other v1.0.5 work), within their budgets. Launch to quit: at most 925 ms after, 11,277 ms before.
+
+Under load (14 of 16 threads kept busy, CPU 97–99%, N 200 per version): no lost launches, no launch over 1.6 s, full screen p99 957 → 801 ms. An earlier run of the fix with other agents on the machine lost at least one launch in one batch (exit null, which fits the harness's 180 s kill) and had one slow batch, both on the final build; neither came back and the cause wasn't found. Lost launches now count as `desktop.coldStart.lost` and don't end the run.
+
+`pnpm perf --label v1.0.5 --cold-starts 200 --flows 200`, `pnpm perf:compare v1.0.4 v1.0.5`: budgets 39/40 → 39/40, the same one over (the full `/me/profile` at 10 connections, 722 → 724 ms p99). Its cold starts used the stub; v1.0.4's used the real CDN. Overflow 0 on all 17 screens (`v1.0.5/overflow.json`); there is no v1.0.4 screen set to compare with.
+
+- **State push size**, no budget: +3.7–3.8 kB in every scenario (mid-counter 52.7 → 56.4 kB, lobby 14.4 → 18.2 kB). Sending takes the same time, and the update budgets hold.
+- **Explore's calls**, no budget (`apps/desktop/bench`, in the main process, without IPC): Browse list 0.17 ms the first time, one champion 0.24 ms, My games 0.21 ms for 1,000 games, a 156 kB answer. The bench's snapshot is a small simulator scenario (list 4.6 kB, champion 32 kB), so a full band's list and champion will cost more; not measured here.
+- **One number didn't repeat:** the run recorded IPC latency of 15 ms (full-game) and 10.8 ms (lobby), and full-game update p95 33 ms. Re-running the clicks step gave 0.8 and 0.5 ms and 19.6 ms, and three alternating full-game replays of both builds gave 1–2 ms and about 20 ms on each, so it isn't the code. `v1.0.5.json` keeps the first run's numbers.
+
 ## What's left
 
 - **The full profile at 10 connections stays over budget** (925 ms p99). Gzip of 14 MB costs ~105 ms per request and the JSON ~15 ms; to get under 200 ms with 10 at once it would take a cache of compressed responses (memory on a small server) or precompressed match summaries. With the panel's disk cache a full download happens only on registration, after sign-out, or against an older server, one request at a time (150 ms alone, within budget), so I left it.

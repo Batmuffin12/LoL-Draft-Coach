@@ -11,15 +11,31 @@ export function metricSentence(m: MetricResult, explain: ExplainConfig): string 
   );
 }
 
-/** Headline numbers as the Style tab shows them; tone from your average percentile (already turned for lower-is-better). */
+/**
+ * Do your number and your percentile point the same way? They can differ: `you` is an average over your games and
+ * `reference` a median, while the percentile averages where each game stood. On a skewed number like KDA, a few huge games
+ * lift your average above the median while most of your games sit below it. Equal as shown counts as no direction.
+ */
+export function numberAgrees(m: MetricResult, explain: ExplainConfig): boolean {
+  const same = formatMetric(m.you, m.metric, explain) === formatMetric(m.reference, m.metric, explain);
+  const better = same ? 0 : Math.sign(m.you - m.reference) * (m.lowerIsBetter ? -1 : 1);
+  const above = Math.sign(m.percentile - 0.5);
+  return better === above || above === 0;
+}
+
+/**
+ * Headline numbers as the Style tab shows them; tone and place from your average percentile (already turned for
+ * lower-is-better). When that disagrees with the two numbers printed beside it, neither colour nor place claims a
+ * direction: the row shows on the line, neutral, with the numbers as they are.
+ */
 export function numberViews(headline: MetricResult[], explain: ExplainConfig, toneGap: number): NumberView[] {
   return headline.map((m) => ({
     label: metricShort(m.metric, explain),
     you: formatMetric(m.you, m.metric, explain),
     typical: formatMetric(m.reference, m.metric, explain),
-    tone: m.percentile >= 0.5 + toneGap ? "pos" : m.percentile <= 0.5 - toneGap ? "neg" : null,
+    tone: !numberAgrees(m, explain) ? null : m.percentile >= 0.5 + toneGap ? "pos" : m.percentile <= 0.5 - toneGap ? "neg" : null,
     // The percentile is already turned for lower-is-better: 0.5 is typical, right of it better.
-    relative: Math.max(-1, Math.min(1, (m.percentile - 0.5) * 2)),
+    relative: numberAgrees(m, explain) ? Math.max(-1, Math.min(1, (m.percentile - 0.5) * 2)) : 0,
     title: renderReason(
       {
         id: "style.number.title",

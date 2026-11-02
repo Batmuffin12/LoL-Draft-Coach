@@ -12,7 +12,7 @@ import { PersonalCoach } from "../src/main/personal-coach";
 import { DirectProfileSource } from "../src/main/profile-source";
 import { loadProfile, MATCH_IDS_PAGE, sortMatchIdsNewestFirst } from "../src/main/profile";
 import type { ViewState } from "../src/shared/view";
-import { CLIENT_PUUID, fakeDdragonFetch, fakeRiotFetch, LOCAL_PUUID, stepUntil, waitFor } from "./helpers";
+import { CLIENT_PUUID, fakeDdragonFetch, seededDdragonCache, fakeRiotFetch, LOCAL_PUUID, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -101,7 +101,7 @@ async function startCoach(riot: RiotApi | null, overrides: Record<string, unknow
     : null;
   coach = new PersonalCoach({
     connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-    ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+    ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
     config,
     profiles,
     noProfileMessage: "No Riot API key configured. Set RIOT_API_KEY in your .env to get personal picks.",
@@ -136,7 +136,7 @@ describe("PersonalCoach (mock client + fake Riot API)", () => {
     expect(picks.every((p) => p.terms.length === 0)).toBe(true);
     // Riot's positions come from the client (fixture): Ahri/Ekko/Akali are all listed for middle.
     expect(picks.every((p) => !p.offMeta)).toBe(true);
-    expect(picks.find((p) => p.champion.id === 103)!.reasons.map((r) => r.text).join(" ")).toMatch(/grades S A+/);
+    expect(picks.find((p) => p.champion.id === 103)!.reasons.map((r) => r.text).join(" ")).toMatch(/recent grades S A\+/);
     // The list as a whole is explained: a confidence label from our own data.
     expect(coach!.state.pickAdvice.confidence?.label).toMatch(/Clear pick|Close call|Not much data yet/);
 

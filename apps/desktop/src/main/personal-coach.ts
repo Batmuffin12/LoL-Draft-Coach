@@ -13,6 +13,7 @@ import type { AdviceRecord, ChampionId, CoachStatus, DraftState, MetaSnapshot, P
 import type { ViewState } from "../shared/view";
 import type { MetaSource } from "./meta-source";
 import { AdviceRecorder } from "./advice-log";
+import { ExploreSource } from "./explore-source";
 import { ImportFlow } from "./import-flow";
 import { DraftSession, type DraftInputs } from "./draft-session";
 import { focusView, growthFor, lastGameFor, monthFor, roleAdvice, styleFor, type LobbyViewContext } from "./lobby-views";
@@ -80,6 +81,8 @@ export class PersonalCoach extends Coach {
   private readonly recorder = new AdviceRecorder();
   /** The current champ select, and your pick until its game is over. */
   private readonly session: DraftSession;
+  /** Browse and My games: answers on demand, never in the view state. */
+  readonly explore: ExploreSource;
   /** The advice log: your recent games with what the coach showed, newest first. */
   private advice: AdviceRecord[] = [];
   /** Your growth focus (main role and champion), recomputed when your games or the meta change. */
@@ -103,6 +106,7 @@ export class PersonalCoach extends Coach {
     this.config = p.config;
     this.band = p.config.bands.defaultBand;
     this.client = new ClientFacts(p.ddragon);
+    this.explore = new ExploreSource({ index: () => this.metaIndex, profile: () => this.profile, config: () => this.config, minGames: () => this.view.limits.minGames, client: this.client, ddragon: p.ddragon, lookup: this.championLookup });
     this.imports = new ImportFlow({
       config: () => this.config,
       connector: p.connector,
@@ -191,6 +195,7 @@ export class PersonalCoach extends Coach {
       this.updateFocus();
       this.updateRoleAdvice();
       this.updateLastGame();
+      this.updatePlaystyle();
     });
     // Shard rows from CommunityDragon once Data Dragon is loaded, when the client listed none.
     this.p.ddragon.on("patch", () => {

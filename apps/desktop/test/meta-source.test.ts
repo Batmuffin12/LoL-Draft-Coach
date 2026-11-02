@@ -15,7 +15,7 @@ import { MetaSource, type MetaStatus } from "../src/main/meta-source";
 import { PersonalCoach } from "../src/main/personal-coach";
 import { ServerProfileSource } from "../src/main/profile-source";
 import { ServerClient, ServerError } from "../src/main/server-client";
-import { fakeDdragonFetch, fakeRiotFetch, stepUntil, waitFor } from "./helpers";
+import { fakeDdragonFetch, seededDdragonCache, fakeRiotFetch, stepUntil, waitFor } from "./helpers";
 
 const config = loadConfig(findConfigDir(__dirname));
 const tmp = (p: string) => mkdtempSync(join(tmpdir(), p));
@@ -223,7 +223,7 @@ describe("PersonalCoach with the live meta (mock client + real server API)", () 
     const creds = await lcu.start();
     coach = new PersonalCoach({
       connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-      ddragon: new DataDragon({ cacheDir: tmp("ldc-dd-"), fetch: fakeDdragonFetch() }),
+      ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
       config,
       profiles,
       riotId: null,

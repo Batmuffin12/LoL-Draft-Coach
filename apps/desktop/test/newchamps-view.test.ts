@@ -86,12 +86,12 @@ describe("new champions view", () => {
           { label: "Its spike", minor: true, items: [{ text: "Infinity Edge (item 1, ~11 min)" }, { text: "Fight once it's done; farm safely before" }] },
           { label: "First item", minor: true, items: [{ text: "You: 13.4 min (3 games)" }, { text: "Typical: 11.1 min" }, { text: "Farm and back on time to reach it sooner" }] },
           { label: "Short vs long games", minor: true, items: [{ text: "Stronger in long games" }, { text: "Wins 47% in short games, 53% in long" }] },
-          { label: "Good matchups", items: [{ text: "Orianna +3.1% WR", champion: { id: 61, name: "Orianna", iconUrl: null }, title: "Into Orianna: about 3 more wins per 100 games than their usual win rates predict (400 games)" }] },
+          { label: "Good matchups", items: [{ text: "Orianna +3.1 pts", champion: { id: 61, name: "Orianna", iconUrl: null }, title: "Into Orianna: about 3 more wins per 100 games than their usual win rates predict (400 games)" }] },
           {
             label: "Tough matchups",
             items: [
-              { text: "Zed \u22124.2% WR", champion: { id: 238, name: "Zed", iconUrl: null }, title: "Into Zed: about 4 fewer wins per 100 games than their usual win rates predict (500 games)" },
-              { text: "LeBlanc \u22122.0% WR", champion: { id: 7, name: "LeBlanc", iconUrl: null }, title: "Into LeBlanc: about 2 fewer wins per 100 games than their usual win rates predict (300 games)" },
+              { text: "Zed −4.2 pts", champion: { id: 238, name: "Zed", iconUrl: null }, title: "Into Zed: about 4 fewer wins per 100 games than their usual win rates predict (500 games)" },
+              { text: "LeBlanc −2.0 pts", champion: { id: 7, name: "LeBlanc", iconUrl: null }, title: "Into LeBlanc: about 2 fewer wins per 100 games than their usual win rates predict (300 games)" },
             ],
           },
           { label: "You on it", minor: true, items: [{ text: "2–1" }] },

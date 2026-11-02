@@ -3,6 +3,7 @@ import type { DraftView, ViewState } from "../../shared/view";
 import { BanTable, type BanRow } from "../components/BanTable";
 import { ConfidenceChip } from "../components/Chip";
 import { DraftBoard } from "../components/DraftBoard";
+import { EmptyState } from "../components/EmptyState";
 import { LiveHighlight } from "../components/Tour";
 import { draftHighlights } from "../first-use";
 import { Facts } from "../components/Facts";
@@ -63,8 +64,9 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const firstId = state.picks[0]?.champion.id;
   useEffect(() => setSel(0), [firstId]);
   const banning = state.bans.length > 0 || draft.localAction === "ban";
-  // Drops reason lines one by one until the picks fit 720px, wherever the room went (undocked, the board may scroll).
-  const fitLevel = useFitLevel(`${firstId}-${sel}-${banning}`, REASONS - 1);
+  // Drops reason lines one by one until the picks fit, wherever the room went (undocked, the board may scroll); last, the two lines around them move to hover.
+  const fitLevel = useFitLevel(`${firstId}-${sel}-${banning}`, REASONS);
+  const brief = state.docked && fitLevel >= REASONS;
   const hover = !banning && state.hoverPick?.loadout ? state.hoverPick : null;
   // Back to the picks when the hovered champion goes away.
   useEffect(() => {
@@ -108,7 +110,6 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
   const cur = picks[sel] ?? picks[0];
   const at = cur ? picks.indexOf(cur) : -1;
   const theirTeam = state.enemyNotes.length ? { label: t("pick.theirTeam"), items: state.enemyNotes.map((text) => ({ text })) } : null;
-  const notes = [state.filledNote, theirTeam].filter((row) => row != null);
   const record = cur ? (state.roles.find((r) => r.role === state.pickRole)?.pool.find((c) => c.champion.id === cur.champion.id) ?? null) : null;
   return (
     <Window header={<Header state={state} />} band={band} footer={footer}>
@@ -117,28 +118,31 @@ export function ChampSelectScreen({ state, draft, runes }: { state: ViewState; d
       {showLoadout ? (
         <LoadoutBody pick={hover} tab={tab === "build" ? "build" : "runes"} runes={runes} />
       ) : banning ? (
-        <Section title={t("ban.head")}>
-          {state.bans.length > 0 || state.hoverBans?.bans.length ? <div data-tour="bans"><BanTable bans={banRows(state)} /></div> : <p className="caption">{t(noBansKey(state))}</p>}
-        </Section>
+        state.bans.length > 0 || state.hoverBans?.bans.length ? (
+          <Section title={t("ban.head")}>
+            <div data-tour="bans"><BanTable bans={banRows(state)} /></div>
+          </Section>
+        ) : (
+          <EmptyState message={t(noBansKey(state))} inline={!state.docked} />
+        )
+      ) : !cur ? (
+        <EmptyState message={t(noPicksKey(state))} inline={!state.docked} />
       ) : (
         <>
-          <Section title={t("pick.head")} aside={picks.length > 0 && <ConfidenceChip confidence={state.pickAdvice.confidence} />}>
-            {notes.length > 0 && <Facts rows={notes} flow />}
-            {cur ? (
-              <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} />
-            ) : (
-              <p className="caption">{t(noPicksKey(state))}</p>
-            )}
+          <Section title={t("pick.head")} aside={<ConfidenceChip confidence={state.pickAdvice.confidence} />}>
+            {state.filledNote && <Facts rows={[state.filledNote]} flow />}
+            <SuggestedPick tour="picks" pick={cur} first={at === 0} whyNot={state.pickAdvice.whyNot} record={record} maxReasons={Math.max(1, REASONS - (hover ? 1 : 0) - (state.docked ? fitLevel : 0))} brief={brief} more={brief ? theirTeam?.items.map((i) => i.text).join("\n") : null} />
+            {theirTeam && !brief && <Facts rows={[theirTeam]} flow />}
           </Section>
-          {cur && picks.length > 1 && (
-            <Section title={t("pick.ifNot", { champion: cur.champion.name })} gold={false}>
-              <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} />
+          {picks.length > 1 && (
+            <Section title={t("pick.ifNot", { champion: cur.champion.name })}>
+              <OtherPicks picks={picks.map((pick, index) => ({ pick, index })).filter((p) => p.index !== at)} onSelect={setSel} brief={brief} />
             </Section>
           )}
         </>
       )}
       {!state.docked && (
-        <Section title={t("draft.head")} gold={false}>
+        <Section title={t("draft.head")}>
           <DraftBoard draft={draft} />
         </Section>
       )}

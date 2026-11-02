@@ -26,7 +26,7 @@ export function monthView(r: MonthlyReport, deps: MonthViewDeps): MonthView | nu
   return {
     period: `${shortDate(r.from)} – ${shortDate(r.to)}`,
     games: r.games,
-    steadyNote: say("month.steady", { games: r.games, before: r.gamesBefore }),
+    steadyNote: say("month.realChanges", { games: r.games, before: r.gamesBefore }),
     rank: r.rank.now
       ? r.rank.start && rankText(r.rank.start) !== rankText(r.rank.now)
         ? say("month.rank.from", { now: rankText(r.rank.now), start: rankText(r.rank.start) })

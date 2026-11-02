@@ -24,6 +24,8 @@ export class MockLcuServer {
   readonly writes: { method: string; path: string; body: unknown }[] = [];
   /** Rune page slots: a POST beyond this answers 400, like the real client. */
   maxPages = 20;
+  /** When set, every write answers this HTTP status. */
+  failWritesWith: number | null = null;
 
   constructor(
     private readonly fixture: Fixture,
@@ -82,6 +84,7 @@ export class MockLcuServer {
       return;
     }
     if (req.method !== "GET") {
+      this.writes.push({ method: req.method ?? "", path, body: null });
       res.writeHead(405).end();
       return;
     }
@@ -100,6 +103,7 @@ export class MockLcuServer {
     req.on("end", () => {
       const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "null") as Record<string, unknown>;
       this.writes.push({ method: req.method!, path, body });
+      if (this.failWritesWith) return void res.writeHead(this.failWritesWith).end("{}");
       const pages = (this.state.get("/lol-perks/v1/pages") as { id: number }[] | undefined) ?? [];
       if (req.method === "POST" && path === "/lol-perks/v1/pages") {
         if (pages.length >= this.maxPages) return void res.writeHead(400).end('{"message":"Max pages reached"}');

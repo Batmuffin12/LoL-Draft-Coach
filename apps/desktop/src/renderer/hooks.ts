@@ -11,6 +11,25 @@ export function useNow(intervalMs: number): number {
 }
 
 /**
+ * An answer from the main process, asked for once per `key` while the screen is open: undefined until
+ * the first one, `fallback` if the call fails. The previous answer stays on screen while a new key loads.
+ */
+export function useFetched<T>(fetch: () => Promise<T>, key: string, fallback: T): T | undefined {
+  const [value, setValue] = useState<T | undefined>(undefined);
+  useEffect(() => {
+    let current = true;
+    void fetch().then(
+      (v) => current && setValue(v),
+      () => current && setValue(fallback),
+    );
+    return () => {
+      current = false;
+    };
+  }, [key]);
+  return value;
+}
+
+/**
  * How many steps a screen must shrink for the panel's scrolling area not to overflow: 0 is the full
  * content, up to `max` the most compact form (secondary lines move to hover). Measured after layout,
  * again when `key` changes or the window resizes, and from the top when the area gets taller (a notice

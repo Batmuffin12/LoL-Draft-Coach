@@ -58,39 +58,14 @@ a{color:#c8aa6e}a:hover{color:#f0e6d2}
   </section>
 
   <section class="section">
-    <div class="section-head"><span class="t-label gold">Your bot style, before → now</span><span class="rule"></span><span class="t-micro">50 = rank average</span></div>
-    <svg viewBox="0 0 406 196" width="406" height="196" role="img" aria-label="Style scores last period and this period">
-      <g font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="600" letter-spacing="1" fill="#8a94a7">
-        <text x="110" y="8" text-anchor="middle">BEFORE</text>
-        <text x="250" y="8" text-anchor="middle">NOW</text>
-      </g>
-      <line x1="110" y1="16" x2="110" y2="190" stroke="#222c3d"></line>
-      <line x1="250" y1="16" x2="250" y2="190" stroke="#222c3d"></line>
-      <g stroke="#66738c" stroke-width="1.5" opacity=".7">
-        <line x1="110" y1="70" x2="250" y2="58"></line>
-        <line x1="110" y1="82" x2="250" y2="78"></line>
-        <line x1="110" y1="110" x2="250" y2="102"></line>
-        <line x1="110" y1="126" x2="250" y2="130"></line>
-      </g>
-      <line x1="110" y1="62" x2="250" y2="26" stroke="#3ccf8e" stroke-width="2.5"></line>
-      <line x1="110" y1="170" x2="250" y2="146" stroke="#3ccf8e" stroke-width="2.5"></line>
-      <line x1="110" y1="146" x2="250" y2="174" stroke="#ffb86b" stroke-width="2.5"></line>
-      <g fill="#3ccf8e"><circle cx="110" cy="62" r="3.5"></circle><circle cx="250" cy="26" r="4"></circle><circle cx="110" cy="170" r="3.5"></circle><circle cx="250" cy="146" r="4"></circle></g>
-      <g fill="#ffb86b"><circle cx="110" cy="146" r="3.5"></circle><circle cx="250" cy="174" r="4"></circle></g>
-      <g font-family="Barlow Semi Condensed, sans-serif" font-size="13" font-weight="600">
-        <text x="100" y="66" text-anchor="end" fill="#8a94a7">Farming 62</text>
-        <text x="100" y="150" text-anchor="end" fill="#8a94a7">Vision 41</text>
-        <text x="100" y="174" text-anchor="end" fill="#8a94a7">Risk control 35</text>
-        <text x="260" y="30" fill="#3ccf8e">71 Farming +9</text>
-        <text x="260" y="62" fill="#8a94a7">63 Early pressure</text>
-        <text x="260" y="82" fill="#8a94a7">58 Fighting</text>
-        <text x="260" y="106" fill="#8a94a7">52 Objectives</text>
-        <text x="260" y="134" fill="#8a94a7">45 Roaming</text>
-        <text x="260" y="150" fill="#3ccf8e">41 Risk control +6</text>
-        <text x="260" y="178" fill="#ffb86b">34 Vision −7</text>
-      </g>
-    </svg>
-    <span class="t-micro">Grey lines: no real change over 50 games.</span>
+    <div class="section-head"><span class="t-label">Your bot style, before → now</span><span class="rule"></span><span class="t-micro">Real changes over 50 games</span></div>
+    <!-- Polish pass: only real changes, biggest first; the rest collapse to one line with their numbers on hover. -->
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 40px;gap:8px;font-size:15px;line-height:20px"><span>Farming</span><span style="text-align:right"><span style="color:#a3acbe">62 → </span><b>71</b></span><span style="text-align:right;font-weight:600;color:#3ccf8e">+9</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 40px;gap:8px;font-size:15px;line-height:20px"><span>Vision</span><span style="text-align:right"><span style="color:#a3acbe">41 → </span><b>34</b></span><span style="text-align:right;font-weight:600;color:#ff9e7a">−7</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 72px 40px;gap:8px;font-size:15px;line-height:20px"><span>Risk control</span><span style="text-align:right"><span style="color:#a3acbe">35 → </span><b>41</b></span><span style="text-align:right;font-weight:600;color:#3ccf8e">+6</span></div>
+      <span class="t-micro">Other 4: about the same</span>
+    </div>
   </section>
 
   <section class="section">

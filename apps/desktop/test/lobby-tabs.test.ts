@@ -10,23 +10,23 @@ import { emptyViewState, type ViewState } from "../src/shared/view";
 beforeAll(() => setCopy(uiCopy(loadConfig(findConfigDir(__dirname)).explain.templates)));
 
 const render = (over: Partial<ViewState> = {}) => renderToStaticMarkup(createElement(LobbyScreen, { state: { ...emptyViewState(), ...over } }));
-const tabs = (html: string) => [...html.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1]);
+const tabs = (html: string) => [...html.split('class="seg sub"')[0]!.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1]);
 const selected = (html: string) => /aria-selected="true"[^>]*>([^<]+)</.exec(html)?.[1];
-const pills = (html: string) => [...html.matchAll(/class="pill(?: on)?"[^>]*>([^<]+)</g)].map((m) => m[1]);
+const subTabs = (html: string) => [...(html.split('class="seg sub"')[1] ?? "").split("</div>")[0]!.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1]);
 
 describe("lobby tabs", () => {
   it("has three main tabs, and opens Me on its first sub-tab", () => {
     const html = render();
     expect(tabs(html)).toEqual(["Last game", "Me", "Champions"]);
     expect(selected(html)).toBe("Me");
-    expect(pills(html)).toEqual(["Style", "This month"]);
-    expect(html).toMatch(/class="pill on"[^>]*>Style</);
+    expect(subTabs(html)).toEqual(["Style", "This month", "My games"]);
+    expect(html.split('class="seg sub"')[1]).toMatch(/aria-selected="true"[^>]*>Style</);
   });
 
   it("opens Last game after a recent game, without sub-tabs", () => {
     const html = render({ lastGame: { champion: { id: 1, name: "Ahri", iconUrl: null }, role: "middle", win: true, durationSec: 1800, shown: [], lockedAt: Date.now(), endedAt: Date.now(), lines: [], terms: [] } as unknown as ViewState["lastGame"] });
     expect(selected(html)).toBe("Last game");
-    expect(pills(html)).toEqual([]);
+    expect(subTabs(html)).toEqual([]);
   });
 
   it("adds Next game while roles are queued", () => {

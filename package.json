@@ -1,6 +1,6 @@
 {
   "name": "lol-draft-coach",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.33.0",
@@ -11,6 +11,7 @@
     "invite": "node scripts/invite.mjs",
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r test",
+    "coverage": "pnpm --filter=./packages/* --filter=./apps/* --filter=!@ldc/jev exec vitest run --coverage && node scripts/coverage-summary.mjs",
     "check": "pnpm typecheck && pnpm test",
     "desktop": "pnpm --filter @ldc/desktop start",
     "infra:plan": "node scripts/railway-iac.mjs plan",
@@ -26,6 +27,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "5.0.3",
+    "happy-dom": "^21.0.4",
     "railway": "^3.12.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"

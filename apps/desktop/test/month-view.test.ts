@@ -34,7 +34,7 @@ describe("month view", () => {
     expect(monthView({ ...report, rank: { start: null, now: { tier: "GOLD", rank: "IV" }, direction: null } }, deps)!.rank).toBe("Rank: Gold IV");
     expect(v.axes).toEqual([{ label: "Farming", from: 40, to: 47, changed: "up" }]);
     expect(v.role).toBe("Mid");
-    expect(v.steadyNote).toBe("bold = a real change over 20 games");
+    expect(v.steadyNote).toBe("Real changes over 20 games");
     expect(v.winRate).toEqual({ from: 0.45, to: 0.55, text: "win rate, up 10 points" });
     expect(v.gamesBefore).toBe(16);
     expect(v.gamesBeforeText).toBe("16 games before");

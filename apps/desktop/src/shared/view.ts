@@ -17,6 +17,9 @@ export const IPC = {
   deleteData: "coach:delete-data",
   importLoadout: "coach:import-loadout",
   retry: "coach:retry",
+  exploreList: "coach:explore-list",
+  exploreChampion: "coach:explore-champion",
+  exploreGames: "coach:explore-games",
 } as const;
 
 /** A game's result is still missing this long after it was played: Riot may never send it, so the card stops promising it. */
@@ -64,6 +67,8 @@ export interface DraftView {
 export interface ReasonView {
   text: string;
   negative: boolean;
+  /** It says your games and win rate on the champion in this role: not repeated where your record already shows. */
+  ownRecord?: boolean;
 }
 
 export interface PickView {
@@ -136,8 +141,10 @@ export interface RunePageView extends ChoiceNumbers {
 export interface LoadoutView {
   /** Games behind the build (your band plus the one above). */
   games: number;
-  /** Band names the build comes from, e.g. "Gold to Platinum + Emerald to Diamond". */
+  /** Band names the build comes from, e.g. "Gold to Diamond". */
   source: string;
+  /** The source takes in the band above yours, for more games (there's none above the top band). */
+  sourceAbove: boolean;
   /** Shown when the build rests on few games, e.g. "Not much data yet: treat it as a rough guide". */
   thinNote: string | null;
   page: RunePageView | null;
@@ -183,6 +190,9 @@ export interface MatchupRowView {
   /** An ally in your lane (bot and support): your lane partner. */
   partner?: boolean;
 }
+
+/** Within this (points of win chance either way) a pair plays as expected: "Even". */
+export const MATCHUP_EVEN = 0.01;
 
 /** One outcome of an import click; `failed`: this part didn't work. */
 export interface ImportLine {
@@ -392,7 +402,7 @@ export interface MonthView {
   /** "Sep 7 – Oct 6". */
   period: string;
   games: number;
-  /** "Grey lines: no real change over 64 games." */
+  /** "Real changes over 64 games". */
   steadyNote: string;
   /** "Rank: Gold IV, from Silver I", or null without a rank. */
   rank: string | null;

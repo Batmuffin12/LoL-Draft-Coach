@@ -29,14 +29,18 @@ export interface SuggestedPickProps {
   maxReasons: number;
   /** Its `data-tour` name, for a highlight. */
   tour?: string;
+  /** A very short window: the line under the tiles goes (their hover text says it too). */
+  brief?: boolean;
+  /** What a short window moved to hover, on the card. */
+  more?: string | null;
 }
 
 /** The suggested pick: a gold card with its chance, the You · Meta · Lane tiles, and its reasons. */
-export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }: SuggestedPickProps) {
+export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour, brief = false, more }: SuggestedPickProps) {
   const cols = pickColumns(pick.terms);
   return (
     <>
-      <div className="you pick-card" data-tour={tour}>
+      <div className="you pick-card" data-tour={tour} {...tip(more)}>
         <ChampIcon champ={pick.champion} size={64} framed />
         <div className="who">
           <span className="t-title nm">
@@ -47,7 +51,7 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }:
           )}
         </div>
         {/* No good/bad colour: the chance compares your options in this draft, and #1 is the best one even below 50%. */}
-        <div className="chance" title="Its strength in your rank plus your experience on it">
+        <div className="chance" title="Its strength in your rank plus your experience on it" data-tour={tour ? "chance" : undefined}>
           <span className="t-number">{pick.expectedWin === null ? "—" : pct(pick.expectedWin)}</span>
           <span className="micro">{t("pick.chance")}</span>
         </div>
@@ -60,8 +64,9 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }:
           </div>
         ))}
       </div>
+      {!brief && <span className="micro tiles-note">{t("pick.tile.unit")}</span>}
       <ul className="reasons">
-        {pickReasons(pick.reasons, maxReasons).map((r) => (
+        {pickReasons(pick.reasons, maxReasons, record !== null).map((r) => (
           <li key={r.text} className={r.negative ? "but" : undefined}>
             {r.text}
           </li>
@@ -72,13 +77,13 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour }:
   );
 }
 
-/** The other suggestions as equal buttons: icon, name, chance and its first plus. Clicking one shows it in the card. */
-export function OtherPicks({ picks, onSelect }: { picks: { pick: PickView; index: number }[]; onSelect: (index: number) => void }) {
+/** The other suggestions as equal buttons: icon, name, chance and its first plus (on hover only when `brief`). Clicking one shows it in the card. */
+export function OtherPicks({ picks, onSelect, brief = false }: { picks: { pick: PickView; index: number }[]; onSelect: (index: number) => void; brief?: boolean }) {
   return (
     <div className="alts">
       {picks.map(({ pick, index }) => {
         const plus = pick.reasons.find((r) => !r.negative);
-        const line = [pick.expectedWin === null ? null : pct(pick.expectedWin), plus ? reasonHeadline(plus).replace(/^./, (c) => c.toLowerCase()) : null].filter(Boolean).join(" · ");
+        const line = [pick.expectedWin === null ? null : pct(pick.expectedWin), plus && !brief ? reasonHeadline(plus).replace(/^./, (c) => c.toLowerCase()) : null].filter(Boolean).join(" · ");
         return (
           <button key={pick.champion.id} type="button" className="alt" onClick={() => onSelect(index)} {...tip([pick.champion.name, ...pick.reasons.map((r) => r.text)].join("\n"))}>
             <ChampIcon champ={pick.champion} size={34} title="" />

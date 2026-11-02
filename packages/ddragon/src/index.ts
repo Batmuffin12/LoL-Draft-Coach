@@ -6,6 +6,9 @@ import type { ChampionId, ChampionInfo, ItemInfo, RuneInfo, SpellInfo } from "@l
 
 export const DEFAULT_BASE_URL = "https://ddragon.leagueoflegends.com";
 
+/** A request that hasn't finished by then has failed: no answer, or a body that stopped arriving. */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
+
 /** CommunityDragon's public mirror of the client's game-data files (the spec's "LCU game data / CommunityDragon"). */
 export const COMMUNITY_DRAGON_GAME_DATA = "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/";
 
@@ -21,6 +24,9 @@ export function communityDragonAsset(clientPath: string, base = COMMUNITY_DRAGON
 }
 
 const VersionsSchema = z.array(z.string().min(1)).min(1);
+
+/** The cache's current.json: which patch and language are on disk. */
+const CurrentFileSchema = z.looseObject({ version: z.string().min(1), locale: z.string() });
 
 /** CommunityDragon's rune paths (slots with perk ids) and perks (names, client icon paths): only the fields we use. */
 const PerkStylesFileSchema = z.looseObject({
@@ -110,18 +116,23 @@ export interface DataDragonOptions {
   cacheDir: string;
   locale?: string;
   baseUrl?: string;
+  /** Where the CommunityDragon game data files are read from (a local stand-in when measuring). */
+  communityDragonUrl?: string;
   fetch?: typeof fetch;
+  requestTimeoutMs?: number;
 }
 
 export class DataDragonError extends Error {}
 
 /**
- * Data Dragon adapter. On load it reads versions.json, and when the newest version
- * differs from the cached one it downloads every static file for the new patch.
- * Works offline from the cache.
+ * Data Dragon adapter. `loadCached` gives the last patch from disk without any network;
+ * `update` reads versions.json and, when the newest version differs, downloads every static
+ * file for the new patch and replaces the cache. `load` does both for callers that need the
+ * data before going on, and works offline from the cache.
  */
 export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
   private current: StaticData | null = null;
+  private updating: Promise<boolean> | null = null;
   private readonly base: string;
   private readonly locale: string;
   private readonly fetchFn: typeof fetch;
@@ -138,6 +149,11 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
     return this.current;
   }
 
+  /** Whether any patch's data is in memory (the newest or not). */
+  get loaded(): boolean {
+    return this.current !== null;
+  }
+
   /** Newest version according to versions.json (first entry). */
   async latestVersion(): Promise<string> {
     const versions = VersionsSchema.parse(await this.getJson(`${this.base}/api/versions.json`));
@@ -145,27 +161,53 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
   }
 
   /**
-   * Loads static data for the newest patch. Returns true when a new patch was
-   * downloaded (and emits "patch"), false when the cache was already current.
+   * The newest patch, or else whatever the cache holds. Returns true when a new patch was
+   * downloaded, false when the data is from the cache. Fails only with no data to fall back on.
    */
   async load(): Promise<boolean> {
-    let latest: string;
     try {
-      latest = await this.latestVersion();
+      return await this.update();
     } catch (err) {
-      const cached = await this.readCachedVersion();
-      if (!cached) throw new DataDragonError(`Data Dragon unreachable and no cached data: ${String(err)}`);
-      this.setCurrent(await this.readCache(cached));
-      return false;
+      if (await this.loadCached()) return false;
+      throw err instanceof DataDragonError ? err : new DataDragonError(`Data Dragon unreachable and no cached data: ${String(err)}`);
     }
+  }
 
-    const cachedVersion = await this.readCachedVersion();
-    if (cachedVersion === latest) {
-      try {
-        this.setCurrent(await this.readCache(latest));
+  /**
+   * The last patch from disk, with no network. False when there's none or it's unusable
+   * (the next `update` downloads it again). Emits "patch" when it loads.
+   */
+  async loadCached(): Promise<boolean> {
+    if (this.current) return true;
+    const version = await this.readCachedVersion();
+    const data = version ? await this.readCacheIfValid(version) : null;
+    if (!data) return false;
+    // An update may have finished while this read: the newer data stays.
+    if (!this.current) this.setCurrent(data);
+    return true;
+  }
+
+  /**
+   * Asks the network for the newest patch and applies it (emits "patch" when the version in
+   * memory changes). True when it was downloaded, false when memory or the cache already had
+   * it. Rejects when it can't be checked or fetched, keeping the data it had. Calls made while
+   * one is running share its result.
+   */
+  update(): Promise<boolean> {
+    this.updating ??= this.fetchNewest().finally(() => {
+      this.updating = null;
+    });
+    return this.updating;
+  }
+
+  private async fetchNewest(): Promise<boolean> {
+    const latest = await this.latestVersion();
+    if (this.current?.version === latest) return false;
+    if ((await this.readCachedVersion()) === latest) {
+      const cached = await this.readCacheIfValid(latest);
+      if (cached) {
+        this.setCurrent(cached);
         return false;
-      } catch {
-        // Corrupt cache: fall through and re-download.
       }
     }
 
@@ -203,7 +245,8 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
       raw = JSON.parse(await readFile(file, "utf8"));
     } catch {
       try {
-        raw = { styles: await this.getJson(`${COMMUNITY_DRAGON_GAME_DATA}v1/perkstyles.json`), perks: await this.getJson(`${COMMUNITY_DRAGON_GAME_DATA}v1/perks.json`) };
+        const base = this.opts.communityDragonUrl ?? COMMUNITY_DRAGON_GAME_DATA;
+        raw = { styles: await this.getJson(`${base}v1/perkstyles.json`), perks: await this.getJson(`${base}v1/perks.json`) };
       } catch {
         return null;
       }
@@ -279,9 +322,18 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
   }
 
   private async getJson(url: string): Promise<unknown> {
-    const res = await this.fetchFn(url);
-    if (!res.ok) throw new DataDragonError(`GET ${url} failed with HTTP ${res.status}`);
-    return res.json();
+    const timeoutMs = this.opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    try {
+      // The timer also ends a body that stops arriving.
+      const res = await this.fetchFn(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) throw new DataDragonError(`GET ${url} failed with HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+        throw new DataDragonError(`GET ${url} didn't answer within ${timeoutMs / 1000} s`);
+      }
+      throw err;
+    }
   }
 
   private versionDir(version: string): string {
@@ -290,20 +342,25 @@ export class DataDragon extends EventEmitter<{ patch: [StaticData] }> {
 
   private async readCachedVersion(): Promise<string | null> {
     try {
-      const meta = JSON.parse(await readFile(join(this.opts.cacheDir, "current.json"), "utf8")) as { version?: string; locale?: string };
-      return meta.locale === this.locale && meta.version ? meta.version : null;
+      const meta = CurrentFileSchema.parse(JSON.parse(await readFile(join(this.opts.cacheDir, "current.json"), "utf8")));
+      return meta.locale === this.locale ? meta.version : null;
     } catch {
       return null;
     }
   }
 
-  private async readCache(version: string): Promise<StaticData> {
-    const raw = {} as RawFiles;
-    for (const name of Object.keys(FILES) as FileName[]) {
-      const json = JSON.parse(await readFile(join(this.versionDir(version), `${name}.json`), "utf8"));
-      (raw as Record<FileName, unknown>)[name] = this.validate(name, json);
+  /** A patch's files from disk, validated; null when any is missing or corrupt. */
+  private async readCacheIfValid(version: string): Promise<StaticData | null> {
+    try {
+      const raw = {} as RawFiles;
+      for (const name of Object.keys(FILES) as FileName[]) {
+        const json = JSON.parse(await readFile(join(this.versionDir(version), `${name}.json`), "utf8"));
+        (raw as Record<FileName, unknown>)[name] = this.validate(name, json);
+      }
+      return this.build(version, raw);
+    } catch {
+      return null;
     }
-    return this.build(version, raw);
   }
 
   private async writeCache(version: string, raw: RawFiles): Promise<void> {

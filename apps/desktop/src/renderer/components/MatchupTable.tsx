@@ -1,10 +1,7 @@
-import type { MatchupRowView } from "../../shared/view";
+import { MATCHUP_EVEN as VERDICT_DEAD_ZONE, type MatchupRowView } from "../../shared/view";
 import { cx, gameCount, positionLabel, rateOf, signedOrDash, t, tip, tone, winsPer100 } from "../format";
 import { ChampIcon } from "./ChampIcon";
 import { Facts } from "./Facts";
-
-/** Within this (points of win chance either way) a pair plays as expected: "Even". */
-const VERDICT_DEAD_ZONE = 0.01;
 
 /** The matchup in a word, from the change against expectation: Favoured, Even or Hard. */
 function verdict(delta: number | null): string {
@@ -63,7 +60,7 @@ export function MatchupTable({ rows }: { rows: MatchupRowView[] }) {
         <Facts
           flow
           rows={[
-            ...(noGames.length ? [{ label: t("matchups.none"), items: noGames.map((m) => ({ text: m.champion!.name, champion: m.champion })) }] : []),
+            ...(noGames.length ? [{ label: t("matchups.noneRow"), items: noGames.map((m) => ({ text: m.champion!.name, champion: m.champion })) }] : []),
             ...(open.length ? [{ label: t("matchups.open"), items: open.map((m) => ({ text: positionLabel(m.role) })) }] : []),
           ]}
         />

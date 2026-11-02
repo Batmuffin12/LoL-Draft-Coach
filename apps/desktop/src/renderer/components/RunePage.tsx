@@ -35,7 +35,7 @@ export interface RunePageProps {
   maxSwaps?: number;
 }
 
-/** Swap rows that fit 720px under the trees; with more than one, each stays on one line and the row's tooltip has the rest. */
+/** Swap rows that fit 720px under the trees; with more than one, each row is just its name and its tooltip has the reason. */
 const SWAP_ROWS = 2;
 
 /** The page on its full trees, like the build sites: taken runes lit, the rest grey. Then one line per situational swap. */
@@ -64,11 +64,11 @@ export function RunePage({ primary, secondary, runes, shards, swaps, maxSwaps = 
         </div>
       </div>
       {rows.map((s, i) => (
-        <div key={s.id} className={swaps.length > 1 ? "swap one-line" : "swap"} {...tip([s.name, ...s.reasons, ...(i === 0 ? hidden : [])].join("\n"))}>
+        <div key={s.id} className="swap" {...tip([s.name, ...s.reasons, ...(i === 0 ? hidden : [])].join("\n"))}>
           <ChampIcon champ={s} kind="game" round size={20} />
           <span className="wrap">
             <b>Swap in {s.name}</b>
-            {s.reasons[0] && <span className="muted">{` — ${lower(s.reasons[0])}`}</span>}
+            {swaps.length === 1 && s.reasons[0] && <span className="muted">{` — ${lower(s.reasons[0])}`}</span>}
           </span>
         </div>
       ))}

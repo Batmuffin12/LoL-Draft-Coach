@@ -2,6 +2,26 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the milestone tags: a minor version per milestone (0.7.0 = milestone 7), a patch version for fixes and small features released from `main` in between.
 
+## [1.0.5] — 2026-11-02
+
+### Added
+- **Explore: look things up yourself.** Champions > Browse lists every champion and role in your rank, with search, a role filter and sorting by win, pick or ban rate. A champion's page shows its rune pages, spells, skills, starting items, core build and best and worst matchups. Me > My games lists your own games, with filters and your record per champion. It all comes from data already on the PC, so nothing new wakes the server.
+- `pnpm coverage` with a floor per package, run in CI. Tests went from 677 to 1,236, including real click tests, compliance tests and failure paths.
+
+### Changed
+- **A cleaner look**, after three rounds of critique measured against other LoL sites: gold only where it means you or the main action, a filled primary button, sentence case in the working UI, gently rounder corners (4, 6 and 8 px), role icons from the client's own art, underlined second-level tabs, lighter footer, real empty states.
+- **The tour is four short steps**, most important first. Everything else is a one-time note where it applies, and notes no longer cover what they explain.
+- **Month and Style read at a glance**: Month lists what really moved, and Style hides the radar when everything is close to your rank.
+- **The pick screen says it once**: no repeated record, and points say what they are.
+- **The app no longer waits on Riot's game data to start**: it uses its saved copy, connects to the League client at once and updates in the background. On 1,000 starts per version, client connected p99 went from 701 to 380 ms and the worst start from 10.9 s to 405 ms. First paint is about 27 ms later at p50 (351 to 378 ms), within budget.
+
+### Fixed
+- A response that never comes from Riot's game data no longer stops the panel from starting (requests now time out after 20 s).
+- Signing out while a request was running could bring the old player's games back on screen.
+- **The privacy wording is accurate**: the app and landing page said your games stay on this PC, but the server stores them too. They now say what is stored and what a delete removes.
+- Style no longer shows a number and a position that disagree: such a row goes neutral.
+- Flaky desktop tests under load (cache file polling, a real rate-limit wait, a sign-out race).
+
 ## [1.0.4] — 2026-11-02
 
 ### Added

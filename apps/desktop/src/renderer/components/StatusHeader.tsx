@@ -27,12 +27,12 @@ export function StatusHeader({ lcu, docked, metaText, metaTitle, onDock, onMinim
   return (
     <header className="header">
       <img className="logo" src={logo} alt="" width={22} height={22} />
-      <span data-tour="status-dot" className={`status-dot ${lcu}`} title={label} role="img" aria-label={label} />
+      <span className={`status-dot ${lcu}`} title={label} role="img" aria-label={label} />
       <span className="app">Draft Coach</span>
       {metaText && <Chip title={metaTitle}>{metaText}</Chip>}
       <span className="spacer" />
-      <span className="window-buttons" data-tour="window-buttons">
-      <button className="icon-btn" onClick={onDock} title={t(docked ? "window.undock" : "window.dock")} aria-label={t(docked ? "window.undock" : "window.dock")} aria-pressed={docked}>
+      <span className="window-buttons">
+      <button className="icon-btn" data-tour="dock" onClick={onDock} title={t(docked ? "window.undock" : "window.dock")} aria-label={t(docked ? "window.undock" : "window.dock")} aria-pressed={docked}>
         {docked ? "◧" : "□"}
       </button>
       <button className="icon-btn" onClick={onMinimize} title={t("window.minimize")} aria-label={t("window.minimize")}>

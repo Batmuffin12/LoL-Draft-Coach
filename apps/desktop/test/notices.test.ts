@@ -10,7 +10,7 @@ import { Coach } from "../src/main/coach";
 import { findConfigDir, loadConfig } from "../src/main/config";
 import { logProblem } from "../src/main/problem-log";
 import { PersonalCoach } from "../src/main/personal-coach";
-import { fakeDdragonFetch, waitFor } from "./helpers";
+import { fakeDdragonFetch, seededDdragonCache, waitFor } from "./helpers";
 
 vi.mock("../src/main/problem-log", () => ({ logProblem: vi.fn() }));
 
@@ -83,6 +83,7 @@ describe("Coach notices", () => {
     let online = false;
     const { coach, connector } = handCoach(((...a: Parameters<typeof fetch>) => (online ? good(...a) : Promise.reject(new Error("fetch failed at https://ddragon")))) as typeof fetch);
     await coach.start();
+    await waitFor(() => keys(coach).length > 0);
     expect(keys(coach)).toEqual(["championData"]);
     expect(coach.state.notices[0]!.text).not.toMatch(/fetch failed|ddragon/);
     expect(vi.mocked(logProblem).mock.calls[0]![0]).toMatch(/fetch failed/);
@@ -111,7 +112,7 @@ describe("PersonalCoach notices (mock League client)", () => {
     const creds = await server.start();
     coach = new PersonalCoach({
       connector: new LcuConnector({ discover: async () => creds, pollIntervalMs: 20 }),
-      ddragon: new DataDragon({ cacheDir: tmp("ldc-n-"), fetch: fakeDdragonFetch() }),
+      ddragon: new DataDragon({ cacheDir: await seededDdragonCache(), fetch: fakeDdragonFetch() }),
       config,
       profiles: null,
       riotId: null,

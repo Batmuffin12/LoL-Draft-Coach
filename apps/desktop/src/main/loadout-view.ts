@@ -127,23 +127,50 @@ function runePageView(c: LoadoutChoice<RunePageStat>, swaps: RuneSwap[], option:
   };
 }
 
+/** A name and icon from Data Dragon; the id while it isn't known. */
+export function iconOf(map: ReadonlyMap<number, { name: string; iconUrl: string }> | undefined, id: number): IconView {
+  const x = map?.get(id);
+  return { id, name: x?.name ?? `#${id}`, iconUrl: x?.iconUrl ?? null };
+}
+
+/** The pieces a rune page's view is made of, for a loadout with or without thin data. */
+function pageParts(deps: LoadoutViewDeps, thin: boolean): PageViewParts & { say: (r: Reason) => string } {
+  const rune = (id: number) => iconOf(deps.data?.runeInfo, id);
+  const names = { item: (id: number) => iconOf(deps.data?.itemInfo, id).name, rune: (id: number) => rune(id).name };
+  const say = (r: Reason) => renderReason(r, deps.templates, deps.championName, names);
+  return {
+    deps,
+    say,
+    rune,
+    first: (rs) => (rs[0] ? say(rs[0]) : null),
+    /** Win rate and games of a choice; no win rate with thin data (D31) or when the choice has none (0: e.g. the start into your lane opponent). */
+    numbers: (c) => ({ winRate: thin || c.winRate <= 0 ? null : c.winRate, games: c.n }),
+    withReasons: (v, rs) => ({ ...v, reasons: rs.map(say) }),
+  };
+}
+
+/**
+ * Pages side by side, looked up rather than chosen for a draft: each named by its keystone, with how
+ * many of the games behind the build take it (`total`). No swaps: there's no enemy team.
+ */
+export function browsePageViews(pages: RunePageStat[], total: number, thin: boolean, deps: LoadoutViewDeps): RunePageView[] {
+  const parts = pageParts(deps, thin);
+  return pages.map((p) => {
+    const keystone = p.runes[0];
+    const option = { label: keystone === undefined ? "" : parts.rune(keystone).name, share: total > 0 ? p.n / total : null };
+    return runePageView({ value: p, winRate: p.games > 0 ? p.wins / p.games : 0, n: p.n, reasons: [] }, [], option, parts);
+  });
+}
+
 /** Builds what the "Your pick" card shows from an engine loadout: Data Dragon names and icons, reasons in words. */
 export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   const d = deps.data;
-  const icon = (map: ReadonlyMap<number, { name: string; iconUrl: string }> | undefined, id: number): IconView => {
-    const x = map?.get(id);
-    return { id, name: x?.name ?? `#${id}`, iconUrl: x?.iconUrl ?? null };
-  };
+  const icon = iconOf;
   const item = (id: number) => icon(d?.itemInfo, id);
-  const rune = (id: number) => icon(d?.runeInfo, id);
-  const names = { item: (id: number) => item(id).name, rune: (id: number) => rune(id).name };
-  const say = (r: Reason) => renderReason(r, deps.templates, deps.championName, names);
-  const first = (rs: Reason[]) => (rs[0] ? say(rs[0]) : null);
-  const key = (slot: number) => renderReason({ id: `skill.key.${slot}`, slots: {} }, deps.templates, deps.championName);
-  const withReasons = (v: IconView, rs: Reason[]): LoadoutItemView => ({ ...v, reasons: rs.map(say) });
   const thin = l.source.thin;
-  /** Win rate and games of a choice; no win rate with thin data (D31) or when the choice has none (0: e.g. the start into your lane opponent). */
-  const numbers = (c: LoadoutChoice<unknown>): ChoiceNumbers => ({ winRate: thin || c.winRate <= 0 ? null : c.winRate, games: c.n });
+  const parts = pageParts(deps, thin);
+  const { say, first, numbers, withReasons } = parts;
+  const key = (slot: number) => renderReason({ id: `skill.key.${slot}`, slots: {} }, deps.templates, deps.championName);
   // A slot item's "bought more vs teams like this" is said only when the item's own text answers
   // that trait, in game terms; otherwise it's a correlation (armor penetration "vs physical teams").
   const answers = (itemId: number, trait: string) => {
@@ -167,12 +194,12 @@ export function toLoadoutView(l: Loadout, deps: LoadoutViewDeps): LoadoutView {
   const ranges = bandNames.map((n) => /^(.+) to (.+)$/.exec(n));
   const source = bandNames.length > 1 && ranges.every(Boolean) ? `${ranges[0]![1]} to ${ranges.at(-1)![2]}` : bandNames.join(" + ");
 
-  const parts: PageViewParts = { deps, rune, first, numbers, withReasons };
   const alt = l.pageAlt;
   const optionLabel = (kind: PageKind) => renderReason({ id: `ui.runes.option.${kind}`, slots: {} }, deps.templates, deps.championName);
   return {
     games: l.games,
     source,
+    sourceAbove: sourceBands.length > 1,
     thinNote: l.source.thin
       ? [
           renderReason({ id: l.source.pooled ? "loadout.thin.pooled" : "loadout.thin", slots: { roleGames: l.source.roleGames, games: l.source.games, role: l.role, champion: l.championId } }, deps.templates, deps.championName),

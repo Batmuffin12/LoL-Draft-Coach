@@ -6,6 +6,10 @@
  *   tsx scripts/perf/desktop.ts startup <runs> <out.json>
  *   tsx scripts/perf/desktop.ts replay <scenario> <seconds> <out.json> [clicks JSON] [rounds]
  *   tsx scripts/perf/desktop.ts screens <outDir>
+ *
+ * Cold starts ask the real Data Dragon unless LDC_PERF_DDRAGON_DIR names a copy of a panel's Data Dragon
+ * cache: then a local stub serves it, with LDC_PERF_DDRAGON_DELAYS ("tail", "hang" or ms; default 0) on
+ * versions.json. LDC_PERF_DDRAGON_FIRST: the number of the first start, to carry "tail" across batches.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -15,6 +19,7 @@ import type { Fixture } from "@ldc/lcu";
 import { MockLcuServer } from "@ldc/lcu/testing";
 import { history, loadScenario } from "@ldc/sim";
 import { world } from "../../packages/sim/scenarios/_world";
+import { startDdragonStub, stubDelay } from "./ddragon-stub";
 import { HIGHLIGHT_IDS } from "../../apps/desktop/src/shared/ui-state";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -176,16 +181,24 @@ function baseEnv(setup: Setup, lcu: string, opts: { profile?: boolean; serverUrl
 async function startup(runs: number, out: string): Promise<void> {
   const setup = await scenarioSetup("mid-counter", 0);
   const results: unknown[] = [];
+  const { LDC_PERF_DDRAGON_DIR: stubDir, LDC_PERF_DDRAGON_DELAYS: delays = "0", LDC_PERF_DDRAGON_FIRST: first = "0" } = process.env;
+  const stub = stubDir ? await startDdragonStub(stubDir) : null;
   for (let i = 0; i <= runs; i++) {
     const file = join(local, `perf-startup-${i}.json`);
     rmSync(file, { force: true });
-    await withMock(setup, 0, async (lcu) => {
-      const r = await launch({ ...baseEnv(setup, lcu), LDC_PERF: file, LDC_PERF_MODE: "startup", LDC_PERF_T0: String(Date.now()) });
-      if (!existsSync(file)) throw new Error(`startup run ${i} wrote no results (exit ${r.code}):\n${r.stdout.slice(-2000)}`);
+    // The warm-up fills the cache, so it always gets an answer.
+    stub?.setDelay(i === 0 ? 0 : stubDelay(delays, Number(first) + i - 1));
+    // A launch that wrote nothing counts as lost rather than ending the batch; launchMs shows one that wouldn't quit.
+    const started = Date.now();
+    const lost = await withMock(setup, 0, async (lcu) => {
+      const r = await launch({ ...baseEnv(setup, lcu), ...(stub ? { LDC_DDRAGON_URL: stub.url } : {}), LDC_PERF: file, LDC_PERF_MODE: "startup", LDC_PERF_T0: String(Date.now()) });
+      return existsSync(file) ? null : `exit ${r.code}: ${r.stdout.slice(-2000)}`;
     });
-    if (i > 0) results.push(JSON.parse(readFileSync(file, "utf8")));
-    process.stdout.write(`startup ${i === 0 ? "warm-up" : `${i}/${runs}`} done\n`);
+    const launchMs = Date.now() - started;
+    if (i > 0) results.push(lost === null ? { ...JSON.parse(readFileSync(file, "utf8")), launchMs } : { lost, launchMs });
+    process.stdout.write(`startup ${i === 0 ? "warm-up" : `${i}/${runs}`} ${lost === null ? "done" : "LOST"} in ${launchMs} ms\n`);
   }
+  stub?.stop();
   writeFileSync(out, JSON.stringify(results));
 }
 
@@ -220,6 +233,11 @@ export const SCREENS: { name: string; scenario: string; click?: string; connect?
   { name: "Pool", scenario: "idle", click: "Champions>Pool" },
   { name: "New", scenario: "idle", click: "Champions>Try new" },
   { name: "Month", scenario: "idle", click: "Me>This month" },
+  { name: "MyGames", scenario: "idle", click: "Me>My games" },
+  { name: "Browse", scenario: "idle", click: "Champions>Browse" },
+  { name: "Browse-Runes", scenario: "idle", click: "Champions>Browse>Ahri" },
+  { name: "Browse-Build", scenario: "idle", click: "Champions>Browse>Ahri>Build" },
+  { name: "Browse-Matchups", scenario: "idle", click: "Champions>Browse>Ahri>Matchups" },
   { name: "NextGame", scenario: "lobby" },
 ];
 
@@ -246,8 +264,67 @@ async function screens(outDir: string): Promise<void> {
   writeFileSync(join(outDir, "overflow.json"), JSON.stringify(overflow, null, 2));
 }
 
+/**
+ * Browse and My games on a bigger synthetic world than the regression screens': each shot's screenshot, overflow and
+ * what the state leaves out (LDC_EXPLORE_DUMP), to compare with `meta`. `old`: a snapshot from before bans and builds;
+ * `empty`: a history with no games. `closed`: no client at all, on a port nothing listens to.
+ */
+async function exploreShots(outDir: string, meta: string, old: string, hist: string, empty: string): Promise<void> {
+  mkdirSync(outDir, { recursive: true });
+  const shots: { name: string; click: string; meta?: string | null; history?: string; closed?: boolean; height?: number }[] = [
+    { name: "list", click: "Champions>Browse" },
+    { name: "list-support-pick", click: "Champions>Browse>Support>Pick" },
+    { name: "list-ban", click: "Champions>Browse>Ban" },
+    { name: "search", click: "Champions>Browse>type:KAI'SA" },
+    { name: "search-none", click: "Champions>Browse>type:zzz" },
+    { name: "long-name-runes", click: "Champions>Browse>type:nunu>Nunu & Willump" },
+    { name: "long-name-build", click: "Champions>Browse>type:nunu>Nunu & Willump>Build" },
+    { name: "thin-runes", click: "Champions>Browse>type:kaisa>Bot>Kai'Sa" },
+    { name: "thin-build", click: "Champions>Browse>type:kaisa>Bot>Kai'Sa>Build" },
+    { name: "no-build", click: "Champions>Browse>type:kaisa>Top>Kai'Sa" },
+    { name: "ahri-build-short", click: "Champions>Browse>type:ahri>Mid>Ahri>Build", height: 660 },
+    { name: "ahri-matchups-short", click: "Champions>Browse>type:ahri>Mid>Ahri>Matchups", height: 660 },
+    { name: "games-short", click: "Me>My games", height: 660 },
+    { name: "ahri-runes", click: "Champions>Browse>type:ahri>Mid>Ahri" },
+    { name: "ahri-build", click: "Champions>Browse>type:ahri>Mid>Ahri>Build" },
+    { name: "ahri-matchups", click: "Champions>Browse>type:ahri>Mid>Ahri>Matchups" },
+    { name: "back-keeps-search", click: "Champions>Browse>Pick>type:ahri>Ahri>‹ Back" },
+    { name: "old-list", click: "Champions>Browse", meta: old },
+    { name: "old-detail", click: "Champions>Browse>Ahri", meta: old },
+    { name: "no-snapshot", click: "Champions>Browse", meta: null },
+    { name: "games", click: "Me>My games" },
+    { name: "games-by-champion", click: "Me>My games>By champion" },
+    { name: "games-by-champion-open", click: "Me>My games>By champion>Ahri" },
+    { name: "games-closed-client", click: "Me>My games", closed: true },
+    { name: "games-empty", click: "Me>My games", history: empty },
+  ];
+  const overflow: Record<string, string> = {};
+  for (const s of shots) {
+    const setup: Setup = { fixture: idleFixture("None"), meta: s.meta === null ? null : (s.meta ?? meta), timeScale: 0 };
+    const shoot = async (lcu: string) => {
+      const r = await launch({
+        ...baseEnv(setup, lcu),
+        ...(s.height ? { LDC_SCREENSHOT_HEIGHT: String(s.height) } : {}),
+        LDC_PROFILE_FILE: s.history ?? hist,
+        LDC_SCREENSHOT: join(outDir, `g-${s.name}.png`),
+        LDC_EXPLORE_DUMP: join(outDir, `g-${s.name}.json`),
+        LDC_SCREENSHOT_DELAY_MS: "6000",
+        LDC_SCREENSHOT_CLICK: s.click,
+      });
+      const m = /scroll overflow (-?\d+|null)px/.exec(r.stdout);
+      overflow[s.name] = m?.[1] ?? "?";
+      for (const c of s.click.split(">")) if (!r.stdout.includes(`clicked "${c}": true`)) console.warn(`${s.name}: "${c}" was not found`);
+    };
+    if (s.closed) await shoot("1:closed");
+    else await withMock(setup, 0, shoot);
+    process.stdout.write(`${s.name}: overflow ${overflow[s.name]}px\n`);
+  }
+  writeFileSync(join(outDir, "g-overflow.json"), JSON.stringify(overflow, null, 2));
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-if (cmd === "startup") await startup(Number(args[0] ?? 10), args[1]!);
+if (cmd === "explore") await exploreShots(args[0]!, args[1]!, args[2]!, args[3]!, args[4]!);
+else if (cmd === "startup") await startup(Number(args[0] ?? 10), args[1]!);
 else if (cmd === "replay") await replay(args[0]!, Number(args[1] ?? 60), args[2]!, args[3] ? (JSON.parse(args[3]) as string[]) : [], Number(args[4] ?? 1));
 else if (cmd === "screens") await screens(args[0]!);
 else {

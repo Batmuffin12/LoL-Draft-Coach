@@ -6,13 +6,17 @@ const EASE = { 1: "easy", 2: "medium", 3: "hard" } as const;
 
 /** New champions for one role: the champion of yours it's most like, its win rate in your rank, ease; one reason under each (on hover only when `brief`). */
 export function NewChampTable({ rows, brief = false }: { rows: NewChampView[]; brief?: boolean }) {
+  // A column of dashes says nothing: it goes when no row has one of yours to compare with.
+  const like = rows.some((c) => c.like);
   return (
-    <div className="table newchamps" role="table">
+    <div className={cx("table newchamps", !like && "no-like")} role="table">
       <div className="thead" role="row">
         <span className="c-champ" role="columnheader">{t("label.champion")}</span>
-        <span className="c-num" role="columnheader" title={t("new.likeTip")}>
-          {t("new.likeHead")}
-        </span>
+        {like && (
+          <span className="c-num" role="columnheader" title={t("new.likeTip")}>
+            {t("new.likeHead")}
+          </span>
+        )}
         <span className="c-num" role="columnheader" title={t("new.winRateTip")}>
           {t("label.winRate")}
         </span>
@@ -31,16 +35,18 @@ export function NewChampTable({ rows, brief = false }: { rows: NewChampView[]; b
               </span>
             )}
           </span>
-          <span className="like" role="cell">
-            {c.like ? (
-              <>
-                <ChampIcon champ={c.like} size={24} title={t("new.likeYour", { champion: c.like.name })} />
-                <span className="wrap">{c.like.name}</span>
-              </>
-            ) : (
-              "—"
-            )}
-          </span>
+          {like && (
+            <span className="like" role="cell">
+              {c.like ? (
+                <>
+                  <ChampIcon champ={c.like} size={24} title={t("new.likeYour", { champion: c.like.name })} />
+                  <span className="wrap">{c.like.name}</span>
+                </>
+              ) : (
+                "—"
+              )}
+            </span>
+          )}
           <span className={cx("c-num", winToneOf(c.winRate, c.games))} role="cell" title={gameCount(c.games)}>
             {rateOf(c.winRate, c.games)}
           </span>

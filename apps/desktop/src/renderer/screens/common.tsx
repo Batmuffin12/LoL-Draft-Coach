@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { canRestartToUpdate, type AccountView, type ViewState } from "../../shared/view";
 import { Notice } from "../components/Notice";
+import { ProgressRow } from "../components/ProgressRow";
 import { StatusHeader } from "../components/StatusHeader";
 import { ago, count, cx, profileProgress, t, versionText } from "../format";
 import { useNow } from "../hooks";
@@ -34,25 +35,6 @@ export function Header({ state }: { state: ViewState }) {
       onMinimize={() => window.coach.minimize()}
       onClose={() => window.coach.close()}
     />
-  );
-}
-
-/** Something loading: a micro line, and a thin gold bar when how far along is known. Not a boxed notice. */
-export function ProgressRow({ text, done, total }: { text: string; done?: number; total?: number }) {
-  const known = done !== undefined && total !== undefined && total > 0;
-  const share = known ? Math.max(0, Math.min(1, done / total)) : 0;
-  return (
-    <div className="progress" role="status">
-      <span className="p-text">
-        <span>{text}</span>
-        {known && <span>{`${Math.round(share * 100)}%`}</span>}
-      </span>
-      {known && (
-        <span className="p-bar" aria-hidden="true">
-          <span style={{ width: `${share * 100}%` }} />
-        </span>
-      )}
-    </div>
   );
 }
 
@@ -109,9 +91,9 @@ function RetryLink() {
 }
 
 /** A small text action for the one-line footer. */
-function FootLink({ onClick, danger, gold, children }: { onClick: () => void; danger?: boolean; gold?: boolean; children: string }) {
+function FootLink({ onClick, danger, gold, expanded, children }: { onClick: () => void; danger?: boolean; gold?: boolean; expanded?: boolean; children: string }) {
   return (
-    <button type="button" className={cx("foot-link", danger && "danger", gold && "gold")} onClick={onClick}>
+    <button type="button" className={cx("foot-link", danger && "danger", gold && "gold")} aria-expanded={expanded} onClick={onClick}>
       {children}
     </button>
   );
@@ -137,10 +119,11 @@ export function ConfirmRow({ ask, yes, busyText, no, busy, danger, onYes, onNo }
   );
 }
 
-/** Who the app is connected as, the tour again, sign out and data deletion (confirmed in place), the app's version, then the full Riot notice. */
+/** Who the app is connected as, the tour again, an Account link that opens sign out and data deletion in place (each confirmed there), the app's version, then the full Riot notice. */
 export function AccountFooter({ state, onHowItWorks }: { state: ViewState; onHowItWorks?: (() => void) | undefined }) {
   const { account, app } = state;
   const [confirming, setConfirming] = useState<"signOut" | "delete" | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const run = (action: () => Promise<void>) => {
     setBusy(true);
@@ -171,9 +154,18 @@ export function AccountFooter({ state, onHowItWorks }: { state: ViewState; onHow
             <span className="micro who" title={`Connected as ${account.riotId}`}>
               {account.riotId}
             </span>
-            {howItWorks}
-            <FootLink onClick={() => setConfirming("signOut")}>{t("account.signOut")}</FootLink>
-            <FootLink onClick={() => setConfirming("delete")}>{t("account.deleteLink")}</FootLink>
+            {accountOpen ? (
+              <>
+                <FootLink onClick={() => setConfirming("signOut")}>{t("account.signOut")}</FootLink>
+                <FootLink onClick={() => setConfirming("delete")}>{t("account.deleteLink")}</FootLink>
+                <FootLink expanded onClick={() => setAccountOpen(false)}>{t("account.close")}</FootLink>
+              </>
+            ) : (
+              <>
+                {howItWorks}
+                <FootLink expanded={false} onClick={() => setAccountOpen(true)}>{t("account.menu")}</FootLink>
+              </>
+            )}
           </div>
         )
       ) : null}

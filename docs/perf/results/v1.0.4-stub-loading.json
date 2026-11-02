@@ -1,0 +1,75 @@
+{
+ "label": "v1.0.4-stub-loading",
+ "git": "48face4",
+ "note": "Interleaved on a quiet machine (CPU 2-4% before and after): 48face4 (v1.0.4's start plus the Data Dragon stub) against 2a21d97, 10 batches of 100 cold starts per version, one warm-up launch before each batch, with the stub's delay tail on versions.json. scripts/perf/interleave.mjs. Both builds read 2a21d97's config.",
+ "at": "2026-11-02T01:12:16.514Z",
+ "machine": {
+  "cpu": "AMD Ryzen 7 7800X3D 8-Core Processor           ",
+  "cores": 16,
+  "memGb": 33,
+  "platform": "win32",
+  "node": "v24.14.0",
+  "electron": "44.5.1"
+ },
+ "metrics": {
+  "desktop.coldStart.clientConnected": {
+   "median": 368.17919921875,
+   "p95": 392.5078125,
+   "p99": 700.660888671875,
+   "min": 344.531494140625,
+   "max": 10897.338134765625,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.ddragonEvent": {
+   "median": 357.488525390625,
+   "p95": 381.841552734375,
+   "p99": 690.3095703125,
+   "min": 333.795166015625,
+   "max": 10886.4580078125,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstPaint": {
+   "median": 351.39990234375,
+   "p95": 367.60009765625,
+   "p99": 383.60009765625,
+   "min": 315,
+   "max": 439.199951171875,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.firstScreen": {
+   "median": 320.900146484375,
+   "p95": 336.2998046875,
+   "p99": 350.5,
+   "min": 311.400146484375,
+   "max": 460.199951171875,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.fullScreen": {
+   "median": 517.7001953125,
+   "p95": 547.60009765625,
+   "p99": 845,
+   "min": 495.699951171875,
+   "max": 11056.10009765625,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.launch": {
+   "median": 722,
+   "p95": 786,
+   "p99": 1053,
+   "min": 673,
+   "max": 11277,
+   "samples": 1000,
+   "unit": "ms"
+  },
+  "desktop.coldStart.lost": {
+   "value": 0,
+   "unit": "count"
+  }
+ },
+ "raw": {}
+}

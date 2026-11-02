@@ -5,6 +5,7 @@ import { findConfigDir, loadConfig } from "../src/main/config";
 import { uiCopy } from "../src/main/personal-coach";
 import { LOBBY_TOUR, startTour, type TourRun } from "../src/renderer/first-use";
 import { setCopy, t } from "../src/renderer/format";
+import { showsServer } from "../src/renderer/screens/ConnectScreen";
 import { LobbyScreen } from "../src/renderer/screens/LobbyScreen";
 import { emptyViewState, type AccountView, type ViewState } from "../src/shared/view";
 
@@ -14,10 +15,7 @@ const noop = () => {};
 const registered = { state: "registered", riotId: "Sim#SIM", serverUrl: null, defaultServerUrl: null, message: null } satisfies AccountView;
 const lobby = (over: Partial<ViewState> = {}, run: TourRun | null = null) =>
   renderToStaticMarkup(createElement(LobbyScreen, { state: { ...emptyViewState(), ...over }, onHowItWorks: noop, tour: run && { run, onRun: noop, onClose: noop } }));
-const selected = (html: string) => /aria-selected="true"[^>]*>([^<]+)</.exec(html)?.[1];
-const at = (id: string) => ({ ...startTour(), index: steps().findIndex((s) => s.id === id) });
-// Without Browse and My games until those sub-tabs exist.
-const steps = () => LOBBY_TOUR.filter((s) => !["browse", "my-games"].includes(s.id));
+const steps = () => LOBBY_TOUR;
 
 describe("the lobby tour", () => {
   it("runs over the real lobby, opening with its intro and without Back", () => {
@@ -29,14 +27,12 @@ describe("the lobby tour", () => {
     expect(html).not.toContain(">Back<");
   });
 
-  it("says where it is, for screen readers too", () => {
-    expect(lobby({}, startTour())).toContain(`Step 1 of ${steps().length}`);
+  it("says where it is, in words", () => {
+    expect(lobby({}, startTour())).toContain(`>1 of ${steps().length}<`);
   });
 
-  it("opens the tab each step is about", () => {
-    expect(selected(lobby({}, at("last")))).toBe("Last game");
-    expect(selected(lobby({}, at("me")))).toBe("Me");
-    expect(selected(lobby({}, at("champions")))).toBe("Champions");
+  it("says at once that you choose", () => {
+    expect(lobby({}, startTour())).toContain(t("tour.intro.end"));
   });
 
   it("isn't there when not running", () => {
@@ -46,7 +42,18 @@ describe("the lobby tour", () => {
 
   it("has what its steps spotlight on the screen", () => {
     const html = lobby({ account: registered });
-    for (const target of ["tab-last", "tab-me", "tab-champions", "status-dot", "window-buttons", "how-it-works"]) expect(html).toContain(`data-tour="${target}"`);
+    for (const step of steps()) if (step.target) expect(html).toContain(`data-tour="${step.target}"`);
+  });
+});
+
+describe("Connect's server line", () => {
+  it("doesn't show in a build that comes with its server", () => {
+    expect(showsServer("https://coach", "https://coach")).toBe(false);
+  });
+
+  it("shows when there's no built-in server, or another is set", () => {
+    expect(showsServer("https://x", null)).toBe(true);
+    expect(showsServer("https://x", "https://coach")).toBe(true);
   });
 });
 
@@ -54,5 +61,16 @@ describe("the footer", () => {
   it("offers the tour again, registered or in development mode", () => {
     expect(lobby({ account: registered })).toContain("How it works");
     expect(lobby({ account: null })).toContain("How it works");
+  });
+
+  it("keeps signing out and deleting behind Account, closed at first", () => {
+    const html = lobby({ account: registered });
+    expect(html).toMatch(/aria-expanded="false"[^>]*>Account</);
+    expect(html).not.toContain(t("account.signOut"));
+    expect(html).not.toContain(t("account.deleteLink"));
+  });
+
+  it("has Riot's notice in full", () => {
+    expect(lobby({ account: registered })).toContain("isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.");
   });
 });
