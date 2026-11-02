@@ -446,7 +446,7 @@ describe("role-aware comfort and off-meta picks", () => {
     expect(picks[0]!.offMeta).toBe(false);
     expect(text(fun.reasons)).toMatch(/Off-meta in jungle \(usually bot\)/);
     expect(text(fun.reasons.slice(0, 1))).toMatch(/4 recent jungle games, 50% win rate \(8 games in all roles\)/);
-    expect(text(picks[0]!.reasons)).toMatch(/S A\+ lately/);
+    expect(text(picks[0]!.reasons)).toMatch(/recent grades S A\+/);
     const unpenalised = combineFactors(fun.factors, weightsForBand(2, engineCfg));
     expect(fun.score).toBeCloseTo(unpenalised * (1 - engineCfg.roles.offMetaPenalty));
   });

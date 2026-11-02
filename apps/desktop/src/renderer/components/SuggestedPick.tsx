@@ -77,13 +77,13 @@ export function SuggestedPick({ pick, first, whyNot, record, maxReasons, tour, b
   );
 }
 
-/** The other suggestions as equal buttons: icon, name, chance and its first plus. Clicking one shows it in the card. */
-export function OtherPicks({ picks, onSelect }: { picks: { pick: PickView; index: number }[]; onSelect: (index: number) => void }) {
+/** The other suggestions as equal buttons: icon, name, chance and its first plus (on hover only when `brief`). Clicking one shows it in the card. */
+export function OtherPicks({ picks, onSelect, brief = false }: { picks: { pick: PickView; index: number }[]; onSelect: (index: number) => void; brief?: boolean }) {
   return (
     <div className="alts">
       {picks.map(({ pick, index }) => {
         const plus = pick.reasons.find((r) => !r.negative);
-        const line = [pick.expectedWin === null ? null : pct(pick.expectedWin), plus ? reasonHeadline(plus).replace(/^./, (c) => c.toLowerCase()) : null].filter(Boolean).join(" · ");
+        const line = [pick.expectedWin === null ? null : pct(pick.expectedWin), plus && !brief ? reasonHeadline(plus).replace(/^./, (c) => c.toLowerCase()) : null].filter(Boolean).join(" · ");
         return (
           <button key={pick.champion.id} type="button" className="alt" onClick={() => onSelect(index)} {...tip([pick.champion.name, ...pick.reasons.map((r) => r.text)].join("\n"))}>
             <ChampIcon champ={pick.champion} size={34} title="" />

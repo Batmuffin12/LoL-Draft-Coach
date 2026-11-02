@@ -30,15 +30,22 @@ export interface TourStep {
   target?: string;
   /** Ends on a second strong line ("ui.tour.<id>.end"). */
   end?: boolean;
+  /** About the dock button, whose action depends on the state: while docked its wording is "ui.tour.<id>.docked". */
+  dock?: boolean;
 }
 
 /** Short on purpose: what it is, where it lives, the rest of the app, how to see this again. Everything else is a note on first use, where it applies. */
 export const LOBBY_TOUR: TourStep[] = [
   { id: "intro", end: true },
-  { id: "window", target: "window-buttons" },
+  { id: "window", target: "dock", dock: true },
   { id: "tabs", target: "tab-row" },
   { id: "footer", target: "how-it-works" },
 ];
+
+/** The wording key of a step: the dock button undocks while docked, so it can't say "dock it" then. */
+export function stepKey(step: TourStep, docked: boolean): string {
+  return step.dock && docked ? `${step.id}.docked` : step.id;
+}
 
 /** The steps this tour has: without those already found to have no target. */
 export function tourSteps(steps: readonly TourStep[], skipped: readonly string[]): TourStep[] {
@@ -123,6 +130,11 @@ export function placeNote(o: { target: Box; about: Box; footer: Box | null; size
   const over = about.top > view.height / 2 ? [about.top - gap - size.height] : [];
   const top = [bottom, about.top + about.height + gap, ...over].find(fits) ?? Math.max(margin, bottom);
   return { top, left };
+}
+
+/** A note from champ select or locked in has shown, so you've been through a draft: the lobby stops explaining that one will come. */
+export function seenADraft(ui: Pick<UiState, "highlightsSeen">): boolean {
+  return draftHighlights({ banning: false, loadout: true }).concat(draftHighlights({ banning: true, loadout: false }), draftHighlights({ banning: false, loadout: false })).some((id) => ui.highlightsSeen.includes(id));
 }
 
 /** The highlights for a live screen, in order. Those whose target isn't on screen (no second rune page, no import, no "rough guide") simply don't show. */
