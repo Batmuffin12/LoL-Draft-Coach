@@ -28,6 +28,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Coverage stays above each package's floor
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm coverage
       - name: Server bundle builds
         run: pnpm --filter @ldc/server build
 

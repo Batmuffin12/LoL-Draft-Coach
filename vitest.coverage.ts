@@ -1,6 +1,7 @@
 // Coverage settings shared by every package's vitest.config.ts. Nothing here runs
 // on `pnpm test`: v8 only instruments under `pnpm coverage` (vitest run --coverage).
 
+/** Fails `pnpm coverage` (and CI) below these: a little under what was measured, so coverage can't fall quietly. Raise them as it grows. */
 export type Floor = { lines: number; branches: number };
 
 /**
